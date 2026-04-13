@@ -1,37 +1,57 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Identity and Masterdata Microservices
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Branch**: `001-identity-masterdata` | **Date**: 2026-04-13 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/001-identity-masterdata/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Implement two foundational go-zero microservices (identity and masterdata) providing authentication, authorization, role-based access control, and master data management for a community service platform. The system enforces a two-tier governance model where headquarters controls master data and provincial/municipal administrators manage regional operations within their scope.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: Go 1.21+  
+**Primary Dependencies**: go-zero 1.6+, gRPC, JWT (golang-jwt/jwt), bcrypt (golang.org/x/crypto/bcrypt)  
+**Storage**: MySQL 8.0 (relational data), Redis 7.0 (cache/session), MinIO (object storage for images)  
+**Testing**: go test, testify/assert  
+**Target Platform**: Linux server (Docker containerized deployment)  
+**Project Type**: Microservices (2 services: identity, masterdata)  
+**Performance Goals**: API P99 ≤ 200ms, RPC P99 ≤ 100ms, 10k concurrent users  
+**Constraints**: Soft delete only for core data, all changes audited, scope-based data isolation  
+**Scale/Scope**: 100k communities, 1M users, 5-tier administrative hierarchy
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+### ✅ I. Spec is the Single Source of Truth
+- All business logic documented in spec.md before implementation
+- No code modifications outside of Logic layer
+- Spec-driven development workflow enforced
+
+### ✅ II. Microservices by Business Capability
+- Two independent microservices: identity (auth/users) and masterdata (admin divisions/config)
+- Each service has independent database schema (auth_* and md_* table prefixes)
+- Services communicate via gRPC for internal calls
+- Etcd for service discovery
+
+### ✅ III. go-zero Three-Layer Architecture
+- Strict API → Logic → Model layering
+- goctl-generated code for API, RPC, and Model layers
+- All database operations through Model layer only
+- Built-in go-zero features: cache, circuit breaker, rate limiting, logging, monitoring
+
+### ✅ IV. Two-Tier Governance Architecture
+- masterdata service is sole provider of administrative divisions
+- Headquarters-only control for core master data (CRUD operations restricted by role)
+- Provincial/municipal submission + headquarters approval workflow
+- Soft delete with audit logging for all core data
+
+### ✅ V. AI as Development Assistant
+- This plan generated from approved spec.md
+- Code generation will use goctl + Logic layer implementation
+- All generated code subject to human review
+
+**Gate Status**: ✅ PASSED - All constitutional requirements satisfied
 
 ## Project Structure
 
@@ -48,51 +68,81 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+services/
+├── identity/
+│   ├── api/
+│   │   ├── etc/
+│   │   │   └── identity-api.yaml
+│   │   ├── internal/
+│   │   │   ├── config/
+│   │   │   ├── handler/      # goctl generated
+│   │   │   ├── logic/        # Business logic here
+│   │   │   ├── svc/
+│   │   │   └── types/        # goctl generated
+│   │   ├── identity.api      # API definition
+│   │   └── identity.go
+│   ├── rpc/
+│   │   ├── etc/
+│   │   │   └── identity-rpc.yaml
+│   │   ├── internal/
+│   │   │   ├── config/
+│   │   │   ├── logic/        # Business logic here
+│   │   │   ├── server/       # goctl generated
+│   │   │   └── svc/
+│   │   ├── pb/               # goctl generated
+│   │   ├── identity.proto    # RPC definition
+│   │   └── identity.go
+│   ├── model/                # goctl generated from DB
+│   │   ├── authuser.go
+│   │   ├── authrole.go
+│   │   ├── authpermission.go
+│   │   └── ...
+│   └── Dockerfile
+│
+└── masterdata/
+    ├── api/
+    │   ├── etc/
+    │   │   └── masterdata-api.yaml
+    │   ├── internal/
+    │   │   ├── config/
+    │   │   ├── handler/      # goctl generated
+    │   │   ├── logic/        # Business logic here
+    │   │   ├── svc/
+    │   │   └── types/        # goctl generated
+    │   ├── masterdata.api    # API definition
+    │   └── masterdata.go
+    ├── rpc/
+    │   ├── etc/
+    │   │   └── masterdata-rpc.yaml
+    │   ├── internal/
+    │   │   ├── config/
+    │   │   ├── logic/        # Business logic here
+    │   │   ├── server/       # goctl generated
+    │   │   └── svc/
+    │   ├── pb/               # goctl generated
+    │   ├── masterdata.proto  # RPC definition
+    │   └── masterdata.go
+    ├── model/                # goctl generated from DB
+    │   ├── mdadministrativedivision.go
+    │   ├── mdcommunity.go
+    │   ├── mdconfiguration.go
+    │   └── ...
+    └── Dockerfile
 
-tests/
-├── contract/
-├── integration/
-└── unit/
+common/
+├── errorx/               # Common error handling
+├── jwtx/                 # JWT utilities
+├── responsex/            # Unified response format
+└── miniox/               # MinIO client wrapper
 
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+deploy/
+├── docker-compose.yml    # Already exists (MySQL, Redis, Etcd, MinIO)
+└── k8s/                  # Kubernetes manifests (future)
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Two-service microservices architecture following go-zero conventions. Each service has independent API (external HTTP), RPC (internal gRPC), and Model (database) layers. Common utilities shared via `common/` package. Services deployed independently via Docker containers. Infrastructure (MySQL, Redis, Etcd, MinIO) already deployed via docker-compose.yml.
 
 ## Complexity Tracking
 
