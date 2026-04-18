@@ -5,6 +5,7 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -67,7 +68,7 @@ func (l *RegisterLogic) Register(req *types.RegisterReq) (resp *types.RegisterRe
 	user := &model.AuthUser{
 		Phone:        req.Phone,
 		PasswordHash: passwordHash,
-		Nickname:     nickname,
+		Nickname:     sql.NullString{String: nickname, Valid: true},
 		UserType:     1, // Default: resident
 		Status:       1, // Active
 	}
