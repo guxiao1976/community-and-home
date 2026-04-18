@@ -1,7 +1,5 @@
 package errorx
 
-import "net/http"
-
 // Common error codes
 const (
 	CodeSuccess           = 0

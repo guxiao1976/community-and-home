@@ -1,0 +1,187 @@
+syntax = "proto3";
+
+package identity;
+option go_package = "./pb";
+
+service Identity {
+  rpc Login(LoginReq) returns (LoginResp);
+  rpc LoginSms(LoginSmsReq) returns (LoginSmsResp);
+  rpc Register(RegisterReq) returns (RegisterResp);
+  rpc ValidateToken(ValidateTokenReq) returns (ValidateTokenResp);
+  rpc RefreshToken(RefreshTokenReq) returns (RefreshTokenResp);
+  rpc Logout(LogoutReq) returns (LogoutResp);
+  rpc GetUser(GetUserReq) returns (GetUserResp);
+  rpc GetUsersByIds(GetUsersByIdsReq) returns (GetUsersByIdsResp);
+  rpc CheckPermission(CheckPermissionReq) returns (CheckPermissionResp);
+  rpc GetUserPermissions(GetUserPermissionsReq) returns (GetUserPermissionsResp);
+  rpc GetRolesByIds(GetRolesByIdsReq) returns (GetRolesByIdsResp);
+  rpc GetUserRoles(GetUserRolesReq) returns (GetUserRolesResp);
+
+  // Verification and property related methods
+  rpc GetUserVerificationStatus(GetUserVerificationStatusReq) returns (GetUserVerificationStatusResp);
+  rpc GetPropertyBindings(GetPropertyBindingsReq) returns (GetPropertyBindingsResp);
+  rpc ValidatePropertyAccess(ValidatePropertyAccessReq) returns (ValidatePropertyAccessResp);
+}
+
+message LoginReq {
+  string phone = 1;
+  string password = 2;
+}
+message LoginResp {
+  int64 user_id = 1;
+  string token = 2;
+  string refresh_token = 3;
+  int64 expire = 4;
+}
+message LoginSmsReq {
+  string phone = 1;
+  string code = 2;
+}
+message LoginSmsResp {
+  int64 user_id = 1;
+  string token = 2;
+  string refresh_token = 3;
+  int64 expire = 4;
+}
+message RegisterReq {
+  string phone = 1;
+  string code = 2;
+  string name = 3;
+  string password = 4;
+}
+message RegisterResp {
+  int64 user_id = 1;
+  string token = 2;
+  int64 expire = 3;
+}
+message ValidateTokenReq {
+  string token = 1;
+}
+message ValidateTokenResp {
+  bool valid = 1;
+  int64 user_id = 2;
+  int64 expire = 3;
+}
+message RefreshTokenReq {
+  string refresh_token = 1;
+}
+message RefreshTokenResp {
+  string token = 1;
+  string refresh_token = 2;
+  int64 expire = 3;
+}
+message LogoutReq {
+  string token = 1;
+}
+message LogoutResp {
+  bool success = 1;
+}
+message GetUserReq {
+  int64 id = 1;
+}
+message GetUserResp {
+  User user = 1;
+}
+message GetUsersByIdsReq {
+  repeated int64 ids = 1;
+}
+message GetUsersByIdsResp {
+  repeated User users = 1;
+}
+message CheckPermissionReq {
+  int64 user_id = 1;
+  string resource = 2;
+  string action = 3;
+}
+message CheckPermissionResp {
+  bool allowed = 1;
+}
+message GetUserPermissionsReq {
+  int64 user_id = 1;
+}
+message GetUserPermissionsResp {
+  repeated string permissions = 1;
+}
+message User {
+  int64 id = 1;
+  string phone = 2;
+  string name = 3;
+  string avatar_url = 4;
+  int32 user_type = 5;
+  int32 status = 6;
+  int64 scope_id = 7;
+  string created_time = 8;
+  string updated_time = 9;
+}
+
+message Role {
+  int64 id = 1;
+  string name = 2;
+  string code = 3;
+  string description = 4;
+  int32 is_system = 5;
+  int32 status = 6;
+  string created_time = 7;
+  string updated_time = 8;
+}
+
+message GetRolesByIdsReq {
+  repeated int64 ids = 1;
+}
+
+message GetRolesByIdsResp {
+  repeated Role roles = 1;
+}
+
+message GetUserRolesReq {
+  int64 user_id = 1;
+}
+
+message GetUserRolesResp {
+  repeated Role roles = 1;
+}
+
+// Verification status messages
+message GetUserVerificationStatusReq {
+  int64 user_id = 1;
+  int64 property_unit_id = 2;
+}
+
+message GetUserVerificationStatusResp {
+  int64 verification_id = 1;
+  int32 verification_status = 2;
+  string verification_type = 3;
+  string submitted_time = 4;
+  string reviewed_time = 5;
+  string reviewer_notes = 6;
+}
+
+// Property binding messages
+message GetPropertyBindingsReq {
+  int64 user_id = 1;
+}
+
+message PropertyBinding {
+  int64 id = 1;
+  int64 user_id = 2;
+  int64 property_unit_id = 3;
+  string binding_type = 4;
+  int32 is_primary = 5;
+  string bound_time = 6;
+}
+
+message GetPropertyBindingsResp {
+  repeated PropertyBinding bindings = 1;
+}
+
+// Property access validation messages
+message ValidatePropertyAccessReq {
+  int64 user_id = 1;
+  int64 property_unit_id = 2;
+}
+
+message ValidatePropertyAccessResp {
+  bool has_access = 1;
+  string binding_type = 2;
+  int32 is_primary = 3;
+}

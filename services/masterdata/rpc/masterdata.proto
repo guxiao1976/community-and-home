@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package masterdata;
+option go_package = "./pb";
+
+message Division {
+  int64 id = 1;
+  int64 parent_id = 2;
+  int32 level = 3;
+  string name = 4;
+  string code = 5;
+  string path = 6;
+  int32 sort_order = 7;
+  int32 status = 8;
+  int64 created_by = 9;
+  string created_time = 10;
+  string updated_time = 11;
+}
+
+message DivisionTree {
+  Division division = 1;
+  repeated DivisionTree children = 2;
+}
+
+message Community {
+  int64 id = 1;
+  int64 division_id = 2;
+  string name = 3;
+  string address = 4;
+  double area = 5;
+  int32 population = 6;
+  int32 community_type = 7;
+  int32 submission_status = 8;
+  int64 submitter_id = 9;
+  string submit_time = 10;
+  int64 reviewer_id = 11;
+  string review_time = 12;
+  string review_notes = 13;
+  string created_time = 14;
+  string updated_time = 15;
+}
+
+// Division RPC requests/responses
+message GetDivisionReq {
+  int64 id = 1;
+}
+
+message GetDivisionResp {
+  Division division = 1;
+}
+
+message GetDivisionsByIdsReq {
+  repeated int64 ids = 1;
+}
+
+message GetDivisionsByIdsResp {
+  repeated Division divisions = 1;
+}
+
+message GetDivisionTreeReq {
+  int64 parent_id = 1;
+}
+
+message GetDivisionTreeResp {
+  repeated DivisionTree tree = 1;
+}
+
+message GetDivisionPathReq {
+  int64 id = 1;
+}
+
+message GetDivisionPathResp {
+  repeated Division path = 1;
+}
+
+message ValidateScopeReq {
+  int64 user_id = 1;
+  int64 division_id = 2;
+}
+
+message ValidateScopeResp {
+  bool allowed = 1;
+}
+
+// Community RPC requests/responses
+message GetCommunityReq {
+  int64 id = 1;
+}
+
+message GetCommunityResp {
+  Community community = 1;
+}
+
+message GetCommunitiesByIdsReq {
+  repeated int64 ids = 1;
+}
+
+message GetCommunitiesByIdsResp {
+  repeated Community communities = 1;
+}
+
+message GetCommunitiesByDivisionReq {
+  int64 division_id = 1;
+  int32 status = 2; // 0=all, 1=approved only
+}
+
+message GetCommunitiesByDivisionResp {
+  repeated Community communities = 1;
+}
+
+// Masterdata service definition
+service Masterdata {
+  // Division RPC methods
+  rpc GetDivision(GetDivisionReq) returns (GetDivisionResp);
+  rpc GetDivisionsByIds(GetDivisionsByIdsReq) returns (GetDivisionsByIdsResp);
+  rpc GetDivisionTree(GetDivisionTreeReq) returns (GetDivisionTreeResp);
+  rpc GetDivisionPath(GetDivisionPathReq) returns (GetDivisionPathResp);
+  rpc ValidateScope(ValidateScopeReq) returns (ValidateScopeResp);
+
+  // Community RPC methods
+  rpc GetCommunity(GetCommunityReq) returns (GetCommunityResp);
+  rpc GetCommunitiesByIds(GetCommunitiesByIdsReq) returns (GetCommunitiesByIdsResp);
+  rpc GetCommunitiesByDivision(GetCommunitiesByDivisionReq) returns (GetCommunitiesByDivisionResp);
+}
