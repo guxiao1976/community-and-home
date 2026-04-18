@@ -1,0 +1,16 @@
+Name: identity-api
+Host: 0.0.0.0
+Port: 8888
+Timeout: 30000
+
+Auth:
+  AccessSecret: changeme
+  AccessExpire: 86400
+
+DataSource: root:123456@tcp(localhost:3306)/identity_db?charset=utf8mb4&parseTime=true&loc=Local
+Cache:
+  - Host: localhost:6379
+
+Casbin:
+  ModelPath: services/identity/api/etc/rbac_model.conf
+  PolicyAdapter: ""

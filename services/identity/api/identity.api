@@ -1,0 +1,491 @@
+syntax = "v1"
+
+info (
+	title:   "Identity Service API"
+	desc:    "User authentication, authorization and management"
+	author:  "community-and-home"
+	version: "v1.0"
+)
+
+type (
+	// User types
+	User {
+		Id                 int64  `json:"id"`
+		Phone              string `json:"phone"`
+		Nickname           string `json:"nickname"`
+		AvatarUrl          string `json:"avatar_url"`
+		UserType           int32  `json:"user_type"`
+		Status             int32  `json:"status"`
+		VerificationStatus int32  `json:"verification_status"`
+		ScopeId            *int64 `json:"scope_id"`
+		CreatedTime        string `json:"created_time"`
+		UpdatedTime        string `json:"updated_time"`
+	}
+	RegisterReq {
+		Phone    string `json:"phone"`
+		Code     string `json:"code"`
+		Nickname string `json:"nickname,optional"`
+		Password string `json:"password,optional"`
+	}
+	RegisterResp {
+		UserId int64  `json:"user_id"`
+		Token  string `json:"token"`
+		Expire int64  `json:"expire"`
+	}
+	LoginReq {
+		Phone    string `json:"phone"`
+		Password string `json:"password"`
+	}
+	LoginResp {
+		UserId       int64  `json:"user_id"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
+		Expire       int64  `json:"expire"`
+	}
+	LoginSmsReq {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}
+	LoginSmsResp {
+		UserId       int64  `json:"user_id"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
+		Expire       int64  `json:"expire"`
+	}
+	LogoutReq  {}
+	LogoutResp {
+		Success bool `json:"success"`
+	}
+	RefreshTokenReq {
+		RefreshToken string `json:"refresh_token"`
+	}
+	RefreshTokenResp {
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
+		Expire       int64  `json:"expire"`
+	}
+	SendSmsCodeReq {
+		Phone string `json:"phone"`
+	}
+	SendSmsCodeResp {
+		Success bool `json:"success"`
+	}
+	// User management
+	GetUsersReq {
+		Page     int32  `form:"page,optional,default=1"`
+		PageSize int32  `form:"page_size,optional,default=20"`
+		UserType *int32 `form:"user_type,optional"`
+		Status   *int32 `form:"status,optional"`
+		ScopeId  *int64 `form:"scope_id,optional"`
+	}
+	GetUsersResp {
+		List  []User `json:"list"`
+		Total int64  `json:"total"`
+	}
+	GetUserReq {
+		Id int64 `path:"id"`
+	}
+	GetUserResp {
+		User User `json:"user"`
+	}
+	CreateUserReq {
+		Phone    string `json:"phone"`
+		Password string `json:"password"`
+		Nickname string `json:"nickname,optional"`
+		UserType int32  `json:"user_type"`
+		ScopeId  *int64 `json:"scope_id,optional"`
+	}
+	CreateUserResp {
+		Id int64 `json:"id"`
+	}
+	UpdateUserReq {
+		Id        int64  `path:"id"`
+		Nickname  string `json:"nickname,optional"`
+		AvatarUrl string `json:"avatar_url,optional"`
+		UserType  int32  `json:"user_type,optional"`
+		Status    int32  `json:"status,optional"`
+		ScopeId   *int64 `json:"scope_id,optional"`
+		Password  string `json:"password,optional"`
+	}
+	UpdateUserResp {
+		Success bool `json:"success"`
+	}
+	DeleteUserReq {
+		Id int64 `path:"id"`
+	}
+	DeleteUserResp {
+		Success bool `json:"success"`
+	}
+	// Permission
+	GetUserPermissionsReq {
+		UserId int64 `path:"id"`
+	}
+	GetUserPermissionsResp {
+		Permissions []string `json:"permissions"`
+	}
+	// Role types
+	Role {
+		Id          int64  `json:"id"`
+		Name        string `json:"name"`
+		Code        string `json:"code"`
+		Description string `json:"description,optional"`
+		IsSystem    int32  `json:"is_system"`
+		Status      int32  `json:"status"`
+		CreatedTime string `json:"created_time"`
+		UpdatedTime string `json:"updated_time"`
+	}
+	RoleWithPermissions {
+		Id          int64        `json:"id"`
+		Name        string       `json:"name"`
+		Code        string       `json:"code"`
+		Description string       `json:"description,optional"`
+		IsSystem    int32        `json:"is_system"`
+		Status      int32        `json:"status"`
+		Permissions []Permission `json:"permissions"`
+		CreatedTime string       `json:"created_time"`
+		UpdatedTime string       `json:"updated_time"`
+	}
+	GetRolesReq {
+		Page     int32  `form:"page,optional,default=1"`
+		PageSize int32  `form:"page_size,optional,default=20"`
+		Status   *int32 `form:"status,optional"`
+	}
+	GetRolesResp {
+		List  []Role `json:"list"`
+		Total int64  `json:"total"`
+	}
+	GetRoleReq {
+		Id int64 `path:"id"`
+	}
+	GetRoleResp {
+		Role RoleWithPermissions `json:"role"`
+	}
+	CreateRoleReq {
+		Name          string  `json:"name"`
+		Code          string  `json:"code"`
+		Description   string  `json:"description,optional"`
+		PermissionIds []int64 `json:"permission_ids"`
+	}
+	CreateRoleResp {
+		Id int64 `json:"id"`
+	}
+	UpdateRoleReq {
+		Id            int64   `path:"id"`
+		Name          string  `json:"name,optional"`
+		Description   string  `json:"description,optional"`
+		Status        *int32  `json:"status,optional"`
+		PermissionIds []int64 `json:"permission_ids,optional"`
+	}
+	UpdateRoleResp {
+		Success bool `json:"success"`
+	}
+	DeleteRoleReq {
+		Id int64 `path:"id"`
+	}
+	DeleteRoleResp {
+		Success bool `json:"success"`
+	}
+	// Permission types
+	Permission {
+		Id          int64  `json:"id"`
+		Name        string `json:"name"`
+		Code        string `json:"code"`
+		Type        int32  `json:"type"`
+		ParentId    *int64 `json:"parent_id,optional"`
+		Path        string `json:"path"`
+		SortOrder   int32  `json:"sort_order"`
+		Status      int32  `json:"status"`
+		CreatedTime string `json:"created_time"`
+		UpdatedTime string `json:"updated_time"`
+	}
+	PermissionTree {
+		Id          int64            `json:"id"`
+		Name        string           `json:"name"`
+		Code        string           `json:"code"`
+		Type        int32            `json:"type"`
+		ParentId    *int64           `json:"parent_id,optional"`
+		Path        string           `json:"path"`
+		SortOrder   int32            `json:"sort_order"`
+		Status      int32            `json:"status"`
+		Children    []PermissionTree `json:"children,optional"`
+		CreatedTime string           `json:"created_time"`
+		UpdatedTime string           `json:"updated_time"`
+	}
+	GetPermissionsReq {
+		Status *int32 `form:"status,optional"`
+	}
+	GetPermissionsResp {
+		List []PermissionTree `json:"list"`
+	}
+	// Homeowner verification types
+	HomeownerVerification {
+		Id                 int64  `json:"id"`
+		UserId             int64  `json:"user_id"`
+		PropertyUnitId     int64  `json:"property_unit_id"`
+		DocumentUrls       string `json:"document_urls"`
+		RealName           string `json:"real_name"`
+		IdCardNumber       string `json:"id_card_number"`
+		VerificationStatus int64  `json:"verification_status"`
+		ReviewerId         *int64 `json:"reviewer_id,optional"`
+		ReviewTime         string `json:"review_time,optional"`
+		ReviewNotes        string `json:"review_notes,optional"`
+		SubmitTime         string `json:"submit_time"`
+		CreatedTime        string `json:"created_time"`
+		UpdatedTime        string `json:"updated_time"`
+	}
+	SubmitVerificationReq {
+		PropertyUnitId int64    `json:"property_unit_id"`
+		RealName       string   `json:"real_name"`
+		IdCardNumber   string   `json:"id_card_number"`
+		DocumentUrls   []string `json:"document_urls"`
+	}
+	SubmitVerificationResp {
+		Id int64 `json:"id"`
+	}
+	GetVerificationReq {
+		Id int64 `path:"id"`
+	}
+	GetVerificationResp {
+		Verification HomeownerVerification `json:"verification"`
+	}
+	GetMyVerificationsReq {
+		Page     int32  `form:"page,optional,default=1"`
+		PageSize int32  `form:"page_size,optional,default=20"`
+		Status   *int32 `form:"status,optional"`
+	}
+	GetMyVerificationsResp {
+		List  []HomeownerVerification `json:"list"`
+		Total int64                   `json:"total"`
+	}
+	GetVerificationListReq {
+		Page     int32  `form:"page,optional,default=1"`
+		PageSize int32  `form:"page_size,optional,default=20"`
+		Status   *int32 `form:"status,optional"`
+	}
+	GetVerificationListResp {
+		List  []HomeownerVerification `json:"list"`
+		Total int64                   `json:"total"`
+	}
+	ReviewVerificationReq {
+		Id          int64  `path:"id"`
+		Status      int32  `json:"status"`
+		ReviewNotes string `json:"review_notes,optional"`
+	}
+	ReviewVerificationResp {
+		Success bool `json:"success"`
+	}
+	// Property binding types
+	PropertyBinding {
+		Id             int64  `json:"id"`
+		UserId         int64  `json:"user_id"`
+		PropertyUnitId int64  `json:"property_unit_id"`
+		IsPrimary      bool   `json:"is_primary"`
+		BindStatus     int64  `json:"bind_status"`
+		BindTime       string `json:"bind_time"`
+		RevokeTime     string `json:"revoke_time,optional"`
+		RevokedBy      int64  `json:"revoked_by,optional"`
+		CreatedTime    string `json:"created_time"`
+		UpdatedTime    string `json:"updated_time"`
+	}
+	BindPropertyReq {
+		PropertyUnitId int64 `json:"property_unit_id"`
+	}
+	BindPropertyResp {
+		Id int64 `json:"id"`
+	}
+	UnbindPropertyReq {
+		Id int64 `path:"id"`
+	}
+	UnbindPropertyResp {
+		Success bool `json:"success"`
+	}
+	GetMyPropertiesReq {
+		Page     int32  `form:"page,optional,default=1"`
+		PageSize int32  `form:"page_size,optional,default=20"`
+		Status   *int32 `form:"status,optional"`
+	}
+	GetMyPropertiesResp {
+		List  []PropertyBinding `json:"list"`
+		Total int64             `json:"total"`
+	}
+)
+
+@server (
+	prefix: /api/identity
+	group:  auth
+	jwt:    Auth
+)
+service identity-api {
+	@doc "User login with password"
+	@handler login
+	post /auth/login (LoginReq) returns (LoginResp)
+
+	@doc "User login with SMS code"
+	@handler loginSms
+	post /auth/login/sms (LoginSmsReq) returns (LoginSmsResp)
+
+	@doc "User register"
+	@handler register
+	post /auth/register (RegisterReq) returns (RegisterResp)
+
+	@doc "Send SMS verification code"
+	@handler sendSmsCode
+	post /auth/sms/send (SendSmsCodeReq) returns (SendSmsCodeResp)
+
+	@doc "Refresh token"
+	@handler refreshToken
+	post /auth/token/refresh (RefreshTokenReq) returns (RefreshTokenResp)
+
+	@doc "User logout"
+	@handler logout
+	post /auth/logout (LogoutReq) returns (LogoutResp)
+}
+
+@server (
+	prefix: /api/identity
+	group:  user
+	jwt:    Auth
+)
+service identity-api {
+	@doc "List users"
+	@handler getUsers
+	get /users (GetUsersReq) returns (GetUsersResp)
+
+	@doc "Get user details"
+	@handler getUser
+	get /users/:id (GetUserReq) returns (GetUserResp)
+
+	@doc "Create user"
+	@handler createUser
+	post /users (CreateUserReq) returns (CreateUserResp)
+
+	@doc "Update user"
+	@handler updateUser
+	put /users/:id (UpdateUserReq) returns (UpdateUserResp)
+
+	@doc "Delete user"
+	@handler deleteUser
+	delete /users/:id (DeleteUserReq) returns (DeleteUserResp)
+
+	@doc "Get user permissions"
+	@handler getUserPermissions
+	get /users/:id/permissions (GetUserPermissionsReq) returns (GetUserPermissionsResp)
+}
+
+@server (
+	prefix: /api/identity
+	group:  role
+	jwt:    Auth
+)
+service identity-api {
+	@doc "List roles"
+	@handler getRoles
+	get /roles (GetRolesReq) returns (GetRolesResp)
+
+	@doc "Get role details"
+	@handler getRole
+	get /roles/:id (GetRoleReq) returns (GetRoleResp)
+
+	@doc "Create role"
+	@handler createRole
+	post /roles (CreateRoleReq) returns (CreateRoleResp)
+
+	@doc "Update role"
+	@handler updateRole
+	put /roles/:id (UpdateRoleReq) returns (UpdateRoleResp)
+
+	@doc "Delete role"
+	@handler deleteRole
+	delete /roles/:id (DeleteRoleReq) returns (DeleteRoleResp)
+}
+
+@server (
+	prefix: /api/identity
+	group:  permission
+	jwt:    Auth
+)
+service identity-api {
+	@doc "Get permission tree"
+	@handler getPermissions
+	get /permissions (GetPermissionsReq) returns (GetPermissionsResp)
+}
+
+@server (
+	prefix: /api/identity
+	group:  verification
+	jwt:    Auth
+)
+service identity-api {
+	@doc "Submit homeowner verification"
+	@handler submitVerification
+	post /verification (SubmitVerificationReq) returns (SubmitVerificationResp)
+
+	@doc "Get verification details"
+	@handler getVerification
+	get /verification/:id (GetVerificationReq) returns (GetVerificationResp)
+
+	@doc "Get my verification requests"
+	@handler getMyVerifications
+	get /verification/my (GetMyVerificationsReq) returns (GetMyVerificationsResp)
+
+	@doc "List all verification requests (admin)"
+	@handler getVerificationList
+	get /verifications (GetVerificationListReq) returns (GetVerificationListResp)
+
+	@doc "Review verification request (admin)"
+	@handler reviewVerification
+	put /verification/:id/review (ReviewVerificationReq) returns (ReviewVerificationResp)
+}
+
+@server (
+	prefix: /api/identity
+	group:  property
+	jwt:    Auth
+)
+service identity-api {
+	@doc "Bind property to user"
+	@handler bindProperty
+	post /property/bind (BindPropertyReq) returns (BindPropertyResp)
+
+	@doc "Unbind property from user"
+	@handler unbindProperty
+	delete /property/:id (UnbindPropertyReq) returns (UnbindPropertyResp)
+
+	@doc "Get my properties"
+	@handler getMyProperties
+	get /property/my (GetMyPropertiesReq) returns (GetMyPropertiesResp)
+}
+
+// File upload types
+type (
+	UploadFileReq {
+		EntityType string `form:"entity_type"`
+		EntityId   int64  `form:"entity_id"`
+	}
+	UploadFileResp {
+		FileId  int64  `json:"file_id"`
+		FileUrl string `json:"file_url"`
+	}
+	GetFileUrlReq {
+		FileId int64 `path:"file_id"`
+	}
+	GetFileUrlResp {
+		FileUrl string `json:"file_url"`
+	}
+)
+
+@server (
+	prefix: /api/identity
+	group:  file
+	jwt:    Auth
+)
+service identity-api {
+	@doc "Upload file to MinIO"
+	@handler uploadFile
+	post /file/upload (UploadFileReq) returns (UploadFileResp)
+
+	@doc "Get file URL"
+	@handler getFileUrl
+	get /file/:file_id (GetFileUrlReq) returns (GetFileUrlResp)
+}
+

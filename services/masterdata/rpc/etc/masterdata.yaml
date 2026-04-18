@@ -1,0 +1,12 @@
+Name: masterdata.rpc
+ListenOn: 0.0.0.0:8082
+Timeout: 30000
+
+Etcd:
+  Hosts:
+    - 127.0.0.1:2379
+  Key: masterdata.rpc
+
+DataSource: root:123456@tcp(localhost:3306)/masterdata_db?charset=utf8mb4&parseTime=true&loc=Local
+Cache:
+  - Host: localhost:6379

@@ -1,0 +1,211 @@
+syntax = "v1"
+
+info (
+	title:   "Masterdata Service API"
+	desc:    "Administrative division and community management"
+	author:  "community-and-home"
+	version: "v1.0"
+)
+
+type (
+	// Administrative Division Types
+	Division {
+		Id          int64  `json:"id"`
+		ParentId    *int64 `json:"parent_id"`
+		Level       int32  `json:"level"`
+		Name        string `json:"name"`
+		Code        string `json:"code"`
+		Path        string `json:"path"`
+		SortOrder   int32  `json:"sort_order"`
+		Status      int32  `json:"status"`
+		CreatedBy   int64  `json:"created_by"`
+		CreatedTime string `json:"created_time"`
+		UpdatedTime string `json:"updated_time"`
+	}
+	DivisionTree {
+		Division
+		Children []DivisionTree `json:"children,omitempty"`
+	}
+	GetDivisionsReq {
+		Mode     string `form:"mode,optional"` // list or tree
+		Level    *int32 `form:"level,optional"`
+		ParentId *int64 `form:"parent_id,optional"`
+		Page     int32  `form:"page,optional,default=1"`
+		PageSize int32  `form:"page_size,optional,default=20"`
+	}
+	GetDivisionsResp {
+		List  []Division     `json:"list,omitempty"`
+		Tree  []DivisionTree `json:"tree,omitempty"`
+		Total int64          `json:"total"`
+	}
+	GetDivisionReq {
+		Id int64 `path:"id"`
+	}
+	GetDivisionResp {
+		Division Division `json:"division"`
+	}
+	CreateDivisionReq {
+		ParentId  *int64 `json:"parent_id"`
+		Level     int32  `json:"level"`
+		Name      string `json:"name"`
+		Code      string `json:"code"`
+		SortOrder int32  `json:"sort_order,optional,default=0"`
+	}
+	CreateDivisionResp {
+		Id int64 `json:"id"`
+	}
+	UpdateDivisionReq {
+		Id        int64  `path:"id"`
+		ParentId  *int64 `json:"parent_id,optional"`
+		Name      string `json:"name,optional"`
+		Code      string `json:"code,optional"`
+		SortOrder int32  `json:"sort_order,optional"`
+		Status    int32  `json:"status,optional"`
+	}
+	UpdateDivisionResp {
+		Success bool `json:"success"`
+	}
+	DeleteDivisionReq {
+		Id int64 `path:"id"`
+	}
+	DeleteDivisionResp {
+		Success bool `json:"success"`
+	}
+	// Community Types
+	Community {
+		Id               int64   `json:"id"`
+		DivisionId       int64   `json:"division_id"`
+		Name             string  `json:"name"`
+		Address          string  `json:"address"`
+		Area             float64 `json:"area"`
+		Population       int32   `json:"population"`
+		CommunityType    int32   `json:"community_type"`
+		SubmissionStatus int32   `json:"submission_status"`
+		SubmitterId      int64   `json:"submitter_id"`
+		SubmitTime       string  `json:"submit_time"`
+		ReviewerId       *int64  `json:"reviewer_id"`
+		ReviewTime       string  `json:"review_time"`
+		ReviewNotes      string  `json:"review_notes"`
+		CreatedTime      string  `json:"created_time"`
+		UpdatedTime      string  `json:"updated_time"`
+	}
+	GetCommunitiesReq {
+		DivisionId       *int64 `form:"division_id,optional"`
+		SubmissionStatus *int32 `form:"submission_status,optional"`
+		Page             int32  `form:"page,optional,default=1"`
+		PageSize         int32  `form:"page_size,optional,default=20"`
+	}
+	GetCommunitiesResp {
+		List  []Community `json:"list"`
+		Total int64       `json:"total"`
+	}
+	GetCommunityReq {
+		Id int64 `path:"id"`
+	}
+	GetCommunityResp {
+		Community Community `json:"community"`
+	}
+	CreateCommunityReq {
+		DivisionId    int64   `json:"division_id"`
+		Name          string  `json:"name"`
+		Address       string  `json:"address"`
+		Area          float64 `json:"area,optional"`
+		Population    int32   `json:"population,optional"`
+		CommunityType int32   `json:"community_type"`
+	}
+	CreateCommunityResp {
+		Id int64 `json:"id"`
+	}
+	UpdateCommunityReq {
+		Id            int64   `path:"id"`
+		Name          string  `json:"name,optional"`
+		Address       string  `json:"address,optional"`
+		Area          float64 `json:"area,optional"`
+		Population    int32   `json:"population,optional"`
+		CommunityType int32   `json:"community_type,optional"`
+	}
+	UpdateCommunityResp {
+		Success bool `json:"success"`
+	}
+	SubmitCommunityReq {
+		Id int64 `path:"id"`
+	}
+	SubmitCommunityResp {
+		Success bool `json:"success"`
+	}
+	ReviewCommunityReq {
+		Id          int64  `path:"id"`
+		Action      string `json:"action"` // approve or reject
+		ReviewNotes string `json:"review_notes,optional"`
+	}
+	ReviewCommunityResp {
+		Success bool `json:"success"`
+	}
+	DeleteCommunityReq {
+		Id int64 `path:"id"`
+	}
+	DeleteCommunityResp {
+		Success bool `json:"success"`
+	}
+)
+
+@server (
+	prefix: /api/masterdata
+	group:  division
+)
+service masterdata-api {
+	@doc "List or tree view of administrative divisions"
+	@handler getDivisions
+	get /divisions (GetDivisionsReq) returns (GetDivisionsResp)
+
+	@doc "Get single division details"
+	@handler getDivision
+	get /divisions/:id (GetDivisionReq) returns (GetDivisionResp)
+
+	@doc "Create new administrative division"
+	@handler createDivision
+	post /divisions (CreateDivisionReq) returns (CreateDivisionResp)
+
+	@doc "Update administrative division"
+	@handler updateDivision
+	put /divisions/:id (UpdateDivisionReq) returns (UpdateDivisionResp)
+
+	@doc "Soft delete administrative division"
+	@handler deleteDivision
+	delete /divisions/:id (DeleteDivisionReq) returns (DeleteDivisionResp)
+}
+
+@server (
+	prefix: /api/masterdata
+	group:  community
+)
+service masterdata-api {
+	@doc "List communities with filters"
+	@handler getCommunities
+	get /communities (GetCommunitiesReq) returns (GetCommunitiesResp)
+
+	@doc "Get single community details"
+	@handler getCommunity
+	get /communities/:id (GetCommunityReq) returns (GetCommunityResp)
+
+	@doc "Create new community"
+	@handler createCommunity
+	post /communities (CreateCommunityReq) returns (CreateCommunityResp)
+
+	@doc "Update community"
+	@handler updateCommunity
+	put /communities/:id (UpdateCommunityReq) returns (UpdateCommunityResp)
+
+	@doc "Submit community for review"
+	@handler submitCommunity
+	post /communities/:id/submit (SubmitCommunityReq) returns (SubmitCommunityResp)
+
+	@doc "Review community (approve/reject)"
+	@handler reviewCommunity
+	post /communities/:id/review (ReviewCommunityReq) returns (ReviewCommunityResp)
+
+	@doc "Soft delete community"
+	@handler deleteCommunity
+	delete /communities/:id (DeleteCommunityReq) returns (DeleteCommunityResp)
+}
+
