@@ -6,6 +6,7 @@ package file
 import (
 	"net/http"
 
+	"github.com/guxiao/community-and-home/common/responsex"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/logic/file"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/svc"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/types"
@@ -23,10 +24,6 @@ func UploadFileHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := file.NewUploadFileLogic(r.Context(), svcCtx, r)
 		resp, err := l.UploadFile(&req)
-		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
-		}
+		responsex.Response(w, resp, err)
 	}
 }

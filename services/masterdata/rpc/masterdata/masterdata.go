@@ -14,25 +14,31 @@ import (
 )
 
 type (
-	Community                    = pb.Community
-	Division                     = pb.Division
-	DivisionTree                 = pb.DivisionTree
-	GetCommunitiesByDivisionReq  = pb.GetCommunitiesByDivisionReq
-	GetCommunitiesByDivisionResp = pb.GetCommunitiesByDivisionResp
-	GetCommunitiesByIdsReq       = pb.GetCommunitiesByIdsReq
-	GetCommunitiesByIdsResp      = pb.GetCommunitiesByIdsResp
-	GetCommunityReq              = pb.GetCommunityReq
-	GetCommunityResp             = pb.GetCommunityResp
-	GetDivisionPathReq           = pb.GetDivisionPathReq
-	GetDivisionPathResp          = pb.GetDivisionPathResp
-	GetDivisionReq               = pb.GetDivisionReq
-	GetDivisionResp              = pb.GetDivisionResp
-	GetDivisionTreeReq           = pb.GetDivisionTreeReq
-	GetDivisionTreeResp          = pb.GetDivisionTreeResp
-	GetDivisionsByIdsReq         = pb.GetDivisionsByIdsReq
-	GetDivisionsByIdsResp        = pb.GetDivisionsByIdsResp
-	ValidateScopeReq             = pb.ValidateScopeReq
-	ValidateScopeResp            = pb.ValidateScopeResp
+	CreateDivisionReq                 = pb.CreateDivisionReq
+	CreateDivisionResp                = pb.CreateDivisionResp
+	DeleteDivisionReq                 = pb.DeleteDivisionReq
+	DeleteDivisionResp                = pb.DeleteDivisionResp
+	Division                          = pb.Division
+	DivisionTree                      = pb.DivisionTree
+	GetDivisionPathReq                = pb.GetDivisionPathReq
+	GetDivisionPathResp               = pb.GetDivisionPathResp
+	GetDivisionReq                    = pb.GetDivisionReq
+	GetDivisionResp                   = pb.GetDivisionResp
+	GetDivisionTreeReq                = pb.GetDivisionTreeReq
+	GetDivisionTreeResp               = pb.GetDivisionTreeResp
+	GetDivisionsByIdsReq              = pb.GetDivisionsByIdsReq
+	GetDivisionsByIdsResp             = pb.GetDivisionsByIdsResp
+	GetResidentialAreaReq             = pb.GetResidentialAreaReq
+	GetResidentialAreaResp            = pb.GetResidentialAreaResp
+	GetResidentialAreasByDivisionReq  = pb.GetResidentialAreasByDivisionReq
+	GetResidentialAreasByDivisionResp = pb.GetResidentialAreasByDivisionResp
+	GetResidentialAreasByIdsReq       = pb.GetResidentialAreasByIdsReq
+	GetResidentialAreasByIdsResp      = pb.GetResidentialAreasByIdsResp
+	ResidentialArea                   = pb.ResidentialArea
+	UpdateDivisionReq                 = pb.UpdateDivisionReq
+	UpdateDivisionResp                = pb.UpdateDivisionResp
+	ValidateScopeReq                  = pb.ValidateScopeReq
+	ValidateScopeResp                 = pb.ValidateScopeResp
 
 	Masterdata interface {
 		// Division RPC methods
@@ -41,10 +47,13 @@ type (
 		GetDivisionTree(ctx context.Context, in *GetDivisionTreeReq, opts ...grpc.CallOption) (*GetDivisionTreeResp, error)
 		GetDivisionPath(ctx context.Context, in *GetDivisionPathReq, opts ...grpc.CallOption) (*GetDivisionPathResp, error)
 		ValidateScope(ctx context.Context, in *ValidateScopeReq, opts ...grpc.CallOption) (*ValidateScopeResp, error)
-		// Community RPC methods
-		GetCommunity(ctx context.Context, in *GetCommunityReq, opts ...grpc.CallOption) (*GetCommunityResp, error)
-		GetCommunitiesByIds(ctx context.Context, in *GetCommunitiesByIdsReq, opts ...grpc.CallOption) (*GetCommunitiesByIdsResp, error)
-		GetCommunitiesByDivision(ctx context.Context, in *GetCommunitiesByDivisionReq, opts ...grpc.CallOption) (*GetCommunitiesByDivisionResp, error)
+		CreateDivision(ctx context.Context, in *CreateDivisionReq, opts ...grpc.CallOption) (*CreateDivisionResp, error)
+		UpdateDivision(ctx context.Context, in *UpdateDivisionReq, opts ...grpc.CallOption) (*UpdateDivisionResp, error)
+		DeleteDivision(ctx context.Context, in *DeleteDivisionReq, opts ...grpc.CallOption) (*DeleteDivisionResp, error)
+		// Residential Area RPC methods
+		GetResidentialArea(ctx context.Context, in *GetResidentialAreaReq, opts ...grpc.CallOption) (*GetResidentialAreaResp, error)
+		GetResidentialAreasByIds(ctx context.Context, in *GetResidentialAreasByIdsReq, opts ...grpc.CallOption) (*GetResidentialAreasByIdsResp, error)
+		GetResidentialAreasByDivision(ctx context.Context, in *GetResidentialAreasByDivisionReq, opts ...grpc.CallOption) (*GetResidentialAreasByDivisionResp, error)
 	}
 
 	defaultMasterdata struct {
@@ -84,18 +93,33 @@ func (m *defaultMasterdata) ValidateScope(ctx context.Context, in *ValidateScope
 	return client.ValidateScope(ctx, in, opts...)
 }
 
-// Community RPC methods
-func (m *defaultMasterdata) GetCommunity(ctx context.Context, in *GetCommunityReq, opts ...grpc.CallOption) (*GetCommunityResp, error) {
+func (m *defaultMasterdata) CreateDivision(ctx context.Context, in *CreateDivisionReq, opts ...grpc.CallOption) (*CreateDivisionResp, error) {
 	client := pb.NewMasterdataClient(m.cli.Conn())
-	return client.GetCommunity(ctx, in, opts...)
+	return client.CreateDivision(ctx, in, opts...)
 }
 
-func (m *defaultMasterdata) GetCommunitiesByIds(ctx context.Context, in *GetCommunitiesByIdsReq, opts ...grpc.CallOption) (*GetCommunitiesByIdsResp, error) {
+func (m *defaultMasterdata) UpdateDivision(ctx context.Context, in *UpdateDivisionReq, opts ...grpc.CallOption) (*UpdateDivisionResp, error) {
 	client := pb.NewMasterdataClient(m.cli.Conn())
-	return client.GetCommunitiesByIds(ctx, in, opts...)
+	return client.UpdateDivision(ctx, in, opts...)
 }
 
-func (m *defaultMasterdata) GetCommunitiesByDivision(ctx context.Context, in *GetCommunitiesByDivisionReq, opts ...grpc.CallOption) (*GetCommunitiesByDivisionResp, error) {
+func (m *defaultMasterdata) DeleteDivision(ctx context.Context, in *DeleteDivisionReq, opts ...grpc.CallOption) (*DeleteDivisionResp, error) {
 	client := pb.NewMasterdataClient(m.cli.Conn())
-	return client.GetCommunitiesByDivision(ctx, in, opts...)
+	return client.DeleteDivision(ctx, in, opts...)
+}
+
+// Residential Area RPC methods
+func (m *defaultMasterdata) GetResidentialArea(ctx context.Context, in *GetResidentialAreaReq, opts ...grpc.CallOption) (*GetResidentialAreaResp, error) {
+	client := pb.NewMasterdataClient(m.cli.Conn())
+	return client.GetResidentialArea(ctx, in, opts...)
+}
+
+func (m *defaultMasterdata) GetResidentialAreasByIds(ctx context.Context, in *GetResidentialAreasByIdsReq, opts ...grpc.CallOption) (*GetResidentialAreasByIdsResp, error) {
+	client := pb.NewMasterdataClient(m.cli.Conn())
+	return client.GetResidentialAreasByIds(ctx, in, opts...)
+}
+
+func (m *defaultMasterdata) GetResidentialAreasByDivision(ctx context.Context, in *GetResidentialAreasByDivisionReq, opts ...grpc.CallOption) (*GetResidentialAreasByDivisionResp, error) {
+	client := pb.NewMasterdataClient(m.cli.Conn())
+	return client.GetResidentialAreasByDivision(ctx, in, opts...)
 }

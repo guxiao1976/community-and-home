@@ -28,7 +28,9 @@ func NewGetUserPermissionsLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *GetUserPermissionsLogic) GetUserPermissions(req *types.GetUserPermissionsReq) (resp *types.GetUserPermissionsResp, err error) {
-	// todo: add your logic here and delete this line
-
-	return
+	// TODO: This will be implemented in Phase 7 (Role & Permission Management)
+	// For now, return empty permissions list
+	return &types.GetUserPermissionsResp{
+		Permissions: []string{},
+	}, nil
 }

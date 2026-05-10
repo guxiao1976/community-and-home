@@ -20,6 +20,14 @@ CREATE TABLE IF NOT EXISTS md_administrative_division (
     path VARCHAR(500) NOT NULL COMMENT 'Materialized path (e.g., /1/23/456/)',
     sort_order INT NOT NULL DEFAULT 0 COMMENT 'Display order',
     status TINYINT NOT NULL DEFAULT 1 COMMENT '1=Active, 2=Inactive',
+    submission_status TINYINT NOT NULL DEFAULT 0 COMMENT '0=Pending, 1=Submitted, 2=Approved, 3=Rejected',
+    submission_type TINYINT NULL COMMENT '1=Create, 2=Update, 3=Delete',
+    change_snapshot JSON NULL COMMENT 'Snapshot of values before modification',
+    submitter_id BIGINT NULL COMMENT 'Submitter user ID',
+    submit_time TIMESTAMP NULL COMMENT 'Submission timestamp',
+    reviewer_id BIGINT NULL COMMENT 'Reviewer user ID',
+    review_time TIMESTAMP NULL COMMENT 'Review timestamp',
+    review_notes VARCHAR(500) NULL COMMENT 'Review notes/rejection reason',
     created_by BIGINT NOT NULL COMMENT 'Creator user ID',
     created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation timestamp',
     updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last update timestamp',
@@ -32,14 +40,21 @@ CREATE TABLE IF NOT EXISTS md_administrative_division (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Administrative division hierarchy';
 
 -- ============================================================
--- Table: md_community
--- Description: Community/village master data
+-- Table: md_residential_area
+-- Description: Residential area (小区) master data
 -- ============================================================
-CREATE TABLE IF NOT EXISTS md_community (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Community ID',
-    division_id BIGINT NOT NULL COMMENT 'Administrative division ID (level 5)',
-    name VARCHAR(100) NOT NULL COMMENT 'Community name',
+DROP TABLE IF EXISTS md_community;
+CREATE TABLE IF NOT EXISTS md_residential_area (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Residential area ID',
+    county_id BIGINT NULL COMMENT 'District/county division ID (level 3)',
+    street_id BIGINT NULL COMMENT 'Street division ID (level 4)',
+    community_div_id BIGINT NULL COMMENT 'Community division ID (level 5)',
+    code VARCHAR(100) NOT NULL COMMENT 'Residential area unique code',
+    name VARCHAR(100) NOT NULL COMMENT 'Residential area name',
     address VARCHAR(255) NOT NULL COMMENT 'Full address',
+    longitude DECIMAL(10,7) NULL COMMENT 'Longitude',
+    latitude DECIMAL(10,7) NULL COMMENT 'Latitude',
+    data_source TINYINT NOT NULL DEFAULT 0 COMMENT '0=Manual, 1=AMap API',
     area DECIMAL(10,2) NULL COMMENT 'Area in square kilometers',
     population INT NULL COMMENT 'Population count',
     community_type TINYINT NOT NULL COMMENT '1=Residential, 2=Village, 3=Mixed',
@@ -52,12 +67,17 @@ CREATE TABLE IF NOT EXISTS md_community (
     created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation timestamp',
     updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Last update timestamp',
     delete_time TIMESTAMP NULL COMMENT 'Soft delete timestamp',
-    KEY idx_division (division_id),
+    UNIQUE KEY uk_code (code),
+    KEY idx_county (county_id),
+    KEY idx_street (street_id),
+    KEY idx_community_div (community_div_id),
     KEY idx_status (submission_status),
     KEY idx_submitter (submitter_id),
     KEY idx_delete (delete_time),
-    CONSTRAINT fk_community_division FOREIGN KEY (division_id) REFERENCES md_administrative_division(id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Community master data';
+    CONSTRAINT fk_ra_county FOREIGN KEY (county_id) REFERENCES md_administrative_division(id) ON DELETE SET NULL,
+    CONSTRAINT fk_ra_street FOREIGN KEY (street_id) REFERENCES md_administrative_division(id) ON DELETE SET NULL,
+    CONSTRAINT fk_ra_community_div FOREIGN KEY (community_div_id) REFERENCES md_administrative_division(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Residential area master data';
 
 -- ============================================================
 -- Table: md_district_economic_data
@@ -143,3 +163,25 @@ CREATE TABLE IF NOT EXISTS md_audit_log (
     KEY idx_action (action),
     KEY idx_created_time (created_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Audit log';
+
+-- Table: md_submission_record
+-- Tracks submission/approval lifecycle for all masterdata entities
+CREATE TABLE IF NOT EXISTS md_submission_record (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Record ID',
+    entity_type VARCHAR(50) NOT NULL COMMENT 'Entity type (administrative_division/residential_area/configuration/sensitive_word)',
+    entity_id BIGINT NOT NULL COMMENT 'Entity ID (kept even if entity is deleted)',
+    entity_name VARCHAR(200) NULL COMMENT 'Entity name (snapshot at submit time)',
+    entity_code VARCHAR(100) NULL COMMENT 'Entity code (snapshot at submit time)',
+    submission_type TINYINT NOT NULL COMMENT '1=Create, 2=Update, 3=Delete',
+    submitter_id BIGINT NOT NULL COMMENT 'Submitter user ID',
+    submit_time TIMESTAMP NOT NULL COMMENT 'Submission timestamp',
+    reviewer_id BIGINT NULL COMMENT 'Reviewer user ID',
+    review_time TIMESTAMP NULL COMMENT 'Review timestamp',
+    review_result TINYINT NOT NULL DEFAULT 0 COMMENT '0=Pending, 1=Approved, 2=Rejected, 3=Withdrawn',
+    review_notes VARCHAR(500) NULL COMMENT 'Review notes/rejection reason',
+    created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Record created time',
+    KEY idx_submitter (submitter_id),
+    KEY idx_reviewer (reviewer_id),
+    KEY idx_entity (entity_type, entity_id),
+    KEY idx_result (review_result)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Submission/approval records';

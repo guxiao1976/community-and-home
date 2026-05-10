@@ -11,7 +11,7 @@ import (
 type ServiceContext struct {
 	Config                        config.Config
 	MdAdministrativeDivisionModel model.MdAdministrativeDivisionModel
-	MdCommunityModel              model.MdCommunityModel
+	MdResidentialAreaModel        model.MdResidentialAreaModel
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -22,6 +22,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	return &ServiceContext{
 		Config:                        c,
 		MdAdministrativeDivisionModel: model.NewMdAdministrativeDivisionModel(conn, cacheConf, opts),
-		MdCommunityModel:              model.NewMdCommunityModel(conn, cacheConf, opts),
+		MdResidentialAreaModel:        model.NewMdResidentialAreaModel(conn, cacheConf, opts),
 	}
 }

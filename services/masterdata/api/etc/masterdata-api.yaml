@@ -1,8 +1,11 @@
 Name: masterdata-api
 Host: 0.0.0.0
-Port: 8888
+Port: 8889
 Timeout: 30000
 
 DataSource: root:123456@tcp(localhost:3306)/masterdata_db?charset=utf8mb4&parseTime=true&loc=Local
 Cache:
   - Host: localhost:6379
+    Pass: "123456"
+
+AMapKey: "86a40b61232944538a345529ceaabcbe"

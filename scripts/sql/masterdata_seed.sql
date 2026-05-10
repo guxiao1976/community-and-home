@@ -103,16 +103,16 @@ INSERT INTO md_administrative_division (id, parent_id, level, name, code, path, 
 (32222, 3222, 5, '高新社区', '440305002002', '/3/32/322/3222/32222/', 2, 1, 1);
 
 -- ============================================================
--- Seed Data: md_community
--- Description: Sample community data (approved status)
+-- Seed Data: md_residential_area
+-- Description: Sample residential area data (approved status)
 -- ============================================================
 
-INSERT INTO md_community (id, division_id, name, address, area, population, community_type, submission_status, submitter_id, submit_time, reviewer_id, review_time) VALUES
-(1, 11411, '中关村东路社区居委会', '北京市海淀区中关村东路', 0.5, 5000, 1, 2, 1, NOW(), 1, NOW()),
-(2, 11412, '中关村西区社区居委会', '北京市海淀区中关村西区', 0.6, 6000, 1, 2, 1, NOW(), 1, NOW()),
-(3, 21311, '陆家嘴社区居委会', '上海市浦东新区陆家嘴', 0.8, 8000, 1, 2, 1, NOW(), 1, NOW()),
-(4, 31221, '珠江新城社区居委会', '广州市天河区珠江新城', 1.0, 10000, 1, 2, 1, NOW(), 1, NOW()),
-(5, 32221, '科技园社区居委会', '深圳市南山区科技园', 0.7, 7000, 1, 2, 1, NOW(), 1, NOW());
+INSERT INTO md_residential_area (id, county_id, street_id, community_div_id, code, name, address, area, population, community_type, submission_status, submitter_id, submit_time, reviewer_id, review_time) VALUES
+(1, 114, 1141, 11411, 'RA-110108001001', '中关村东路社区居委会', '北京市海淀区中关村东路', 0.5, 5000, 1, 2, 1, NOW(), 1, NOW()),
+(2, 114, 1141, 11412, 'RA-110108001002', '中关村西区社区居委会', '北京市海淀区中关村西区', 0.6, 6000, 1, 2, 1, NOW(), 1, NOW()),
+(3, 213, 2131, 21311, 'RA-310115001001', '陆家嘴社区居委会', '上海市浦东新区陆家嘴', 0.8, 8000, 1, 2, 1, NOW(), 1, NOW()),
+(4, 312, 3122, 31221, 'RA-440106002001', '珠江新城社区居委会', '广州市天河区珠江新城', 1.0, 10000, 1, 2, 1, NOW(), 1, NOW()),
+(5, 322, 3222, 32221, 'RA-440305002001', '科技园社区居委会', '深圳市南山区科技园', 0.7, 7000, 1, 2, 1, NOW(), 1, NOW());
 
 -- ============================================================
 -- Seed Data: md_district_economic_data
@@ -132,14 +132,14 @@ INSERT INTO md_district_economic_data (division_id, year, population, gdp, per_c
 -- ============================================================
 
 INSERT INTO md_configuration (module, config_key, config_value, value_type, description, is_public, approval_status, created_by) VALUES
-('auth', 'sms.rate_limit', '{"max_per_hour": 5, "max_per_day": 10}', 'json', '短信验证码发送频率限制', 0, 2, 1),
-('auth', 'password.min_length', '8', 'number', '密码最小长度', 0, 2, 1),
-('auth', 'password.require_special_char', 'true', 'boolean', '密码是否需要特殊字符', 0, 2, 1),
-('auth', 'jwt.access_token_expire', '7200', 'number', 'JWT访问令牌过期时间（秒）', 0, 2, 1),
-('auth', 'jwt.refresh_token_expire', '604800', 'number', 'JWT刷新令牌过期时间（秒）', 0, 2, 1),
-('masterdata', 'community.auto_approve', 'false', 'boolean', '社区数据是否自动审批', 0, 2, 1),
-('property', 'verification.max_documents', '9', 'number', '业主认证最大文档数量', 0, 2, 1),
-('property', 'file.max_size', '5242880', 'number', '文件上传最大大小（字节）', 0, 2, 1);
+('认证管理', 'sms.rate_limit', '{"max_per_hour": 5, "max_per_day": 10}', 'json', '短信验证码发送频率限制', 0, 2, 1),
+('认证管理', 'password.min_length', '8', 'number', '密码最小长度', 0, 2, 1),
+('认证管理', 'password.require_special_char', 'true', 'boolean', '密码是否需要特殊字符', 0, 2, 1),
+('认证管理', 'jwt.access_token_expire', '7200', 'number', 'JWT访问令牌过期时间（秒）', 0, 2, 1),
+('认证管理', 'jwt.refresh_token_expire', '604800', 'number', 'JWT刷新令牌过期时间（秒）', 0, 2, 1),
+('基础数据', 'community.auto_approve', 'false', 'boolean', '社区数据是否自动审批', 0, 2, 1),
+('物业管理', 'verification.max_documents', '9', 'number', '业主认证最大文档数量', 0, 2, 1),
+('物业管理', 'file.max_size', '5242880', 'number', '文件上传最大大小（字节）', 0, 2, 1);
 
 -- ============================================================
 -- Seed Data: md_sensitive_word

@@ -6,6 +6,7 @@ package role
 import (
 	"net/http"
 
+	"github.com/guxiao/community-and-home/common/responsex"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/logic/role"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/svc"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/types"
@@ -23,10 +24,6 @@ func GetRolesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := role.NewGetRolesLogic(r.Context(), svcCtx)
 		resp, err := l.GetRoles(&req)
-		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
-		}
+		responsex.Response(w, resp, err)
 	}
 }

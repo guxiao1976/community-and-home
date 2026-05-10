@@ -48,8 +48,8 @@ func (m *AuditLogMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		path := r.URL.Path
 		if containsSubstr(path, "/divisions") {
 			entityType = "md_administrative_division"
-		} else if containsSubstr(path, "/communities") {
-			entityType = "md_community"
+		} else if containsSubstr(path, "/residential-areas") {
+			entityType = "md_residential_area"
 		}
 
 		// Write audit log asynchronously

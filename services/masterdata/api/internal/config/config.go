@@ -9,4 +9,5 @@ type Config struct {
 	rest.RestConf
 	DataSource string
 	Cache      cache.CacheConf
+	AMapKey    string
 }

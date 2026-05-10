@@ -177,10 +177,10 @@ type LoginReq struct {
 }
 
 type LoginResp struct {
-	UserId       int64  `json:"user_id"`
-	Token        string `json:"token"`
-	RefreshToken string `json:"refresh_token"`
-	Expire       int64  `json:"expire"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	ExpiresIn    int64  `json:"expiresIn"`
+	User         User   `json:"user"`
 }
 
 type LoginSmsReq struct {
@@ -189,10 +189,10 @@ type LoginSmsReq struct {
 }
 
 type LoginSmsResp struct {
-	UserId       int64  `json:"user_id"`
-	Token        string `json:"token"`
-	RefreshToken string `json:"refresh_token"`
-	Expire       int64  `json:"expire"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	ExpiresIn    int64  `json:"expiresIn"`
+	User         User   `json:"user"`
 }
 
 type LogoutReq struct {
@@ -247,9 +247,9 @@ type RefreshTokenReq struct {
 }
 
 type RefreshTokenResp struct {
-	Token        string `json:"token"`
-	RefreshToken string `json:"refresh_token"`
-	Expire       int64  `json:"expire"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	ExpiresIn    int64  `json:"expiresIn"`
 }
 
 type RegisterReq struct {
@@ -372,132 +372,4 @@ type User struct {
 	ScopeId            *int64 `json:"scope_id"`
 	CreatedTime        string `json:"created_time"`
 	UpdatedTime        string `json:"updated_time"`
-}
-
-type CreateFamilyReq struct {
-	PropertyUnitId int64  `json:"property_unit_id"`
-	FamilyName     string `json:"family_name"`
-}
-
-type CreateFamilyResp struct {
-	Id int64 `json:"id"`
-}
-
-type GetFamilyReq struct {
-	Id int64 `path:"id"`
-}
-
-type FamilyWithMembers struct {
-	Id             int64          `json:"id"`
-	PropertyUnitId int64          `json:"property_unit_id"`
-	FamilyHeadId   int64          `json:"family_head_id"`
-	FamilyName     string         `json:"family_name"`
-	Status         int64          `json:"status"`
-	Members        []FamilyMember `json:"members"`
-	CreatedTime    string         `json:"created_time"`
-	UpdatedTime    string         `json:"updated_time"`
-}
-
-type GetFamilyResp struct {
-	Family FamilyWithMembers `json:"family"`
-}
-
-type UpdateFamilyReq struct {
-	Id         int64  `path:"id"`
-	FamilyName string `json:"family_name,optional"`
-	Status     *int64 `json:"status,optional"`
-}
-
-type UpdateFamilyResp struct {
-	Success bool `json:"success"`
-}
-
-type DeleteFamilyReq struct {
-	Id int64 `path:"id"`
-}
-
-type DeleteFamilyResp struct {
-	Success bool `json:"success"`
-}
-
-type GetPropertyFamiliesReq struct {
-	PropertyUnitId int64  `path:"property_unit_id"`
-	Page           int32  `form:"page,optional,default=1"`
-	PageSize       int32  `form:"page_size,optional,default=20"`
-	Status         *int64 `form:"status,optional"`
-}
-
-type GetPropertyFamiliesResp struct {
-	List  []Family `json:"list"`
-	Total int64    `json:"total"`
-}
-
-type Family struct {
-	Id             int64  `json:"id"`
-	PropertyUnitId int64  `json:"property_unit_id"`
-	FamilyHeadId   int64  `json:"family_head_id"`
-	FamilyName     string `json:"family_name"`
-	Status         int64  `json:"status"`
-	MemberCount    int    `json:"member_count"`
-	CreatedTime    string `json:"created_time"`
-	UpdatedTime    string `json:"updated_time"`
-}
-
-type AddFamilyMemberReq struct {
-	FamilyId     int64   `path:"id"`
-	UserId       *int64  `json:"user_id,optional"`
-	Name         string  `json:"name"`
-	Relationship string  `json:"relationship"`
-	Phone        *string `json:"phone,optional"`
-	IdCardNumber *string `json:"id_card_number,optional"`
-	BirthDate    *string `json:"birth_date,optional"`
-	Gender       *int64  `json:"gender,optional"`
-}
-
-type AddFamilyMemberResp struct {
-	Id int64 `json:"id"`
-}
-
-type GetFamilyMembersReq struct {
-	FamilyId int64 `path:"id"`
-}
-
-type GetFamilyMembersResp struct {
-	List []FamilyMember `json:"list"`
-}
-
-type FamilyMember struct {
-	Id           int64   `json:"id"`
-	FamilyId     int64   `json:"family_id"`
-	UserId       *int64  `json:"user_id,omitempty"`
-	Name         string  `json:"name"`
-	Relationship string  `json:"relationship"`
-	Phone        *string `json:"phone,omitempty"`
-	IdCardNumber *string `json:"id_card_number,omitempty"`
-	BirthDate    *string `json:"birth_date,omitempty"`
-	Gender       *int64  `json:"gender,omitempty"`
-	CreatedTime  string  `json:"created_time"`
-	UpdatedTime  string  `json:"updated_time"`
-}
-
-type UpdateFamilyMemberReq struct {
-	Id           int64   `path:"member_id"`
-	Name         *string `json:"name,optional"`
-	Relationship *string `json:"relationship,optional"`
-	Phone        *string `json:"phone,optional"`
-	IdCardNumber *string `json:"id_card_number,optional"`
-	BirthDate    *string `json:"birth_date,optional"`
-	Gender       *int64  `json:"gender,optional"`
-}
-
-type UpdateFamilyMemberResp struct {
-	Success bool `json:"success"`
-}
-
-type DeleteFamilyMemberReq struct {
-	Id int64 `path:"member_id"`
-}
-
-type DeleteFamilyMemberResp struct {
-	Success bool `json:"success"`
 }

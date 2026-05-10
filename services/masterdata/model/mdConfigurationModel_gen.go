@@ -43,18 +43,26 @@ type (
 	}
 
 	MdConfiguration struct {
-		Id             int64          `db:"id"`
-		Module         string         `db:"module"`
-		ConfigKey      string         `db:"config_key"`
-		ConfigValue    string         `db:"config_value"`
-		ValueType      string         `db:"value_type"`
-		Description    sql.NullString `db:"description"`
-		IsPublic       int64          `db:"is_public"`
-		ApprovalStatus int64          `db:"approval_status"`
-		CreatedBy      int64          `db:"created_by"`
-		CreatedTime    time.Time      `db:"created_time"`
-		UpdatedTime    time.Time      `db:"updated_time"`
-		DeleteTime     sql.NullTime   `db:"delete_time"`
+		Id               int64          `db:"id"`
+		Module           string         `db:"module"`
+		ConfigKey        string         `db:"config_key"`
+		ConfigValue      string         `db:"config_value"`
+		ValueType        string         `db:"value_type"`
+		Description      sql.NullString `db:"description"`
+		IsPublic         int64          `db:"is_public"`
+		ApprovalStatus   int64          `db:"approval_status"`
+		SubmissionStatus int64          `db:"submission_status"`
+		SubmissionType   sql.NullInt64  `db:"submission_type"`
+		ChangeSnapshot   sql.NullString `db:"change_snapshot"`
+		SubmitterId      sql.NullInt64  `db:"submitter_id"`
+		SubmitTime       sql.NullTime   `db:"submit_time"`
+		ReviewerId       sql.NullInt64  `db:"reviewer_id"`
+		ReviewTime       sql.NullTime   `db:"review_time"`
+		ReviewNotes      sql.NullString `db:"review_notes"`
+		CreatedBy        int64          `db:"created_by"`
+		CreatedTime      time.Time      `db:"created_time"`
+		UpdatedTime      time.Time      `db:"updated_time"`
+		DeleteTime       sql.NullTime   `db:"delete_time"`
 	}
 )
 
@@ -121,8 +129,8 @@ func (m *defaultMdConfigurationModel) Insert(ctx context.Context, data *MdConfig
 	mdConfigurationIdKey := fmt.Sprintf("%s%v", cacheMdConfigurationIdPrefix, data.Id)
 	mdConfigurationModuleConfigKeyKey := fmt.Sprintf("%s%v:%v", cacheMdConfigurationModuleConfigKeyPrefix, data.Module, data.ConfigKey)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, mdConfigurationRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.Module, data.ConfigKey, data.ConfigValue, data.ValueType, data.Description, data.IsPublic, data.ApprovalStatus, data.CreatedBy, data.CreatedTime, data.UpdatedTime, data.DeleteTime)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, mdConfigurationRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.Module, data.ConfigKey, data.ConfigValue, data.ValueType, data.Description, data.IsPublic, data.ApprovalStatus, data.SubmissionStatus, data.SubmissionType, data.ChangeSnapshot, data.SubmitterId, data.SubmitTime, data.ReviewerId, data.ReviewTime, data.ReviewNotes, data.CreatedBy, data.CreatedTime, data.UpdatedTime, data.DeleteTime)
 	}, mdConfigurationIdKey, mdConfigurationModuleConfigKeyKey)
 	return ret, err
 }
@@ -137,7 +145,7 @@ func (m *defaultMdConfigurationModel) Update(ctx context.Context, newData *MdCon
 	mdConfigurationModuleConfigKeyKey := fmt.Sprintf("%s%v:%v", cacheMdConfigurationModuleConfigKeyPrefix, data.Module, data.ConfigKey)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, mdConfigurationRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.Module, newData.ConfigKey, newData.ConfigValue, newData.ValueType, newData.Description, newData.IsPublic, newData.ApprovalStatus, newData.CreatedBy, newData.CreatedTime, newData.UpdatedTime, newData.DeleteTime, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.Module, newData.ConfigKey, newData.ConfigValue, newData.ValueType, newData.Description, newData.IsPublic, newData.ApprovalStatus, newData.SubmissionStatus, newData.SubmissionType, newData.ChangeSnapshot, newData.SubmitterId, newData.SubmitTime, newData.ReviewerId, newData.ReviewTime, newData.ReviewNotes, newData.CreatedBy, newData.CreatedTime, newData.UpdatedTime, newData.DeleteTime, newData.Id)
 	}, mdConfigurationIdKey, mdConfigurationModuleConfigKeyKey)
 	return err
 }

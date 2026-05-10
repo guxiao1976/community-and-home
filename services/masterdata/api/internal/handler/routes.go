@@ -6,10 +6,15 @@ package handler
 import (
 	"net/http"
 
-	community "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/community"
+	amap_sync "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/amap_sync"
+	approval "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/approval"
 	configuration "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/configuration"
+	deleted_items "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/deleted_items"
 	division "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/division"
+	residentialarea "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/residentialarea"
 	sensitiveword "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/sensitiveword"
+	statistics "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/statistics"
+	submissionrecord "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/submissionrecord"
 	"github.com/guxiao/community-and-home/services/masterdata/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -19,46 +24,124 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
-				// List communities with filters
+				// 获取同步任务进度
 				Method:  http.MethodGet,
-				Path:    "/communities",
-				Handler: community.GetCommunitiesHandler(serverCtx),
+				Path:    "/amap-sync/progress",
+				Handler: amap_sync.GetSyncProgressHandler(serverCtx),
 			},
 			{
-				// Create new community
+				// 触发高德地图小区数据同步
 				Method:  http.MethodPost,
-				Path:    "/communities",
-				Handler: community.CreateCommunityHandler(serverCtx),
+				Path:    "/amap-sync/sync",
+				Handler: amap_sync.SyncResidentialAreasHandler(serverCtx),
 			},
+		},
+		rest.WithPrefix("/api/masterdata"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
 			{
-				// Get single community details
+				// Get approval detail with snapshot comparison
 				Method:  http.MethodGet,
-				Path:    "/communities/:id",
-				Handler: community.GetCommunityHandler(serverCtx),
+				Path:    "/approval/:entity_type/:id",
+				Handler: approval.GetApprovalDetailHandler(serverCtx),
 			},
 			{
-				// Update community
+				// Review a pending item
+				Method:  http.MethodPost,
+				Path:    "/approval/:entity_type/:id/review",
+				Handler: approval.ReviewItemHandler(serverCtx),
+			},
+			{
+				// Batch review pending items
+				Method:  http.MethodPost,
+				Path:    "/approval/batch-review",
+				Handler: approval.BatchReviewItemsHandler(serverCtx),
+			},
+			{
+				// Get pending approval counts per entity type
+				Method:  http.MethodGet,
+				Path:    "/approval/pending-counts",
+				Handler: approval.GetPendingCountsHandler(serverCtx),
+			},
+			{
+				// Get pending approval items
+				Method:  http.MethodGet,
+				Path:    "/approval/pending-items",
+				Handler: approval.GetPendingItemsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/masterdata"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// List configurations with filters
+				Method:  http.MethodGet,
+				Path:    "/configurations",
+				Handler: configuration.GetConfigurationsHandler(serverCtx),
+			},
+			{
+				// Create new configuration
+				Method:  http.MethodPost,
+				Path:    "/configurations",
+				Handler: configuration.CreateConfigurationHandler(serverCtx),
+			},
+			{
+				// Get single configuration details
+				Method:  http.MethodGet,
+				Path:    "/configurations/:id",
+				Handler: configuration.GetConfigurationHandler(serverCtx),
+			},
+			{
+				// Update configuration
 				Method:  http.MethodPut,
-				Path:    "/communities/:id",
-				Handler: community.UpdateCommunityHandler(serverCtx),
+				Path:    "/configurations/:id",
+				Handler: configuration.UpdateConfigurationHandler(serverCtx),
 			},
 			{
-				// Soft delete community
+				// Soft delete configuration
 				Method:  http.MethodDelete,
-				Path:    "/communities/:id",
-				Handler: community.DeleteCommunityHandler(serverCtx),
+				Path:    "/configurations/:id",
+				Handler: configuration.DeleteConfigurationHandler(serverCtx),
 			},
 			{
-				// Review community (approve/reject)
+				// Submit configuration
 				Method:  http.MethodPost,
-				Path:    "/communities/:id/review",
-				Handler: community.ReviewCommunityHandler(serverCtx),
+				Path:    "/configurations/:id/submit",
+				Handler: configuration.SubmitConfigurationHandler(serverCtx),
 			},
 			{
-				// Submit community for review
+				// Batch submit configurations
 				Method:  http.MethodPost,
-				Path:    "/communities/:id/submit",
-				Handler: community.SubmitCommunityHandler(serverCtx),
+				Path:    "/configurations/batch-submit",
+				Handler: configuration.BatchSubmitConfigurationsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/masterdata"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// Get deleted items list with optional entity type filter
+				Method:  http.MethodGet,
+				Path:    "/deleted-items",
+				Handler: deleted_items.GetDeletedItemsHandler(serverCtx),
+			},
+			{
+				// Restore a deleted item
+				Method:  http.MethodPost,
+				Path:    "/deleted-items/:entity_type/:id/restore",
+				Handler: deleted_items.RestoreDeletedItemHandler(serverCtx),
+			},
+			{
+				// Get deleted items counts per entity type
+				Method:  http.MethodGet,
+				Path:    "/deleted-items/counts",
+				Handler: deleted_items.GetDeletedCountsHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/masterdata"),
@@ -96,6 +179,36 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/divisions/:id",
 				Handler: division.DeleteDivisionHandler(serverCtx),
 			},
+			{
+				// Cancel delete request
+				Method:  http.MethodPost,
+				Path:    "/divisions/:id/cancel-delete",
+				Handler: division.CancelDeleteDivisionHandler(serverCtx),
+			},
+			{
+				// Request delete for approved division
+				Method:  http.MethodPost,
+				Path:    "/divisions/:id/request-delete",
+				Handler: division.RequestDeleteDivisionHandler(serverCtx),
+			},
+			{
+				// Submit division
+				Method:  http.MethodPost,
+				Path:    "/divisions/:id/submit",
+				Handler: division.SubmitDivisionHandler(serverCtx),
+			},
+			{
+				// Withdraw submitted division
+				Method:  http.MethodPost,
+				Path:    "/divisions/:id/withdraw",
+				Handler: division.WithdrawDivisionHandler(serverCtx),
+			},
+			{
+				// Batch submit divisions
+				Method:  http.MethodPost,
+				Path:    "/divisions/batch-submit",
+				Handler: division.BatchSubmitDivisionsHandler(serverCtx),
+			},
 		},
 		rest.WithPrefix("/api/masterdata"),
 	)
@@ -103,34 +216,52 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
-				// Create configuration
+				// List residential areas with filters
+				Method:  http.MethodGet,
+				Path:    "/residential-areas",
+				Handler: residentialarea.GetResidentialAreasHandler(serverCtx),
+			},
+			{
+				// Create new residential area
 				Method:  http.MethodPost,
-				Path:    "/configurations",
-				Handler: configuration.CreateConfigHandler(serverCtx),
+				Path:    "/residential-areas",
+				Handler: residentialarea.CreateResidentialAreaHandler(serverCtx),
 			},
 			{
-				// Get configuration list
+				// Get single residential area details
 				Method:  http.MethodGet,
-				Path:    "/configurations",
-				Handler: configuration.GetConfigsHandler(serverCtx),
+				Path:    "/residential-areas/:id",
+				Handler: residentialarea.GetResidentialAreaHandler(serverCtx),
 			},
 			{
-				// Get single configuration
-				Method:  http.MethodGet,
-				Path:    "/configurations/:id",
-				Handler: configuration.GetConfigHandler(serverCtx),
-			},
-			{
-				// Update configuration
+				// Update residential area
 				Method:  http.MethodPut,
-				Path:    "/configurations/:id",
-				Handler: configuration.UpdateConfigHandler(serverCtx),
+				Path:    "/residential-areas/:id",
+				Handler: residentialarea.UpdateResidentialAreaHandler(serverCtx),
 			},
 			{
-				// Delete configuration
+				// Soft delete residential area
 				Method:  http.MethodDelete,
-				Path:    "/configurations/:id",
-				Handler: configuration.DeleteConfigHandler(serverCtx),
+				Path:    "/residential-areas/:id",
+				Handler: residentialarea.DeleteResidentialAreaHandler(serverCtx),
+			},
+			{
+				// Review residential area (approve/reject)
+				Method:  http.MethodPost,
+				Path:    "/residential-areas/:id/review",
+				Handler: residentialarea.ReviewResidentialAreaHandler(serverCtx),
+			},
+			{
+				// Submit residential area for review
+				Method:  http.MethodPost,
+				Path:    "/residential-areas/:id/submit",
+				Handler: residentialarea.SubmitResidentialAreaHandler(serverCtx),
+			},
+			{
+				// Batch submit residential areas
+				Method:  http.MethodPost,
+				Path:    "/residential-areas/batch-submit",
+				Handler: residentialarea.BatchSubmitResidentialAreasHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/masterdata"),
@@ -139,16 +270,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
-				// Create sensitive word
-				Method:  http.MethodPost,
-				Path:    "/sensitive-words",
-				Handler: sensitiveword.CreateSensitiveWordHandler(serverCtx),
-			},
-			{
-				// Get sensitive word list
+				// List sensitive words with filters
 				Method:  http.MethodGet,
 				Path:    "/sensitive-words",
 				Handler: sensitiveword.GetSensitiveWordsHandler(serverCtx),
+			},
+			{
+				// Create new sensitive word
+				Method:  http.MethodPost,
+				Path:    "/sensitive-words",
+				Handler: sensitiveword.CreateSensitiveWordHandler(serverCtx),
 			},
 			{
 				// Update sensitive word
@@ -157,10 +288,52 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: sensitiveword.UpdateSensitiveWordHandler(serverCtx),
 			},
 			{
-				// Delete sensitive word
+				// Soft delete sensitive word
 				Method:  http.MethodDelete,
 				Path:    "/sensitive-words/:id",
 				Handler: sensitiveword.DeleteSensitiveWordHandler(serverCtx),
+			},
+			{
+				// Submit sensitive word
+				Method:  http.MethodPost,
+				Path:    "/sensitive-words/:id/submit",
+				Handler: sensitiveword.SubmitSensitiveWordHandler(serverCtx),
+			},
+			{
+				// Batch submit sensitive words
+				Method:  http.MethodPost,
+				Path:    "/sensitive-words/batch-submit",
+				Handler: sensitiveword.BatchSubmitSensitiveWordsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/masterdata"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// Get division counts statistics
+				Method:  http.MethodGet,
+				Path:    "/statistics/division-counts",
+				Handler: statistics.GetDivisionCountsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/masterdata"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// Get my submission records
+				Method:  http.MethodGet,
+				Path:    "/submission-records/my",
+				Handler: submissionrecord.GetMySubmissionRecordsHandler(serverCtx),
+			},
+			{
+				// Get reviewed submission records
+				Method:  http.MethodGet,
+				Path:    "/submission-records/reviewed",
+				Handler: submissionrecord.GetReviewedSubmissionRecordsHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/masterdata"),

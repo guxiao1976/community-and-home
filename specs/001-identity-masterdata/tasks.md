@@ -72,7 +72,7 @@
 ### Model Generation (Masterdata Service)
 
 - [ ] T029 [P] Generate md_administrative_division model using goctl in services/masterdata/model/mdadministrativedivisionmodel.go
-- [ ] T030 [P] Generate md_community model using goctl in services/masterdata/model/mdcommunitymodel.go
+- [ ] T030 [P] Generate md_residential_area model using goctl in services/masterdata/model/mdresidentialareamodel.go
 - [ ] T031 [P] Generate md_district_economic_data model using goctl in services/masterdata/model/mddistricteconomicdatamodel.go
 - [ ] T032 [P] Generate md_configuration model using goctl in services/masterdata/model/mdconfigurationmodel.go
 - [ ] T033 [P] Generate md_sensitive_word model using goctl in services/masterdata/model/mdsensitivewordmodel.go

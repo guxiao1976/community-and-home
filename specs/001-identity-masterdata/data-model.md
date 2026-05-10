@@ -383,15 +383,18 @@ Five-tier administrative division hierarchy.
 
 ---
 
-### md_community
+### md_residential_area
 
-Community/village master data.
+Residential area (住宅小区) master data.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | Community ID |
-| division_id | BIGINT | NOT NULL, INDEX | Administrative division ID (level 5) |
-| name | VARCHAR(100) | NOT NULL | Community name |
+| id | BIGINT | PRIMARY KEY, AUTO_INCREMENT | Residential area ID |
+| county_id | BIGINT | NULL, INDEX | District/county division ID (level 3) |
+| street_id | BIGINT | NULL, INDEX | Street division ID (level 4) |
+| community_div_id | BIGINT | NULL, INDEX | Community division ID (level 5) |
+| code | VARCHAR(100) | NOT NULL, UNIQUE | Residential area unique code |
+| name | VARCHAR(100) | NOT NULL | Residential area name |
 | address | VARCHAR(255) | NOT NULL | Full address |
 | area | DECIMAL(10,2) | NULL | Area in square kilometers |
 | population | INT | NULL | Population count |
@@ -408,16 +411,22 @@ Community/village master data.
 
 **Indexes**:
 - PRIMARY KEY (id)
-- KEY idx_division (division_id)
+- UNIQUE KEY uk_code (code)
+- KEY idx_county (county_id)
+- KEY idx_street (street_id)
+- KEY idx_community_div (community_div_id)
 - KEY idx_status (submission_status)
 - KEY idx_submitter (submitter_id)
 - KEY idx_delete (delete_time)
 
 **Foreign Keys**:
-- FOREIGN KEY (division_id) REFERENCES md_administrative_division(id) ON DELETE RESTRICT
+- FOREIGN KEY (county_id) REFERENCES md_administrative_division(id) ON DELETE SET NULL
+- FOREIGN KEY (street_id) REFERENCES md_administrative_division(id) ON DELETE SET NULL
+- FOREIGN KEY (community_div_id) REFERENCES md_administrative_division(id) ON DELETE SET NULL
 
 **Validation Rules**:
-- division_id: Must reference level 5 (community) division
+- code: Must be unique across all residential areas
+- county_id/street_id/community_div_id: Must reference valid administrative divisions
 - submission_status: 0→1 (submit), 1→2 (approve), 1→3 (reject)
 - Only headquarters can approve/reject (reviewer must have scope_id=NULL)
 
@@ -571,14 +580,14 @@ auth_user (1) ----< (N) auth_uploaded_file
 
 ```
 md_administrative_division (1) ----< (N) md_administrative_division (parent-child)
-md_administrative_division (1) ----< (N) md_community
+md_administrative_division (1) ----< (N) md_residential_area
 md_administrative_division (1) ----< (N) md_district_economic_data
 ```
 
 ### Cross-Service References
 
 ```
-auth_property_unit.community_id -> md_community.id (via RPC, not FK)
+auth_property_unit.community_div_id -> md_residential_area.id (via RPC, not FK)
 auth_user.scope_id -> md_administrative_division.id (via RPC, not FK)
 ```
 

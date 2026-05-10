@@ -30,8 +30,8 @@ minio/data/
 *.dylib
 *.test
 *.out
-services/*/api/api
-services/*/rpc/rpc
+*-api
+*-rpc
 
 # ==================== Python ====================
 __pycache__/

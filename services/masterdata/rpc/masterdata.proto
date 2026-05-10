@@ -22,22 +22,25 @@ message DivisionTree {
   repeated DivisionTree children = 2;
 }
 
-message Community {
+message ResidentialArea {
   int64 id = 1;
-  int64 division_id = 2;
-  string name = 3;
-  string address = 4;
-  double area = 5;
-  int32 population = 6;
-  int32 community_type = 7;
-  int32 submission_status = 8;
-  int64 submitter_id = 9;
-  string submit_time = 10;
-  int64 reviewer_id = 11;
-  string review_time = 12;
-  string review_notes = 13;
-  string created_time = 14;
-  string updated_time = 15;
+  int64 county_id = 2;
+  int64 street_id = 3;
+  int64 community_div_id = 4;
+  string code = 5;
+  string name = 6;
+  string address = 7;
+  double area = 8;
+  int32 population = 9;
+  int32 community_type = 10;
+  int32 submission_status = 11;
+  int64 submitter_id = 12;
+  string submit_time = 13;
+  int64 reviewer_id = 14;
+  string review_time = 15;
+  string review_notes = 16;
+  string created_time = 17;
+  string updated_time = 18;
 }
 
 // Division RPC requests/responses
@@ -82,30 +85,67 @@ message ValidateScopeResp {
   bool allowed = 1;
 }
 
-// Community RPC requests/responses
-message GetCommunityReq {
+message CreateDivisionReq {
+  int64 parent_id = 1;
+  int32 level = 2;
+  string name = 3;
+  string code = 4;
+  int32 sort_order = 5;
+  int64 created_by = 6;
+}
+
+message CreateDivisionResp {
   int64 id = 1;
 }
 
-message GetCommunityResp {
-  Community community = 1;
+message UpdateDivisionReq {
+  int64 id = 1;
+  int64 parent_id = 2;
+  int32 level = 3;
+  string name = 4;
+  string code = 5;
+  int32 sort_order = 6;
+  int32 status = 7;
 }
 
-message GetCommunitiesByIdsReq {
+message UpdateDivisionResp {
+  bool success = 1;
+}
+
+message DeleteDivisionReq {
+  int64 id = 1;
+}
+
+message DeleteDivisionResp {
+  bool success = 1;
+}
+
+// Residential Area RPC requests/responses
+message GetResidentialAreaReq {
+  int64 id = 1;
+}
+
+message GetResidentialAreaResp {
+  ResidentialArea residential_area = 1;
+}
+
+message GetResidentialAreasByIdsReq {
   repeated int64 ids = 1;
 }
 
-message GetCommunitiesByIdsResp {
-  repeated Community communities = 1;
+message GetResidentialAreasByIdsResp {
+  repeated ResidentialArea residential_areas = 1;
 }
 
-message GetCommunitiesByDivisionReq {
-  int64 division_id = 1;
-  int32 status = 2; // 0=all, 1=approved only
+message GetResidentialAreasByDivisionReq {
+  int64 county_id = 1;
+  int64 street_id = 2;
+  int64 community_div_id = 3;
+  int32 status = 4; // 0=all, 1=approved only
 }
 
-message GetCommunitiesByDivisionResp {
-  repeated Community communities = 1;
+message GetResidentialAreasByDivisionResp {
+  repeated ResidentialArea residential_areas = 1;
 }
 
 // Masterdata service definition
@@ -116,9 +156,12 @@ service Masterdata {
   rpc GetDivisionTree(GetDivisionTreeReq) returns (GetDivisionTreeResp);
   rpc GetDivisionPath(GetDivisionPathReq) returns (GetDivisionPathResp);
   rpc ValidateScope(ValidateScopeReq) returns (ValidateScopeResp);
+  rpc CreateDivision(CreateDivisionReq) returns (CreateDivisionResp);
+  rpc UpdateDivision(UpdateDivisionReq) returns (UpdateDivisionResp);
+  rpc DeleteDivision(DeleteDivisionReq) returns (DeleteDivisionResp);
 
-  // Community RPC methods
-  rpc GetCommunity(GetCommunityReq) returns (GetCommunityResp);
-  rpc GetCommunitiesByIds(GetCommunitiesByIdsReq) returns (GetCommunitiesByIdsResp);
-  rpc GetCommunitiesByDivision(GetCommunitiesByDivisionReq) returns (GetCommunitiesByDivisionResp);
+  // Residential Area RPC methods
+  rpc GetResidentialArea(GetResidentialAreaReq) returns (GetResidentialAreaResp);
+  rpc GetResidentialAreasByIds(GetResidentialAreasByIdsReq) returns (GetResidentialAreasByIdsResp);
+  rpc GetResidentialAreasByDivision(GetResidentialAreasByDivisionReq) returns (GetResidentialAreasByDivisionResp);
 }

@@ -10,7 +10,15 @@ Auth:
 DataSource: root:123456@tcp(localhost:3306)/identity_db?charset=utf8mb4&parseTime=true&loc=Local
 Cache:
   - Host: localhost:6379
+    Pass: "123456"
 
 Casbin:
-  ModelPath: services/identity/api/etc/rbac_model.conf
+  ModelPath: etc/rbac_model.conf
   PolicyAdapter: ""
+
+MinIO:
+  Endpoint: localhost:9000
+  AccessKeyID: admin
+  SecretAccessKey: "12345678"
+  UseSSL: false
+  BucketName: community-home

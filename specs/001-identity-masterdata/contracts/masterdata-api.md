@@ -828,7 +828,7 @@ Query audit logs.
         "log_id": 10001,
         "user_id": 100,
         "user_name": "张三",
-        "entity_type": "md_community",
+        "entity_type": "md_residential_area",
         "entity_id": 1001,
         "action": "UPDATE",
         "old_value": "{\"name\":\"XX小区\"}",

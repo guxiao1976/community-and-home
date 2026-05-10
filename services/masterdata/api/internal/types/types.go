@@ -3,11 +3,367 @@
 
 package types
 
-type Community struct {
+type ApprovalDetailResp struct {
+	Id             int64  `json:"id"`
+	EntityType     string `json:"entity_type"`
+	SubmissionType int32  `json:"submission_type"`
+	CurrentData    string `json:"current_data"`
+	SnapshotData   string `json:"snapshot_data"`
+	SubmitterId    int64  `json:"submitter_id"`
+	SubmitTime     string `json:"submit_time"`
+	ReviewerId     *int64 `json:"reviewer_id"`
+	ReviewTime     string `json:"review_time"`
+	ReviewNotes    string `json:"review_notes"`
+}
+
+type ApprovalPendingItem struct {
+	Id               int64  `json:"id"`
+	EntityType       string `json:"entity_type"`
+	SubmissionType   int32  `json:"submission_type"`
+	Name             string `json:"name"`
+	ChangeSummary    string `json:"change_summary"`
+	SubmitterId      int64  `json:"submitter_id"`
+	SubmitTime       string `json:"submit_time"`
+	SubmissionStatus int32  `json:"submission_status"`
+}
+
+type BatchReviewReq struct {
+	EntityType  string  `json:"entity_type"`
+	Ids         []int64 `json:"ids"`
+	Action      string  `json:"action"`
+	ReviewNotes string  `json:"review_notes,optional"`
+}
+
+type BatchReviewResp struct {
+	SuccessCount int64 `json:"success_count"`
+	FailCount    int64 `json:"fail_count"`
+}
+
+type BatchSubmitReq struct {
+	Ids []int64 `json:"ids"`
+}
+
+type BatchSubmitResp struct {
+	Success bool `json:"success"`
+}
+
+type Configuration struct {
+	Id             int64  `json:"id"`
+	Module         string `json:"module"`
+	Key            string `json:"key"`
+	Value          string `json:"value"`
+	ValueType      string `json:"value_type"`
+	Description    string `json:"description"`
+	IsPublic       int32  `json:"is_public"`
+	ApprovalStatus int32  `json:"approval_status"`
+	CreatedBy      int64  `json:"created_by"`
+	CreatedTime    string `json:"created_time"`
+	UpdatedTime    string `json:"updated_time"`
+}
+
+type CreateConfigurationReq struct {
+	Module      string `json:"module"`
+	Key         string `json:"key"`
+	Value       string `json:"value"`
+	ValueType   string `json:"value_type"`
+	Description string `json:"description,optional"`
+	IsPublic    int32  `json:"is_public"`
+}
+
+type CreateConfigurationResp struct {
+	Id int64 `json:"id"`
+}
+
+type CreateDivisionReq struct {
+	ParentId  int64  `json:"parent_id,optional,default=0"`
+	Level     int32  `json:"level"`
+	Name      string `json:"name"`
+	Code      string `json:"code"`
+	SortOrder int32  `json:"sort_order,optional,default=0"`
+}
+
+type CreateDivisionResp struct {
+	Id int64 `json:"id"`
+}
+
+type CreateResidentialAreaReq struct {
+	CountyId       int64   `json:"county_id"`
+	StreetId       *int64  `json:"street_id,optional"`
+	CommunityDivId *int64  `json:"community_div_id,optional"`
+	Code           string  `json:"code,optional"`
+	Name           string  `json:"name"`
+	Address        string  `json:"address,optional"`
+	Area           float64 `json:"area,optional"`
+	Population     int32   `json:"population,optional"`
+	CommunityType  int32   `json:"community_type"`
+}
+
+type CreateResidentialAreaResp struct {
+	Id int64 `json:"id"`
+}
+
+type CreateSensitiveWordReq struct {
+	Word     string `json:"word"`
+	Category string `json:"category"`
+	Severity int32  `json:"severity"`
+	Action   int32  `json:"action"`
+}
+
+type CreateSensitiveWordResp struct {
+	Id int64 `json:"id"`
+}
+
+type DeleteConfigurationReq struct {
+	Id int64 `path:"id"`
+}
+
+type DeleteConfigurationResp struct {
+	Success bool `json:"success"`
+}
+
+type DeleteDivisionReq struct {
+	Id int64 `path:"id"`
+}
+
+type DeleteDivisionResp struct {
+	Success bool `json:"success"`
+}
+
+type DeleteResidentialAreaReq struct {
+	Id int64 `path:"id"`
+}
+
+type DeleteResidentialAreaResp struct {
+	Success bool `json:"success"`
+}
+
+type DeleteSensitiveWordReq struct {
+	Id int64 `path:"id"`
+}
+
+type DeleteSensitiveWordResp struct {
+	Success bool `json:"success"`
+}
+
+type DeletedCountsResp struct {
+	ResidentialArea        int64 `json:"residential_area"`
+	AdministrativeDivision int64 `json:"administrative_division"`
+	Configuration          int64 `json:"configuration"`
+	SensitiveWord          int64 `json:"sensitive_word"`
+	Total                  int64 `json:"total"`
+}
+
+type DeletedItem struct {
+	Id         int64  `json:"id"`
+	EntityType string `json:"entity_type"`
+	Name       string `json:"name"`
+	Code       string `json:"code"`
+	DeleteTime string `json:"delete_time"`
+}
+
+type Division struct {
+	Id               int64  `json:"id"`
+	ParentId         *int64 `json:"parent_id"`
+	Level            int32  `json:"level"`
+	Name             string `json:"name"`
+	Code             string `json:"code"`
+	Path             string `json:"path"`
+	SortOrder        int32  `json:"sort_order"`
+	Status           int32  `json:"status"`
+	SubmissionStatus int32  `json:"submission_status"`
+	SubmissionType   *int64 `json:"submission_type"`
+	CreatedBy        int64  `json:"created_by"`
+	CreatedTime      string `json:"created_time"`
+	UpdatedTime      string `json:"updated_time"`
+}
+
+type DivisionChildCountResp struct {
+	HasChildDivisions   bool `json:"has_child_divisions"`
+	HasResidentialAreas bool `json:"has_residential_areas"`
+	HasData             bool `json:"has_data"`
+}
+
+type DivisionCountItem struct {
+	Id             int64  `json:"id"`
+	Name           string `json:"name"`
+	Level          int64  `json:"level"`
+	CommunityCount int64  `json:"community_count"`
+	VillageCount   int64  `json:"village_count"`
+	TotalCount     int64  `json:"total_count"`
+}
+
+type DivisionCountsReq struct {
+	ParentId *int64 `form:"parent_id,optional"`
+}
+
+type DivisionCountsResp struct {
+	List []DivisionCountItem `json:"list"`
+}
+
+type DivisionTree struct {
+	Division
+	Children []DivisionTree `json:"children,omitempty"`
+}
+
+type GetApprovalDetailReq struct {
+	EntityType string `path:"entity_type"`
+	Id         int64  `path:"id"`
+}
+
+type GetConfigurationReq struct {
+	Id int64 `path:"id"`
+}
+
+type GetConfigurationResp struct {
+	Configuration Configuration `json:"configuration"`
+}
+
+type GetConfigurationsReq struct {
+	Module   string `form:"module,optional"`
+	Key      string `form:"key,optional"`
+	Page     int32  `form:"page,optional,default=1"`
+	PageSize int32  `form:"page_size,optional,default=20"`
+}
+
+type GetConfigurationsResp struct {
+	List  []Configuration `json:"list"`
+	Total int64           `json:"total"`
+}
+
+type GetDeletedItemsReq struct {
+	EntityType string `form:"entity_type,optional"`
+	Page       int32  `form:"page,optional,default=1"`
+	PageSize   int32  `form:"page_size,optional,default=20"`
+}
+
+type GetDeletedItemsResp struct {
+	List  []DeletedItem `json:"list"`
+	Total int64         `json:"total"`
+}
+
+type GetDivisionReq struct {
+	Id int64 `path:"id"`
+}
+
+type GetDivisionResp struct {
+	Division Division `json:"division"`
+}
+
+type GetDivisionsReq struct {
+	Mode             string `form:"mode,optional"`
+	Level            *int32 `form:"level,optional"`
+	ParentId         *int64 `form:"parent_id,optional"`
+	Page             int32  `form:"page,optional,default=1"`
+	PageSize         int32  `form:"page_size,optional,default=20"`
+	SubmissionStatus *int32 `form:"submission_status,optional"`
+	MinLevel         *int32 `form:"min_level,optional"`
+}
+
+type GetDivisionsResp struct {
+	List  []Division     `json:"list"`
+	Tree  []DivisionTree `json:"tree,omitempty"`
+	Total int64          `json:"total"`
+}
+
+type GetPendingItemsReq struct {
+	EntityType     string `form:"entity_type,optional"`
+	SubmissionType *int32 `form:"submission_type,optional"`
+	Page           int32  `form:"page,optional,default=1"`
+	PageSize       int32  `form:"page_size,optional,default=20"`
+}
+
+type GetPendingItemsResp struct {
+	List  []ApprovalPendingItem `json:"list"`
+	Total int64                 `json:"total"`
+}
+
+type GetResidentialAreaReq struct {
+	Id int64 `path:"id"`
+}
+
+type GetResidentialAreaResp struct {
+	ResidentialArea ResidentialArea `json:"residential_area"`
+}
+
+type GetResidentialAreasReq struct {
+	CityId           *int64 `form:"city_id,optional"`
+	CountyId         *int64 `form:"county_id,optional"`
+	StreetId         *int64 `form:"street_id,optional"`
+	CommunityDivId   *int64 `form:"community_div_id,optional"`
+	Keyword          string `form:"keyword,optional"`
+	SubmissionStatus *int32 `form:"submission_status,optional"`
+	Page             int32  `form:"page,optional,default=1"`
+	PageSize         int32  `form:"page_size,optional,default=20"`
+}
+
+type GetResidentialAreasResp struct {
+	List  []ResidentialArea `json:"list"`
+	Total int64             `json:"total"`
+}
+
+type GetSensitiveWordsReq struct {
+	Category string `form:"category,optional"`
+	Severity *int32 `form:"severity,optional"`
+	Status   *int32 `form:"status,optional"`
+	Page     int32  `form:"page,optional,default=1"`
+	PageSize int32  `form:"page_size,optional,default=20"`
+}
+
+type GetSensitiveWordsResp struct {
+	List  []SensitiveWord `json:"list"`
+	Total int64           `json:"total"`
+}
+
+type GetSubmissionRecordsReq struct {
+	EntityType   string `form:"entity_type,optional"`
+	ReviewResult *int32 `form:"review_result,optional"`
+	Page         int32  `form:"page,optional,default=1"`
+	PageSize     int32  `form:"page_size,optional,default=20"`
+}
+
+type GetSubmissionRecordsResp struct {
+	List  []SubmissionRecordItem `json:"list"`
+	Total int64                  `json:"total"`
+}
+
+type GetSyncProgressReq struct {
+	TaskId string `form:"task_id"`
+}
+
+type GetSyncProgressResp struct {
+	TaskId            string `json:"task_id"`
+	Status            string `json:"status"`
+	TotalCounties     int32  `json:"total_counties"`
+	CurrentCounty     int32  `json:"current_county"`
+	CurrentCountyName string `json:"current_county_name,optional"`
+	TotalPages        int32  `json:"total_pages"`
+	CurrentPage       int32  `json:"current_page"`
+	TotalFound        int32  `json:"total_found"`
+	TotalSynced       int32  `json:"total_synced"`
+	TotalSkipped      int32  `json:"total_skipped"`
+	TotalFailed       int32  `json:"total_failed"`
+	ErrorMessage      string `json:"error_message,optional"`
+}
+
+type PendingCountsResp struct {
+	ResidentialArea        int64 `json:"residential_area"`
+	AdministrativeDivision int64 `json:"administrative_division"`
+	Configuration          int64 `json:"configuration"`
+	SensitiveWord          int64 `json:"sensitive_word"`
+	Total                  int64 `json:"total"`
+}
+
+type ResidentialArea struct {
 	Id               int64   `json:"id"`
-	DivisionId       int64   `json:"division_id"`
+	CountyId         *int64  `json:"county_id"`
+	StreetId         *int64  `json:"street_id"`
+	CommunityDivId   *int64  `json:"community_div_id"`
+	Code             string  `json:"code"`
 	Name             string  `json:"name"`
 	Address          string  `json:"address"`
+	Longitude        float64 `json:"longitude"`
+	Latitude         float64 `json:"latitude"`
+	DataSource       int32   `json:"data_source"`
 	Area             float64 `json:"area"`
 	Population       int32   `json:"population"`
 	CommunityType    int32   `json:"community_type"`
@@ -21,136 +377,97 @@ type Community struct {
 	UpdatedTime      string  `json:"updated_time"`
 }
 
-type CreateCommunityReq struct {
-	DivisionId    int64   `json:"division_id"`
-	Name          string  `json:"name"`
-	Address       string  `json:"address"`
-	Area          float64 `json:"area,optional"`
-	Population    int32   `json:"population,optional"`
-	CommunityType int32   `json:"community_type"`
+type RestoreDeletedItemReq struct {
+	Id         int64  `path:"id"`
+	EntityType string `path:"entity_type"`
 }
 
-type CreateCommunityResp struct {
-	Id int64 `json:"id"`
-}
-
-type CreateDivisionReq struct {
-	ParentId  *int64 `json:"parent_id"`
-	Level     int32  `json:"level"`
-	Name      string `json:"name"`
-	Code      string `json:"code"`
-	SortOrder int32  `json:"sort_order,optional,default=0"`
-}
-
-type CreateDivisionResp struct {
-	Id int64 `json:"id"`
-}
-
-type DeleteCommunityReq struct {
-	Id int64 `path:"id"`
-}
-
-type DeleteCommunityResp struct {
+type RestoreDeletedItemResp struct {
 	Success bool `json:"success"`
 }
 
-type DeleteDivisionReq struct {
-	Id int64 `path:"id"`
-}
-
-type DeleteDivisionResp struct {
-	Success bool `json:"success"`
-}
-
-type Division struct {
-	Id          int64  `json:"id"`
-	ParentId    *int64 `json:"parent_id"`
-	Level       int32  `json:"level"`
-	Name        string `json:"name"`
-	Code        string `json:"code"`
-	Path        string `json:"path"`
-	SortOrder   int32  `json:"sort_order"`
-	Status      int32  `json:"status"`
-	CreatedBy   int64  `json:"created_by"`
-	CreatedTime string `json:"created_time"`
-	UpdatedTime string `json:"updated_time"`
-}
-
-type DivisionTree struct {
-	Division
-	Children []DivisionTree `json:"children,omitempty"`
-}
-
-type GetCommunitiesReq struct {
-	DivisionId       *int64 `form:"division_id,optional"`
-	SubmissionStatus *int32 `form:"submission_status,optional"`
-	Page             int32  `form:"page,optional,default=1"`
-	PageSize         int32  `form:"page_size,optional,default=20"`
-}
-
-type GetCommunitiesResp struct {
-	List  []Community `json:"list"`
-	Total int64       `json:"total"`
-}
-
-type GetCommunityReq struct {
-	Id int64 `path:"id"`
-}
-
-type GetCommunityResp struct {
-	Community Community `json:"community"`
-}
-
-type GetDivisionReq struct {
-	Id int64 `path:"id"`
-}
-
-type GetDivisionResp struct {
-	Division Division `json:"division"`
-}
-
-type GetDivisionsReq struct {
-	Mode     string `form:"mode,optional"` // list or tree
-	Level    *int32 `form:"level,optional"`
-	ParentId *int64 `form:"parent_id,optional"`
-	Page     int32  `form:"page,optional,default=1"`
-	PageSize int32  `form:"page_size,optional,default=20"`
-}
-
-type GetDivisionsResp struct {
-	List  []Division     `json:"list,omitempty"`
-	Tree  []DivisionTree `json:"tree,omitempty"`
-	Total int64          `json:"total"`
-}
-
-type ReviewCommunityReq struct {
+type ReviewItemReq struct {
 	Id          int64  `path:"id"`
-	Action      string `json:"action"` // approve or reject
+	EntityType  string `path:"entity_type"`
+	Action      string `json:"action"`
 	ReviewNotes string `json:"review_notes,optional"`
 }
 
-type ReviewCommunityResp struct {
+type ReviewItemResp struct {
 	Success bool `json:"success"`
 }
 
-type SubmitCommunityReq struct {
+type ReviewResidentialAreaReq struct {
+	Id          int64  `path:"id"`
+	Action      string `json:"action"`
+	ReviewNotes string `json:"review_notes,optional"`
+}
+
+type ReviewResidentialAreaResp struct {
+	Success bool `json:"success"`
+}
+
+type SensitiveWord struct {
+	Id               int64  `json:"id"`
+	Word             string `json:"word"`
+	Category         string `json:"category"`
+	Severity         int32  `json:"severity"`
+	Action           int32  `json:"action"`
+	Status           int32  `json:"status"`
+	SubmissionStatus int32  `json:"submission_status"`
+	SubmissionType   *int64 `json:"submission_type"`
+	CreatedBy        int64  `json:"created_by"`
+	CreatedTime      string `json:"created_time"`
+	UpdatedTime      string `json:"updated_time"`
+}
+
+type SubmissionRecordItem struct {
+	Id             int64  `json:"id"`
+	EntityType     string `json:"entity_type"`
+	EntityId       int64  `json:"entity_id"`
+	EntityName     string `json:"entity_name"`
+	EntityCode     string `json:"entity_code"`
+	SubmissionType int32  `json:"submission_type"`
+	SubmitterId    int64  `json:"submitter_id"`
+	SubmitTime     string `json:"submit_time"`
+	ReviewerId     *int64 `json:"reviewer_id"`
+	ReviewTime     string `json:"review_time"`
+	ReviewResult   int32  `json:"review_result"`
+	ReviewNotes    string `json:"review_notes"`
+}
+
+type SubmitReq struct {
 	Id int64 `path:"id"`
 }
 
-type SubmitCommunityResp struct {
+type SubmitResidentialAreaReq struct {
+	Id int64 `path:"id"`
+}
+
+type SubmitResidentialAreaResp struct {
 	Success bool `json:"success"`
 }
 
-type UpdateCommunityReq struct {
-	Id            int64   `path:"id"`
-	Name          string  `json:"name,optional"`
-	Address       string  `json:"address,optional"`
-	Area          float64 `json:"area,optional"`
-	Population    int32   `json:"population,optional"`
-	CommunityType int32   `json:"community_type,optional"`
+type SubmitResp struct {
+	Success bool `json:"success"`
 }
 
-type UpdateCommunityResp struct {
+type SyncResidentialAreasReq struct {
+	DivisionId int64 `json:"division_id"`
+}
+
+type SyncResidentialAreasResp struct {
+	TaskId string `json:"task_id"`
+}
+
+type UpdateConfigurationReq struct {
+	Id          int64  `path:"id"`
+	Value       string `json:"value,optional"`
+	Description string `json:"description,optional"`
+	IsPublic    int32  `json:"is_public,optional"`
+}
+
+type UpdateConfigurationResp struct {
 	Success bool `json:"success"`
 }
 
@@ -167,129 +484,30 @@ type UpdateDivisionResp struct {
 	Success bool `json:"success"`
 }
 
-// Configuration management types
-type Configuration struct {
-	Id             int64  `json:"id"`
-	Module         string `json:"module"`
-	ConfigKey      string `json:"config_key"`
-	ConfigValue    string `json:"config_value"`
-	ValueType      string `json:"value_type"`
-	Description    string `json:"description"`
-	IsPublic       int64  `json:"is_public"`
-	ApprovalStatus int64  `json:"approval_status"`
-	CreatedTime    string `json:"created_time"`
-	UpdatedTime    string `json:"updated_time"`
+type UpdateResidentialAreaReq struct {
+	Id             int64   `path:"id"`
+	StreetId       *int64  `json:"street_id,optional"`
+	CommunityDivId *int64  `json:"community_div_id,optional"`
+	Code           string  `json:"code,optional"`
+	Name           string  `json:"name,optional"`
+	Address        string  `json:"address,optional"`
+	Area           float64 `json:"area,optional"`
+	Population     int32   `json:"population,optional"`
+	CommunityType  int32   `json:"community_type,optional"`
 }
 
-type CreateConfigReq struct {
-	Module      string `json:"module"`
-	ConfigKey   string `json:"config_key"`
-	ConfigValue string `json:"config_value"`
-	ValueType   string `json:"value_type,optional,default=string"`
-	Description string `json:"description,optional"`
-	IsPublic    int64  `json:"is_public,optional,default=0"`
-}
-
-type CreateConfigResp struct {
-	Id int64 `json:"id"`
-}
-
-type GetConfigReq struct {
-	Id int64 `path:"id"`
-}
-
-type GetConfigResp struct {
-	Configuration Configuration `json:"configuration"`
-}
-
-type GetConfigsReq struct {
-	Module   string `form:"module,optional"`
-	Page     int32  `form:"page,optional,default=1"`
-	PageSize int32  `form:"page_size,optional,default=20"`
-}
-
-type GetConfigsResp struct {
-	List  []Configuration `json:"list"`
-	Total int64           `json:"total"`
-}
-
-type UpdateConfigReq struct {
-	Id          int64  `path:"id"`
-	ConfigValue string `json:"config_value,optional"`
-	Description string `json:"description,optional"`
-}
-
-type UpdateConfigResp struct {
+type UpdateResidentialAreaResp struct {
 	Success bool `json:"success"`
-}
-
-type DeleteConfigReq struct {
-	Id int64 `path:"id"`
-}
-
-type DeleteConfigResp struct {
-	Success bool `json:"success"`
-}
-
-// Sensitive word management types
-type SensitiveWord struct {
-	Id          int64  `json:"id"`
-	Word        string `json:"word"`
-	Category    string `json:"category"`
-	Severity    int64  `json:"severity"`
-	Action      int64  `json:"action"`
-	Status      int64  `json:"status"`
-	CreatedTime string `json:"created_time"`
-	UpdatedTime string `json:"updated_time"`
-}
-
-type CreateSensitiveWordReq struct {
-	Word     string `json:"word"`
-	Category string `json:"category,optional"`
-	Severity int64  `json:"severity,optional,default=1"`
-	Action   int64  `json:"action,optional,default=1"`
-}
-
-type CreateSensitiveWordResp struct {
-	Id int64 `json:"id"`
-}
-
-type GetSensitiveWordReq struct {
-	Id int64 `path:"id"`
-}
-
-type GetSensitiveWordResp struct {
-	SensitiveWord SensitiveWord `json:"sensitive_word"`
-}
-
-type GetSensitiveWordsReq struct {
-	Category string `form:"category,optional"`
-	Status   *int64 `form:"status,optional"`
-	Page     int32  `form:"page,optional,default=1"`
-	PageSize int32  `form:"page_size,optional,default=20"`
-}
-
-type GetSensitiveWordsResp struct {
-	List  []SensitiveWord `json:"list"`
-	Total int64           `json:"total"`
 }
 
 type UpdateSensitiveWordReq struct {
 	Id       int64  `path:"id"`
 	Category string `json:"category,optional"`
-	Severity int64  `json:"severity,optional"`
-	Action   int64  `json:"action,optional"`
-	Status   int64  `json:"status,optional"`
+	Severity int32  `json:"severity,optional"`
+	Action   int32  `json:"action,optional"`
+	Status   int32  `json:"status,optional"`
 }
 
 type UpdateSensitiveWordResp struct {
-	Success bool `json:"success"`
-}
-
-type DeleteSensitiveWordReq struct {
-	Id int64 `path:"id"`
-}
-
-type DeleteSensitiveWordResp struct {
 	Success bool `json:"success"`
 }

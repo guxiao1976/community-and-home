@@ -67,11 +67,30 @@ func (l *LoginLogic) Login(req *types.LoginReq) (resp *types.LoginResp, err erro
 		return nil, errorx.NewDefaultError("生成refresh token失败")
 	}
 
+	// Build user response
+	var scopeId *int64
+	if user.ScopeId.Valid {
+		scopeId = &user.ScopeId.Int64
+	}
+
+	userResp := types.User{
+		Id:                 user.Id,
+		Phone:              user.Phone,
+		Nickname:           user.Nickname.String,
+		AvatarUrl:          user.AvatarUrl.String,
+		UserType:           int32(user.UserType),
+		Status:             int32(user.Status),
+		VerificationStatus: int32(user.VerificationStatus),
+		ScopeId:            scopeId,
+		CreatedTime:        user.CreatedTime.Format(time.RFC3339),
+		UpdatedTime:        user.UpdatedTime.Format(time.RFC3339),
+	}
+
 	return &types.LoginResp{
-		UserId:       user.Id,
-		Token:        accessToken,
+		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		Expire:       now + accessExpire,
+		ExpiresIn:    accessExpire,
+		User:         userResp,
 	}, nil
 }
 

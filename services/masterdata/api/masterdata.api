@@ -10,31 +10,35 @@ info (
 type (
 	// Administrative Division Types
 	Division {
-		Id          int64  `json:"id"`
-		ParentId    *int64 `json:"parent_id"`
-		Level       int32  `json:"level"`
-		Name        string `json:"name"`
-		Code        string `json:"code"`
-		Path        string `json:"path"`
-		SortOrder   int32  `json:"sort_order"`
-		Status      int32  `json:"status"`
-		CreatedBy   int64  `json:"created_by"`
-		CreatedTime string `json:"created_time"`
-		UpdatedTime string `json:"updated_time"`
+		Id               int64  `json:"id"`
+		ParentId         *int64 `json:"parent_id"`
+		Level            int32  `json:"level"`
+		Name             string `json:"name"`
+		Code             string `json:"code"`
+		Path             string `json:"path"`
+		SortOrder        int32  `json:"sort_order"`
+		Status           int32  `json:"status"`
+		SubmissionStatus int32  `json:"submission_status"`
+		SubmissionType   *int64 `json:"submission_type"`
+		CreatedBy        int64  `json:"created_by"`
+		CreatedTime      string `json:"created_time"`
+		UpdatedTime      string `json:"updated_time"`
 	}
 	DivisionTree {
 		Division
 		Children []DivisionTree `json:"children,omitempty"`
 	}
 	GetDivisionsReq {
-		Mode     string `form:"mode,optional"` // list or tree
-		Level    *int32 `form:"level,optional"`
-		ParentId *int64 `form:"parent_id,optional"`
-		Page     int32  `form:"page,optional,default=1"`
-		PageSize int32  `form:"page_size,optional,default=20"`
+		Mode             string `form:"mode,optional"`
+		Level            *int32 `form:"level,optional"`
+		ParentId         *int64 `form:"parent_id,optional"`
+		Page             int32  `form:"page,optional,default=1"`
+		PageSize         int32  `form:"page_size,optional,default=20"`
+		SubmissionStatus *int32 `form:"submission_status,optional"`
+		MinLevel         *int32 `form:"min_level,optional"`
 	}
 	GetDivisionsResp {
-		List  []Division     `json:"list,omitempty"`
+		List  []Division     `json:"list"`
 		Tree  []DivisionTree `json:"tree,omitempty"`
 		Total int64          `json:"total"`
 	}
@@ -45,7 +49,7 @@ type (
 		Division Division `json:"division"`
 	}
 	CreateDivisionReq {
-		ParentId  *int64 `json:"parent_id"`
+		ParentId  int64  `json:"parent_id,optional,default=0"`
 		Level     int32  `json:"level"`
 		Name      string `json:"name"`
 		Code      string `json:"code"`
@@ -71,12 +75,18 @@ type (
 	DeleteDivisionResp {
 		Success bool `json:"success"`
 	}
-	// Community Types
-	Community {
+	// Residential Area Types
+	ResidentialArea {
 		Id               int64   `json:"id"`
-		DivisionId       int64   `json:"division_id"`
+		CountyId         *int64  `json:"county_id"`
+		StreetId         *int64  `json:"street_id"`
+		CommunityDivId   *int64  `json:"community_div_id"`
+		Code             string  `json:"code"`
 		Name             string  `json:"name"`
 		Address          string  `json:"address"`
+		Longitude        float64 `json:"longitude"`
+		Latitude         float64 `json:"latitude"`
+		DataSource       int32   `json:"data_source"`
 		Area             float64 `json:"area"`
 		Population       int32   `json:"population"`
 		CommunityType    int32   `json:"community_type"`
@@ -89,63 +99,177 @@ type (
 		CreatedTime      string  `json:"created_time"`
 		UpdatedTime      string  `json:"updated_time"`
 	}
-	GetCommunitiesReq {
-		DivisionId       *int64 `form:"division_id,optional"`
+	GetResidentialAreasReq {
+		CityId           *int64 `form:"city_id,optional"`
+		CountyId         *int64 `form:"county_id,optional"`
+		StreetId         *int64 `form:"street_id,optional"`
+		CommunityDivId   *int64 `form:"community_div_id,optional"`
+		Keyword          string `form:"keyword,optional"`
 		SubmissionStatus *int32 `form:"submission_status,optional"`
 		Page             int32  `form:"page,optional,default=1"`
 		PageSize         int32  `form:"page_size,optional,default=20"`
 	}
-	GetCommunitiesResp {
-		List  []Community `json:"list"`
-		Total int64       `json:"total"`
+	GetResidentialAreasResp {
+		List  []ResidentialArea `json:"list"`
+		Total int64             `json:"total"`
 	}
-	GetCommunityReq {
+	GetResidentialAreaReq {
 		Id int64 `path:"id"`
 	}
-	GetCommunityResp {
-		Community Community `json:"community"`
+	GetResidentialAreaResp {
+		ResidentialArea ResidentialArea `json:"residential_area"`
 	}
-	CreateCommunityReq {
-		DivisionId    int64   `json:"division_id"`
-		Name          string  `json:"name"`
-		Address       string  `json:"address"`
-		Area          float64 `json:"area,optional"`
-		Population    int32   `json:"population,optional"`
-		CommunityType int32   `json:"community_type"`
+	CreateResidentialAreaReq {
+		CountyId       int64   `json:"county_id"`
+		StreetId       *int64  `json:"street_id,optional"`
+		CommunityDivId *int64  `json:"community_div_id,optional"`
+		Code           string  `json:"code,optional"`
+		Name           string  `json:"name"`
+		Address        string  `json:"address,optional"`
+		Area           float64 `json:"area,optional"`
+		Population     int32   `json:"population,optional"`
+		CommunityType  int32   `json:"community_type"`
 	}
-	CreateCommunityResp {
+	CreateResidentialAreaResp {
 		Id int64 `json:"id"`
 	}
-	UpdateCommunityReq {
-		Id            int64   `path:"id"`
-		Name          string  `json:"name,optional"`
-		Address       string  `json:"address,optional"`
-		Area          float64 `json:"area,optional"`
-		Population    int32   `json:"population,optional"`
-		CommunityType int32   `json:"community_type,optional"`
+	UpdateResidentialAreaReq {
+		Id             int64   `path:"id"`
+		StreetId       *int64  `json:"street_id,optional"`
+		CommunityDivId *int64  `json:"community_div_id,optional"`
+		Code           string  `json:"code,optional"`
+		Name           string  `json:"name,optional"`
+		Address        string  `json:"address,optional"`
+		Area           float64 `json:"area,optional"`
+		Population     int32   `json:"population,optional"`
+		CommunityType  int32   `json:"community_type,optional"`
 	}
-	UpdateCommunityResp {
+	UpdateResidentialAreaResp {
 		Success bool `json:"success"`
 	}
-	SubmitCommunityReq {
+	SubmitResidentialAreaReq {
 		Id int64 `path:"id"`
 	}
-	SubmitCommunityResp {
+	SubmitResidentialAreaResp {
 		Success bool `json:"success"`
 	}
-	ReviewCommunityReq {
+	ReviewResidentialAreaReq {
 		Id          int64  `path:"id"`
-		Action      string `json:"action"` // approve or reject
+		Action      string `json:"action"`
 		ReviewNotes string `json:"review_notes,optional"`
 	}
-	ReviewCommunityResp {
+	ReviewResidentialAreaResp {
 		Success bool `json:"success"`
 	}
-	DeleteCommunityReq {
+	DeleteResidentialAreaReq {
 		Id int64 `path:"id"`
 	}
-	DeleteCommunityResp {
+	DeleteResidentialAreaResp {
 		Success bool `json:"success"`
+	}
+	DivisionChildCountResp {
+		HasChildDivisions   bool `json:"has_child_divisions"`
+		HasResidentialAreas bool `json:"has_residential_areas"`
+		HasData             bool `json:"has_data"`
+	}
+	BatchSubmitReq {
+		Ids []int64 `json:"ids"`
+	}
+	BatchSubmitResp {
+		Success bool `json:"success"`
+	}
+	SubmitReq {
+		Id int64 `path:"id"`
+	}
+	SubmitResp {
+		Success bool `json:"success"`
+	}
+	// Approval Center Types
+	ApprovalPendingItem {
+		Id               int64  `json:"id"`
+		EntityType       string `json:"entity_type"`
+		SubmissionType   int32  `json:"submission_type"`
+		Name             string `json:"name"`
+		ChangeSummary    string `json:"change_summary"`
+		SubmitterId      int64  `json:"submitter_id"`
+		SubmitTime       string `json:"submit_time"`
+		SubmissionStatus int32  `json:"submission_status"`
+	}
+	GetPendingItemsReq {
+		EntityType     string `form:"entity_type,optional"`
+		SubmissionType *int32 `form:"submission_type,optional"`
+		Page           int32  `form:"page,optional,default=1"`
+		PageSize       int32  `form:"page_size,optional,default=20"`
+	}
+	GetPendingItemsResp {
+		List  []ApprovalPendingItem `json:"list"`
+		Total int64                 `json:"total"`
+	}
+	PendingCountsResp {
+		ResidentialArea        int64 `json:"residential_area"`
+		AdministrativeDivision int64 `json:"administrative_division"`
+		Configuration          int64 `json:"configuration"`
+		SensitiveWord          int64 `json:"sensitive_word"`
+		Total                  int64 `json:"total"`
+	}
+	GetApprovalDetailReq {
+		EntityType string `path:"entity_type"`
+		Id         int64  `path:"id"`
+	}
+	ApprovalDetailResp {
+		Id             int64  `json:"id"`
+		EntityType     string `json:"entity_type"`
+		SubmissionType int32  `json:"submission_type"`
+		CurrentData    string `json:"current_data"`
+		SnapshotData   string `json:"snapshot_data"`
+		SubmitterId    int64  `json:"submitter_id"`
+		SubmitTime     string `json:"submit_time"`
+		ReviewerId     *int64 `json:"reviewer_id"`
+		ReviewTime     string `json:"review_time"`
+		ReviewNotes    string `json:"review_notes"`
+	}
+	ReviewItemReq {
+		Id          int64  `path:"id"`
+		EntityType  string `path:"entity_type"`
+		Action      string `json:"action"`
+		ReviewNotes string `json:"review_notes,optional"`
+	}
+	ReviewItemResp {
+		Success bool `json:"success"`
+	}
+	BatchReviewReq {
+		EntityType  string  `json:"entity_type"`
+		Ids         []int64 `json:"ids"`
+		Action      string  `json:"action"`
+		ReviewNotes string  `json:"review_notes,optional"`
+	}
+	BatchReviewResp {
+		SuccessCount int64 `json:"success_count"`
+		FailCount    int64 `json:"fail_count"`
+	}
+	SubmissionRecordItem {
+		Id             int64  `json:"id"`
+		EntityType     string `json:"entity_type"`
+		EntityId       int64  `json:"entity_id"`
+		EntityName     string `json:"entity_name"`
+		EntityCode     string `json:"entity_code"`
+		SubmissionType int32  `json:"submission_type"`
+		SubmitterId    int64  `json:"submitter_id"`
+		SubmitTime     string `json:"submit_time"`
+		ReviewerId     *int64 `json:"reviewer_id"`
+		ReviewTime     string `json:"review_time"`
+		ReviewResult   int32  `json:"review_result"`
+		ReviewNotes    string `json:"review_notes"`
+	}
+	GetSubmissionRecordsReq {
+		EntityType   string `form:"entity_type,optional"`
+		ReviewResult *int32 `form:"review_result,optional"`
+		Page         int32  `form:"page,optional,default=1"`
+		PageSize     int32  `form:"page_size,optional,default=20"`
+	}
+	GetSubmissionRecordsResp {
+		List  []SubmissionRecordItem `json:"list"`
+		Total int64                  `json:"total"`
 	}
 )
 
@@ -173,39 +297,395 @@ service masterdata-api {
 	@doc "Soft delete administrative division"
 	@handler deleteDivision
 	delete /divisions/:id (DeleteDivisionReq) returns (DeleteDivisionResp)
+
+	@doc "Submit division"
+	@handler submitDivision
+	post /divisions/:id/submit (SubmitReq) returns (SubmitResp)
+
+	@doc "Batch submit divisions"
+	@handler batchSubmitDivisions
+	post /divisions/batch-submit (BatchSubmitReq) returns (BatchSubmitResp)
+
+	@doc "Request delete for approved division"
+	@handler requestDeleteDivision
+	post /divisions/:id/request-delete returns (SubmitResp)
+
+	@doc "Cancel delete request"
+	@handler cancelDeleteDivision
+	post /divisions/:id/cancel-delete returns (SubmitResp)
+
+	@doc "Withdraw submitted division"
+	@handler withdrawDivision
+	post /divisions/:id/withdraw returns (SubmitResp)
 }
 
 @server (
 	prefix: /api/masterdata
-	group:  community
+	group:  residentialarea
 )
 service masterdata-api {
-	@doc "List communities with filters"
-	@handler getCommunities
-	get /communities (GetCommunitiesReq) returns (GetCommunitiesResp)
+	@doc "List residential areas with filters"
+	@handler getResidentialAreas
+	get /residential-areas (GetResidentialAreasReq) returns (GetResidentialAreasResp)
 
-	@doc "Get single community details"
-	@handler getCommunity
-	get /communities/:id (GetCommunityReq) returns (GetCommunityResp)
+	@doc "Get single residential area details"
+	@handler getResidentialArea
+	get /residential-areas/:id (GetResidentialAreaReq) returns (GetResidentialAreaResp)
 
-	@doc "Create new community"
-	@handler createCommunity
-	post /communities (CreateCommunityReq) returns (CreateCommunityResp)
+	@doc "Create new residential area"
+	@handler createResidentialArea
+	post /residential-areas (CreateResidentialAreaReq) returns (CreateResidentialAreaResp)
 
-	@doc "Update community"
-	@handler updateCommunity
-	put /communities/:id (UpdateCommunityReq) returns (UpdateCommunityResp)
+	@doc "Update residential area"
+	@handler updateResidentialArea
+	put /residential-areas/:id (UpdateResidentialAreaReq) returns (UpdateResidentialAreaResp)
 
-	@doc "Submit community for review"
-	@handler submitCommunity
-	post /communities/:id/submit (SubmitCommunityReq) returns (SubmitCommunityResp)
+	@doc "Submit residential area for review"
+	@handler submitResidentialArea
+	post /residential-areas/:id/submit (SubmitResidentialAreaReq) returns (SubmitResidentialAreaResp)
 
-	@doc "Review community (approve/reject)"
-	@handler reviewCommunity
-	post /communities/:id/review (ReviewCommunityReq) returns (ReviewCommunityResp)
+	@doc "Review residential area (approve/reject)"
+	@handler reviewResidentialArea
+	post /residential-areas/:id/review (ReviewResidentialAreaReq) returns (ReviewResidentialAreaResp)
 
-	@doc "Soft delete community"
-	@handler deleteCommunity
-	delete /communities/:id (DeleteCommunityReq) returns (DeleteCommunityResp)
+	@doc "Soft delete residential area"
+	@handler deleteResidentialArea
+	delete /residential-areas/:id (DeleteResidentialAreaReq) returns (DeleteResidentialAreaResp)
+
+	@doc "Batch submit residential areas"
+	@handler batchSubmitResidentialAreas
+	post /residential-areas/batch-submit (BatchSubmitReq) returns (BatchSubmitResp)
+}
+
+type (
+	// Configuration Types
+	Configuration {
+		Id             int64  `json:"id"`
+		Module         string `json:"module"`
+		Key            string `json:"key"`
+		Value          string `json:"value"`
+		ValueType      string `json:"value_type"`
+		Description    string `json:"description"`
+		IsPublic       int32  `json:"is_public"`
+		ApprovalStatus int32  `json:"approval_status"`
+		CreatedBy      int64  `json:"created_by"`
+		CreatedTime    string `json:"created_time"`
+		UpdatedTime    string `json:"updated_time"`
+	}
+	GetConfigurationsReq {
+		Module   string `form:"module,optional"`
+		Key      string `form:"key,optional"`
+		Page     int32  `form:"page,optional,default=1"`
+		PageSize int32  `form:"page_size,optional,default=20"`
+	}
+	GetConfigurationsResp {
+		List  []Configuration `json:"list"`
+		Total int64           `json:"total"`
+	}
+	GetConfigurationReq {
+		Id int64 `path:"id"`
+	}
+	GetConfigurationResp {
+		Configuration Configuration `json:"configuration"`
+	}
+	CreateConfigurationReq {
+		Module      string `json:"module"`
+		Key         string `json:"key"`
+		Value       string `json:"value"`
+		ValueType   string `json:"value_type"`
+		Description string `json:"description,optional"`
+		IsPublic    int32  `json:"is_public"`
+	}
+	CreateConfigurationResp {
+		Id int64 `json:"id"`
+	}
+	UpdateConfigurationReq {
+		Id          int64  `path:"id"`
+		Value       string `json:"value,optional"`
+		Description string `json:"description,optional"`
+		IsPublic    int32  `json:"is_public,optional"`
+	}
+	UpdateConfigurationResp {
+		Success bool `json:"success"`
+	}
+	DeleteConfigurationReq {
+		Id int64 `path:"id"`
+	}
+	DeleteConfigurationResp {
+		Success bool `json:"success"`
+	}
+	// Sensitive Word Types
+	SensitiveWord {
+		Id               int64  `json:"id"`
+		Word             string `json:"word"`
+		Category         string `json:"category"`
+		Severity         int32  `json:"severity"`
+		Action           int32  `json:"action"`
+		Status           int32  `json:"status"`
+		SubmissionStatus int32  `json:"submission_status"`
+		SubmissionType   *int64 `json:"submission_type"`
+		CreatedBy        int64  `json:"created_by"`
+		CreatedTime      string `json:"created_time"`
+		UpdatedTime      string `json:"updated_time"`
+	}
+	GetSensitiveWordsReq {
+		Category string `form:"category,optional"`
+		Severity *int32 `form:"severity,optional"`
+		Status   *int32 `form:"status,optional"`
+		Page     int32  `form:"page,optional,default=1"`
+		PageSize int32  `form:"page_size,optional,default=20"`
+	}
+	GetSensitiveWordsResp {
+		List  []SensitiveWord `json:"list"`
+		Total int64           `json:"total"`
+	}
+	CreateSensitiveWordReq {
+		Word     string `json:"word"`
+		Category string `json:"category"`
+		Severity int32  `json:"severity"`
+		Action   int32  `json:"action"`
+	}
+	CreateSensitiveWordResp {
+		Id int64 `json:"id"`
+	}
+	UpdateSensitiveWordReq {
+		Id       int64  `path:"id"`
+		Category string `json:"category,optional"`
+		Severity int32  `json:"severity,optional"`
+		Action   int32  `json:"action,optional"`
+		Status   int32  `json:"status,optional"`
+	}
+	UpdateSensitiveWordResp {
+		Success bool `json:"success"`
+	}
+	DeleteSensitiveWordReq {
+		Id int64 `path:"id"`
+	}
+	DeleteSensitiveWordResp {
+		Success bool `json:"success"`
+	}
+)
+
+@server (
+	prefix: /api/masterdata
+	group:  configuration
+)
+service masterdata-api {
+	@doc "List configurations with filters"
+	@handler getConfigurations
+	get /configurations (GetConfigurationsReq) returns (GetConfigurationsResp)
+
+	@doc "Get single configuration details"
+	@handler getConfiguration
+	get /configurations/:id (GetConfigurationReq) returns (GetConfigurationResp)
+
+	@doc "Create new configuration"
+	@handler createConfiguration
+	post /configurations (CreateConfigurationReq) returns (CreateConfigurationResp)
+
+	@doc "Update configuration"
+	@handler updateConfiguration
+	put /configurations/:id (UpdateConfigurationReq) returns (UpdateConfigurationResp)
+
+	@doc "Soft delete configuration"
+	@handler deleteConfiguration
+	delete /configurations/:id (DeleteConfigurationReq) returns (DeleteConfigurationResp)
+
+	@doc "Submit configuration"
+	@handler submitConfiguration
+	post /configurations/:id/submit (SubmitReq) returns (SubmitResp)
+
+	@doc "Batch submit configurations"
+	@handler batchSubmitConfigurations
+	post /configurations/batch-submit (BatchSubmitReq) returns (BatchSubmitResp)
+}
+
+@server (
+	prefix: /api/masterdata
+	group:  sensitiveword
+)
+service masterdata-api {
+	@doc "List sensitive words with filters"
+	@handler getSensitiveWords
+	get /sensitive-words (GetSensitiveWordsReq) returns (GetSensitiveWordsResp)
+
+	@doc "Create new sensitive word"
+	@handler createSensitiveWord
+	post /sensitive-words (CreateSensitiveWordReq) returns (CreateSensitiveWordResp)
+
+	@doc "Update sensitive word"
+	@handler updateSensitiveWord
+	put /sensitive-words/:id (UpdateSensitiveWordReq) returns (UpdateSensitiveWordResp)
+
+	@doc "Soft delete sensitive word"
+	@handler deleteSensitiveWord
+	delete /sensitive-words/:id (DeleteSensitiveWordReq) returns (DeleteSensitiveWordResp)
+
+	@doc "Submit sensitive word"
+	@handler submitSensitiveWord
+	post /sensitive-words/:id/submit (SubmitReq) returns (SubmitResp)
+
+	@doc "Batch submit sensitive words"
+	@handler batchSubmitSensitiveWords
+	post /sensitive-words/batch-submit (BatchSubmitReq) returns (BatchSubmitResp)
+}
+
+@server (
+	prefix: /api/masterdata
+	group:  approval
+)
+service masterdata-api {
+	@doc "Get pending approval counts per entity type"
+	@handler getPendingCounts
+	get /approval/pending-counts returns (PendingCountsResp)
+
+	@doc "Get pending approval items"
+	@handler getPendingItems
+	get /approval/pending-items (GetPendingItemsReq) returns (GetPendingItemsResp)
+
+	@doc "Get approval detail with snapshot comparison"
+	@handler getApprovalDetail
+	get /approval/:entity_type/:id (GetApprovalDetailReq) returns (ApprovalDetailResp)
+
+	@doc "Review a pending item"
+	@handler reviewItem
+	post /approval/:entity_type/:id/review (ReviewItemReq) returns (ReviewItemResp)
+
+	@doc "Batch review pending items"
+	@handler batchReviewItems
+	post /approval/batch-review (BatchReviewReq) returns (BatchReviewResp)
+}
+
+@server (
+	prefix: /api/masterdata
+	group:  submissionrecord
+)
+service masterdata-api {
+	@doc "Get my submission records"
+	@handler getMySubmissionRecords
+	get /submission-records/my (GetSubmissionRecordsReq) returns (GetSubmissionRecordsResp)
+
+	@doc "Get reviewed submission records"
+	@handler getReviewedSubmissionRecords
+	get /submission-records/reviewed (GetSubmissionRecordsReq) returns (GetSubmissionRecordsResp)
+}
+
+type (
+	// Deleted Data Recovery Types
+	DeletedItem {
+		Id         int64  `json:"id"`
+		EntityType string `json:"entity_type"`
+		Name       string `json:"name"`
+		Code       string `json:"code"`
+		DeleteTime string `json:"delete_time"`
+	}
+	GetDeletedItemsReq {
+		EntityType string `form:"entity_type,optional"`
+		Page       int32  `form:"page,optional,default=1"`
+		PageSize   int32  `form:"page_size,optional,default=20"`
+	}
+	GetDeletedItemsResp {
+		List  []DeletedItem `json:"list"`
+		Total int64         `json:"total"`
+	}
+	DeletedCountsResp {
+		ResidentialArea        int64 `json:"residential_area"`
+		AdministrativeDivision int64 `json:"administrative_division"`
+		Configuration          int64 `json:"configuration"`
+		SensitiveWord          int64 `json:"sensitive_word"`
+		Total                  int64 `json:"total"`
+	}
+	RestoreDeletedItemReq {
+		Id         int64  `path:"id"`
+		EntityType string `path:"entity_type"`
+	}
+	RestoreDeletedItemResp {
+		Success bool `json:"success"`
+	}
+)
+
+@server (
+	prefix: /api/masterdata
+	group:  deleted_items
+)
+service masterdata-api {
+	@doc "Get deleted items counts per entity type"
+	@handler getDeletedCounts
+	get /deleted-items/counts returns (DeletedCountsResp)
+
+	@doc "Get deleted items list with optional entity type filter"
+	@handler getDeletedItems
+	get /deleted-items (GetDeletedItemsReq) returns (GetDeletedItemsResp)
+
+	@doc "Restore a deleted item"
+	@handler restoreDeletedItem
+	post /deleted-items/:entity_type/:id/restore (RestoreDeletedItemReq) returns (RestoreDeletedItemResp)
+}
+
+type (
+	DivisionCountsReq {
+		ParentId *int64 `form:"parent_id,optional"`
+	}
+	DivisionCountItem {
+		Id             int64  `json:"id"`
+		Name           string `json:"name"`
+		Level          int64  `json:"level"`
+		CommunityCount int64  `json:"community_count"`
+		VillageCount   int64  `json:"village_count"`
+		TotalCount     int64  `json:"total_count"`
+	}
+	DivisionCountsResp {
+		List []DivisionCountItem `json:"list"`
+	}
+)
+
+@server (
+	prefix: /api/masterdata
+	group:  statistics
+)
+service masterdata-api {
+	@doc "Get division counts statistics"
+	@handler getDivisionCounts
+	get /statistics/division-counts (DivisionCountsReq) returns (DivisionCountsResp)
+}
+
+type (
+	SyncResidentialAreasReq {
+		DivisionId int64 `json:"division_id"`
+	}
+	SyncResidentialAreasResp {
+		TaskId string `json:"task_id"`
+	}
+	GetSyncProgressReq {
+		TaskId string `form:"task_id"`
+	}
+	GetSyncProgressResp {
+		TaskId            string `json:"task_id"`
+		Status            string `json:"status"`
+		TotalCounties     int32  `json:"total_counties"`
+		CurrentCounty     int32  `json:"current_county"`
+		CurrentCountyName string `json:"current_county_name,optional"`
+		TotalPages        int32  `json:"total_pages"`
+		CurrentPage       int32  `json:"current_page"`
+		TotalFound        int32  `json:"total_found"`
+		TotalSynced       int32  `json:"total_synced"`
+		TotalSkipped      int32  `json:"total_skipped"`
+		TotalFailed       int32  `json:"total_failed"`
+		ErrorMessage      string `json:"error_message,optional"`
+	}
+)
+
+@server (
+	prefix: /api/masterdata
+	group:  amap_sync
+)
+service masterdata-api {
+	@doc "触发高德地图小区数据同步"
+	@handler syncResidentialAreas
+	post /amap-sync/sync (SyncResidentialAreasReq) returns (SyncResidentialAreasResp)
+
+	@doc "获取同步任务进度"
+	@handler getSyncProgress
+	get /amap-sync/progress (GetSyncProgressReq) returns (GetSyncProgressResp)
 }
 
