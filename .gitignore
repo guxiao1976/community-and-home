@@ -1,10 +1,28 @@
-# Database data directories
+# ==================== OS ====================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==================== IDE / Editor ====================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ==================== Claude Code ====================
+.claude/worktrees/
+.claude/settings.local.json
+.claude/todos/
+.claude/scheduled_tasks.json
+
+# ==================== Data directories ====================
 mysql/data/
 redis/data/
 etcd/data/
 minio/data/
 
-# Go build artifacts
+# ==================== Go ====================
 *.exe
 *.exe~
 *.dll
@@ -12,19 +30,29 @@ minio/data/
 *.dylib
 *.test
 *.out
-go.work
+services/*/api/api
+services/*/rpc/rpc
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
+# ==================== Python ====================
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
 
-# OS
-.DS_Store
-Thumbs.db
+# ==================== Node / Frontend ====================
+node_modules/
+dist/
+.vite/
 
-# Logs
+# ==================== Environment / Secrets ====================
+.env
+.env.*
+!.env.example
+
+# ==================== Logs ====================
 *.log
 logs/
+
+# ==================== Misc ====================
+*.bak
+*.tmp
