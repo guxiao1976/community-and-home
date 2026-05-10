@@ -1437,6 +1437,429 @@ func (x *GetUserRolesResp) GetRoles() []*Role {
 	return nil
 }
 
+// Verification status messages
+type GetUserVerificationStatusReq struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	UserId         int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PropertyUnitId int64                  `protobuf:"varint,2,opt,name=property_unit_id,json=propertyUnitId,proto3" json:"property_unit_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetUserVerificationStatusReq) Reset() {
+	*x = GetUserVerificationStatusReq{}
+	mi := &file_identity_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserVerificationStatusReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserVerificationStatusReq) ProtoMessage() {}
+
+func (x *GetUserVerificationStatusReq) ProtoReflect() protoreflect.Message {
+	mi := &file_identity_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserVerificationStatusReq.ProtoReflect.Descriptor instead.
+func (*GetUserVerificationStatusReq) Descriptor() ([]byte, []int) {
+	return file_identity_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *GetUserVerificationStatusReq) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *GetUserVerificationStatusReq) GetPropertyUnitId() int64 {
+	if x != nil {
+		return x.PropertyUnitId
+	}
+	return 0
+}
+
+type GetUserVerificationStatusResp struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	VerificationId     int64                  `protobuf:"varint,1,opt,name=verification_id,json=verificationId,proto3" json:"verification_id,omitempty"`
+	VerificationStatus int32                  `protobuf:"varint,2,opt,name=verification_status,json=verificationStatus,proto3" json:"verification_status,omitempty"`
+	VerificationType   string                 `protobuf:"bytes,3,opt,name=verification_type,json=verificationType,proto3" json:"verification_type,omitempty"`
+	SubmittedTime      string                 `protobuf:"bytes,4,opt,name=submitted_time,json=submittedTime,proto3" json:"submitted_time,omitempty"`
+	ReviewedTime       string                 `protobuf:"bytes,5,opt,name=reviewed_time,json=reviewedTime,proto3" json:"reviewed_time,omitempty"`
+	ReviewerNotes      string                 `protobuf:"bytes,6,opt,name=reviewer_notes,json=reviewerNotes,proto3" json:"reviewer_notes,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *GetUserVerificationStatusResp) Reset() {
+	*x = GetUserVerificationStatusResp{}
+	mi := &file_identity_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserVerificationStatusResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserVerificationStatusResp) ProtoMessage() {}
+
+func (x *GetUserVerificationStatusResp) ProtoReflect() protoreflect.Message {
+	mi := &file_identity_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserVerificationStatusResp.ProtoReflect.Descriptor instead.
+func (*GetUserVerificationStatusResp) Descriptor() ([]byte, []int) {
+	return file_identity_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetUserVerificationStatusResp) GetVerificationId() int64 {
+	if x != nil {
+		return x.VerificationId
+	}
+	return 0
+}
+
+func (x *GetUserVerificationStatusResp) GetVerificationStatus() int32 {
+	if x != nil {
+		return x.VerificationStatus
+	}
+	return 0
+}
+
+func (x *GetUserVerificationStatusResp) GetVerificationType() string {
+	if x != nil {
+		return x.VerificationType
+	}
+	return ""
+}
+
+func (x *GetUserVerificationStatusResp) GetSubmittedTime() string {
+	if x != nil {
+		return x.SubmittedTime
+	}
+	return ""
+}
+
+func (x *GetUserVerificationStatusResp) GetReviewedTime() string {
+	if x != nil {
+		return x.ReviewedTime
+	}
+	return ""
+}
+
+func (x *GetUserVerificationStatusResp) GetReviewerNotes() string {
+	if x != nil {
+		return x.ReviewerNotes
+	}
+	return ""
+}
+
+// Property binding messages
+type GetPropertyBindingsReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPropertyBindingsReq) Reset() {
+	*x = GetPropertyBindingsReq{}
+	mi := &file_identity_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPropertyBindingsReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPropertyBindingsReq) ProtoMessage() {}
+
+func (x *GetPropertyBindingsReq) ProtoReflect() protoreflect.Message {
+	mi := &file_identity_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPropertyBindingsReq.ProtoReflect.Descriptor instead.
+func (*GetPropertyBindingsReq) Descriptor() ([]byte, []int) {
+	return file_identity_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *GetPropertyBindingsReq) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+type PropertyBinding struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId         int64                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PropertyUnitId int64                  `protobuf:"varint,3,opt,name=property_unit_id,json=propertyUnitId,proto3" json:"property_unit_id,omitempty"`
+	BindingType    string                 `protobuf:"bytes,4,opt,name=binding_type,json=bindingType,proto3" json:"binding_type,omitempty"`
+	IsPrimary      int32                  `protobuf:"varint,5,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`
+	BoundTime      string                 `protobuf:"bytes,6,opt,name=bound_time,json=boundTime,proto3" json:"bound_time,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *PropertyBinding) Reset() {
+	*x = PropertyBinding{}
+	mi := &file_identity_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PropertyBinding) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PropertyBinding) ProtoMessage() {}
+
+func (x *PropertyBinding) ProtoReflect() protoreflect.Message {
+	mi := &file_identity_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PropertyBinding.ProtoReflect.Descriptor instead.
+func (*PropertyBinding) Descriptor() ([]byte, []int) {
+	return file_identity_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *PropertyBinding) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *PropertyBinding) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *PropertyBinding) GetPropertyUnitId() int64 {
+	if x != nil {
+		return x.PropertyUnitId
+	}
+	return 0
+}
+
+func (x *PropertyBinding) GetBindingType() string {
+	if x != nil {
+		return x.BindingType
+	}
+	return ""
+}
+
+func (x *PropertyBinding) GetIsPrimary() int32 {
+	if x != nil {
+		return x.IsPrimary
+	}
+	return 0
+}
+
+func (x *PropertyBinding) GetBoundTime() string {
+	if x != nil {
+		return x.BoundTime
+	}
+	return ""
+}
+
+type GetPropertyBindingsResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Bindings      []*PropertyBinding     `protobuf:"bytes,1,rep,name=bindings,proto3" json:"bindings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPropertyBindingsResp) Reset() {
+	*x = GetPropertyBindingsResp{}
+	mi := &file_identity_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPropertyBindingsResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPropertyBindingsResp) ProtoMessage() {}
+
+func (x *GetPropertyBindingsResp) ProtoReflect() protoreflect.Message {
+	mi := &file_identity_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPropertyBindingsResp.ProtoReflect.Descriptor instead.
+func (*GetPropertyBindingsResp) Descriptor() ([]byte, []int) {
+	return file_identity_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *GetPropertyBindingsResp) GetBindings() []*PropertyBinding {
+	if x != nil {
+		return x.Bindings
+	}
+	return nil
+}
+
+// Property access validation messages
+type ValidatePropertyAccessReq struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	UserId         int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PropertyUnitId int64                  `protobuf:"varint,2,opt,name=property_unit_id,json=propertyUnitId,proto3" json:"property_unit_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ValidatePropertyAccessReq) Reset() {
+	*x = ValidatePropertyAccessReq{}
+	mi := &file_identity_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatePropertyAccessReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatePropertyAccessReq) ProtoMessage() {}
+
+func (x *ValidatePropertyAccessReq) ProtoReflect() protoreflect.Message {
+	mi := &file_identity_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatePropertyAccessReq.ProtoReflect.Descriptor instead.
+func (*ValidatePropertyAccessReq) Descriptor() ([]byte, []int) {
+	return file_identity_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ValidatePropertyAccessReq) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *ValidatePropertyAccessReq) GetPropertyUnitId() int64 {
+	if x != nil {
+		return x.PropertyUnitId
+	}
+	return 0
+}
+
+type ValidatePropertyAccessResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HasAccess     bool                   `protobuf:"varint,1,opt,name=has_access,json=hasAccess,proto3" json:"has_access,omitempty"`
+	BindingType   string                 `protobuf:"bytes,2,opt,name=binding_type,json=bindingType,proto3" json:"binding_type,omitempty"`
+	IsPrimary     int32                  `protobuf:"varint,3,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidatePropertyAccessResp) Reset() {
+	*x = ValidatePropertyAccessResp{}
+	mi := &file_identity_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatePropertyAccessResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatePropertyAccessResp) ProtoMessage() {}
+
+func (x *ValidatePropertyAccessResp) ProtoReflect() protoreflect.Message {
+	mi := &file_identity_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatePropertyAccessResp.ProtoReflect.Descriptor instead.
+func (*ValidatePropertyAccessResp) Descriptor() ([]byte, []int) {
+	return file_identity_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ValidatePropertyAccessResp) GetHasAccess() bool {
+	if x != nil {
+		return x.HasAccess
+	}
+	return false
+}
+
+func (x *ValidatePropertyAccessResp) GetBindingType() string {
+	if x != nil {
+		return x.BindingType
+	}
+	return ""
+}
+
+func (x *ValidatePropertyAccessResp) GetIsPrimary() int32 {
+	if x != nil {
+		return x.IsPrimary
+	}
+	return 0
+}
+
 var File_identity_proto protoreflect.FileDescriptor
 
 const file_identity_proto_rawDesc = "" +
@@ -1530,7 +1953,39 @@ const file_identity_proto_rawDesc = "" +
 	"\x0fGetUserRolesReq\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x03R\x06userId\"8\n" +
 	"\x10GetUserRolesResp\x12$\n" +
-	"\x05roles\x18\x01 \x03(\v2\x0e.identity.RoleR\x05roles2\xb4\x06\n" +
+	"\x05roles\x18\x01 \x03(\v2\x0e.identity.RoleR\x05roles\"a\n" +
+	"\x1cGetUserVerificationStatusReq\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12(\n" +
+	"\x10property_unit_id\x18\x02 \x01(\x03R\x0epropertyUnitId\"\x99\x02\n" +
+	"\x1dGetUserVerificationStatusResp\x12'\n" +
+	"\x0fverification_id\x18\x01 \x01(\x03R\x0everificationId\x12/\n" +
+	"\x13verification_status\x18\x02 \x01(\x05R\x12verificationStatus\x12+\n" +
+	"\x11verification_type\x18\x03 \x01(\tR\x10verificationType\x12%\n" +
+	"\x0esubmitted_time\x18\x04 \x01(\tR\rsubmittedTime\x12#\n" +
+	"\rreviewed_time\x18\x05 \x01(\tR\freviewedTime\x12%\n" +
+	"\x0ereviewer_notes\x18\x06 \x01(\tR\rreviewerNotes\"1\n" +
+	"\x16GetPropertyBindingsReq\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\"\xc5\x01\n" +
+	"\x0fPropertyBinding\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12(\n" +
+	"\x10property_unit_id\x18\x03 \x01(\x03R\x0epropertyUnitId\x12!\n" +
+	"\fbinding_type\x18\x04 \x01(\tR\vbindingType\x12\x1d\n" +
+	"\n" +
+	"is_primary\x18\x05 \x01(\x05R\tisPrimary\x12\x1d\n" +
+	"\n" +
+	"bound_time\x18\x06 \x01(\tR\tboundTime\"P\n" +
+	"\x17GetPropertyBindingsResp\x125\n" +
+	"\bbindings\x18\x01 \x03(\v2\x19.identity.PropertyBindingR\bbindings\"^\n" +
+	"\x19ValidatePropertyAccessReq\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12(\n" +
+	"\x10property_unit_id\x18\x02 \x01(\x03R\x0epropertyUnitId\"}\n" +
+	"\x1aValidatePropertyAccessResp\x12\x1d\n" +
+	"\n" +
+	"has_access\x18\x01 \x01(\bR\thasAccess\x12!\n" +
+	"\fbinding_type\x18\x02 \x01(\tR\vbindingType\x12\x1d\n" +
+	"\n" +
+	"is_primary\x18\x03 \x01(\x05R\tisPrimary2\xe3\b\n" +
 	"\bIdentity\x120\n" +
 	"\x05Login\x12\x12.identity.LoginReq\x1a\x13.identity.LoginResp\x129\n" +
 	"\bLoginSms\x12\x15.identity.LoginSmsReq\x1a\x16.identity.LoginSmsResp\x129\n" +
@@ -1543,7 +1998,10 @@ const file_identity_proto_rawDesc = "" +
 	"\x0fCheckPermission\x12\x1c.identity.CheckPermissionReq\x1a\x1d.identity.CheckPermissionResp\x12W\n" +
 	"\x12GetUserPermissions\x12\x1f.identity.GetUserPermissionsReq\x1a .identity.GetUserPermissionsResp\x12H\n" +
 	"\rGetRolesByIds\x12\x1a.identity.GetRolesByIdsReq\x1a\x1b.identity.GetRolesByIdsResp\x12E\n" +
-	"\fGetUserRoles\x12\x19.identity.GetUserRolesReq\x1a\x1a.identity.GetUserRolesRespB\x06Z\x04./pbb\x06proto3"
+	"\fGetUserRoles\x12\x19.identity.GetUserRolesReq\x1a\x1a.identity.GetUserRolesResp\x12l\n" +
+	"\x19GetUserVerificationStatus\x12&.identity.GetUserVerificationStatusReq\x1a'.identity.GetUserVerificationStatusResp\x12Z\n" +
+	"\x13GetPropertyBindings\x12 .identity.GetPropertyBindingsReq\x1a!.identity.GetPropertyBindingsResp\x12c\n" +
+	"\x16ValidatePropertyAccess\x12#.identity.ValidatePropertyAccessReq\x1a$.identity.ValidatePropertyAccessRespB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_identity_proto_rawDescOnce sync.Once
@@ -1557,69 +2015,83 @@ func file_identity_proto_rawDescGZIP() []byte {
 	return file_identity_proto_rawDescData
 }
 
-var file_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_identity_proto_goTypes = []any{
-	(*LoginReq)(nil),               // 0: identity.LoginReq
-	(*LoginResp)(nil),              // 1: identity.LoginResp
-	(*LoginSmsReq)(nil),            // 2: identity.LoginSmsReq
-	(*LoginSmsResp)(nil),           // 3: identity.LoginSmsResp
-	(*RegisterReq)(nil),            // 4: identity.RegisterReq
-	(*RegisterResp)(nil),           // 5: identity.RegisterResp
-	(*ValidateTokenReq)(nil),       // 6: identity.ValidateTokenReq
-	(*ValidateTokenResp)(nil),      // 7: identity.ValidateTokenResp
-	(*RefreshTokenReq)(nil),        // 8: identity.RefreshTokenReq
-	(*RefreshTokenResp)(nil),       // 9: identity.RefreshTokenResp
-	(*LogoutReq)(nil),              // 10: identity.LogoutReq
-	(*LogoutResp)(nil),             // 11: identity.LogoutResp
-	(*GetUserReq)(nil),             // 12: identity.GetUserReq
-	(*GetUserResp)(nil),            // 13: identity.GetUserResp
-	(*GetUsersByIdsReq)(nil),       // 14: identity.GetUsersByIdsReq
-	(*GetUsersByIdsResp)(nil),      // 15: identity.GetUsersByIdsResp
-	(*CheckPermissionReq)(nil),     // 16: identity.CheckPermissionReq
-	(*CheckPermissionResp)(nil),    // 17: identity.CheckPermissionResp
-	(*GetUserPermissionsReq)(nil),  // 18: identity.GetUserPermissionsReq
-	(*GetUserPermissionsResp)(nil), // 19: identity.GetUserPermissionsResp
-	(*User)(nil),                   // 20: identity.User
-	(*Role)(nil),                   // 21: identity.Role
-	(*GetRolesByIdsReq)(nil),       // 22: identity.GetRolesByIdsReq
-	(*GetRolesByIdsResp)(nil),      // 23: identity.GetRolesByIdsResp
-	(*GetUserRolesReq)(nil),        // 24: identity.GetUserRolesReq
-	(*GetUserRolesResp)(nil),       // 25: identity.GetUserRolesResp
+	(*LoginReq)(nil),                      // 0: identity.LoginReq
+	(*LoginResp)(nil),                     // 1: identity.LoginResp
+	(*LoginSmsReq)(nil),                   // 2: identity.LoginSmsReq
+	(*LoginSmsResp)(nil),                  // 3: identity.LoginSmsResp
+	(*RegisterReq)(nil),                   // 4: identity.RegisterReq
+	(*RegisterResp)(nil),                  // 5: identity.RegisterResp
+	(*ValidateTokenReq)(nil),              // 6: identity.ValidateTokenReq
+	(*ValidateTokenResp)(nil),             // 7: identity.ValidateTokenResp
+	(*RefreshTokenReq)(nil),               // 8: identity.RefreshTokenReq
+	(*RefreshTokenResp)(nil),              // 9: identity.RefreshTokenResp
+	(*LogoutReq)(nil),                     // 10: identity.LogoutReq
+	(*LogoutResp)(nil),                    // 11: identity.LogoutResp
+	(*GetUserReq)(nil),                    // 12: identity.GetUserReq
+	(*GetUserResp)(nil),                   // 13: identity.GetUserResp
+	(*GetUsersByIdsReq)(nil),              // 14: identity.GetUsersByIdsReq
+	(*GetUsersByIdsResp)(nil),             // 15: identity.GetUsersByIdsResp
+	(*CheckPermissionReq)(nil),            // 16: identity.CheckPermissionReq
+	(*CheckPermissionResp)(nil),           // 17: identity.CheckPermissionResp
+	(*GetUserPermissionsReq)(nil),         // 18: identity.GetUserPermissionsReq
+	(*GetUserPermissionsResp)(nil),        // 19: identity.GetUserPermissionsResp
+	(*User)(nil),                          // 20: identity.User
+	(*Role)(nil),                          // 21: identity.Role
+	(*GetRolesByIdsReq)(nil),              // 22: identity.GetRolesByIdsReq
+	(*GetRolesByIdsResp)(nil),             // 23: identity.GetRolesByIdsResp
+	(*GetUserRolesReq)(nil),               // 24: identity.GetUserRolesReq
+	(*GetUserRolesResp)(nil),              // 25: identity.GetUserRolesResp
+	(*GetUserVerificationStatusReq)(nil),  // 26: identity.GetUserVerificationStatusReq
+	(*GetUserVerificationStatusResp)(nil), // 27: identity.GetUserVerificationStatusResp
+	(*GetPropertyBindingsReq)(nil),        // 28: identity.GetPropertyBindingsReq
+	(*PropertyBinding)(nil),               // 29: identity.PropertyBinding
+	(*GetPropertyBindingsResp)(nil),       // 30: identity.GetPropertyBindingsResp
+	(*ValidatePropertyAccessReq)(nil),     // 31: identity.ValidatePropertyAccessReq
+	(*ValidatePropertyAccessResp)(nil),    // 32: identity.ValidatePropertyAccessResp
 }
 var file_identity_proto_depIdxs = []int32{
 	20, // 0: identity.GetUserResp.user:type_name -> identity.User
 	20, // 1: identity.GetUsersByIdsResp.users:type_name -> identity.User
 	21, // 2: identity.GetRolesByIdsResp.roles:type_name -> identity.Role
 	21, // 3: identity.GetUserRolesResp.roles:type_name -> identity.Role
-	0,  // 4: identity.Identity.Login:input_type -> identity.LoginReq
-	2,  // 5: identity.Identity.LoginSms:input_type -> identity.LoginSmsReq
-	4,  // 6: identity.Identity.Register:input_type -> identity.RegisterReq
-	6,  // 7: identity.Identity.ValidateToken:input_type -> identity.ValidateTokenReq
-	8,  // 8: identity.Identity.RefreshToken:input_type -> identity.RefreshTokenReq
-	10, // 9: identity.Identity.Logout:input_type -> identity.LogoutReq
-	12, // 10: identity.Identity.GetUser:input_type -> identity.GetUserReq
-	14, // 11: identity.Identity.GetUsersByIds:input_type -> identity.GetUsersByIdsReq
-	16, // 12: identity.Identity.CheckPermission:input_type -> identity.CheckPermissionReq
-	18, // 13: identity.Identity.GetUserPermissions:input_type -> identity.GetUserPermissionsReq
-	22, // 14: identity.Identity.GetRolesByIds:input_type -> identity.GetRolesByIdsReq
-	24, // 15: identity.Identity.GetUserRoles:input_type -> identity.GetUserRolesReq
-	1,  // 16: identity.Identity.Login:output_type -> identity.LoginResp
-	3,  // 17: identity.Identity.LoginSms:output_type -> identity.LoginSmsResp
-	5,  // 18: identity.Identity.Register:output_type -> identity.RegisterResp
-	7,  // 19: identity.Identity.ValidateToken:output_type -> identity.ValidateTokenResp
-	9,  // 20: identity.Identity.RefreshToken:output_type -> identity.RefreshTokenResp
-	11, // 21: identity.Identity.Logout:output_type -> identity.LogoutResp
-	13, // 22: identity.Identity.GetUser:output_type -> identity.GetUserResp
-	15, // 23: identity.Identity.GetUsersByIds:output_type -> identity.GetUsersByIdsResp
-	17, // 24: identity.Identity.CheckPermission:output_type -> identity.CheckPermissionResp
-	19, // 25: identity.Identity.GetUserPermissions:output_type -> identity.GetUserPermissionsResp
-	23, // 26: identity.Identity.GetRolesByIds:output_type -> identity.GetRolesByIdsResp
-	25, // 27: identity.Identity.GetUserRoles:output_type -> identity.GetUserRolesResp
-	16, // [16:28] is the sub-list for method output_type
-	4,  // [4:16] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	29, // 4: identity.GetPropertyBindingsResp.bindings:type_name -> identity.PropertyBinding
+	0,  // 5: identity.Identity.Login:input_type -> identity.LoginReq
+	2,  // 6: identity.Identity.LoginSms:input_type -> identity.LoginSmsReq
+	4,  // 7: identity.Identity.Register:input_type -> identity.RegisterReq
+	6,  // 8: identity.Identity.ValidateToken:input_type -> identity.ValidateTokenReq
+	8,  // 9: identity.Identity.RefreshToken:input_type -> identity.RefreshTokenReq
+	10, // 10: identity.Identity.Logout:input_type -> identity.LogoutReq
+	12, // 11: identity.Identity.GetUser:input_type -> identity.GetUserReq
+	14, // 12: identity.Identity.GetUsersByIds:input_type -> identity.GetUsersByIdsReq
+	16, // 13: identity.Identity.CheckPermission:input_type -> identity.CheckPermissionReq
+	18, // 14: identity.Identity.GetUserPermissions:input_type -> identity.GetUserPermissionsReq
+	22, // 15: identity.Identity.GetRolesByIds:input_type -> identity.GetRolesByIdsReq
+	24, // 16: identity.Identity.GetUserRoles:input_type -> identity.GetUserRolesReq
+	26, // 17: identity.Identity.GetUserVerificationStatus:input_type -> identity.GetUserVerificationStatusReq
+	28, // 18: identity.Identity.GetPropertyBindings:input_type -> identity.GetPropertyBindingsReq
+	31, // 19: identity.Identity.ValidatePropertyAccess:input_type -> identity.ValidatePropertyAccessReq
+	1,  // 20: identity.Identity.Login:output_type -> identity.LoginResp
+	3,  // 21: identity.Identity.LoginSms:output_type -> identity.LoginSmsResp
+	5,  // 22: identity.Identity.Register:output_type -> identity.RegisterResp
+	7,  // 23: identity.Identity.ValidateToken:output_type -> identity.ValidateTokenResp
+	9,  // 24: identity.Identity.RefreshToken:output_type -> identity.RefreshTokenResp
+	11, // 25: identity.Identity.Logout:output_type -> identity.LogoutResp
+	13, // 26: identity.Identity.GetUser:output_type -> identity.GetUserResp
+	15, // 27: identity.Identity.GetUsersByIds:output_type -> identity.GetUsersByIdsResp
+	17, // 28: identity.Identity.CheckPermission:output_type -> identity.CheckPermissionResp
+	19, // 29: identity.Identity.GetUserPermissions:output_type -> identity.GetUserPermissionsResp
+	23, // 30: identity.Identity.GetRolesByIds:output_type -> identity.GetRolesByIdsResp
+	25, // 31: identity.Identity.GetUserRoles:output_type -> identity.GetUserRolesResp
+	27, // 32: identity.Identity.GetUserVerificationStatus:output_type -> identity.GetUserVerificationStatusResp
+	30, // 33: identity.Identity.GetPropertyBindings:output_type -> identity.GetPropertyBindingsResp
+	32, // 34: identity.Identity.ValidatePropertyAccess:output_type -> identity.ValidatePropertyAccessResp
+	20, // [20:35] is the sub-list for method output_type
+	5,  // [5:20] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_identity_proto_init() }
@@ -1633,7 +2105,7 @@ func file_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_identity_proto_rawDesc), len(file_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   26,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

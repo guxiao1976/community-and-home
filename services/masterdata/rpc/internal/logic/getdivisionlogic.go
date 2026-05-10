@@ -3,9 +3,10 @@ package logic
 import (
 	"context"
 
+	"github.com/guxiao/community-and-home/services/masterdata/model"
 	"github.com/guxiao/community-and-home/services/masterdata/rpc/internal/svc"
 	"github.com/guxiao/community-and-home/services/masterdata/rpc/pb"
-	"github.com/guxiao/community-and-home/services/masterdata/model"
+
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -56,39 +57,6 @@ func modelDivisionToPb(d *model.MdAdministrativeDivision) *pb.Division {
 	}
 	if d.ParentId.Valid {
 		result.ParentId = d.ParentId.Int64
-	}
-	return result
-}
-
-func modelCommunityToPb(c *model.MdCommunity) *pb.Community {
-	result := &pb.Community{
-		Id:               c.Id,
-		DivisionId:       c.DivisionId,
-		Name:             c.Name,
-		Address:          c.Address,
-		CommunityType:    int32(c.CommunityType),
-		SubmissionStatus: int32(c.SubmissionStatus),
-		SubmitterId:      c.SubmitterId,
-		CreatedTime:      c.CreatedTime.Format("2006-01-02 15:04:05"),
-		UpdatedTime:      c.UpdatedTime.Format("2006-01-02 15:04:05"),
-	}
-	if c.Area.Valid {
-		result.Area = c.Area.Float64
-	}
-	if c.Population.Valid {
-		result.Population = int32(c.Population.Int64)
-	}
-	if c.SubmitTime.Valid {
-		result.SubmitTime = c.SubmitTime.Time.Format("2006-01-02 15:04:05")
-	}
-	if c.ReviewerId.Valid {
-		result.ReviewerId = c.ReviewerId.Int64
-	}
-	if c.ReviewTime.Valid {
-		result.ReviewTime = c.ReviewTime.Time.Format("2006-01-02 15:04:05")
-	}
-	if c.ReviewNotes.Valid {
-		result.ReviewNotes = c.ReviewNotes.String
 	}
 	return result
 }

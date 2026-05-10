@@ -43,18 +43,26 @@ type (
 	}
 
 	MdAdministrativeDivision struct {
-		Id          int64         `db:"id"`
-		ParentId    sql.NullInt64 `db:"parent_id"`
-		Level       int64         `db:"level"`
-		Name        string        `db:"name"`
-		Code        string        `db:"code"`
-		Path        string        `db:"path"`
-		SortOrder   int64         `db:"sort_order"`
-		Status      int64         `db:"status"`
-		CreatedBy   int64         `db:"created_by"`
-		CreatedTime time.Time     `db:"created_time"`
-		UpdatedTime time.Time     `db:"updated_time"`
-		DeleteTime  sql.NullTime  `db:"delete_time"`
+		Id               int64          `db:"id"`
+		ParentId         sql.NullInt64  `db:"parent_id"`
+		Level            int64          `db:"level"`
+		Name             string         `db:"name"`
+		Code             string         `db:"code"`
+		Path             string         `db:"path"`
+		SortOrder        int64          `db:"sort_order"`
+		Status           int64          `db:"status"`
+		SubmissionStatus int64          `db:"submission_status"`
+		SubmissionType   sql.NullInt64  `db:"submission_type"`
+		ChangeSnapshot   sql.NullString `db:"change_snapshot"`
+		SubmitterId      sql.NullInt64  `db:"submitter_id"`
+		SubmitTime       sql.NullTime   `db:"submit_time"`
+		ReviewerId       sql.NullInt64  `db:"reviewer_id"`
+		ReviewTime       sql.NullTime   `db:"review_time"`
+		ReviewNotes      sql.NullString `db:"review_notes"`
+		CreatedBy        int64          `db:"created_by"`
+		CreatedTime      time.Time      `db:"created_time"`
+		UpdatedTime      time.Time      `db:"updated_time"`
+		DeleteTime       sql.NullTime   `db:"delete_time"`
 	}
 )
 
@@ -121,8 +129,8 @@ func (m *defaultMdAdministrativeDivisionModel) Insert(ctx context.Context, data 
 	mdAdministrativeDivisionCodeKey := fmt.Sprintf("%s%v", cacheMdAdministrativeDivisionCodePrefix, data.Code)
 	mdAdministrativeDivisionIdKey := fmt.Sprintf("%s%v", cacheMdAdministrativeDivisionIdPrefix, data.Id)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, mdAdministrativeDivisionRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.ParentId, data.Level, data.Name, data.Code, data.Path, data.SortOrder, data.Status, data.CreatedBy, data.CreatedTime, data.UpdatedTime, data.DeleteTime)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, mdAdministrativeDivisionRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.ParentId, data.Level, data.Name, data.Code, data.Path, data.SortOrder, data.Status, data.SubmissionStatus, data.SubmissionType, data.ChangeSnapshot, data.SubmitterId, data.SubmitTime, data.ReviewerId, data.ReviewTime, data.ReviewNotes, data.CreatedBy, data.CreatedTime, data.UpdatedTime, data.DeleteTime)
 	}, mdAdministrativeDivisionCodeKey, mdAdministrativeDivisionIdKey)
 	return ret, err
 }
@@ -137,7 +145,7 @@ func (m *defaultMdAdministrativeDivisionModel) Update(ctx context.Context, newDa
 	mdAdministrativeDivisionIdKey := fmt.Sprintf("%s%v", cacheMdAdministrativeDivisionIdPrefix, data.Id)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, mdAdministrativeDivisionRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.ParentId, newData.Level, newData.Name, newData.Code, newData.Path, newData.SortOrder, newData.Status, newData.CreatedBy, newData.CreatedTime, newData.UpdatedTime, newData.DeleteTime, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.ParentId, newData.Level, newData.Name, newData.Code, newData.Path, newData.SortOrder, newData.Status, newData.SubmissionStatus, newData.SubmissionType, newData.ChangeSnapshot, newData.SubmitterId, newData.SubmitTime, newData.ReviewerId, newData.ReviewTime, newData.ReviewNotes, newData.CreatedBy, newData.CreatedTime, newData.UpdatedTime, newData.DeleteTime, newData.Id)
 	}, mdAdministrativeDivisionCodeKey, mdAdministrativeDivisionIdKey)
 	return err
 }

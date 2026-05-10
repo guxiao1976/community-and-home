@@ -7,7 +7,7 @@ package identity
 import (
 	"context"
 
-	"github.com/guxiao/community-and-home/services/identity/rpc/types/pb"
+	"github.com/guxiao/community-and-home/services/identity/rpc/pb"
 
 	"github.com/zeromicro/go-zero/zrpc"
 	"google.golang.org/grpc"

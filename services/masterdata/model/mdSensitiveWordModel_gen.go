@@ -43,15 +43,24 @@ type (
 	}
 
 	MdSensitiveWord struct {
-		Id          int64     `db:"id"`
-		Word        string    `db:"word"`
-		Category    string    `db:"category"`
-		Severity    int64     `db:"severity"`
-		Action      int64     `db:"action"`
-		Status      int64     `db:"status"`
-		CreatedBy   int64     `db:"created_by"`
-		CreatedTime time.Time `db:"created_time"`
-		UpdatedTime time.Time `db:"updated_time"`
+		Id               int64         `db:"id"`
+		Word             string        `db:"word"`
+		Category         string        `db:"category"`
+		Severity         int64         `db:"severity"`
+		Action           int64         `db:"action"`
+		Status           int64         `db:"status"`
+		SubmissionStatus int64         `db:"submission_status"`
+		SubmissionType   sql.NullInt64 `db:"submission_type"`
+		ChangeSnapshot   sql.NullString`db:"change_snapshot"`
+		SubmitterId      sql.NullInt64 `db:"submitter_id"`
+		SubmitTime       sql.NullTime  `db:"submit_time"`
+		ReviewerId       sql.NullInt64 `db:"reviewer_id"`
+		ReviewTime       sql.NullTime  `db:"review_time"`
+		ReviewNotes      sql.NullString`db:"review_notes"`
+		CreatedBy        int64         `db:"created_by"`
+		CreatedTime      time.Time     `db:"created_time"`
+		UpdatedTime      time.Time     `db:"updated_time"`
+		DeleteTime       sql.NullTime  `db:"delete_time"`
 	}
 )
 
@@ -118,8 +127,8 @@ func (m *defaultMdSensitiveWordModel) Insert(ctx context.Context, data *MdSensit
 	mdSensitiveWordIdKey := fmt.Sprintf("%s%v", cacheMdSensitiveWordIdPrefix, data.Id)
 	mdSensitiveWordWordKey := fmt.Sprintf("%s%v", cacheMdSensitiveWordWordPrefix, data.Word)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?)", m.table, mdSensitiveWordRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.Word, data.Category, data.Severity, data.Action, data.Status, data.CreatedBy, data.CreatedTime, data.UpdatedTime)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, mdSensitiveWordRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.Word, data.Category, data.Severity, data.Action, data.Status, data.SubmissionStatus, data.SubmissionType, data.ChangeSnapshot, data.SubmitterId, data.SubmitTime, data.ReviewerId, data.ReviewTime, data.ReviewNotes, data.CreatedBy, data.CreatedTime, data.UpdatedTime, data.DeleteTime)
 	}, mdSensitiveWordIdKey, mdSensitiveWordWordKey)
 	return ret, err
 }
@@ -134,7 +143,7 @@ func (m *defaultMdSensitiveWordModel) Update(ctx context.Context, newData *MdSen
 	mdSensitiveWordWordKey := fmt.Sprintf("%s%v", cacheMdSensitiveWordWordPrefix, data.Word)
 	_, err = m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, mdSensitiveWordRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, newData.Word, newData.Category, newData.Severity, newData.Action, newData.Status, newData.CreatedBy, newData.CreatedTime, newData.UpdatedTime, newData.Id)
+		return conn.ExecCtx(ctx, query, newData.Word, newData.Category, newData.Severity, newData.Action, newData.Status, newData.SubmissionStatus, newData.SubmissionType, newData.ChangeSnapshot, newData.SubmitterId, newData.SubmitTime, newData.ReviewerId, newData.ReviewTime, newData.ReviewNotes, newData.CreatedBy, newData.CreatedTime, newData.UpdatedTime, newData.DeleteTime, newData.Id)
 	}, mdSensitiveWordIdKey, mdSensitiveWordWordKey)
 	return err
 }

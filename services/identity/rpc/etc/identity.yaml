@@ -11,6 +11,6 @@ DataSource: root:123456@tcp(localhost:3306)/identity_db?charset=utf8mb4&parseTim
 Cache:
   - Host: localhost:6379
 
-Auth:
+JwtAuth:
   AccessSecret: your-secret-key-change-in-production
   AccessExpire: 86400

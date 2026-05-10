@@ -6,6 +6,7 @@ package user
 import (
 	"context"
 
+	"github.com/guxiao/community-and-home/common/errorx"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/svc"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/types"
 
@@ -28,7 +29,14 @@ func NewDeleteUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Delete
 }
 
 func (l *DeleteUserLogic) DeleteUser(req *types.DeleteUserReq) (resp *types.DeleteUserResp, err error) {
-	// todo: add your logic here and delete this line
+	// Soft delete user
+	err = l.svcCtx.AuthUserModel.SoftDelete(l.ctx, req.Id)
+	if err != nil {
+		logx.Errorf("failed to delete user: %v", err)
+		return nil, errorx.NewDefaultError("failed to delete user")
+	}
 
-	return
+	return &types.DeleteUserResp{
+		Success: true,
+	}, nil
 }

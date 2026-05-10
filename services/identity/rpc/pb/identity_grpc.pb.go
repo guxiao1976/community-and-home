@@ -19,18 +19,21 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Identity_Login_FullMethodName              = "/identity.Identity/Login"
-	Identity_LoginSms_FullMethodName           = "/identity.Identity/LoginSms"
-	Identity_Register_FullMethodName           = "/identity.Identity/Register"
-	Identity_ValidateToken_FullMethodName      = "/identity.Identity/ValidateToken"
-	Identity_RefreshToken_FullMethodName       = "/identity.Identity/RefreshToken"
-	Identity_Logout_FullMethodName             = "/identity.Identity/Logout"
-	Identity_GetUser_FullMethodName            = "/identity.Identity/GetUser"
-	Identity_GetUsersByIds_FullMethodName      = "/identity.Identity/GetUsersByIds"
-	Identity_CheckPermission_FullMethodName    = "/identity.Identity/CheckPermission"
-	Identity_GetUserPermissions_FullMethodName = "/identity.Identity/GetUserPermissions"
-	Identity_GetRolesByIds_FullMethodName      = "/identity.Identity/GetRolesByIds"
-	Identity_GetUserRoles_FullMethodName       = "/identity.Identity/GetUserRoles"
+	Identity_Login_FullMethodName                     = "/identity.Identity/Login"
+	Identity_LoginSms_FullMethodName                  = "/identity.Identity/LoginSms"
+	Identity_Register_FullMethodName                  = "/identity.Identity/Register"
+	Identity_ValidateToken_FullMethodName             = "/identity.Identity/ValidateToken"
+	Identity_RefreshToken_FullMethodName              = "/identity.Identity/RefreshToken"
+	Identity_Logout_FullMethodName                    = "/identity.Identity/Logout"
+	Identity_GetUser_FullMethodName                   = "/identity.Identity/GetUser"
+	Identity_GetUsersByIds_FullMethodName             = "/identity.Identity/GetUsersByIds"
+	Identity_CheckPermission_FullMethodName           = "/identity.Identity/CheckPermission"
+	Identity_GetUserPermissions_FullMethodName        = "/identity.Identity/GetUserPermissions"
+	Identity_GetRolesByIds_FullMethodName             = "/identity.Identity/GetRolesByIds"
+	Identity_GetUserRoles_FullMethodName              = "/identity.Identity/GetUserRoles"
+	Identity_GetUserVerificationStatus_FullMethodName = "/identity.Identity/GetUserVerificationStatus"
+	Identity_GetPropertyBindings_FullMethodName       = "/identity.Identity/GetPropertyBindings"
+	Identity_ValidatePropertyAccess_FullMethodName    = "/identity.Identity/ValidatePropertyAccess"
 )
 
 // IdentityClient is the client API for Identity service.
@@ -49,6 +52,10 @@ type IdentityClient interface {
 	GetUserPermissions(ctx context.Context, in *GetUserPermissionsReq, opts ...grpc.CallOption) (*GetUserPermissionsResp, error)
 	GetRolesByIds(ctx context.Context, in *GetRolesByIdsReq, opts ...grpc.CallOption) (*GetRolesByIdsResp, error)
 	GetUserRoles(ctx context.Context, in *GetUserRolesReq, opts ...grpc.CallOption) (*GetUserRolesResp, error)
+	// Verification and property related methods
+	GetUserVerificationStatus(ctx context.Context, in *GetUserVerificationStatusReq, opts ...grpc.CallOption) (*GetUserVerificationStatusResp, error)
+	GetPropertyBindings(ctx context.Context, in *GetPropertyBindingsReq, opts ...grpc.CallOption) (*GetPropertyBindingsResp, error)
+	ValidatePropertyAccess(ctx context.Context, in *ValidatePropertyAccessReq, opts ...grpc.CallOption) (*ValidatePropertyAccessResp, error)
 }
 
 type identityClient struct {
@@ -179,6 +186,36 @@ func (c *identityClient) GetUserRoles(ctx context.Context, in *GetUserRolesReq, 
 	return out, nil
 }
 
+func (c *identityClient) GetUserVerificationStatus(ctx context.Context, in *GetUserVerificationStatusReq, opts ...grpc.CallOption) (*GetUserVerificationStatusResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserVerificationStatusResp)
+	err := c.cc.Invoke(ctx, Identity_GetUserVerificationStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) GetPropertyBindings(ctx context.Context, in *GetPropertyBindingsReq, opts ...grpc.CallOption) (*GetPropertyBindingsResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPropertyBindingsResp)
+	err := c.cc.Invoke(ctx, Identity_GetPropertyBindings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *identityClient) ValidatePropertyAccess(ctx context.Context, in *ValidatePropertyAccessReq, opts ...grpc.CallOption) (*ValidatePropertyAccessResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidatePropertyAccessResp)
+	err := c.cc.Invoke(ctx, Identity_ValidatePropertyAccess_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IdentityServer is the server API for Identity service.
 // All implementations must embed UnimplementedIdentityServer
 // for forward compatibility.
@@ -195,6 +232,10 @@ type IdentityServer interface {
 	GetUserPermissions(context.Context, *GetUserPermissionsReq) (*GetUserPermissionsResp, error)
 	GetRolesByIds(context.Context, *GetRolesByIdsReq) (*GetRolesByIdsResp, error)
 	GetUserRoles(context.Context, *GetUserRolesReq) (*GetUserRolesResp, error)
+	// Verification and property related methods
+	GetUserVerificationStatus(context.Context, *GetUserVerificationStatusReq) (*GetUserVerificationStatusResp, error)
+	GetPropertyBindings(context.Context, *GetPropertyBindingsReq) (*GetPropertyBindingsResp, error)
+	ValidatePropertyAccess(context.Context, *ValidatePropertyAccessReq) (*ValidatePropertyAccessResp, error)
 	mustEmbedUnimplementedIdentityServer()
 }
 
@@ -240,6 +281,15 @@ func (UnimplementedIdentityServer) GetRolesByIds(context.Context, *GetRolesByIds
 }
 func (UnimplementedIdentityServer) GetUserRoles(context.Context, *GetUserRolesReq) (*GetUserRolesResp, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserRoles not implemented")
+}
+func (UnimplementedIdentityServer) GetUserVerificationStatus(context.Context, *GetUserVerificationStatusReq) (*GetUserVerificationStatusResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserVerificationStatus not implemented")
+}
+func (UnimplementedIdentityServer) GetPropertyBindings(context.Context, *GetPropertyBindingsReq) (*GetPropertyBindingsResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPropertyBindings not implemented")
+}
+func (UnimplementedIdentityServer) ValidatePropertyAccess(context.Context, *ValidatePropertyAccessReq) (*ValidatePropertyAccessResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidatePropertyAccess not implemented")
 }
 func (UnimplementedIdentityServer) mustEmbedUnimplementedIdentityServer() {}
 func (UnimplementedIdentityServer) testEmbeddedByValue()                  {}
@@ -478,6 +528,60 @@ func _Identity_GetUserRoles_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Identity_GetUserVerificationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserVerificationStatusReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).GetUserVerificationStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_GetUserVerificationStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).GetUserVerificationStatus(ctx, req.(*GetUserVerificationStatusReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_GetPropertyBindings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPropertyBindingsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).GetPropertyBindings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_GetPropertyBindings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).GetPropertyBindings(ctx, req.(*GetPropertyBindingsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Identity_ValidatePropertyAccess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatePropertyAccessReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IdentityServer).ValidatePropertyAccess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Identity_ValidatePropertyAccess_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IdentityServer).ValidatePropertyAccess(ctx, req.(*ValidatePropertyAccessReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Identity_ServiceDesc is the grpc.ServiceDesc for Identity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -532,6 +636,18 @@ var Identity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserRoles",
 			Handler:    _Identity_GetUserRoles_Handler,
+		},
+		{
+			MethodName: "GetUserVerificationStatus",
+			Handler:    _Identity_GetUserVerificationStatus_Handler,
+		},
+		{
+			MethodName: "GetPropertyBindings",
+			Handler:    _Identity_GetPropertyBindings_Handler,
+		},
+		{
+			MethodName: "ValidatePropertyAccess",
+			Handler:    _Identity_ValidatePropertyAccess_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

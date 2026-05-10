@@ -49,18 +49,33 @@ func (s *MasterdataServer) ValidateScope(ctx context.Context, in *pb.ValidateSco
 	return l.ValidateScope(in)
 }
 
-// Community RPC methods
-func (s *MasterdataServer) GetCommunity(ctx context.Context, in *pb.GetCommunityReq) (*pb.GetCommunityResp, error) {
-	l := logic.NewGetCommunityLogic(ctx, s.svcCtx)
-	return l.GetCommunity(in)
+func (s *MasterdataServer) CreateDivision(ctx context.Context, in *pb.CreateDivisionReq) (*pb.CreateDivisionResp, error) {
+	l := logic.NewCreateDivisionLogic(ctx, s.svcCtx)
+	return l.CreateDivision(in)
 }
 
-func (s *MasterdataServer) GetCommunitiesByIds(ctx context.Context, in *pb.GetCommunitiesByIdsReq) (*pb.GetCommunitiesByIdsResp, error) {
-	l := logic.NewGetCommunitiesByIdsLogic(ctx, s.svcCtx)
-	return l.GetCommunitiesByIds(in)
+func (s *MasterdataServer) UpdateDivision(ctx context.Context, in *pb.UpdateDivisionReq) (*pb.UpdateDivisionResp, error) {
+	l := logic.NewUpdateDivisionLogic(ctx, s.svcCtx)
+	return l.UpdateDivision(in)
 }
 
-func (s *MasterdataServer) GetCommunitiesByDivision(ctx context.Context, in *pb.GetCommunitiesByDivisionReq) (*pb.GetCommunitiesByDivisionResp, error) {
-	l := logic.NewGetCommunitiesByDivisionLogic(ctx, s.svcCtx)
-	return l.GetCommunitiesByDivision(in)
+func (s *MasterdataServer) DeleteDivision(ctx context.Context, in *pb.DeleteDivisionReq) (*pb.DeleteDivisionResp, error) {
+	l := logic.NewDeleteDivisionLogic(ctx, s.svcCtx)
+	return l.DeleteDivision(in)
+}
+
+// Residential Area RPC methods
+func (s *MasterdataServer) GetResidentialArea(ctx context.Context, in *pb.GetResidentialAreaReq) (*pb.GetResidentialAreaResp, error) {
+	l := logic.NewGetResidentialAreaLogic(ctx, s.svcCtx)
+	return l.GetResidentialArea(in)
+}
+
+func (s *MasterdataServer) GetResidentialAreasByIds(ctx context.Context, in *pb.GetResidentialAreasByIdsReq) (*pb.GetResidentialAreasByIdsResp, error) {
+	l := logic.NewGetResidentialAreasByIdsLogic(ctx, s.svcCtx)
+	return l.GetResidentialAreasByIds(in)
+}
+
+func (s *MasterdataServer) GetResidentialAreasByDivision(ctx context.Context, in *pb.GetResidentialAreasByDivisionReq) (*pb.GetResidentialAreasByDivisionResp, error) {
+	l := logic.NewGetResidentialAreasByDivisionLogic(ctx, s.svcCtx)
+	return l.GetResidentialAreasByDivision(in)
 }

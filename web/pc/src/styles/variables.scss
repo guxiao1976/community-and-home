@@ -1,0 +1,70 @@
+// SCSS variables
+
+// Colors - 高德控制台风格
+$primary-color: #1890ff;
+$success-color: #52c41a;
+$warning-color: #faad14;
+$danger-color: #f5222d;
+$info-color: #86909c;
+
+$text-primary: #1d2129;
+$text-regular: #4e5969;
+$text-secondary: #86909c;
+$text-placeholder: #c9cdd4;
+
+$border-base: #e5e6eb;
+$border-light: #e5e6eb;
+$border-lighter: #f2f3f5;
+$border-extra-light: #f7f8fa;
+
+$background-base: #f0f2f5;
+$background-light: #fafafa;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// Typography
+$font-size-base: 14px;
+$font-size-sm: 12px;
+$font-size-lg: 16px;
+$font-size-xl: 18px;
+
+$line-height-base: 1.5;
+
+// Layout
+$header-height: 50px;
+$sidebar-width: 216px;
+$sidebar-collapsed-width: 64px;
+
+// Sidebar colors - 高德控制台白色侧边栏风格
+$sidebar-bg: #ffffff;
+$sidebar-text-color: #4e5969;
+$sidebar-hover-bg: #f2f3f5;
+$sidebar-active-bg: #e6f7ff;
+$sidebar-active-text: #1890ff;
+$sidebar-group-title: #86909c;
+$primary-color-light: rgba(24, 144, 255, 0.08);
+
+// Header colors - 白色顶栏
+$header-bg: #ffffff;
+$header-border: #e5e6eb;
+
+// Border colors
+$border-color-light: #e5e6eb;
+
+// Border radius
+$border-radius-base: 2px;
+$border-radius-sm: 2px;
+$border-radius-lg: 4px;
+
+// Shadows
+$box-shadow-base: 0 1px 4px rgba(0, 0, 0, 0.06);
+$box-shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.06);
+
+// Transitions
+$transition-base: all 0.2s ease;
+$transition-fast: all 0.15s ease;

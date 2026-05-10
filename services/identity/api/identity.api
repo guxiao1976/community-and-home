@@ -37,20 +37,20 @@ type (
 		Password string `json:"password"`
 	}
 	LoginResp {
-		UserId       int64  `json:"user_id"`
-		Token        string `json:"token"`
-		RefreshToken string `json:"refresh_token"`
-		Expire       int64  `json:"expire"`
+		AccessToken  string `json:"accessToken"`
+		RefreshToken string `json:"refreshToken"`
+		ExpiresIn    int64  `json:"expiresIn"`
+		User         User   `json:"user"`
 	}
 	LoginSmsReq {
 		Phone string `json:"phone"`
 		Code  string `json:"code"`
 	}
 	LoginSmsResp {
-		UserId       int64  `json:"user_id"`
-		Token        string `json:"token"`
-		RefreshToken string `json:"refresh_token"`
-		Expire       int64  `json:"expire"`
+		AccessToken  string `json:"accessToken"`
+		RefreshToken string `json:"refreshToken"`
+		ExpiresIn    int64  `json:"expiresIn"`
+		User         User   `json:"user"`
 	}
 	LogoutReq  {}
 	LogoutResp {
@@ -60,9 +60,9 @@ type (
 		RefreshToken string `json:"refresh_token"`
 	}
 	RefreshTokenResp {
-		Token        string `json:"token"`
-		RefreshToken string `json:"refresh_token"`
-		Expire       int64  `json:"expire"`
+		AccessToken  string `json:"accessToken"`
+		RefreshToken string `json:"refreshToken"`
+		ExpiresIn    int64  `json:"expiresIn"`
 	}
 	SendSmsCodeReq {
 		Phone string `json:"phone"`
@@ -310,10 +310,10 @@ type (
 	}
 )
 
+// Public auth endpoints (no JWT required)
 @server (
 	prefix: /api/identity
 	group:  auth
-	jwt:    Auth
 )
 service identity-api {
 	@doc "User login with password"
@@ -335,7 +335,15 @@ service identity-api {
 	@doc "Refresh token"
 	@handler refreshToken
 	post /auth/token/refresh (RefreshTokenReq) returns (RefreshTokenResp)
+}
 
+// Protected auth endpoints (JWT required)
+@server (
+	prefix: /api/identity
+	group:  auth
+	jwt:    Auth
+)
+service identity-api {
 	@doc "User logout"
 	@handler logout
 	post /auth/logout (LogoutReq) returns (LogoutResp)

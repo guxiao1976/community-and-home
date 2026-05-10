@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	auth "github.com/guxiao/community-and-home/services/identity/api/internal/handler/auth"
-	family "github.com/guxiao/community-and-home/services/identity/api/internal/handler/family"
 	file "github.com/guxiao/community-and-home/services/identity/api/internal/handler/file"
 	permission "github.com/guxiao/community-and-home/services/identity/api/internal/handler/permission"
 	property "github.com/guxiao/community-and-home/services/identity/api/internal/handler/property"
@@ -35,12 +34,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: auth.LoginSmsHandler(serverCtx),
 			},
 			{
-				// User logout
-				Method:  http.MethodPost,
-				Path:    "/auth/logout",
-				Handler: auth.LogoutHandler(serverCtx),
-			},
-			{
 				// User register
 				Method:  http.MethodPost,
 				Path:    "/auth/register",
@@ -57,6 +50,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/auth/token/refresh",
 				Handler: auth.RefreshTokenHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/identity"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// User logout
+				Method:  http.MethodPost,
+				Path:    "/auth/logout",
+				Handler: auth.LogoutHandler(serverCtx),
 			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
@@ -231,67 +236,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/verifications",
 				Handler: verification.GetVerificationListHandler(serverCtx),
-			},
-		},
-		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
-		rest.WithPrefix("/api/identity"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				// Create family
-				Method:  http.MethodPost,
-				Path:    "/family",
-				Handler: family.CreateFamilyHandler(serverCtx),
-			},
-			{
-				// Get family details
-				Method:  http.MethodGet,
-				Path:    "/family/:id",
-				Handler: family.GetFamilyHandler(serverCtx),
-			},
-			{
-				// Update family
-				Method:  http.MethodPut,
-				Path:    "/family/:id",
-				Handler: family.UpdateFamilyHandler(serverCtx),
-			},
-			{
-				// Delete family
-				Method:  http.MethodDelete,
-				Path:    "/family/:id",
-				Handler: family.DeleteFamilyHandler(serverCtx),
-			},
-			{
-				// Get families by property unit
-				Method:  http.MethodGet,
-				Path:    "/family/property/:property_unit_id",
-				Handler: family.GetPropertyFamiliesHandler(serverCtx),
-			},
-			{
-				// Add family member
-				Method:  http.MethodPost,
-				Path:    "/family/:id/members",
-				Handler: family.AddFamilyMemberHandler(serverCtx),
-			},
-			{
-				// Get family members
-				Method:  http.MethodGet,
-				Path:    "/family/:id/members",
-				Handler: family.GetFamilyMembersHandler(serverCtx),
-			},
-			{
-				// Update family member
-				Method:  http.MethodPut,
-				Path:    "/family/members/:member_id",
-				Handler: family.UpdateFamilyMemberHandler(serverCtx),
-			},
-			{
-				// Delete family member
-				Method:  http.MethodDelete,
-				Path:    "/family/members/:member_id",
-				Handler: family.DeleteFamilyMemberHandler(serverCtx),
 			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),

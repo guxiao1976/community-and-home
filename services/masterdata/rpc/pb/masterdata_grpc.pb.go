@@ -19,14 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Masterdata_GetDivision_FullMethodName              = "/masterdata.Masterdata/GetDivision"
-	Masterdata_GetDivisionsByIds_FullMethodName        = "/masterdata.Masterdata/GetDivisionsByIds"
-	Masterdata_GetDivisionTree_FullMethodName          = "/masterdata.Masterdata/GetDivisionTree"
-	Masterdata_GetDivisionPath_FullMethodName          = "/masterdata.Masterdata/GetDivisionPath"
-	Masterdata_ValidateScope_FullMethodName            = "/masterdata.Masterdata/ValidateScope"
-	Masterdata_GetCommunity_FullMethodName             = "/masterdata.Masterdata/GetCommunity"
-	Masterdata_GetCommunitiesByIds_FullMethodName      = "/masterdata.Masterdata/GetCommunitiesByIds"
-	Masterdata_GetCommunitiesByDivision_FullMethodName = "/masterdata.Masterdata/GetCommunitiesByDivision"
+	Masterdata_GetDivision_FullMethodName                   = "/masterdata.Masterdata/GetDivision"
+	Masterdata_GetDivisionsByIds_FullMethodName             = "/masterdata.Masterdata/GetDivisionsByIds"
+	Masterdata_GetDivisionTree_FullMethodName               = "/masterdata.Masterdata/GetDivisionTree"
+	Masterdata_GetDivisionPath_FullMethodName               = "/masterdata.Masterdata/GetDivisionPath"
+	Masterdata_ValidateScope_FullMethodName                 = "/masterdata.Masterdata/ValidateScope"
+	Masterdata_CreateDivision_FullMethodName                = "/masterdata.Masterdata/CreateDivision"
+	Masterdata_UpdateDivision_FullMethodName                = "/masterdata.Masterdata/UpdateDivision"
+	Masterdata_DeleteDivision_FullMethodName                = "/masterdata.Masterdata/DeleteDivision"
+	Masterdata_GetResidentialArea_FullMethodName            = "/masterdata.Masterdata/GetResidentialArea"
+	Masterdata_GetResidentialAreasByIds_FullMethodName      = "/masterdata.Masterdata/GetResidentialAreasByIds"
+	Masterdata_GetResidentialAreasByDivision_FullMethodName = "/masterdata.Masterdata/GetResidentialAreasByDivision"
 )
 
 // MasterdataClient is the client API for Masterdata service.
@@ -41,10 +44,13 @@ type MasterdataClient interface {
 	GetDivisionTree(ctx context.Context, in *GetDivisionTreeReq, opts ...grpc.CallOption) (*GetDivisionTreeResp, error)
 	GetDivisionPath(ctx context.Context, in *GetDivisionPathReq, opts ...grpc.CallOption) (*GetDivisionPathResp, error)
 	ValidateScope(ctx context.Context, in *ValidateScopeReq, opts ...grpc.CallOption) (*ValidateScopeResp, error)
-	// Community RPC methods
-	GetCommunity(ctx context.Context, in *GetCommunityReq, opts ...grpc.CallOption) (*GetCommunityResp, error)
-	GetCommunitiesByIds(ctx context.Context, in *GetCommunitiesByIdsReq, opts ...grpc.CallOption) (*GetCommunitiesByIdsResp, error)
-	GetCommunitiesByDivision(ctx context.Context, in *GetCommunitiesByDivisionReq, opts ...grpc.CallOption) (*GetCommunitiesByDivisionResp, error)
+	CreateDivision(ctx context.Context, in *CreateDivisionReq, opts ...grpc.CallOption) (*CreateDivisionResp, error)
+	UpdateDivision(ctx context.Context, in *UpdateDivisionReq, opts ...grpc.CallOption) (*UpdateDivisionResp, error)
+	DeleteDivision(ctx context.Context, in *DeleteDivisionReq, opts ...grpc.CallOption) (*DeleteDivisionResp, error)
+	// Residential Area RPC methods
+	GetResidentialArea(ctx context.Context, in *GetResidentialAreaReq, opts ...grpc.CallOption) (*GetResidentialAreaResp, error)
+	GetResidentialAreasByIds(ctx context.Context, in *GetResidentialAreasByIdsReq, opts ...grpc.CallOption) (*GetResidentialAreasByIdsResp, error)
+	GetResidentialAreasByDivision(ctx context.Context, in *GetResidentialAreasByDivisionReq, opts ...grpc.CallOption) (*GetResidentialAreasByDivisionResp, error)
 }
 
 type masterdataClient struct {
@@ -105,30 +111,60 @@ func (c *masterdataClient) ValidateScope(ctx context.Context, in *ValidateScopeR
 	return out, nil
 }
 
-func (c *masterdataClient) GetCommunity(ctx context.Context, in *GetCommunityReq, opts ...grpc.CallOption) (*GetCommunityResp, error) {
+func (c *masterdataClient) CreateDivision(ctx context.Context, in *CreateDivisionReq, opts ...grpc.CallOption) (*CreateDivisionResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetCommunityResp)
-	err := c.cc.Invoke(ctx, Masterdata_GetCommunity_FullMethodName, in, out, cOpts...)
+	out := new(CreateDivisionResp)
+	err := c.cc.Invoke(ctx, Masterdata_CreateDivision_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *masterdataClient) GetCommunitiesByIds(ctx context.Context, in *GetCommunitiesByIdsReq, opts ...grpc.CallOption) (*GetCommunitiesByIdsResp, error) {
+func (c *masterdataClient) UpdateDivision(ctx context.Context, in *UpdateDivisionReq, opts ...grpc.CallOption) (*UpdateDivisionResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetCommunitiesByIdsResp)
-	err := c.cc.Invoke(ctx, Masterdata_GetCommunitiesByIds_FullMethodName, in, out, cOpts...)
+	out := new(UpdateDivisionResp)
+	err := c.cc.Invoke(ctx, Masterdata_UpdateDivision_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *masterdataClient) GetCommunitiesByDivision(ctx context.Context, in *GetCommunitiesByDivisionReq, opts ...grpc.CallOption) (*GetCommunitiesByDivisionResp, error) {
+func (c *masterdataClient) DeleteDivision(ctx context.Context, in *DeleteDivisionReq, opts ...grpc.CallOption) (*DeleteDivisionResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetCommunitiesByDivisionResp)
-	err := c.cc.Invoke(ctx, Masterdata_GetCommunitiesByDivision_FullMethodName, in, out, cOpts...)
+	out := new(DeleteDivisionResp)
+	err := c.cc.Invoke(ctx, Masterdata_DeleteDivision_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *masterdataClient) GetResidentialArea(ctx context.Context, in *GetResidentialAreaReq, opts ...grpc.CallOption) (*GetResidentialAreaResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetResidentialAreaResp)
+	err := c.cc.Invoke(ctx, Masterdata_GetResidentialArea_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *masterdataClient) GetResidentialAreasByIds(ctx context.Context, in *GetResidentialAreasByIdsReq, opts ...grpc.CallOption) (*GetResidentialAreasByIdsResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetResidentialAreasByIdsResp)
+	err := c.cc.Invoke(ctx, Masterdata_GetResidentialAreasByIds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *masterdataClient) GetResidentialAreasByDivision(ctx context.Context, in *GetResidentialAreasByDivisionReq, opts ...grpc.CallOption) (*GetResidentialAreasByDivisionResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetResidentialAreasByDivisionResp)
+	err := c.cc.Invoke(ctx, Masterdata_GetResidentialAreasByDivision_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -147,10 +183,13 @@ type MasterdataServer interface {
 	GetDivisionTree(context.Context, *GetDivisionTreeReq) (*GetDivisionTreeResp, error)
 	GetDivisionPath(context.Context, *GetDivisionPathReq) (*GetDivisionPathResp, error)
 	ValidateScope(context.Context, *ValidateScopeReq) (*ValidateScopeResp, error)
-	// Community RPC methods
-	GetCommunity(context.Context, *GetCommunityReq) (*GetCommunityResp, error)
-	GetCommunitiesByIds(context.Context, *GetCommunitiesByIdsReq) (*GetCommunitiesByIdsResp, error)
-	GetCommunitiesByDivision(context.Context, *GetCommunitiesByDivisionReq) (*GetCommunitiesByDivisionResp, error)
+	CreateDivision(context.Context, *CreateDivisionReq) (*CreateDivisionResp, error)
+	UpdateDivision(context.Context, *UpdateDivisionReq) (*UpdateDivisionResp, error)
+	DeleteDivision(context.Context, *DeleteDivisionReq) (*DeleteDivisionResp, error)
+	// Residential Area RPC methods
+	GetResidentialArea(context.Context, *GetResidentialAreaReq) (*GetResidentialAreaResp, error)
+	GetResidentialAreasByIds(context.Context, *GetResidentialAreasByIdsReq) (*GetResidentialAreasByIdsResp, error)
+	GetResidentialAreasByDivision(context.Context, *GetResidentialAreasByDivisionReq) (*GetResidentialAreasByDivisionResp, error)
 	mustEmbedUnimplementedMasterdataServer()
 }
 
@@ -176,14 +215,23 @@ func (UnimplementedMasterdataServer) GetDivisionPath(context.Context, *GetDivisi
 func (UnimplementedMasterdataServer) ValidateScope(context.Context, *ValidateScopeReq) (*ValidateScopeResp, error) {
 	return nil, status.Error(codes.Unimplemented, "method ValidateScope not implemented")
 }
-func (UnimplementedMasterdataServer) GetCommunity(context.Context, *GetCommunityReq) (*GetCommunityResp, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetCommunity not implemented")
+func (UnimplementedMasterdataServer) CreateDivision(context.Context, *CreateDivisionReq) (*CreateDivisionResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateDivision not implemented")
 }
-func (UnimplementedMasterdataServer) GetCommunitiesByIds(context.Context, *GetCommunitiesByIdsReq) (*GetCommunitiesByIdsResp, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetCommunitiesByIds not implemented")
+func (UnimplementedMasterdataServer) UpdateDivision(context.Context, *UpdateDivisionReq) (*UpdateDivisionResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateDivision not implemented")
 }
-func (UnimplementedMasterdataServer) GetCommunitiesByDivision(context.Context, *GetCommunitiesByDivisionReq) (*GetCommunitiesByDivisionResp, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetCommunitiesByDivision not implemented")
+func (UnimplementedMasterdataServer) DeleteDivision(context.Context, *DeleteDivisionReq) (*DeleteDivisionResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteDivision not implemented")
+}
+func (UnimplementedMasterdataServer) GetResidentialArea(context.Context, *GetResidentialAreaReq) (*GetResidentialAreaResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetResidentialArea not implemented")
+}
+func (UnimplementedMasterdataServer) GetResidentialAreasByIds(context.Context, *GetResidentialAreasByIdsReq) (*GetResidentialAreasByIdsResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetResidentialAreasByIds not implemented")
+}
+func (UnimplementedMasterdataServer) GetResidentialAreasByDivision(context.Context, *GetResidentialAreasByDivisionReq) (*GetResidentialAreasByDivisionResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetResidentialAreasByDivision not implemented")
 }
 func (UnimplementedMasterdataServer) mustEmbedUnimplementedMasterdataServer() {}
 func (UnimplementedMasterdataServer) testEmbeddedByValue()                    {}
@@ -296,56 +344,110 @@ func _Masterdata_ValidateScope_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Masterdata_GetCommunity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCommunityReq)
+func _Masterdata_CreateDivision_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateDivisionReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MasterdataServer).GetCommunity(ctx, in)
+		return srv.(MasterdataServer).CreateDivision(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Masterdata_GetCommunity_FullMethodName,
+		FullMethod: Masterdata_CreateDivision_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MasterdataServer).GetCommunity(ctx, req.(*GetCommunityReq))
+		return srv.(MasterdataServer).CreateDivision(ctx, req.(*CreateDivisionReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Masterdata_GetCommunitiesByIds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCommunitiesByIdsReq)
+func _Masterdata_UpdateDivision_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDivisionReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MasterdataServer).GetCommunitiesByIds(ctx, in)
+		return srv.(MasterdataServer).UpdateDivision(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Masterdata_GetCommunitiesByIds_FullMethodName,
+		FullMethod: Masterdata_UpdateDivision_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MasterdataServer).GetCommunitiesByIds(ctx, req.(*GetCommunitiesByIdsReq))
+		return srv.(MasterdataServer).UpdateDivision(ctx, req.(*UpdateDivisionReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Masterdata_GetCommunitiesByDivision_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCommunitiesByDivisionReq)
+func _Masterdata_DeleteDivision_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteDivisionReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MasterdataServer).GetCommunitiesByDivision(ctx, in)
+		return srv.(MasterdataServer).DeleteDivision(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Masterdata_GetCommunitiesByDivision_FullMethodName,
+		FullMethod: Masterdata_DeleteDivision_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MasterdataServer).GetCommunitiesByDivision(ctx, req.(*GetCommunitiesByDivisionReq))
+		return srv.(MasterdataServer).DeleteDivision(ctx, req.(*DeleteDivisionReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Masterdata_GetResidentialArea_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetResidentialAreaReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterdataServer).GetResidentialArea(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Masterdata_GetResidentialArea_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterdataServer).GetResidentialArea(ctx, req.(*GetResidentialAreaReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Masterdata_GetResidentialAreasByIds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetResidentialAreasByIdsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterdataServer).GetResidentialAreasByIds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Masterdata_GetResidentialAreasByIds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterdataServer).GetResidentialAreasByIds(ctx, req.(*GetResidentialAreasByIdsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Masterdata_GetResidentialAreasByDivision_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetResidentialAreasByDivisionReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterdataServer).GetResidentialAreasByDivision(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Masterdata_GetResidentialAreasByDivision_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterdataServer).GetResidentialAreasByDivision(ctx, req.(*GetResidentialAreasByDivisionReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -378,16 +480,28 @@ var Masterdata_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Masterdata_ValidateScope_Handler,
 		},
 		{
-			MethodName: "GetCommunity",
-			Handler:    _Masterdata_GetCommunity_Handler,
+			MethodName: "CreateDivision",
+			Handler:    _Masterdata_CreateDivision_Handler,
 		},
 		{
-			MethodName: "GetCommunitiesByIds",
-			Handler:    _Masterdata_GetCommunitiesByIds_Handler,
+			MethodName: "UpdateDivision",
+			Handler:    _Masterdata_UpdateDivision_Handler,
 		},
 		{
-			MethodName: "GetCommunitiesByDivision",
-			Handler:    _Masterdata_GetCommunitiesByDivision_Handler,
+			MethodName: "DeleteDivision",
+			Handler:    _Masterdata_DeleteDivision_Handler,
+		},
+		{
+			MethodName: "GetResidentialArea",
+			Handler:    _Masterdata_GetResidentialArea_Handler,
+		},
+		{
+			MethodName: "GetResidentialAreasByIds",
+			Handler:    _Masterdata_GetResidentialAreasByIds_Handler,
+		},
+		{
+			MethodName: "GetResidentialAreasByDivision",
+			Handler:    _Masterdata_GetResidentialAreasByDivision_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

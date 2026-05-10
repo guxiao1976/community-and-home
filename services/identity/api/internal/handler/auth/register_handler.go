@@ -6,6 +6,7 @@ package auth
 import (
 	"net/http"
 
+	"github.com/guxiao/community-and-home/common/responsex"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/logic/auth"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/svc"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/types"
@@ -23,10 +24,6 @@ func RegisterHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := auth.NewRegisterLogic(r.Context(), svcCtx)
 		resp, err := l.Register(&req)
-		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
-		}
+		responsex.Response(w, resp, err)
 	}
 }

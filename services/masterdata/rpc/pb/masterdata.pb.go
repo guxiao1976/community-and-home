@@ -197,41 +197,44 @@ func (x *DivisionTree) GetChildren() []*DivisionTree {
 	return nil
 }
 
-type Community struct {
+type ResidentialArea struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Id               int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	DivisionId       int64                  `protobuf:"varint,2,opt,name=division_id,json=divisionId,proto3" json:"division_id,omitempty"`
-	Name             string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Address          string                 `protobuf:"bytes,4,opt,name=address,proto3" json:"address,omitempty"`
-	Area             float64                `protobuf:"fixed64,5,opt,name=area,proto3" json:"area,omitempty"`
-	Population       int32                  `protobuf:"varint,6,opt,name=population,proto3" json:"population,omitempty"`
-	CommunityType    int32                  `protobuf:"varint,7,opt,name=community_type,json=communityType,proto3" json:"community_type,omitempty"`
-	SubmissionStatus int32                  `protobuf:"varint,8,opt,name=submission_status,json=submissionStatus,proto3" json:"submission_status,omitempty"`
-	SubmitterId      int64                  `protobuf:"varint,9,opt,name=submitter_id,json=submitterId,proto3" json:"submitter_id,omitempty"`
-	SubmitTime       string                 `protobuf:"bytes,10,opt,name=submit_time,json=submitTime,proto3" json:"submit_time,omitempty"`
-	ReviewerId       int64                  `protobuf:"varint,11,opt,name=reviewer_id,json=reviewerId,proto3" json:"reviewer_id,omitempty"`
-	ReviewTime       string                 `protobuf:"bytes,12,opt,name=review_time,json=reviewTime,proto3" json:"review_time,omitempty"`
-	ReviewNotes      string                 `protobuf:"bytes,13,opt,name=review_notes,json=reviewNotes,proto3" json:"review_notes,omitempty"`
-	CreatedTime      string                 `protobuf:"bytes,14,opt,name=created_time,json=createdTime,proto3" json:"created_time,omitempty"`
-	UpdatedTime      string                 `protobuf:"bytes,15,opt,name=updated_time,json=updatedTime,proto3" json:"updated_time,omitempty"`
+	CountyId         int64                  `protobuf:"varint,2,opt,name=county_id,json=countyId,proto3" json:"county_id,omitempty"`
+	StreetId         int64                  `protobuf:"varint,3,opt,name=street_id,json=streetId,proto3" json:"street_id,omitempty"`
+	CommunityDivId   int64                  `protobuf:"varint,4,opt,name=community_div_id,json=communityDivId,proto3" json:"community_div_id,omitempty"`
+	Code             string                 `protobuf:"bytes,5,opt,name=code,proto3" json:"code,omitempty"`
+	Name             string                 `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty"`
+	Address          string                 `protobuf:"bytes,7,opt,name=address,proto3" json:"address,omitempty"`
+	Area             float64                `protobuf:"fixed64,8,opt,name=area,proto3" json:"area,omitempty"`
+	Population       int32                  `protobuf:"varint,9,opt,name=population,proto3" json:"population,omitempty"`
+	CommunityType    int32                  `protobuf:"varint,10,opt,name=community_type,json=communityType,proto3" json:"community_type,omitempty"`
+	SubmissionStatus int32                  `protobuf:"varint,11,opt,name=submission_status,json=submissionStatus,proto3" json:"submission_status,omitempty"`
+	SubmitterId      int64                  `protobuf:"varint,12,opt,name=submitter_id,json=submitterId,proto3" json:"submitter_id,omitempty"`
+	SubmitTime       string                 `protobuf:"bytes,13,opt,name=submit_time,json=submitTime,proto3" json:"submit_time,omitempty"`
+	ReviewerId       int64                  `protobuf:"varint,14,opt,name=reviewer_id,json=reviewerId,proto3" json:"reviewer_id,omitempty"`
+	ReviewTime       string                 `protobuf:"bytes,15,opt,name=review_time,json=reviewTime,proto3" json:"review_time,omitempty"`
+	ReviewNotes      string                 `protobuf:"bytes,16,opt,name=review_notes,json=reviewNotes,proto3" json:"review_notes,omitempty"`
+	CreatedTime      string                 `protobuf:"bytes,17,opt,name=created_time,json=createdTime,proto3" json:"created_time,omitempty"`
+	UpdatedTime      string                 `protobuf:"bytes,18,opt,name=updated_time,json=updatedTime,proto3" json:"updated_time,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
-func (x *Community) Reset() {
-	*x = Community{}
+func (x *ResidentialArea) Reset() {
+	*x = ResidentialArea{}
 	mi := &file_masterdata_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Community) String() string {
+func (x *ResidentialArea) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Community) ProtoMessage() {}
+func (*ResidentialArea) ProtoMessage() {}
 
-func (x *Community) ProtoReflect() protoreflect.Message {
+func (x *ResidentialArea) ProtoReflect() protoreflect.Message {
 	mi := &file_masterdata_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -243,110 +246,131 @@ func (x *Community) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Community.ProtoReflect.Descriptor instead.
-func (*Community) Descriptor() ([]byte, []int) {
+// Deprecated: Use ResidentialArea.ProtoReflect.Descriptor instead.
+func (*ResidentialArea) Descriptor() ([]byte, []int) {
 	return file_masterdata_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Community) GetId() int64 {
+func (x *ResidentialArea) GetId() int64 {
 	if x != nil {
 		return x.Id
 	}
 	return 0
 }
 
-func (x *Community) GetDivisionId() int64 {
+func (x *ResidentialArea) GetCountyId() int64 {
 	if x != nil {
-		return x.DivisionId
+		return x.CountyId
 	}
 	return 0
 }
 
-func (x *Community) GetName() string {
+func (x *ResidentialArea) GetStreetId() int64 {
+	if x != nil {
+		return x.StreetId
+	}
+	return 0
+}
+
+func (x *ResidentialArea) GetCommunityDivId() int64 {
+	if x != nil {
+		return x.CommunityDivId
+	}
+	return 0
+}
+
+func (x *ResidentialArea) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *ResidentialArea) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *Community) GetAddress() string {
+func (x *ResidentialArea) GetAddress() string {
 	if x != nil {
 		return x.Address
 	}
 	return ""
 }
 
-func (x *Community) GetArea() float64 {
+func (x *ResidentialArea) GetArea() float64 {
 	if x != nil {
 		return x.Area
 	}
 	return 0
 }
 
-func (x *Community) GetPopulation() int32 {
+func (x *ResidentialArea) GetPopulation() int32 {
 	if x != nil {
 		return x.Population
 	}
 	return 0
 }
 
-func (x *Community) GetCommunityType() int32 {
+func (x *ResidentialArea) GetCommunityType() int32 {
 	if x != nil {
 		return x.CommunityType
 	}
 	return 0
 }
 
-func (x *Community) GetSubmissionStatus() int32 {
+func (x *ResidentialArea) GetSubmissionStatus() int32 {
 	if x != nil {
 		return x.SubmissionStatus
 	}
 	return 0
 }
 
-func (x *Community) GetSubmitterId() int64 {
+func (x *ResidentialArea) GetSubmitterId() int64 {
 	if x != nil {
 		return x.SubmitterId
 	}
 	return 0
 }
 
-func (x *Community) GetSubmitTime() string {
+func (x *ResidentialArea) GetSubmitTime() string {
 	if x != nil {
 		return x.SubmitTime
 	}
 	return ""
 }
 
-func (x *Community) GetReviewerId() int64 {
+func (x *ResidentialArea) GetReviewerId() int64 {
 	if x != nil {
 		return x.ReviewerId
 	}
 	return 0
 }
 
-func (x *Community) GetReviewTime() string {
+func (x *ResidentialArea) GetReviewTime() string {
 	if x != nil {
 		return x.ReviewTime
 	}
 	return ""
 }
 
-func (x *Community) GetReviewNotes() string {
+func (x *ResidentialArea) GetReviewNotes() string {
 	if x != nil {
 		return x.ReviewNotes
 	}
 	return ""
 }
 
-func (x *Community) GetCreatedTime() string {
+func (x *ResidentialArea) GetCreatedTime() string {
 	if x != nil {
 		return x.CreatedTime
 	}
 	return ""
 }
 
-func (x *Community) GetUpdatedTime() string {
+func (x *ResidentialArea) GetUpdatedTime() string {
 	if x != nil {
 		return x.UpdatedTime
 	}
@@ -802,29 +826,112 @@ func (x *ValidateScopeResp) GetAllowed() bool {
 	return false
 }
 
-// Community RPC requests/responses
-type GetCommunityReq struct {
+type CreateDivisionReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ParentId      int64                  `protobuf:"varint,1,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
+	Level         int32                  `protobuf:"varint,2,opt,name=level,proto3" json:"level,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Code          string                 `protobuf:"bytes,4,opt,name=code,proto3" json:"code,omitempty"`
+	SortOrder     int32                  `protobuf:"varint,5,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	CreatedBy     int64                  `protobuf:"varint,6,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateDivisionReq) Reset() {
+	*x = CreateDivisionReq{}
+	mi := &file_masterdata_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateDivisionReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateDivisionReq) ProtoMessage() {}
+
+func (x *CreateDivisionReq) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateDivisionReq.ProtoReflect.Descriptor instead.
+func (*CreateDivisionReq) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *CreateDivisionReq) GetParentId() int64 {
+	if x != nil {
+		return x.ParentId
+	}
+	return 0
+}
+
+func (x *CreateDivisionReq) GetLevel() int32 {
+	if x != nil {
+		return x.Level
+	}
+	return 0
+}
+
+func (x *CreateDivisionReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateDivisionReq) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *CreateDivisionReq) GetSortOrder() int32 {
+	if x != nil {
+		return x.SortOrder
+	}
+	return 0
+}
+
+func (x *CreateDivisionReq) GetCreatedBy() int64 {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return 0
+}
+
+type CreateDivisionResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetCommunityReq) Reset() {
-	*x = GetCommunityReq{}
-	mi := &file_masterdata_proto_msgTypes[13]
+func (x *CreateDivisionResp) Reset() {
+	*x = CreateDivisionResp{}
+	mi := &file_masterdata_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetCommunityReq) String() string {
+func (x *CreateDivisionResp) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetCommunityReq) ProtoMessage() {}
+func (*CreateDivisionResp) ProtoMessage() {}
 
-func (x *GetCommunityReq) ProtoReflect() protoreflect.Message {
-	mi := &file_masterdata_proto_msgTypes[13]
+func (x *CreateDivisionResp) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -835,83 +942,45 @@ func (x *GetCommunityReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetCommunityReq.ProtoReflect.Descriptor instead.
-func (*GetCommunityReq) Descriptor() ([]byte, []int) {
-	return file_masterdata_proto_rawDescGZIP(), []int{13}
+// Deprecated: Use CreateDivisionResp.ProtoReflect.Descriptor instead.
+func (*CreateDivisionResp) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *GetCommunityReq) GetId() int64 {
+func (x *CreateDivisionResp) GetId() int64 {
 	if x != nil {
 		return x.Id
 	}
 	return 0
 }
 
-type GetCommunityResp struct {
+type UpdateDivisionReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Community     *Community             `protobuf:"bytes,1,opt,name=community,proto3" json:"community,omitempty"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	ParentId      int64                  `protobuf:"varint,2,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
+	Level         int32                  `protobuf:"varint,3,opt,name=level,proto3" json:"level,omitempty"`
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Code          string                 `protobuf:"bytes,5,opt,name=code,proto3" json:"code,omitempty"`
+	SortOrder     int32                  `protobuf:"varint,6,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	Status        int32                  `protobuf:"varint,7,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetCommunityResp) Reset() {
-	*x = GetCommunityResp{}
-	mi := &file_masterdata_proto_msgTypes[14]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetCommunityResp) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetCommunityResp) ProtoMessage() {}
-
-func (x *GetCommunityResp) ProtoReflect() protoreflect.Message {
-	mi := &file_masterdata_proto_msgTypes[14]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetCommunityResp.ProtoReflect.Descriptor instead.
-func (*GetCommunityResp) Descriptor() ([]byte, []int) {
-	return file_masterdata_proto_rawDescGZIP(), []int{14}
-}
-
-func (x *GetCommunityResp) GetCommunity() *Community {
-	if x != nil {
-		return x.Community
-	}
-	return nil
-}
-
-type GetCommunitiesByIdsReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []int64                `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetCommunitiesByIdsReq) Reset() {
-	*x = GetCommunitiesByIdsReq{}
+func (x *UpdateDivisionReq) Reset() {
+	*x = UpdateDivisionReq{}
 	mi := &file_masterdata_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetCommunitiesByIdsReq) String() string {
+func (x *UpdateDivisionReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetCommunitiesByIdsReq) ProtoMessage() {}
+func (*UpdateDivisionReq) ProtoMessage() {}
 
-func (x *GetCommunitiesByIdsReq) ProtoReflect() protoreflect.Message {
+func (x *UpdateDivisionReq) ProtoReflect() protoreflect.Message {
 	mi := &file_masterdata_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -923,135 +992,169 @@ func (x *GetCommunitiesByIdsReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetCommunitiesByIdsReq.ProtoReflect.Descriptor instead.
-func (*GetCommunitiesByIdsReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateDivisionReq.ProtoReflect.Descriptor instead.
+func (*UpdateDivisionReq) Descriptor() ([]byte, []int) {
 	return file_masterdata_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *GetCommunitiesByIdsReq) GetIds() []int64 {
+func (x *UpdateDivisionReq) GetId() int64 {
 	if x != nil {
-		return x.Ids
-	}
-	return nil
-}
-
-type GetCommunitiesByIdsResp struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Communities   []*Community           `protobuf:"bytes,1,rep,name=communities,proto3" json:"communities,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetCommunitiesByIdsResp) Reset() {
-	*x = GetCommunitiesByIdsResp{}
-	mi := &file_masterdata_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetCommunitiesByIdsResp) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetCommunitiesByIdsResp) ProtoMessage() {}
-
-func (x *GetCommunitiesByIdsResp) ProtoReflect() protoreflect.Message {
-	mi := &file_masterdata_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetCommunitiesByIdsResp.ProtoReflect.Descriptor instead.
-func (*GetCommunitiesByIdsResp) Descriptor() ([]byte, []int) {
-	return file_masterdata_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *GetCommunitiesByIdsResp) GetCommunities() []*Community {
-	if x != nil {
-		return x.Communities
-	}
-	return nil
-}
-
-type GetCommunitiesByDivisionReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DivisionId    int64                  `protobuf:"varint,1,opt,name=division_id,json=divisionId,proto3" json:"division_id,omitempty"`
-	Status        int32                  `protobuf:"varint,2,opt,name=status,proto3" json:"status,omitempty"` // 0=all, 1=approved only
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetCommunitiesByDivisionReq) Reset() {
-	*x = GetCommunitiesByDivisionReq{}
-	mi := &file_masterdata_proto_msgTypes[17]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetCommunitiesByDivisionReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetCommunitiesByDivisionReq) ProtoMessage() {}
-
-func (x *GetCommunitiesByDivisionReq) ProtoReflect() protoreflect.Message {
-	mi := &file_masterdata_proto_msgTypes[17]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetCommunitiesByDivisionReq.ProtoReflect.Descriptor instead.
-func (*GetCommunitiesByDivisionReq) Descriptor() ([]byte, []int) {
-	return file_masterdata_proto_rawDescGZIP(), []int{17}
-}
-
-func (x *GetCommunitiesByDivisionReq) GetDivisionId() int64 {
-	if x != nil {
-		return x.DivisionId
+		return x.Id
 	}
 	return 0
 }
 
-func (x *GetCommunitiesByDivisionReq) GetStatus() int32 {
+func (x *UpdateDivisionReq) GetParentId() int64 {
+	if x != nil {
+		return x.ParentId
+	}
+	return 0
+}
+
+func (x *UpdateDivisionReq) GetLevel() int32 {
+	if x != nil {
+		return x.Level
+	}
+	return 0
+}
+
+func (x *UpdateDivisionReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateDivisionReq) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *UpdateDivisionReq) GetSortOrder() int32 {
+	if x != nil {
+		return x.SortOrder
+	}
+	return 0
+}
+
+func (x *UpdateDivisionReq) GetStatus() int32 {
 	if x != nil {
 		return x.Status
 	}
 	return 0
 }
 
-type GetCommunitiesByDivisionResp struct {
+type UpdateDivisionResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Communities   []*Community           `protobuf:"bytes,1,rep,name=communities,proto3" json:"communities,omitempty"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetCommunitiesByDivisionResp) Reset() {
-	*x = GetCommunitiesByDivisionResp{}
+func (x *UpdateDivisionResp) Reset() {
+	*x = UpdateDivisionResp{}
+	mi := &file_masterdata_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateDivisionResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateDivisionResp) ProtoMessage() {}
+
+func (x *UpdateDivisionResp) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateDivisionResp.ProtoReflect.Descriptor instead.
+func (*UpdateDivisionResp) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *UpdateDivisionResp) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type DeleteDivisionReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteDivisionReq) Reset() {
+	*x = DeleteDivisionReq{}
+	mi := &file_masterdata_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteDivisionReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteDivisionReq) ProtoMessage() {}
+
+func (x *DeleteDivisionReq) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteDivisionReq.ProtoReflect.Descriptor instead.
+func (*DeleteDivisionReq) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *DeleteDivisionReq) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type DeleteDivisionResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteDivisionResp) Reset() {
+	*x = DeleteDivisionResp{}
 	mi := &file_masterdata_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetCommunitiesByDivisionResp) String() string {
+func (x *DeleteDivisionResp) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetCommunitiesByDivisionResp) ProtoMessage() {}
+func (*DeleteDivisionResp) ProtoMessage() {}
 
-func (x *GetCommunitiesByDivisionResp) ProtoReflect() protoreflect.Message {
+func (x *DeleteDivisionResp) ProtoReflect() protoreflect.Message {
 	mi := &file_masterdata_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1063,14 +1166,303 @@ func (x *GetCommunitiesByDivisionResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetCommunitiesByDivisionResp.ProtoReflect.Descriptor instead.
-func (*GetCommunitiesByDivisionResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeleteDivisionResp.ProtoReflect.Descriptor instead.
+func (*DeleteDivisionResp) Descriptor() ([]byte, []int) {
 	return file_masterdata_proto_rawDescGZIP(), []int{18}
 }
 
-func (x *GetCommunitiesByDivisionResp) GetCommunities() []*Community {
+func (x *DeleteDivisionResp) GetSuccess() bool {
 	if x != nil {
-		return x.Communities
+		return x.Success
+	}
+	return false
+}
+
+// Residential Area RPC requests/responses
+type GetResidentialAreaReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetResidentialAreaReq) Reset() {
+	*x = GetResidentialAreaReq{}
+	mi := &file_masterdata_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetResidentialAreaReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetResidentialAreaReq) ProtoMessage() {}
+
+func (x *GetResidentialAreaReq) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetResidentialAreaReq.ProtoReflect.Descriptor instead.
+func (*GetResidentialAreaReq) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetResidentialAreaReq) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type GetResidentialAreaResp struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ResidentialArea *ResidentialArea       `protobuf:"bytes,1,opt,name=residential_area,json=residentialArea,proto3" json:"residential_area,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetResidentialAreaResp) Reset() {
+	*x = GetResidentialAreaResp{}
+	mi := &file_masterdata_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetResidentialAreaResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetResidentialAreaResp) ProtoMessage() {}
+
+func (x *GetResidentialAreaResp) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetResidentialAreaResp.ProtoReflect.Descriptor instead.
+func (*GetResidentialAreaResp) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *GetResidentialAreaResp) GetResidentialArea() *ResidentialArea {
+	if x != nil {
+		return x.ResidentialArea
+	}
+	return nil
+}
+
+type GetResidentialAreasByIdsReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ids           []int64                `protobuf:"varint,1,rep,packed,name=ids,proto3" json:"ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetResidentialAreasByIdsReq) Reset() {
+	*x = GetResidentialAreasByIdsReq{}
+	mi := &file_masterdata_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetResidentialAreasByIdsReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetResidentialAreasByIdsReq) ProtoMessage() {}
+
+func (x *GetResidentialAreasByIdsReq) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetResidentialAreasByIdsReq.ProtoReflect.Descriptor instead.
+func (*GetResidentialAreasByIdsReq) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *GetResidentialAreasByIdsReq) GetIds() []int64 {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+type GetResidentialAreasByIdsResp struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ResidentialAreas []*ResidentialArea     `protobuf:"bytes,1,rep,name=residential_areas,json=residentialAreas,proto3" json:"residential_areas,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetResidentialAreasByIdsResp) Reset() {
+	*x = GetResidentialAreasByIdsResp{}
+	mi := &file_masterdata_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetResidentialAreasByIdsResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetResidentialAreasByIdsResp) ProtoMessage() {}
+
+func (x *GetResidentialAreasByIdsResp) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetResidentialAreasByIdsResp.ProtoReflect.Descriptor instead.
+func (*GetResidentialAreasByIdsResp) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetResidentialAreasByIdsResp) GetResidentialAreas() []*ResidentialArea {
+	if x != nil {
+		return x.ResidentialAreas
+	}
+	return nil
+}
+
+type GetResidentialAreasByDivisionReq struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	CountyId       int64                  `protobuf:"varint,1,opt,name=county_id,json=countyId,proto3" json:"county_id,omitempty"`
+	StreetId       int64                  `protobuf:"varint,2,opt,name=street_id,json=streetId,proto3" json:"street_id,omitempty"`
+	CommunityDivId int64                  `protobuf:"varint,3,opt,name=community_div_id,json=communityDivId,proto3" json:"community_div_id,omitempty"`
+	Status         int32                  `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty"` // 0=all, 1=approved only
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetResidentialAreasByDivisionReq) Reset() {
+	*x = GetResidentialAreasByDivisionReq{}
+	mi := &file_masterdata_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetResidentialAreasByDivisionReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetResidentialAreasByDivisionReq) ProtoMessage() {}
+
+func (x *GetResidentialAreasByDivisionReq) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetResidentialAreasByDivisionReq.ProtoReflect.Descriptor instead.
+func (*GetResidentialAreasByDivisionReq) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetResidentialAreasByDivisionReq) GetCountyId() int64 {
+	if x != nil {
+		return x.CountyId
+	}
+	return 0
+}
+
+func (x *GetResidentialAreasByDivisionReq) GetStreetId() int64 {
+	if x != nil {
+		return x.StreetId
+	}
+	return 0
+}
+
+func (x *GetResidentialAreasByDivisionReq) GetCommunityDivId() int64 {
+	if x != nil {
+		return x.CommunityDivId
+	}
+	return 0
+}
+
+func (x *GetResidentialAreasByDivisionReq) GetStatus() int32 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+type GetResidentialAreasByDivisionResp struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ResidentialAreas []*ResidentialArea     `protobuf:"bytes,1,rep,name=residential_areas,json=residentialAreas,proto3" json:"residential_areas,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetResidentialAreasByDivisionResp) Reset() {
+	*x = GetResidentialAreasByDivisionResp{}
+	mi := &file_masterdata_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetResidentialAreasByDivisionResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetResidentialAreasByDivisionResp) ProtoMessage() {}
+
+func (x *GetResidentialAreasByDivisionResp) ProtoReflect() protoreflect.Message {
+	mi := &file_masterdata_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetResidentialAreasByDivisionResp.ProtoReflect.Descriptor instead.
+func (*GetResidentialAreasByDivisionResp) Descriptor() ([]byte, []int) {
+	return file_masterdata_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GetResidentialAreasByDivisionResp) GetResidentialAreas() []*ResidentialArea {
+	if x != nil {
+		return x.ResidentialAreas
 	}
 	return nil
 }
@@ -1098,30 +1490,32 @@ const file_masterdata_proto_rawDesc = "" +
 	"\fupdated_time\x18\v \x01(\tR\vupdatedTime\"v\n" +
 	"\fDivisionTree\x120\n" +
 	"\bdivision\x18\x01 \x01(\v2\x14.masterdata.DivisionR\bdivision\x124\n" +
-	"\bchildren\x18\x02 \x03(\v2\x18.masterdata.DivisionTreeR\bchildren\"\xe1\x03\n" +
-	"\tCommunity\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1f\n" +
-	"\vdivision_id\x18\x02 \x01(\x03R\n" +
-	"divisionId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12\x18\n" +
-	"\aaddress\x18\x04 \x01(\tR\aaddress\x12\x12\n" +
-	"\x04area\x18\x05 \x01(\x01R\x04area\x12\x1e\n" +
+	"\bchildren\x18\x02 \x03(\v2\x18.masterdata.DivisionTreeR\bchildren\"\xbe\x04\n" +
+	"\x0fResidentialArea\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1b\n" +
+	"\tcounty_id\x18\x02 \x01(\x03R\bcountyId\x12\x1b\n" +
+	"\tstreet_id\x18\x03 \x01(\x03R\bstreetId\x12(\n" +
+	"\x10community_div_id\x18\x04 \x01(\x03R\x0ecommunityDivId\x12\x12\n" +
+	"\x04code\x18\x05 \x01(\tR\x04code\x12\x12\n" +
+	"\x04name\x18\x06 \x01(\tR\x04name\x12\x18\n" +
+	"\aaddress\x18\a \x01(\tR\aaddress\x12\x12\n" +
+	"\x04area\x18\b \x01(\x01R\x04area\x12\x1e\n" +
 	"\n" +
-	"population\x18\x06 \x01(\x05R\n" +
+	"population\x18\t \x01(\x05R\n" +
 	"population\x12%\n" +
-	"\x0ecommunity_type\x18\a \x01(\x05R\rcommunityType\x12+\n" +
-	"\x11submission_status\x18\b \x01(\x05R\x10submissionStatus\x12!\n" +
-	"\fsubmitter_id\x18\t \x01(\x03R\vsubmitterId\x12\x1f\n" +
-	"\vsubmit_time\x18\n" +
-	" \x01(\tR\n" +
+	"\x0ecommunity_type\x18\n" +
+	" \x01(\x05R\rcommunityType\x12+\n" +
+	"\x11submission_status\x18\v \x01(\x05R\x10submissionStatus\x12!\n" +
+	"\fsubmitter_id\x18\f \x01(\x03R\vsubmitterId\x12\x1f\n" +
+	"\vsubmit_time\x18\r \x01(\tR\n" +
 	"submitTime\x12\x1f\n" +
-	"\vreviewer_id\x18\v \x01(\x03R\n" +
+	"\vreviewer_id\x18\x0e \x01(\x03R\n" +
 	"reviewerId\x12\x1f\n" +
-	"\vreview_time\x18\f \x01(\tR\n" +
+	"\vreview_time\x18\x0f \x01(\tR\n" +
 	"reviewTime\x12!\n" +
-	"\freview_notes\x18\r \x01(\tR\vreviewNotes\x12!\n" +
-	"\fcreated_time\x18\x0e \x01(\tR\vcreatedTime\x12!\n" +
-	"\fupdated_time\x18\x0f \x01(\tR\vupdatedTime\" \n" +
+	"\freview_notes\x18\x10 \x01(\tR\vreviewNotes\x12!\n" +
+	"\fcreated_time\x18\x11 \x01(\tR\vcreatedTime\x12!\n" +
+	"\fupdated_time\x18\x12 \x01(\tR\vupdatedTime\" \n" +
 	"\x0eGetDivisionReq\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"C\n" +
 	"\x0fGetDivisionResp\x120\n" +
@@ -1143,31 +1537,61 @@ const file_masterdata_proto_rawDesc = "" +
 	"\vdivision_id\x18\x02 \x01(\x03R\n" +
 	"divisionId\"-\n" +
 	"\x11ValidateScopeResp\x12\x18\n" +
-	"\aallowed\x18\x01 \x01(\bR\aallowed\"!\n" +
-	"\x0fGetCommunityReq\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"G\n" +
-	"\x10GetCommunityResp\x123\n" +
-	"\tcommunity\x18\x01 \x01(\v2\x15.masterdata.CommunityR\tcommunity\"*\n" +
-	"\x16GetCommunitiesByIdsReq\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\x03R\x03ids\"R\n" +
-	"\x17GetCommunitiesByIdsResp\x127\n" +
-	"\vcommunities\x18\x01 \x03(\v2\x15.masterdata.CommunityR\vcommunities\"V\n" +
-	"\x1bGetCommunitiesByDivisionReq\x12\x1f\n" +
-	"\vdivision_id\x18\x01 \x01(\x03R\n" +
-	"divisionId\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\x05R\x06status\"W\n" +
-	"\x1cGetCommunitiesByDivisionResp\x127\n" +
-	"\vcommunities\x18\x01 \x03(\v2\x15.masterdata.CommunityR\vcommunities2\xbe\x05\n" +
+	"\aallowed\x18\x01 \x01(\bR\aallowed\"\xac\x01\n" +
+	"\x11CreateDivisionReq\x12\x1b\n" +
+	"\tparent_id\x18\x01 \x01(\x03R\bparentId\x12\x14\n" +
+	"\x05level\x18\x02 \x01(\x05R\x05level\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
+	"\x04code\x18\x04 \x01(\tR\x04code\x12\x1d\n" +
+	"\n" +
+	"sort_order\x18\x05 \x01(\x05R\tsortOrder\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\x06 \x01(\x03R\tcreatedBy\"$\n" +
+	"\x12CreateDivisionResp\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"\xb5\x01\n" +
+	"\x11UpdateDivisionReq\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1b\n" +
+	"\tparent_id\x18\x02 \x01(\x03R\bparentId\x12\x14\n" +
+	"\x05level\x18\x03 \x01(\x05R\x05level\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12\x12\n" +
+	"\x04code\x18\x05 \x01(\tR\x04code\x12\x1d\n" +
+	"\n" +
+	"sort_order\x18\x06 \x01(\x05R\tsortOrder\x12\x16\n" +
+	"\x06status\x18\a \x01(\x05R\x06status\".\n" +
+	"\x12UpdateDivisionResp\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"#\n" +
+	"\x11DeleteDivisionReq\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\".\n" +
+	"\x12DeleteDivisionResp\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"'\n" +
+	"\x15GetResidentialAreaReq\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"`\n" +
+	"\x16GetResidentialAreaResp\x12F\n" +
+	"\x10residential_area\x18\x01 \x01(\v2\x1b.masterdata.ResidentialAreaR\x0fresidentialArea\"/\n" +
+	"\x1bGetResidentialAreasByIdsReq\x12\x10\n" +
+	"\x03ids\x18\x01 \x03(\x03R\x03ids\"h\n" +
+	"\x1cGetResidentialAreasByIdsResp\x12H\n" +
+	"\x11residential_areas\x18\x01 \x03(\v2\x1b.masterdata.ResidentialAreaR\x10residentialAreas\"\x9e\x01\n" +
+	" GetResidentialAreasByDivisionReq\x12\x1b\n" +
+	"\tcounty_id\x18\x01 \x01(\x03R\bcountyId\x12\x1b\n" +
+	"\tstreet_id\x18\x02 \x01(\x03R\bstreetId\x12(\n" +
+	"\x10community_div_id\x18\x03 \x01(\x03R\x0ecommunityDivId\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\x05R\x06status\"m\n" +
+	"!GetResidentialAreasByDivisionResp\x12H\n" +
+	"\x11residential_areas\x18\x01 \x03(\v2\x1b.masterdata.ResidentialAreaR\x10residentialAreas2\xe1\a\n" +
 	"\n" +
 	"Masterdata\x12F\n" +
 	"\vGetDivision\x12\x1a.masterdata.GetDivisionReq\x1a\x1b.masterdata.GetDivisionResp\x12X\n" +
 	"\x11GetDivisionsByIds\x12 .masterdata.GetDivisionsByIdsReq\x1a!.masterdata.GetDivisionsByIdsResp\x12R\n" +
 	"\x0fGetDivisionTree\x12\x1e.masterdata.GetDivisionTreeReq\x1a\x1f.masterdata.GetDivisionTreeResp\x12R\n" +
 	"\x0fGetDivisionPath\x12\x1e.masterdata.GetDivisionPathReq\x1a\x1f.masterdata.GetDivisionPathResp\x12L\n" +
-	"\rValidateScope\x12\x1c.masterdata.ValidateScopeReq\x1a\x1d.masterdata.ValidateScopeResp\x12I\n" +
-	"\fGetCommunity\x12\x1b.masterdata.GetCommunityReq\x1a\x1c.masterdata.GetCommunityResp\x12^\n" +
-	"\x13GetCommunitiesByIds\x12\".masterdata.GetCommunitiesByIdsReq\x1a#.masterdata.GetCommunitiesByIdsResp\x12m\n" +
-	"\x18GetCommunitiesByDivision\x12'.masterdata.GetCommunitiesByDivisionReq\x1a(.masterdata.GetCommunitiesByDivisionRespB\x06Z\x04./pbb\x06proto3"
+	"\rValidateScope\x12\x1c.masterdata.ValidateScopeReq\x1a\x1d.masterdata.ValidateScopeResp\x12O\n" +
+	"\x0eCreateDivision\x12\x1d.masterdata.CreateDivisionReq\x1a\x1e.masterdata.CreateDivisionResp\x12O\n" +
+	"\x0eUpdateDivision\x12\x1d.masterdata.UpdateDivisionReq\x1a\x1e.masterdata.UpdateDivisionResp\x12O\n" +
+	"\x0eDeleteDivision\x12\x1d.masterdata.DeleteDivisionReq\x1a\x1e.masterdata.DeleteDivisionResp\x12[\n" +
+	"\x12GetResidentialArea\x12!.masterdata.GetResidentialAreaReq\x1a\".masterdata.GetResidentialAreaResp\x12m\n" +
+	"\x18GetResidentialAreasByIds\x12'.masterdata.GetResidentialAreasByIdsReq\x1a(.masterdata.GetResidentialAreasByIdsResp\x12|\n" +
+	"\x1dGetResidentialAreasByDivision\x12,.masterdata.GetResidentialAreasByDivisionReq\x1a-.masterdata.GetResidentialAreasByDivisionRespB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_masterdata_proto_rawDescOnce sync.Once
@@ -1181,27 +1605,33 @@ func file_masterdata_proto_rawDescGZIP() []byte {
 	return file_masterdata_proto_rawDescData
 }
 
-var file_masterdata_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_masterdata_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_masterdata_proto_goTypes = []any{
-	(*Division)(nil),                     // 0: masterdata.Division
-	(*DivisionTree)(nil),                 // 1: masterdata.DivisionTree
-	(*Community)(nil),                    // 2: masterdata.Community
-	(*GetDivisionReq)(nil),               // 3: masterdata.GetDivisionReq
-	(*GetDivisionResp)(nil),              // 4: masterdata.GetDivisionResp
-	(*GetDivisionsByIdsReq)(nil),         // 5: masterdata.GetDivisionsByIdsReq
-	(*GetDivisionsByIdsResp)(nil),        // 6: masterdata.GetDivisionsByIdsResp
-	(*GetDivisionTreeReq)(nil),           // 7: masterdata.GetDivisionTreeReq
-	(*GetDivisionTreeResp)(nil),          // 8: masterdata.GetDivisionTreeResp
-	(*GetDivisionPathReq)(nil),           // 9: masterdata.GetDivisionPathReq
-	(*GetDivisionPathResp)(nil),          // 10: masterdata.GetDivisionPathResp
-	(*ValidateScopeReq)(nil),             // 11: masterdata.ValidateScopeReq
-	(*ValidateScopeResp)(nil),            // 12: masterdata.ValidateScopeResp
-	(*GetCommunityReq)(nil),              // 13: masterdata.GetCommunityReq
-	(*GetCommunityResp)(nil),             // 14: masterdata.GetCommunityResp
-	(*GetCommunitiesByIdsReq)(nil),       // 15: masterdata.GetCommunitiesByIdsReq
-	(*GetCommunitiesByIdsResp)(nil),      // 16: masterdata.GetCommunitiesByIdsResp
-	(*GetCommunitiesByDivisionReq)(nil),  // 17: masterdata.GetCommunitiesByDivisionReq
-	(*GetCommunitiesByDivisionResp)(nil), // 18: masterdata.GetCommunitiesByDivisionResp
+	(*Division)(nil),                          // 0: masterdata.Division
+	(*DivisionTree)(nil),                      // 1: masterdata.DivisionTree
+	(*ResidentialArea)(nil),                   // 2: masterdata.ResidentialArea
+	(*GetDivisionReq)(nil),                    // 3: masterdata.GetDivisionReq
+	(*GetDivisionResp)(nil),                   // 4: masterdata.GetDivisionResp
+	(*GetDivisionsByIdsReq)(nil),              // 5: masterdata.GetDivisionsByIdsReq
+	(*GetDivisionsByIdsResp)(nil),             // 6: masterdata.GetDivisionsByIdsResp
+	(*GetDivisionTreeReq)(nil),                // 7: masterdata.GetDivisionTreeReq
+	(*GetDivisionTreeResp)(nil),               // 8: masterdata.GetDivisionTreeResp
+	(*GetDivisionPathReq)(nil),                // 9: masterdata.GetDivisionPathReq
+	(*GetDivisionPathResp)(nil),               // 10: masterdata.GetDivisionPathResp
+	(*ValidateScopeReq)(nil),                  // 11: masterdata.ValidateScopeReq
+	(*ValidateScopeResp)(nil),                 // 12: masterdata.ValidateScopeResp
+	(*CreateDivisionReq)(nil),                 // 13: masterdata.CreateDivisionReq
+	(*CreateDivisionResp)(nil),                // 14: masterdata.CreateDivisionResp
+	(*UpdateDivisionReq)(nil),                 // 15: masterdata.UpdateDivisionReq
+	(*UpdateDivisionResp)(nil),                // 16: masterdata.UpdateDivisionResp
+	(*DeleteDivisionReq)(nil),                 // 17: masterdata.DeleteDivisionReq
+	(*DeleteDivisionResp)(nil),                // 18: masterdata.DeleteDivisionResp
+	(*GetResidentialAreaReq)(nil),             // 19: masterdata.GetResidentialAreaReq
+	(*GetResidentialAreaResp)(nil),            // 20: masterdata.GetResidentialAreaResp
+	(*GetResidentialAreasByIdsReq)(nil),       // 21: masterdata.GetResidentialAreasByIdsReq
+	(*GetResidentialAreasByIdsResp)(nil),      // 22: masterdata.GetResidentialAreasByIdsResp
+	(*GetResidentialAreasByDivisionReq)(nil),  // 23: masterdata.GetResidentialAreasByDivisionReq
+	(*GetResidentialAreasByDivisionResp)(nil), // 24: masterdata.GetResidentialAreasByDivisionResp
 }
 var file_masterdata_proto_depIdxs = []int32{
 	0,  // 0: masterdata.DivisionTree.division:type_name -> masterdata.Division
@@ -1210,27 +1640,33 @@ var file_masterdata_proto_depIdxs = []int32{
 	0,  // 3: masterdata.GetDivisionsByIdsResp.divisions:type_name -> masterdata.Division
 	1,  // 4: masterdata.GetDivisionTreeResp.tree:type_name -> masterdata.DivisionTree
 	0,  // 5: masterdata.GetDivisionPathResp.path:type_name -> masterdata.Division
-	2,  // 6: masterdata.GetCommunityResp.community:type_name -> masterdata.Community
-	2,  // 7: masterdata.GetCommunitiesByIdsResp.communities:type_name -> masterdata.Community
-	2,  // 8: masterdata.GetCommunitiesByDivisionResp.communities:type_name -> masterdata.Community
+	2,  // 6: masterdata.GetResidentialAreaResp.residential_area:type_name -> masterdata.ResidentialArea
+	2,  // 7: masterdata.GetResidentialAreasByIdsResp.residential_areas:type_name -> masterdata.ResidentialArea
+	2,  // 8: masterdata.GetResidentialAreasByDivisionResp.residential_areas:type_name -> masterdata.ResidentialArea
 	3,  // 9: masterdata.Masterdata.GetDivision:input_type -> masterdata.GetDivisionReq
 	5,  // 10: masterdata.Masterdata.GetDivisionsByIds:input_type -> masterdata.GetDivisionsByIdsReq
 	7,  // 11: masterdata.Masterdata.GetDivisionTree:input_type -> masterdata.GetDivisionTreeReq
 	9,  // 12: masterdata.Masterdata.GetDivisionPath:input_type -> masterdata.GetDivisionPathReq
 	11, // 13: masterdata.Masterdata.ValidateScope:input_type -> masterdata.ValidateScopeReq
-	13, // 14: masterdata.Masterdata.GetCommunity:input_type -> masterdata.GetCommunityReq
-	15, // 15: masterdata.Masterdata.GetCommunitiesByIds:input_type -> masterdata.GetCommunitiesByIdsReq
-	17, // 16: masterdata.Masterdata.GetCommunitiesByDivision:input_type -> masterdata.GetCommunitiesByDivisionReq
-	4,  // 17: masterdata.Masterdata.GetDivision:output_type -> masterdata.GetDivisionResp
-	6,  // 18: masterdata.Masterdata.GetDivisionsByIds:output_type -> masterdata.GetDivisionsByIdsResp
-	8,  // 19: masterdata.Masterdata.GetDivisionTree:output_type -> masterdata.GetDivisionTreeResp
-	10, // 20: masterdata.Masterdata.GetDivisionPath:output_type -> masterdata.GetDivisionPathResp
-	12, // 21: masterdata.Masterdata.ValidateScope:output_type -> masterdata.ValidateScopeResp
-	14, // 22: masterdata.Masterdata.GetCommunity:output_type -> masterdata.GetCommunityResp
-	16, // 23: masterdata.Masterdata.GetCommunitiesByIds:output_type -> masterdata.GetCommunitiesByIdsResp
-	18, // 24: masterdata.Masterdata.GetCommunitiesByDivision:output_type -> masterdata.GetCommunitiesByDivisionResp
-	17, // [17:25] is the sub-list for method output_type
-	9,  // [9:17] is the sub-list for method input_type
+	13, // 14: masterdata.Masterdata.CreateDivision:input_type -> masterdata.CreateDivisionReq
+	15, // 15: masterdata.Masterdata.UpdateDivision:input_type -> masterdata.UpdateDivisionReq
+	17, // 16: masterdata.Masterdata.DeleteDivision:input_type -> masterdata.DeleteDivisionReq
+	19, // 17: masterdata.Masterdata.GetResidentialArea:input_type -> masterdata.GetResidentialAreaReq
+	21, // 18: masterdata.Masterdata.GetResidentialAreasByIds:input_type -> masterdata.GetResidentialAreasByIdsReq
+	23, // 19: masterdata.Masterdata.GetResidentialAreasByDivision:input_type -> masterdata.GetResidentialAreasByDivisionReq
+	4,  // 20: masterdata.Masterdata.GetDivision:output_type -> masterdata.GetDivisionResp
+	6,  // 21: masterdata.Masterdata.GetDivisionsByIds:output_type -> masterdata.GetDivisionsByIdsResp
+	8,  // 22: masterdata.Masterdata.GetDivisionTree:output_type -> masterdata.GetDivisionTreeResp
+	10, // 23: masterdata.Masterdata.GetDivisionPath:output_type -> masterdata.GetDivisionPathResp
+	12, // 24: masterdata.Masterdata.ValidateScope:output_type -> masterdata.ValidateScopeResp
+	14, // 25: masterdata.Masterdata.CreateDivision:output_type -> masterdata.CreateDivisionResp
+	16, // 26: masterdata.Masterdata.UpdateDivision:output_type -> masterdata.UpdateDivisionResp
+	18, // 27: masterdata.Masterdata.DeleteDivision:output_type -> masterdata.DeleteDivisionResp
+	20, // 28: masterdata.Masterdata.GetResidentialArea:output_type -> masterdata.GetResidentialAreaResp
+	22, // 29: masterdata.Masterdata.GetResidentialAreasByIds:output_type -> masterdata.GetResidentialAreasByIdsResp
+	24, // 30: masterdata.Masterdata.GetResidentialAreasByDivision:output_type -> masterdata.GetResidentialAreasByDivisionResp
+	20, // [20:31] is the sub-list for method output_type
+	9,  // [9:20] is the sub-list for method input_type
 	9,  // [9:9] is the sub-list for extension type_name
 	9,  // [9:9] is the sub-list for extension extendee
 	0,  // [0:9] is the sub-list for field type_name
@@ -1247,7 +1683,7 @@ func file_masterdata_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_masterdata_proto_rawDesc), len(file_masterdata_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -3,6 +3,7 @@ package family
 import (
 	"net/http"
 
+	"github.com/guxiao/community-and-home/common/responsex"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/logic/family"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/svc"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/types"
@@ -19,10 +20,6 @@ func CreateFamilyHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 
 		l := family.NewCreateFamilyLogic(r.Context(), svcCtx)
 		resp, err := l.CreateFamily(&req)
-		if err != nil {
-			httpx.ErrorCtx(r.Context(), w, err)
-		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
-		}
+		responsex.Response(w, resp, err)
 	}
 }
