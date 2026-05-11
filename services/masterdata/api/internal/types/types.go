@@ -290,6 +290,7 @@ type GetResidentialAreasReq struct {
 	CountyId         *int64 `form:"county_id,optional"`
 	StreetId         *int64 `form:"street_id,optional"`
 	CommunityDivId   *int64 `form:"community_div_id,optional"`
+	CommunityType    *int32 `form:"community_type,optional"`
 	Keyword          string `form:"keyword,optional"`
 	SubmissionStatus *int32 `form:"submission_status,optional"`
 	Page             int32  `form:"page,optional,default=1"`
@@ -353,8 +354,41 @@ type PendingCountsResp struct {
 	Total                  int64 `json:"total"`
 }
 
+type QueryResidentialAreaItem struct {
+	Id             int64  `json:"id"`
+	Code           string `json:"code"`
+	Name           string `json:"name"`
+	Address        string `json:"address"`
+	CommunityType  int32  `json:"community_type"`
+	CityId         *int64 `json:"city_id"`
+	CityName       string `json:"city_name"`
+	CountyId       *int64 `json:"county_id"`
+	CountyName     string `json:"county_name"`
+	StreetId       *int64 `json:"street_id"`
+	StreetName     string `json:"street_name"`
+	CommunityDivId *int64 `json:"community_div_id"`
+	CommunityName  string `json:"community_name"`
+}
+
+type QueryResidentialAreasReq struct {
+	CityId         *int64 `form:"city_id,optional"`
+	CountyId       *int64 `form:"county_id,optional"`
+	StreetId       *int64 `form:"street_id,optional"`
+	CommunityDivId *int64 `form:"community_div_id,optional"`
+	Keyword        string `form:"keyword,optional"`
+	CommunityType  *int32 `form:"community_type,optional"`
+	Page           int32  `form:"page,optional,default=1"`
+	PageSize       int32  `form:"page_size,optional,default=20"`
+}
+
+type QueryResidentialAreasResp struct {
+	List  []QueryResidentialAreaItem `json:"list"`
+	Total int64                      `json:"total"`
+}
+
 type ResidentialArea struct {
 	Id               int64   `json:"id"`
+	CityId           *int64  `json:"city_id"`
 	CountyId         *int64  `json:"county_id"`
 	StreetId         *int64  `json:"street_id"`
 	CommunityDivId   *int64  `json:"community_div_id"`

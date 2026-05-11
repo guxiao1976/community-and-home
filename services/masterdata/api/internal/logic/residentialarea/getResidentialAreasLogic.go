@@ -40,6 +40,7 @@ func (l *GetResidentialAreasLogic) GetResidentialAreas(req *types.GetResidential
 	countyId := req.CountyId
 	streetId := req.StreetId
 	communityDivId := req.CommunityDivId
+	communityType := req.CommunityType
 	keyword := req.Keyword
 	submissionStatus := req.SubmissionStatus
 	excludeStatus := (*int32)(nil)
@@ -103,6 +104,22 @@ func (l *GetResidentialAreasLogic) GetResidentialAreas(req *types.GetResidential
 		return nil, err
 	}
 
+	// Filter by community_type if specified
+	if communityType != nil {
+		filtered := make([]*model.MdResidentialArea, 0)
+		for _, a := range areas {
+			if int32(a.CommunityType) == *communityType {
+				filtered = append(filtered, a)
+			}
+		}
+		areas = filtered
+		// Recount total with community_type filter
+		total, err = l.svcCtx.MdResidentialAreaModel.CountByCommunityType(l.ctx, *communityType, excludeArg...)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	list := make([]types.ResidentialArea, 0, len(areas))
 	for _, a := range areas {
 		list = append(list, modelToResidentialArea(a))
@@ -127,6 +144,9 @@ func modelToResidentialArea(a *model.MdResidentialArea) types.ResidentialArea {
 	}
 	if a.CountyId.Valid {
 		ra.CountyId = &a.CountyId.Int64
+	}
+	if a.CityId.Valid {
+		ra.CityId = &a.CityId.Int64
 	}
 	if a.StreetId.Valid {
 		ra.StreetId = &a.StreetId.Int64

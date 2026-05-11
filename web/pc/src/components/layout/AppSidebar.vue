@@ -60,6 +60,7 @@ import {
   RefreshRight,
   DataAnalysis,
   Download,
+  Search,
   Fold,
   Expand
 } from '@element-plus/icons-vue';
@@ -129,8 +130,13 @@ const menuItems: MenuItem[] = [
         icon: DataAnalysis
       },
       {
+        path: '/masterdata/query',
+        title: '数据查询',
+        icon: Search
+      },
+      {
         path: '/masterdata/amap-sync',
-        title: '高德地图同步',
+        title: '小区数据获取',
         icon: Download
       }
     ]

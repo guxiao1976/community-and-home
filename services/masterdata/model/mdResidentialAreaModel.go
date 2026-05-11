@@ -31,6 +31,7 @@ type (
 		CountDeleted(ctx context.Context) (int64, error)
 		FindDeleted(ctx context.Context, page, pageSize int64) ([]*MdResidentialArea, int64, error)
 		Restore(ctx context.Context, id int64) error
+		CountByCommunityType(ctx context.Context, communityType int32, excludeStatuses ...int32) (int64, error)
 	}
 
 	customMdResidentialAreaModel struct {
@@ -318,6 +319,22 @@ func (m *customMdResidentialAreaModel) Restore(ctx context.Context, id int64) er
 		return conn.ExecCtx(ctx, query, id)
 	}, mdResidentialAreaIdKey)
 	return err
+}
+
+func (m *customMdResidentialAreaModel) CountByCommunityType(ctx context.Context, communityType int32, excludeStatuses ...int32) (int64, error) {
+	var count int64
+	var conditions []string
+	var args []interface{}
+	conditions = append(conditions, "community_type = ?")
+	args = append(args, communityType)
+	appendSubmissionFilter(&conditions, &args, nil, excludeStatuses...)
+	where := strings.Join(conditions, " and ")
+	query := fmt.Sprintf("select count(*) from %s where %s and delete_time is null", m.table, where)
+	err := m.QueryRowNoCacheCtx(ctx, &count, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (m *customMdResidentialAreaModel) CountDeleted(ctx context.Context) (int64, error) {

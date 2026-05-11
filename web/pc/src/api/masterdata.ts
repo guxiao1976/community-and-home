@@ -334,3 +334,34 @@ export const getSyncProgress = (taskId: string) => {
     params: { task_id: taskId }
   })
 }
+
+// ==================== Data Query (Read-only) ====================
+
+export interface QueryResidentialAreaItem {
+  id: number
+  code: string
+  name: string
+  address: string
+  community_type: number
+  city_id: number | null
+  city_name: string
+  county_id: number | null
+  county_name: string
+  street_id: number | null
+  street_name: string
+  community_div_id: number | null
+  community_name: string
+}
+
+export const queryResidentialAreas = (params: {
+  city_id?: number
+  county_id?: number
+  street_id?: number
+  community_div_id?: number
+  keyword?: string
+  community_type?: number
+  page?: number
+  page_size?: number
+}) => {
+  return request.get<{ list: QueryResidentialAreaItem[]; total: number }>('/api/masterdata/query/residential-areas', { params })
+}

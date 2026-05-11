@@ -519,6 +519,18 @@ const handleBatchSubmit = async () => {
         <el-table-column prop="code" label="小区编码" width="140" />
         <el-table-column prop="name" label="小区名称" min-width="150" />
         <el-table-column prop="address" label="地址" min-width="200" />
+        <el-table-column label="城市ID" width="90">
+          <template #default="{ row }">{{ row.city_id ?? '-' }}</template>
+        </el-table-column>
+        <el-table-column label="区县ID" width="90">
+          <template #default="{ row }">{{ row.county_id ?? '-' }}</template>
+        </el-table-column>
+        <el-table-column label="街道ID" width="90">
+          <template #default="{ row }">{{ row.street_id ?? '-' }}</template>
+        </el-table-column>
+        <el-table-column label="社区ID" width="90">
+          <template #default="{ row }">{{ row.community_div_id ?? '-' }}</template>
+        </el-table-column>
         <el-table-column label="小区类型" width="120">
           <template #default="{ row }">{{ communityTypeMap[row.community_type] || '未知' }}</template>
         </el-table-column>
@@ -529,7 +541,6 @@ const handleBatchSubmit = async () => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_time" label="创建时间" width="180" />
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" :icon="View" size="small" link @click="handleView(row)">查看</el-button>
