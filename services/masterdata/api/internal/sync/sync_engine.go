@@ -215,16 +215,10 @@ func (e *SyncEngine) runSyncSingleCounty(ctx context.Context, p *SyncProgress, c
 
 	countyCode := county.Code
 
-	// Extract city_id from county's path: /province/city/county/ -> segment 2 = city
+	// city_id = county's parent_id (level 3 county -> parent is level 2 city)
 	var cityId int64
-	pathParts := strings.Split(county.Path, "/")
-	for _, part := range pathParts {
-		if part == "" {
-			continue
-		}
-		if cid, err := strconv.ParseInt(part, 10, 64); err == nil {
-			cityId = cid // The second non-empty segment is the city id
-		}
+	if county.ParentId.Valid {
+		cityId = county.ParentId.Int64
 	}
 
 	firstResp, err := e.searchResidentialAreas(countyCode, 1)

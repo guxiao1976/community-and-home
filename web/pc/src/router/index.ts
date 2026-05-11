@@ -171,6 +171,16 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'masterdata/query',
+        name: 'MasterdataQuery',
+        component: () => import('@/views/masterdata-query/Index.vue'),
+        meta: {
+          title: '数据查询',
+          icon: 'Search',
+          requiresAuth: true
+        }
+      },
+      {
         path: 'users/list',
         name: 'UserList',
         component: () => import('@/views/users/List.vue'),

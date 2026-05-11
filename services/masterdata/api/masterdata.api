@@ -78,6 +78,7 @@ type (
 	// Residential Area Types
 	ResidentialArea {
 		Id               int64   `json:"id"`
+		CityId           *int64  `json:"city_id"`
 		CountyId         *int64  `json:"county_id"`
 		StreetId         *int64  `json:"street_id"`
 		CommunityDivId   *int64  `json:"community_div_id"`
@@ -105,6 +106,7 @@ type (
 		StreetId         *int64 `form:"street_id,optional"`
 		CommunityDivId   *int64 `form:"community_div_id,optional"`
 		Keyword          string `form:"keyword,optional"`
+		CommunityType   *int32 `form:"community_type,optional"`
 		SubmissionStatus *int32 `form:"submission_status,optional"`
 		Page             int32  `form:"page,optional,default=1"`
 		PageSize         int32  `form:"page_size,optional,default=20"`
@@ -689,3 +691,44 @@ service masterdata-api {
 	get /amap-sync/progress (GetSyncProgressReq) returns (GetSyncProgressResp)
 }
 
+type (
+	QueryResidentialAreasReq {
+		CityId         *int64 `form:"city_id,optional"`
+		CountyId       *int64 `form:"county_id,optional"`
+		StreetId       *int64 `form:"street_id,optional"`
+		CommunityDivId *int64 `form:"community_div_id,optional"`
+		Keyword        string `form:"keyword,optional"`
+		CommunityType  *int32 `form:"community_type,optional"`
+		Page           int32  `form:"page,optional,default=1"`
+		PageSize       int32  `form:"page_size,optional,default=20"`
+	}
+	QueryResidentialAreaItem {
+		Id             int64  `json:"id"`
+		Code           string `json:"code"`
+		Name           string `json:"name"`
+		Address        string `json:"address"`
+		CommunityType  int32  `json:"community_type"`
+		CityId         *int64 `json:"city_id"`
+		CityName       string `json:"city_name"`
+		CountyId       *int64 `json:"county_id"`
+		CountyName     string `json:"county_name"`
+		StreetId       *int64 `json:"street_id"`
+		StreetName     string `json:"street_name"`
+		CommunityDivId *int64 `json:"community_div_id"`
+		CommunityName  string `json:"community_name"`
+	}
+	QueryResidentialAreasResp {
+		List  []QueryResidentialAreaItem `json:"list"`
+		Total int64                      `json:"total"`
+	}
+)
+
+@server (
+	prefix: /api/masterdata
+	group:  dataquery
+)
+service masterdata-api {
+	@doc "查询小区/村数据（只读，含行政区划名称）"
+	@handler queryResidentialAreas
+	get /query/residential-areas (QueryResidentialAreasReq) returns (QueryResidentialAreasResp)
+}

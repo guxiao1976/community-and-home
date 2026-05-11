@@ -1,7 +1,7 @@
 <template>
   <div class="amap-sync">
     <div class="page-header">
-      <h2>高德地图同步</h2>
+      <h2>小区数据获取</h2>
       <p class="page-desc">通过高德地图 API 批量同步住宅小区数据，支持按省/市/区县同步</p>
     </div>
 
@@ -98,6 +98,8 @@ import { getAdministrativeDivisions, syncResidentialAreas, getSyncProgress } fro
 import type { SyncProgress } from '@/api/masterdata'
 import { logger } from '@/utils/logger'
 
+const SYNC_STORAGE_KEY = 'amap-sync-task'
+
 interface DivisionOption {
   id: number
   name: string
@@ -176,6 +178,7 @@ const handleSync = async () => {
     progress.value = null
     try {
       const res = await syncResidentialAreas({ division_id: divId })
+      localStorage.setItem(SYNC_STORAGE_KEY, res.task_id)
       startPolling(res.task_id)
     } catch (error: any) {
       syncing.value = false
@@ -197,6 +200,7 @@ const startPolling = (taskId: string) => {
       if (p.status === 'completed' || p.status === 'failed') {
         stopPolling()
         syncing.value = false
+        localStorage.removeItem(SYNC_STORAGE_KEY)
         if (p.status === 'completed') {
           const countyInfo = p.total_counties > 1 ? `共 ${p.total_counties} 个区县，` : ''
           ElMessage.success(`同步完成！${countyInfo}共发现 ${p.total_found} 个小区，同步 ${p.total_synced} 个，跳过 ${p.total_skipped} 个`)
@@ -217,9 +221,17 @@ const stopPolling = () => {
   }
 }
 
+const restoreSyncState = () => {
+  const taskId = localStorage.getItem(SYNC_STORAGE_KEY)
+  if (!taskId) return
+  syncing.value = true
+  startPolling(taskId)
+}
+
 onMounted(async () => {
   logger.componentMounted('AMap Sync')
   provinceOptions.value = await loadDivisions(undefined, 1)
+  restoreSyncState()
 })
 
 onUnmounted(() => {
