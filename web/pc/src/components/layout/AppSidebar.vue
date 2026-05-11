@@ -51,6 +51,7 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   HomeFilled,
   User,
+  UserFilled,
   Location,
   OfficeBuilding,
   Setting,
@@ -155,6 +156,11 @@ const menuItems: MenuItem[] = [
         path: '/users/verifications',
         title: '实名审核',
         icon: Document
+      },
+      {
+        path: '/roles',
+        title: '角色管理',
+        icon: UserFilled
       }
     ]
   }

@@ -60,7 +60,22 @@
         <el-table-column prop="createdAt" label="提交时间" width="180" />
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleView(row)">查看详情</el-button>
+            <el-button
+              v-if="canApprove || canReject"
+              link
+              type="primary"
+              @click="handleView(row)"
+            >
+              审核详情
+            </el-button>
+            <el-button
+              v-else
+              link
+              type="info"
+              @click="handleView(row)"
+            >
+              查看详情
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -131,14 +146,31 @@
                 placeholder="请输入审核备注（拒绝时必填）"
               />
             </el-form-item>
-            <el-form-item>
-              <el-button type="success" :loading="submitting" @click="handleApprove">
+            <el-form-item v-if="canApprove || canReject">
+              <el-button
+                v-if="canApprove"
+                type="success"
+                :loading="submitting"
+                @click="handleApprove"
+              >
                 通过
               </el-button>
-              <el-button type="danger" :loading="submitting" @click="handleReject">
+              <el-button
+                v-if="canReject"
+                type="danger"
+                :loading="submitting"
+                @click="handleReject"
+              >
                 拒绝
               </el-button>
             </el-form-item>
+            <el-alert
+              v-else
+              title="您没有审核权限，请联系管理员"
+              type="warning"
+              :closable="false"
+              show-icon
+            />
           </el-form>
         </div>
       </div>
@@ -147,11 +179,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { HomeownerVerification } from '@common/types/identity';
 import * as identityApi from '@/api/identity';
 import { desensitizePhone, desensitizeIdCard } from '@common/utils/desensitize';
+import { usePermissionStore } from '@/stores/permission';
+import { useAuthStore } from '@/stores/auth';
+
+const permissionStore = usePermissionStore();
+const authStore = useAuthStore();
+
+const canApprove = computed(() => permissionStore.hasPermission('verification:approve'));
+const canReject = computed(() => permissionStore.hasPermission('verification:reject'));
 
 const loading = ref(false);
 const submitting = ref(false);
@@ -174,7 +214,11 @@ const reviewForm = reactive({
   notes: ''
 });
 
-onMounted(() => {
+onMounted(async () => {
+  const currentUser = authStore.user;
+  if (currentUser?.id) {
+    await permissionStore.loadUserPermissions(currentUser.id);
+  }
   loadData();
 });
 
