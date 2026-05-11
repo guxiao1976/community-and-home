@@ -308,6 +308,10 @@ export const getDivisionCounts = (params?: { parent_id?: number }) => {
   return request.get<{ list: DivisionCountItem[] }>('/api/masterdata/statistics/division-counts', { params })
 }
 
+export const getDivisionCountsRealtime = (params?: { parent_id?: number }) => {
+  return request.get<{ list: DivisionCountItem[] }>('/api/masterdata/statistics/division-counts/realtime', { params })
+}
+
 // ==================== AMap Sync ====================
 
 export interface SyncProgress {
