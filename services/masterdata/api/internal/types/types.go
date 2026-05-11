@@ -290,8 +290,8 @@ type GetResidentialAreasReq struct {
 	CountyId         *int64 `form:"county_id,optional"`
 	StreetId         *int64 `form:"street_id,optional"`
 	CommunityDivId   *int64 `form:"community_div_id,optional"`
-	CommunityType    *int32 `form:"community_type,optional"`
 	Keyword          string `form:"keyword,optional"`
+	CommunityType    *int32 `form:"community_type,optional"`
 	SubmissionStatus *int32 `form:"submission_status,optional"`
 	Page             int32  `form:"page,optional,default=1"`
 	PageSize         int32  `form:"page_size,optional,default=20"`

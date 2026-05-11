@@ -28,6 +28,7 @@ type (
 		InsertBatch(ctx context.Context, rows []MdDivisionStatistics) error
 		FindCountsByParentId(ctx context.Context, parentId *int64, statDate time.Time) ([]DivisionCountRow, error)
 		FindLatestDate(ctx context.Context) (time.Time, error)
+		FindRealtimeCountsByParentId(ctx context.Context, parentId *int64) ([]DivisionCountRow, error)
 		RefreshStatistics(ctx context.Context) error
 	}
 
@@ -107,6 +108,157 @@ func (m *customMdDivisionStatisticsModel) FindLatestDate(ctx context.Context) (t
 		return time.Time{}, err
 	}
 	return row.StatDate, nil
+}
+
+func (m *customMdDivisionStatisticsModel) FindRealtimeCountsByParentId(ctx context.Context, parentId *int64) ([]DivisionCountRow, error) {
+	// residential_area 关联字段说明：
+	//   小区(community_type=1): county_id → level=3(区县), street_id → NULL
+	//   村(community_type=2):   county_id → level=2(市),   street_id → level=3(区县)
+	// 层级：省(1) → 市(2) → 区县(3) → 街道(4) → 社区(5)
+	// 下钻：省 → 市 → 区县 → 街道(无数据)
+
+	var query string
+	var args []interface{}
+
+	if parentId == nil {
+		// 省级统计：小区按 county_id(区县) → 区县.parent_id(市) → 市.parent_id(省)
+		//           村按 street_id(区县) → 区县.parent_id(市) → 市.parent_id(省)
+		query = `SELECT p.id, p.name, p.level,
+			COALESCE(sub.community_count, 0) AS community_count,
+			COALESCE(sub.village_count, 0) AS village_count,
+			COALESCE(sub.total_count, 0) AS total_count
+			FROM md_administrative_division p
+			LEFT JOIN (
+				SELECT city.parent_id AS province_id,
+					SUM(t.community_count) AS community_count,
+					SUM(t.village_count) AS village_count,
+					SUM(t.total_count) AS total_count
+				FROM (
+					SELECT ct.parent_id AS city_id,
+						SUM(ra.community_count) AS community_count,
+						SUM(ra.village_count) AS village_count,
+						SUM(ra.total_count) AS total_count
+					FROM (
+						SELECT r.county_id AS div_id,
+							COUNT(CASE WHEN r.community_type = 1 THEN 1 END) AS community_count,
+							COUNT(CASE WHEN r.community_type = 2 THEN 1 END) AS village_count,
+							COUNT(*) AS total_count
+						FROM md_residential_area r
+						WHERE r.submission_status = 2 AND r.delete_time IS NULL AND r.community_type = 1
+						GROUP BY r.county_id
+						UNION ALL
+						SELECT r.street_id AS div_id,
+							COUNT(CASE WHEN r.community_type = 1 THEN 1 END) AS community_count,
+							COUNT(CASE WHEN r.community_type = 2 THEN 1 END) AS village_count,
+							COUNT(*) AS total_count
+						FROM md_residential_area r
+						WHERE r.submission_status = 2 AND r.delete_time IS NULL AND r.community_type = 2
+						GROUP BY r.street_id
+					) ra
+					INNER JOIN md_administrative_division ct ON ct.id = ra.div_id
+						AND ct.level = 3 AND ct.submission_status = 2 AND ct.delete_time IS NULL
+					GROUP BY ct.parent_id
+				) t
+				INNER JOIN md_administrative_division city ON city.id = t.city_id
+					AND city.level = 2 AND city.submission_status = 2 AND city.delete_time IS NULL
+				GROUP BY city.parent_id
+			) sub ON sub.province_id = p.id
+			WHERE p.level = 1 AND p.parent_id IS NULL AND p.submission_status = 2 AND p.delete_time IS NULL
+			ORDER BY COALESCE(sub.total_count, 0) DESC`
+	} else {
+		var parent struct {
+			Level int64 `db:"level"`
+		}
+		parentErr := m.QueryRowNoCacheCtx(ctx, &parent,
+			"SELECT level FROM md_administrative_division WHERE id = ? LIMIT 1", *parentId)
+		if parentErr != nil {
+			return nil, parentErr
+		}
+
+		switch parent.Level {
+		case 1:
+			// 省 → 市：小区按 county_id(区县) → 区县.parent_id(市)；村按 county_id(市) 直接聚合
+			query = `SELECT d.id, d.name, d.level,
+				COALESCE(sub.community_count, 0) AS community_count,
+				COALESCE(sub.village_count, 0) AS village_count,
+				COALESCE(sub.total_count, 0) AS total_count
+				FROM md_administrative_division d
+				LEFT JOIN (
+					SELECT city_id,
+						SUM(community_count) AS community_count,
+						SUM(village_count) AS village_count,
+						SUM(total_count) AS total_count
+					FROM (
+						SELECT ct.parent_id AS city_id,
+							COUNT(CASE WHEN r.community_type = 1 THEN 1 END) AS community_count,
+							COUNT(CASE WHEN r.community_type = 2 THEN 1 END) AS village_count,
+							COUNT(*) AS total_count
+						FROM md_residential_area r
+						INNER JOIN md_administrative_division ct ON ct.id = r.county_id
+							AND ct.level = 3 AND ct.submission_status = 2 AND ct.delete_time IS NULL
+						WHERE r.submission_status = 2 AND r.delete_time IS NULL AND r.community_type = 1
+						GROUP BY ct.parent_id
+						UNION ALL
+						SELECT r.county_id AS city_id,
+							COUNT(CASE WHEN r.community_type = 1 THEN 1 END) AS community_count,
+							COUNT(CASE WHEN r.community_type = 2 THEN 1 END) AS village_count,
+							COUNT(*) AS total_count
+						FROM md_residential_area r
+						WHERE r.submission_status = 2 AND r.delete_time IS NULL AND r.community_type = 2
+						GROUP BY r.county_id
+					) combined
+					GROUP BY city_id
+				) sub ON sub.city_id = d.id
+				WHERE d.parent_id = ? AND d.submission_status = 2 AND d.delete_time IS NULL
+				ORDER BY COALESCE(sub.total_count, 0) DESC`
+			args = []interface{}{*parentId}
+
+		case 2:
+			// 市 → 区县：小区按 county_id(区县) 聚合；村按 street_id(区县) 聚合
+			query = `SELECT d.id, d.name, d.level,
+				COALESCE(sub.community_count, 0) AS community_count,
+				COALESCE(sub.village_count, 0) AS village_count,
+				COALESCE(sub.total_count, 0) AS total_count
+				FROM md_administrative_division d
+				LEFT JOIN (
+					SELECT div_id,
+						SUM(community_count) AS community_count,
+						SUM(village_count) AS village_count,
+						SUM(total_count) AS total_count
+					FROM (
+						SELECT r.county_id AS div_id,
+							COUNT(CASE WHEN r.community_type = 1 THEN 1 END) AS community_count,
+							COUNT(CASE WHEN r.community_type = 2 THEN 1 END) AS village_count,
+							COUNT(*) AS total_count
+						FROM md_residential_area r
+						WHERE r.submission_status = 2 AND r.delete_time IS NULL AND r.community_type = 1
+						GROUP BY r.county_id
+						UNION ALL
+						SELECT r.street_id AS div_id,
+							COUNT(CASE WHEN r.community_type = 1 THEN 1 END) AS community_count,
+							COUNT(CASE WHEN r.community_type = 2 THEN 1 END) AS village_count,
+							COUNT(*) AS total_count
+						FROM md_residential_area r
+						WHERE r.submission_status = 2 AND r.delete_time IS NULL AND r.community_type = 2
+						GROUP BY r.street_id
+					) combined
+					GROUP BY div_id
+				) sub ON sub.div_id = d.id
+				WHERE d.parent_id = ? AND d.submission_status = 2 AND d.delete_time IS NULL
+				ORDER BY COALESCE(sub.total_count, 0) DESC`
+			args = []interface{}{*parentId}
+
+		default:
+			return []DivisionCountRow{}, nil
+		}
+	}
+
+	var rows []DivisionCountRow
+	err := m.QueryRowsNoCacheCtx(ctx, &rows, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 func (m *customMdDivisionStatisticsModel) RefreshStatistics(ctx context.Context) error {
