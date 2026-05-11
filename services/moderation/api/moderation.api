@@ -1,0 +1,71 @@
+syntax = "v1"
+
+info (
+	title:   "Moderation Service API"
+	desc:    "Text and image content moderation"
+	author:  "community-and-home"
+	version: "v1.0"
+)
+
+type (
+	HealthResp {
+		Status string `json:"status"`
+	}
+	TextCheckReq {
+		Content     string `json:"content"`
+		ContentType string `json:"content_type,optional"`
+	}
+	TextCheckResp {
+		Pass       bool          `json:"pass"`
+		RiskLevel  string        `json:"risk_level"`
+		Reason     string        `json:"reason"`
+		NeedReview bool          `json:"need_review"`
+		Details    []MatchDetail `json:"details"`
+	}
+	MatchDetail {
+		Layer       string  `json:"layer"`
+		MatchedText string  `json:"matched_text,omitempty"`
+		Category    string  `json:"category,omitempty"`
+		Severity    int     `json:"severity,omitempty"`
+		Confidence  float64 `json:"confidence,omitempty"`
+	}
+	ImageCheckResp {
+		Pass       bool          `json:"pass"`
+		RiskLevel  string        `json:"risk_level"`
+		Reason     string        `json:"reason"`
+		NeedReview bool          `json:"need_review"`
+		Details    []MatchDetail `json:"details"`
+	}
+)
+
+@server (
+	prefix: /api/moderation
+	group:  health
+)
+service moderation-api {
+	@handler HealthHandler
+	get /health returns (HealthResp)
+}
+
+@server (
+	prefix:     /api/moderation
+	group:      text_review
+	jwt:        Auth
+	middleware: AuthMiddleware
+)
+service moderation-api {
+	@handler TextCheckHandler
+	post /text/check (TextCheckReq) returns (TextCheckResp)
+}
+
+@server (
+	prefix:     /api/moderation
+	group:      image_review
+	jwt:        Auth
+	middleware: AuthMiddleware
+)
+service moderation-api {
+	@handler ImageCheckHandler
+	post /image/check returns (ImageCheckResp)
+}
+
