@@ -9,10 +9,10 @@ import (
 	amap_sync "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/amap_sync"
 	approval "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/approval"
 	configuration "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/configuration"
+	dataquery "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/dataquery"
 	deleted_items "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/deleted_items"
 	division "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/division"
 	residentialarea "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/residentialarea"
-	dataquery "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/dataquery"
 	sensitiveword "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/sensitiveword"
 	statistics "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/statistics"
 	submissionrecord "github.com/guxiao/community-and-home/services/masterdata/api/internal/handler/submissionrecord"
@@ -119,6 +119,18 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/configurations/batch-submit",
 				Handler: configuration.BatchSubmitConfigurationsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/masterdata"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				// 查询小区/村数据（只读，含行政区划名称）
+				Method:  http.MethodGet,
+				Path:    "/query/residential-areas",
+				Handler: dataquery.QueryResidentialAreasHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/masterdata"),
@@ -318,6 +330,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/statistics/division-counts",
 				Handler: statistics.GetDivisionCountsHandler(serverCtx),
 			},
+			{
+				// Get division counts realtime statistics
+				Method:  http.MethodGet,
+				Path:    "/statistics/division-counts/realtime",
+				Handler: statistics.GetDivisionCountsRealtimeHandler(serverCtx),
+			},
 		},
 		rest.WithPrefix("/api/masterdata"),
 	)
@@ -335,18 +353,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/submission-records/reviewed",
 				Handler: submissionrecord.GetReviewedSubmissionRecordsHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/api/masterdata"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				// 查询小区/村数据（只读，含行政区划名称）
-				Method:  http.MethodGet,
-				Path:    "/query/residential-areas",
-				Handler: dataquery.QueryResidentialAreasHandler(serverCtx),
 			},
 		},
 		rest.WithPrefix("/api/masterdata"),
