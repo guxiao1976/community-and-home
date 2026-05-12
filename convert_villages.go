@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -16,6 +17,14 @@ type ConversionStats struct {
 	Skipped int
 	Errors  int
 	ErrorSamples []string
+}
+
+type VillageRecord struct {
+	ID       int64
+	Code     string
+	Name     string
+	ParentID sql.NullInt64
+	Level    int64
 }
 
 func main() {
@@ -67,6 +76,56 @@ func main() {
 }
 
 func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) error {
-	// Will implement in next steps
+	const batchSize = 1000
+	offset := 0
+
+	for {
+		villages, err := extractVillageCommittees(ctx, db, offset, batchSize)
+		if err != nil {
+			return fmt.Errorf("extract villages at offset %d: %w", offset, err)
+		}
+
+		if len(villages) == 0 {
+			break
+		}
+
+		log.Printf("Processing batch: offset=%d, count=%d", offset, len(villages))
+		stats.Total += len(villages)
+
+		// Process each village (will implement in next tasks)
+		for _, village := range villages {
+			_ = village // Placeholder
+		}
+
+		offset += batchSize
+	}
+
 	return nil
+}
+
+func extractVillageCommittees(ctx context.Context, db *sql.DB, offset, limit int) ([]VillageRecord, error) {
+	query := `
+		SELECT id, code, name, parent_id, level
+		FROM md_administrative_division
+		WHERE level = 5 AND delete_time IS NULL AND submission_status != 4
+		ORDER BY id
+		LIMIT ? OFFSET ?
+	`
+
+	rows, err := db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("query villages failed: %w", err)
+	}
+	defer rows.Close()
+
+	var villages []VillageRecord
+	for rows.Next() {
+		var v VillageRecord
+		if err := rows.Scan(&v.ID, &v.Code, &v.Name, &v.ParentID, &v.Level); err != nil {
+			return nil, fmt.Errorf("scan village failed: %w", err)
+		}
+		villages = append(villages, v)
+	}
+
+	return villages, rows.Err()
 }
