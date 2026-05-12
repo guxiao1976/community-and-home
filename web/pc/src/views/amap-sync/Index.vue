@@ -19,8 +19,13 @@
             </el-select>
           </el-form-item>
           <el-form-item label="区县">
-            <el-select v-model="filters.countyId" placeholder="请选择" clearable style="width: 150px">
+            <el-select v-model="filters.countyId" placeholder="请选择" clearable style="width: 150px" @change="handleCountyChange">
               <el-option v-for="item in countyOptions" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="街道">
+            <el-select v-model="filters.streetId" placeholder="请选择" clearable style="width: 150px">
+              <el-option v-for="item in streetOptions" :key="item.id" :label="item.name" :value="item.id" />
             </el-select>
           </el-form-item>
         </el-form>
@@ -51,6 +56,19 @@
           />
         </template>
 
+        <!-- Street-level progress -->
+        <template v-if="progress.total_streets > 0">
+          <div style="margin-bottom: 8px; color: #606266; font-size: 14px">
+            街道进度：{{ progress.current_street }} / {{ progress.total_streets }}
+            <span v-if="progress.current_street_name">（{{ progress.current_street_name }}）</span>
+          </div>
+          <el-progress
+            :percentage="Math.round(progress.current_street / progress.total_streets * 100)"
+            :stroke-width="12"
+            style="margin-bottom: 16px"
+          />
+        </template>
+
         <!-- Page-level progress -->
         <el-progress
           :percentage="progress.total_pages > 0 ? Math.round(progress.current_page / progress.total_pages * 100) : 0"
@@ -63,14 +81,17 @@
           <p v-if="progress.status === 'running'">
             <template v-if="progress.total_counties > 1">
               正在处理第 {{ progress.current_county }}/{{ progress.total_counties }} 个区县
-              <span v-if="progress.current_county_name">「{{ progress.current_county_name }}」</span>，
-              第 {{ progress.current_page }}/{{ progress.total_pages }} 页
-              （共发现 <strong>{{ progress.total_found }}</strong> 个小区）
+              <span v-if="progress.current_county_name">「{{ progress.current_county_name }}」</span>
             </template>
-            <template v-else>
-              正在处理第 <strong>{{ progress.current_page }}</strong>/{{ progress.total_pages }} 页
-              （共发现 <strong>{{ progress.total_found }}</strong> 个小区）
+            <template v-if="progress.total_streets > 0">
+              <span v-if="progress.total_counties > 1">，</span>
+              第 {{ progress.current_street }}/{{ progress.total_streets }} 个街道
+              <span v-if="progress.current_street_name">「{{ progress.current_street_name }}」</span>
             </template>
+            <template v-if="progress.total_pages > 0">
+              ，第 {{ progress.current_page }}/{{ progress.total_pages }} 页
+            </template>
+            （共发现 <strong>{{ progress.total_found }}</strong> 个小区）
           </p>
           <p v-else-if="progress.status === 'completed'">
             同步完成（共 {{ progress.total_counties }} 个区县）
@@ -108,6 +129,7 @@ interface DivisionOption {
 const provinceOptions = ref<DivisionOption[]>([])
 const cityOptions = ref<DivisionOption[]>([])
 const countyOptions = ref<DivisionOption[]>([])
+const streetOptions = ref<DivisionOption[]>([])
 const syncing = ref(false)
 const progress = ref<SyncProgress | null>(null)
 let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -115,14 +137,16 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 const filters = reactive({
   provinceId: undefined as number | undefined,
   cityId: undefined as number | undefined,
-  countyId: undefined as number | undefined
+  countyId: undefined as number | undefined,
+  streetId: undefined as number | undefined
 })
 
 const effectiveDivisionId = computed(() => {
-  return filters.countyId || filters.cityId || filters.provinceId
+  return filters.streetId || filters.countyId || filters.cityId || filters.provinceId
 })
 
 const levelLabel = computed(() => {
+  if (filters.streetId) return '街道'
   if (filters.countyId) return '区县'
   if (filters.cityId) return '城市'
   if (filters.provinceId) return '省份'
@@ -151,17 +175,28 @@ const loadDivisions = async (parentId?: number, level?: number): Promise<Divisio
 const handleProvinceChange = async () => {
   filters.cityId = undefined
   filters.countyId = undefined
+  filters.streetId = undefined
   cityOptions.value = []
   countyOptions.value = []
+  streetOptions.value = []
   if (!filters.provinceId) return
   cityOptions.value = await loadDivisions(filters.provinceId, 2)
 }
 
 const handleCityChange = async () => {
   filters.countyId = undefined
+  filters.streetId = undefined
   countyOptions.value = []
+  streetOptions.value = []
   if (!filters.cityId) return
   countyOptions.value = await loadDivisions(filters.cityId, 3)
+}
+
+const handleCountyChange = async () => {
+  filters.streetId = undefined
+  streetOptions.value = []
+  if (!filters.countyId) return
+  streetOptions.value = await loadDivisions(filters.countyId, 4)
 }
 
 const handleSync = async () => {
