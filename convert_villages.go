@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -113,6 +114,9 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 				continue
 			}
 
+			transformedName := transformVillageName(village.Name)
+			log.Printf("Village %d: '%s' → '%s'", village.ID, village.Name, transformedName)
+
 			// Successfully parsed hierarchy - will insert in next tasks
 			stats.Success++
 		}
@@ -205,4 +209,24 @@ func parseHierarchicalIDs(ctx context.Context, db *sql.DB, villageID int64) (*Hi
 	}
 
 	return ids, nil
+}
+
+func transformVillageName(originalName string) string {
+	// Remove common suffixes for village committees
+	suffixes := []string{"社区居委会", "村委会", "居委会"}
+
+	name := originalName
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(name, suffix) {
+			name = strings.TrimSuffix(name, suffix)
+			break
+		}
+	}
+
+	// If name is empty after trimming, use original
+	if strings.TrimSpace(name) == "" {
+		return originalName
+	}
+
+	return name
 }
