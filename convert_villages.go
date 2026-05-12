@@ -27,6 +27,14 @@ type VillageRecord struct {
 	Level    int64
 }
 
+type HierarchicalIDs struct {
+	ProvinceID     int64
+	CityID         int64
+	CountyID       int64
+	StreetID       sql.NullInt64
+	CommunityDivID sql.NullInt64
+}
+
 func main() {
 	// Fix #1: Use environment variable with fallback for credentials
 	dsn := os.Getenv("DB_DSN")
@@ -94,7 +102,15 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 
 		// Process each village (will implement in next tasks)
 		for _, village := range villages {
-			_ = village // Placeholder
+			ids, err := parseHierarchicalIDs(ctx, db, village.ID)
+			if err != nil {
+				log.Printf("Failed to parse hierarchy for village %d: %v", village.ID, err)
+				stats.Errors++
+				continue
+			}
+
+			log.Printf("Village %d: province=%d, city=%d, county=%d, street=%v, community=%v",
+				village.ID, ids.ProvinceID, ids.CityID, ids.CountyID, ids.StreetID, ids.CommunityDivID)
 		}
 
 		offset += batchSize
@@ -128,4 +144,61 @@ func extractVillageCommittees(ctx context.Context, db *sql.DB, offset, limit int
 	}
 
 	return villages, rows.Err()
+}
+
+func parseHierarchicalIDs(ctx context.Context, db *sql.DB, villageID int64) (*HierarchicalIDs, error) {
+	query := `
+		WITH RECURSIVE hierarchy AS (
+			SELECT id, parent_id, level, 1 as depth
+			FROM md_administrative_division
+			WHERE id = ?
+
+			UNION ALL
+
+			SELECT d.id, d.parent_id, d.level, h.depth + 1
+			FROM md_administrative_division d
+			INNER JOIN hierarchy h ON d.id = h.parent_id
+			WHERE h.depth < 10
+		)
+		SELECT id, level FROM hierarchy ORDER BY level
+	`
+
+	rows, err := db.QueryContext(ctx, query, villageID)
+	if err != nil {
+		return nil, fmt.Errorf("query hierarchy failed: %w", err)
+	}
+	defer rows.Close()
+
+	ids := &HierarchicalIDs{}
+	for rows.Next() {
+		var id, level int64
+		if err := rows.Scan(&id, &level); err != nil {
+			return nil, fmt.Errorf("scan hierarchy failed: %w", err)
+		}
+
+		switch level {
+		case 1:
+			ids.ProvinceID = id
+		case 2:
+			ids.CityID = id
+		case 3:
+			ids.CountyID = id
+		case 4:
+			ids.StreetID = sql.NullInt64{Int64: id, Valid: true}
+		case 5:
+			ids.CommunityDivID = sql.NullInt64{Int64: id, Valid: true}
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Validate required fields
+	if ids.ProvinceID == 0 || ids.CityID == 0 || ids.CountyID == 0 {
+		return nil, fmt.Errorf("incomplete hierarchy: province=%d, city=%d, county=%d",
+			ids.ProvinceID, ids.CityID, ids.CountyID)
+	}
+
+	return ids, nil
 }
