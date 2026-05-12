@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -18,11 +19,21 @@ type ConversionStats struct {
 }
 
 func main() {
-	db, err := sql.Open("mysql", "root:123456@tcp(localhost:3306)/masterdata_db?parseTime=true&loc=Local")
+	// Fix #1: Use environment variable with fallback for credentials
+	dsn := os.Getenv("DB_DSN")
+	if dsn == "" {
+		dsn = "root:123456@tcp(localhost:3306)/masterdata_db?parseTime=true&loc=Local"
+	}
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer db.Close()
+
+	// Fix #3: Configure connection pool
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(time.Hour)
 
 	if err := db.Ping(); err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -32,7 +43,10 @@ func main() {
 	start := time.Now()
 
 	stats := ConversionStats{ErrorSamples: make([]string, 0, 10)}
-	ctx := context.Background()
+
+	// Fix #2: Add context timeout with cancel
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
 
 	if err := convertVillages(ctx, db, &stats); err != nil {
 		log.Fatalf("Conversion failed: %v", err)
