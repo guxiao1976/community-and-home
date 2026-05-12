@@ -127,9 +127,24 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 				continue
 			}
 
-			_ = transformedName // Will use in next task
-			_ = code            // Will use in next task
-			_ = ids             // Will use in next task
+			// Check for duplicates
+			isDuplicate, err := checkDuplicateResidentialArea(ctx, db, transformedName, ids.CountyID)
+			if err != nil {
+				errMsg := fmt.Sprintf("Village %d: failed to check duplicate: %v", village.ID, err)
+				log.Printf("%s", errMsg)
+				stats.Errors++
+				if len(stats.ErrorSamples) < 10 {
+					stats.ErrorSamples = append(stats.ErrorSamples, errMsg)
+				}
+				continue
+			}
+
+			if isDuplicate {
+				stats.Skipped++
+				continue
+			}
+
+			_ = code // Will use in next task
 
 			stats.Success++
 		}
@@ -243,6 +258,21 @@ func transformVillageName(originalName string) string {
 	}
 
 	return name
+}
+
+func checkDuplicateResidentialArea(ctx context.Context, db *sql.DB, name string, countyID int64) (bool, error) {
+	query := `
+		SELECT COUNT(*) FROM md_residential_area
+		WHERE name = ? AND county_id = ? AND delete_time IS NULL
+	`
+
+	var count int
+	err := db.QueryRowContext(ctx, query, name, countyID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("check duplicate failed: %w", err)
+	}
+
+	return count > 0, nil
 }
 
 // generateResidentialAreaCode generates a unique code for a residential area.
