@@ -115,7 +115,7 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 			}
 
 			transformedName := transformVillageName(village.Name)
-			log.Printf("Village %d: '%s' → '%s'", village.ID, village.Name, transformedName)
+			_ = transformedName // Will be used in next tasks
 
 			// Successfully parsed hierarchy - will insert in next tasks
 			stats.Success++
@@ -224,7 +224,8 @@ func transformVillageName(originalName string) string {
 	}
 
 	// If name is empty after trimming, use original
-	if strings.TrimSpace(name) == "" {
+	name = strings.TrimSpace(name)
+	if name == "" {
 		return originalName
 	}
 
