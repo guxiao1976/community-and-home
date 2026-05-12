@@ -165,7 +165,7 @@ const routes: RouteRecordRaw[] = [
         name: 'AMapSync',
         component: () => import('@/views/amap-sync/Index.vue'),
         meta: {
-          title: '高德地图同步',
+          title: '小区数据获取',
           icon: 'Download',
           requiresAuth: true
         }
@@ -248,6 +248,15 @@ const routes: RouteRecordRaw[] = [
           title: '权限配置',
           requiresAuth: true,
           hidden: true
+        }
+      },
+      {
+        path: '/moderation/test',
+        name: 'ModerationTest',
+        component: () => import('@/views/moderation/ModerationTest.vue'),
+        meta: {
+          title: '内容审核测试',
+          requiresAuth: true
         }
       }
     ]

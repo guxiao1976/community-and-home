@@ -1,0 +1,48 @@
+Name: moderation-api
+Host: 0.0.0.0
+Port: 8890
+Timeout: 30000
+
+Auth:
+  AccessSecret: changeme
+  AccessExpire: 86400
+
+DataSource: root:123456@tcp(localhost:3306)/masterdata_db?charset=utf8mb4&parseTime=true&loc=Local
+LogDataSource: root:123456@tcp(localhost:3306)/moderation_db?charset=utf8mb4&parseTime=true&loc=Local
+Cache:
+  - Host: localhost:6379
+    Pass: "123456"
+
+ACEngine:
+  SyncInterval: 300
+  PinyinExpand: true
+  PinyinMaxVariants: 20
+  SplitDetect: true
+  SplitSeparators: "xX.* 、 \t-_|/~·丶"
+
+Normalizer:
+  IgnoreWidth: true
+  IgnoreCase: true
+  IgnoreChineseStyle: true
+  IgnoreNumStyle: true
+  IgnoreEnglishStyle: true
+  IgnoreRepeat: true
+
+SmallModel:
+  Enable: false
+  Endpoint: ""
+  Model: ""
+  Timeout: 5000
+  HighConfThreshold: 0.9
+
+LargeModel:
+  Enable: false
+  Endpoint: ""
+  ApiKey: ""
+  Model: ""
+  Timeout: 15000
+
+ImageHash:
+  Enable: false
+  HashSize: 16
+  SimilarThreshold: 10

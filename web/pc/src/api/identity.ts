@@ -117,6 +117,34 @@ export function getUserPermissions(userId: number) {
 }
 
 /**
+ * Get user roles
+ */
+export function getUserRoles(userId: number) {
+  return request.get<Role[]>(`/api/identity/users/${userId}/roles`);
+}
+
+/**
+ * Assign role to user
+ */
+export function assignUserRole(userId: number, roleId: number) {
+  return request.post<null>(`/api/identity/users/${userId}/roles`, { role_id: roleId });
+}
+
+/**
+ * Remove role from user
+ */
+export function removeUserRole(userId: number, roleId: number) {
+  return request.delete<null>(`/api/identity/users/${userId}/roles/${roleId}`);
+}
+
+/**
+ * Get all roles (no pagination)
+ */
+export function getAllRoles() {
+  return request.get<Role[]>('/api/identity/roles/all');
+}
+
+/**
  * Get all permissions
  */
 export function getPermissions() {
