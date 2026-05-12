@@ -245,7 +245,16 @@ func transformVillageName(originalName string) string {
 	return name
 }
 
+// generateResidentialAreaCode generates a unique code for a residential area.
+// Format: villageCode (12 digits) + sequential suffix (3 digits, e.g., 001, 002, ...)
+// Note: This function is not concurrency-safe. For single-threaded migration use only.
+// For concurrent use, implement database-level locking or rely on unique constraint retry logic.
 func generateResidentialAreaCode(ctx context.Context, db *sql.DB, villageCode string) (string, error) {
+	// Validate village code length (should be 12 digits)
+	if len(villageCode) != 12 {
+		return "", fmt.Errorf("invalid village code length: expected 12, got %d", len(villageCode))
+	}
+
 	// Query for existing codes with this prefix
 	query := `
 		SELECT code FROM md_residential_area
@@ -267,6 +276,7 @@ func generateResidentialAreaCode(ctx context.Context, db *sql.DB, villageCode st
 
 	// Extract the suffix and increment
 	if len(lastCode.String) <= len(villageCode) {
+		log.Printf("Warning: Village code %s has malformed existing code %s, starting fresh with 001", villageCode, lastCode.String)
 		return villageCode + "001", nil
 	}
 
@@ -275,6 +285,7 @@ func generateResidentialAreaCode(ctx context.Context, db *sql.DB, villageCode st
 	_, err = fmt.Sscanf(suffix, "%d", &seqNum)
 	if err != nil {
 		// If suffix is not a number, start fresh
+		log.Printf("Warning: Village code %s has non-numeric suffix in %s, starting fresh with 001", villageCode, lastCode.String)
 		return villageCode + "001", nil
 	}
 
