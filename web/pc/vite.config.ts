@@ -46,6 +46,10 @@ export default defineConfig({
       '/api/masterdata': {
         target: 'http://localhost:8889',
         changeOrigin: true
+      },
+      '/api/moderation': {
+        target: 'http://localhost:8890',
+        changeOrigin: true
       }
     }
   },

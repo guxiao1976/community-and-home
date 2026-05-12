@@ -249,6 +249,15 @@ const routes: RouteRecordRaw[] = [
           requiresAuth: true,
           hidden: true
         }
+      },
+      {
+        path: '/moderation/test',
+        name: 'ModerationTest',
+        component: () => import('@/views/moderation/ModerationTest.vue'),
+        meta: {
+          title: '内容审核测试',
+          requiresAuth: true
+        }
       }
     ]
   },

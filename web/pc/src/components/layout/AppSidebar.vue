@@ -63,7 +63,9 @@ import {
   Download,
   Search,
   Fold,
-  Expand
+  Expand,
+  Shield,
+  Monitor
 } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
 
@@ -161,6 +163,18 @@ const menuItems: MenuItem[] = [
         path: '/roles',
         title: '角色管理',
         icon: UserFilled
+      }
+    ]
+  },
+  {
+    path: '/moderation',
+    title: '内容审核',
+    icon: Shield,
+    children: [
+      {
+        path: '/moderation/test',
+        title: '内容审核测试',
+        icon: Monitor
       }
     ]
   }
