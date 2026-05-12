@@ -249,7 +249,7 @@ func generateResidentialAreaCode(ctx context.Context, db *sql.DB, villageCode st
 	// Query for existing codes with this prefix
 	query := `
 		SELECT code FROM md_residential_area
-		WHERE code LIKE ?
+		WHERE code LIKE ? AND delete_time IS NULL
 		ORDER BY code DESC
 		LIMIT 1
 	`
