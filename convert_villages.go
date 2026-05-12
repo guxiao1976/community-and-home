@@ -144,7 +144,17 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 				continue
 			}
 
-			_ = code // Will use in next task
+			// Insert residential area record
+			err = insertResidentialArea(ctx, db, village, ids, code, transformedName)
+			if err != nil {
+				errMsg := fmt.Sprintf("Village %d: failed to insert: %v", village.ID, err)
+				log.Printf("%s", errMsg)
+				stats.Errors++
+				if len(stats.ErrorSamples) < 10 {
+					stats.ErrorSamples = append(stats.ErrorSamples, errMsg)
+				}
+				continue
+			}
 
 			stats.Success++
 		}
@@ -273,6 +283,39 @@ func checkDuplicateResidentialArea(ctx context.Context, db *sql.DB, name string,
 	}
 
 	return count > 0, nil
+}
+
+func insertResidentialArea(ctx context.Context, db *sql.DB, village VillageRecord,
+	ids *HierarchicalIDs, code, name string) error {
+
+	query := `
+		INSERT INTO md_residential_area (
+			code, name, county_id, street_id, community_div_id,
+			community_type, submission_status, address, submitter_id
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	// community_type = 2 for village (村庄)
+	// submission_status = 1 for approved
+	// address = name (placeholder)
+	// submitter_id = 1 (system user)
+	_, err := db.ExecContext(ctx, query,
+		code,
+		name,
+		ids.CountyID,
+		ids.StreetID,
+		ids.CommunityDivID,
+		2, // community_type: 2 = village
+		1, // submission_status: 1 = approved
+		name, // address: use name as placeholder
+		1, // submitter_id: 1 = system user
+	)
+
+	if err != nil {
+		return fmt.Errorf("insert failed: %w", err)
+	}
+
+	return nil
 }
 
 // generateResidentialAreaCode generates a unique code for a residential area.
