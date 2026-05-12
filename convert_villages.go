@@ -103,7 +103,7 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 
 		// Process each village (will implement in next tasks)
 		for _, village := range villages {
-			_, err := parseHierarchicalIDs(ctx, db, village.ID)
+			ids, err := parseHierarchicalIDs(ctx, db, village.ID)
 			if err != nil {
 				errMsg := fmt.Sprintf("Village %d: %v", village.ID, err)
 				log.Printf("Failed to parse hierarchy: %s", errMsg)
@@ -115,9 +115,22 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 			}
 
 			transformedName := transformVillageName(village.Name)
-			_ = transformedName // Will be used in next tasks
 
-			// Successfully parsed hierarchy - will insert in next tasks
+			code, err := generateResidentialAreaCode(ctx, db, village.Code)
+			if err != nil {
+				errMsg := fmt.Sprintf("Village %d: failed to generate code: %v", village.ID, err)
+				log.Printf("%s", errMsg)
+				stats.Errors++
+				if len(stats.ErrorSamples) < 10 {
+					stats.ErrorSamples = append(stats.ErrorSamples, errMsg)
+				}
+				continue
+			}
+
+			_ = transformedName // Will use in next task
+			_ = code            // Will use in next task
+			_ = ids             // Will use in next task
+
 			stats.Success++
 		}
 
@@ -230,4 +243,42 @@ func transformVillageName(originalName string) string {
 	}
 
 	return name
+}
+
+func generateResidentialAreaCode(ctx context.Context, db *sql.DB, villageCode string) (string, error) {
+	// Query for existing codes with this prefix
+	query := `
+		SELECT code FROM md_residential_area
+		WHERE code LIKE ?
+		ORDER BY code DESC
+		LIMIT 1
+	`
+
+	var lastCode sql.NullString
+	err := db.QueryRowContext(ctx, query, villageCode+"%").Scan(&lastCode)
+	if err != nil && err != sql.ErrNoRows {
+		return "", fmt.Errorf("query last code failed: %w", err)
+	}
+
+	// If no existing codes, start with 001
+	if !lastCode.Valid || lastCode.String == "" {
+		return villageCode + "001", nil
+	}
+
+	// Extract the suffix and increment
+	if len(lastCode.String) <= len(villageCode) {
+		return villageCode + "001", nil
+	}
+
+	suffix := lastCode.String[len(villageCode):]
+	var seqNum int
+	_, err = fmt.Sscanf(suffix, "%d", &seqNum)
+	if err != nil {
+		// If suffix is not a number, start fresh
+		return villageCode + "001", nil
+	}
+
+	// Increment and format with leading zeros
+	seqNum++
+	return fmt.Sprintf("%s%03d", villageCode, seqNum), nil
 }
