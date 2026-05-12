@@ -13,11 +13,12 @@ import (
 )
 
 type ConversionStats struct {
-	Total   int
-	Success int
-	Skipped int
-	Errors  int
+	Total        int
+	Success      int
+	Skipped      int
+	Errors       int
 	ErrorSamples []string
+	StartTime    time.Time
 }
 
 type VillageRecord struct {
@@ -66,30 +67,35 @@ func main() {
 	}
 
 	log.Println("Starting village committee conversion...")
-	start := time.Now()
 
-	stats := ConversionStats{ErrorSamples: make([]string, 0, 10)}
+	stats := &ConversionStats{
+		ErrorSamples: make([]string, 0, 10),
+		StartTime:    time.Now(),
+	}
 
 	// Fix #2: Add context timeout with cancel
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
-	if err := convertVillages(ctx, db, &stats); err != nil {
+	if err := convertVillages(ctx, db, stats); err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
 
-	log.Printf("\n=== Conversion Complete ===")
+	duration := time.Since(stats.StartTime)
+
+	log.Printf("\n=== Conversion Summary ===")
 	log.Printf("Total processed: %d", stats.Total)
-	log.Printf("Successfully inserted: %d", stats.Success)
+	log.Printf("Successfully converted: %d", stats.Success)
 	log.Printf("Skipped (duplicates): %d", stats.Skipped)
 	log.Printf("Errors: %d", stats.Errors)
+	log.Printf("Duration: %s", duration.Round(time.Second))
+	log.Printf("Average rate: %.0f records/second", float64(stats.Total)/duration.Seconds())
 	if len(stats.ErrorSamples) > 0 {
 		log.Printf("Sample errors:")
 		for _, errMsg := range stats.ErrorSamples {
 			log.Printf("  - %s", errMsg)
 		}
 	}
-	log.Printf("Duration: %v", time.Since(start))
 }
 
 func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) error {
@@ -193,6 +199,17 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 				stats.Success += len(pendingInserts)
 			}
 		}
+
+		// Progress logging
+		elapsed := time.Since(stats.StartTime)
+		rate := float64(stats.Total) / elapsed.Seconds()
+		remaining := 611669 - stats.Total
+		eta := time.Duration(float64(remaining)/rate) * time.Second
+
+		log.Printf("Progress: %d/%d (%.1f%%) | Success: %d | Skipped: %d | Errors: %d | Rate: %.0f/s | ETA: %s",
+			stats.Total, 611669, float64(stats.Total)/611669*100,
+			stats.Success, stats.Skipped, stats.Errors,
+			rate, eta.Round(time.Second))
 
 		offset += batchSize
 	}
