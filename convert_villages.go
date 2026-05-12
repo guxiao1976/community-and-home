@@ -36,6 +36,14 @@ type HierarchicalIDs struct {
 	CommunityDivID sql.NullInt64
 }
 
+type ResidentialAreaInsert struct {
+	Code           string
+	Name           string
+	CountyID       int64
+	StreetID       sql.NullInt64
+	CommunityDivID sql.NullInt64
+}
+
 func main() {
 	// Fix #1: Use environment variable with fallback for credentials
 	dsn := os.Getenv("DB_DSN")
@@ -86,6 +94,7 @@ func main() {
 
 func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) error {
 	const batchSize = 1000
+	const insertBatchSize = 100 // Insert 100 records at a time
 	offset := 0
 
 	for {
@@ -101,7 +110,9 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 		log.Printf("Processing batch: offset=%d, count=%d", offset, len(villages))
 		stats.Total += len(villages)
 
-		// Process each village (will implement in next tasks)
+		pendingInserts := make([]ResidentialAreaInsert, 0, insertBatchSize)
+
+		// Process each village
 		for _, village := range villages {
 			ids, err := parseHierarchicalIDs(ctx, db, village.ID)
 			if err != nil {
@@ -144,19 +155,43 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 				continue
 			}
 
-			// Insert residential area record
-			err = insertResidentialArea(ctx, db, village, ids, code, transformedName)
-			if err != nil {
-				errMsg := fmt.Sprintf("Village %d: failed to insert: %v", village.ID, err)
+			// Add to pending batch
+			pendingInserts = append(pendingInserts, ResidentialAreaInsert{
+				Code:           code,
+				Name:           transformedName,
+				CountyID:       ids.CountyID,
+				StreetID:       ids.StreetID,
+				CommunityDivID: ids.CommunityDivID,
+			})
+
+			// Insert when batch is full
+			if len(pendingInserts) >= insertBatchSize {
+				if err := insertResidentialAreaBatch(ctx, db, pendingInserts); err != nil {
+					errMsg := fmt.Sprintf("Batch insert failed: %v", err)
+					log.Printf("%s", errMsg)
+					stats.Errors += len(pendingInserts)
+					if len(stats.ErrorSamples) < 10 {
+						stats.ErrorSamples = append(stats.ErrorSamples, errMsg)
+					}
+				} else {
+					stats.Success += len(pendingInserts)
+				}
+				pendingInserts = pendingInserts[:0] // Clear batch
+			}
+		}
+
+		// Insert remaining records
+		if len(pendingInserts) > 0 {
+			if err := insertResidentialAreaBatch(ctx, db, pendingInserts); err != nil {
+				errMsg := fmt.Sprintf("Batch insert failed: %v", err)
 				log.Printf("%s", errMsg)
-				stats.Errors++
+				stats.Errors += len(pendingInserts)
 				if len(stats.ErrorSamples) < 10 {
 					stats.ErrorSamples = append(stats.ErrorSamples, errMsg)
 				}
-				continue
+			} else {
+				stats.Success += len(pendingInserts)
 			}
-
-			stats.Success++
 		}
 
 		offset += batchSize
@@ -285,34 +320,39 @@ func checkDuplicateResidentialArea(ctx context.Context, db *sql.DB, name string,
 	return count > 0, nil
 }
 
-func insertResidentialArea(ctx context.Context, db *sql.DB, village VillageRecord,
-	ids *HierarchicalIDs, code, name string) error {
+func insertResidentialAreaBatch(ctx context.Context, db *sql.DB, records []ResidentialAreaInsert) error {
+	if len(records) == 0 {
+		return nil
+	}
 
-	query := `
-		INSERT INTO md_residential_area (
-			code, name, county_id, street_id, community_div_id,
-			community_type, submission_status, address, submitter_id
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`
+	// Build multi-value INSERT
+	query := `INSERT INTO md_residential_area (
+		code, name, county_id, street_id, community_div_id,
+		community_type, submission_status, address, submitter_id
+	) VALUES `
 
-	// community_type = 2 for village (村庄)
-	// submission_status = 1 for approved
-	// address = name (placeholder)
-	// submitter_id = 1 (system user)
-	_, err := db.ExecContext(ctx, query,
-		code,
-		name,
-		ids.CountyID,
-		ids.StreetID,
-		ids.CommunityDivID,
-		2, // community_type: 2 = village
-		1, // submission_status: 1 = approved
-		name, // address: use name as placeholder
-		1, // submitter_id: 1 = system user
-	)
+	values := []interface{}{}
+	for i, record := range records {
+		if i > 0 {
+			query += ", "
+		}
+		query += "(?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		values = append(values,
+			record.Code,
+			record.Name,
+			record.CountyID,
+			record.StreetID,
+			record.CommunityDivID,
+			2, // community_type: village
+			1, // submission_status: approved
+			record.Name, // address placeholder
+			1, // submitter_id: system
+		)
+	}
 
+	_, err := db.ExecContext(ctx, query, values...)
 	if err != nil {
-		return fmt.Errorf("insert failed: %w", err)
+		return fmt.Errorf("batch insert failed: %w", err)
 	}
 
 	return nil
