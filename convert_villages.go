@@ -89,7 +89,11 @@ func main() {
 	log.Printf("Skipped (duplicates): %d", stats.Skipped)
 	log.Printf("Errors: %d", stats.Errors)
 	log.Printf("Duration: %s", duration.Round(time.Second))
-	log.Printf("Average rate: %.0f records/second", float64(stats.Total)/duration.Seconds())
+	if duration.Seconds() > 0 {
+		log.Printf("Average rate: %.0f records/second", float64(stats.Total)/duration.Seconds())
+	} else {
+		log.Printf("Average rate: N/A (completed too quickly)")
+	}
 	if len(stats.ErrorSamples) > 0 {
 		log.Printf("Sample errors:")
 		for _, errMsg := range stats.ErrorSamples {
@@ -202,14 +206,21 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 
 		// Progress logging
 		elapsed := time.Since(stats.StartTime)
-		rate := float64(stats.Total) / elapsed.Seconds()
-		remaining := 611669 - stats.Total
-		eta := time.Duration(float64(remaining)/rate) * time.Second
-
-		log.Printf("Progress: %d/%d (%.1f%%) | Success: %d | Skipped: %d | Errors: %d | Rate: %.0f/s | ETA: %s",
-			stats.Total, 611669, float64(stats.Total)/611669*100,
-			stats.Success, stats.Skipped, stats.Errors,
-			rate, eta.Round(time.Second))
+		if elapsed.Seconds() > 0 {
+			rate := float64(stats.Total) / elapsed.Seconds()
+			remaining := 611669 - stats.Total
+			if rate > 0 && remaining > 0 {
+				eta := time.Duration(float64(remaining)/rate) * time.Second
+				log.Printf("Progress: %d/%d (%.1f%%) | Success: %d | Skipped: %d | Errors: %d | Rate: %.0f/s | ETA: %s",
+					stats.Total, 611669, float64(stats.Total)/611669*100,
+					stats.Success, stats.Skipped, stats.Errors,
+					rate, eta.Round(time.Second))
+			} else {
+				log.Printf("Progress: %d/%d (%.1f%%) | Success: %d | Skipped: %d | Errors: %d",
+					stats.Total, 611669, float64(stats.Total)/611669*100,
+					stats.Success, stats.Skipped, stats.Errors)
+			}
+		}
 
 		offset += batchSize
 	}
