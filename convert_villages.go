@@ -102,15 +102,19 @@ func convertVillages(ctx context.Context, db *sql.DB, stats *ConversionStats) er
 
 		// Process each village (will implement in next tasks)
 		for _, village := range villages {
-			ids, err := parseHierarchicalIDs(ctx, db, village.ID)
+			_, err := parseHierarchicalIDs(ctx, db, village.ID)
 			if err != nil {
-				log.Printf("Failed to parse hierarchy for village %d: %v", village.ID, err)
+				errMsg := fmt.Sprintf("Village %d: %v", village.ID, err)
+				log.Printf("Failed to parse hierarchy: %s", errMsg)
 				stats.Errors++
+				if len(stats.ErrorSamples) < 10 {
+					stats.ErrorSamples = append(stats.ErrorSamples, errMsg)
+				}
 				continue
 			}
 
-			log.Printf("Village %d: province=%d, city=%d, county=%d, street=%v, community=%v",
-				village.ID, ids.ProvinceID, ids.CityID, ids.CountyID, ids.StreetID, ids.CommunityDivID)
+			// Successfully parsed hierarchy - will insert in next tasks
+			stats.Success++
 		}
 
 		offset += batchSize
@@ -185,13 +189,13 @@ func parseHierarchicalIDs(ctx context.Context, db *sql.DB, villageID int64) (*Hi
 			ids.CountyID = id
 		case 4:
 			ids.StreetID = sql.NullInt64{Int64: id, Valid: true}
-		case 5:
-			ids.CommunityDivID = sql.NullInt64{Int64: id, Valid: true}
+		// Note: Level 5 (village committee) is the entity being converted,
+		// not a parent community division, so we don't store it in CommunityDivID
 		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("iterate hierarchy rows: %w", err)
 	}
 
 	// Validate required fields
