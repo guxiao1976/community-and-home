@@ -38,6 +38,19 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.egg-info/
+.venv/
+venv/
+*.pth
+
+# ==================== AI Model ====================
+# Python engine
+services/ai-model/python-engine/.env
+services/ai-model/python-engine/models/
+services/ai-model/python-engine/*.log
+
+# RPC service
+services/ai-model/rpc/ai-model-rpc
+services/ai-model/rpc/*.log
 
 # ==================== Node / Frontend ====================
 node_modules/

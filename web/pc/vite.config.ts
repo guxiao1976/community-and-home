@@ -40,16 +40,19 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api/identity': {
-        target: 'http://localhost:8888',
-        changeOrigin: true
+        target: 'http://172.31.39.71:8888',
+        changeOrigin: true,
+        agent: false
       },
       '/api/masterdata': {
-        target: 'http://localhost:8889',
-        changeOrigin: true
+        target: 'http://172.31.39.71:8889',
+        changeOrigin: true,
+        agent: false
       },
       '/api/moderation': {
-        target: 'http://localhost:8890',
-        changeOrigin: true
+        target: 'http://172.31.39.71:8890',
+        changeOrigin: true,
+        agent: false
       }
     }
   },
