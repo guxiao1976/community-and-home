@@ -15,7 +15,7 @@ Cache:
 
 ACEngine:
   SyncInterval: 300
-  PinyinExpand: true
+  PinyinExpand: false
   PinyinMaxVariants: 20
   SplitDetect: true
   SplitSeparators: "xX.* 、 \t-_|/~·丶"

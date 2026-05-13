@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Python 推理引擎
+  ai-model-python:
+    build:
+      context: ./python-engine
+      dockerfile: Dockerfile
+    container_name: ai-model-python
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./python-engine/app:/app/app
+      - ai-model-cache:/app/models  # 模型缓存持久化
+    environment:
+      - HF_HOME=/app/models
+      - TRANSFORMERS_CACHE=/app/models
+      - HF_ENDPOINT=https://hf-mirror.com
+    # GPU 配置（已升级 PyTorch 2.7 + CUDA 12.6 支持 RTX 5060）
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8001/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 600s  # GPU 模式加载时间（10分钟）
+    networks:
+      - ai-model-network
+
+  # Go gRPC 服务
+  ai-model-rpc:
+    build:
+      context: ./rpc
+      dockerfile: Dockerfile
+    container_name: ai-model-rpc
+    ports:
+      - "8084:8084"
+    volumes:
+      - ./rpc/etc:/app/etc
+    environment:
+      - PYTHON_ENGINE_HOST=ai-model-python
+      - PYTHON_ENGINE_PORT=8001
+    depends_on:
+      ai-model-python:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "ai-model-rpc"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ai-model-network
+      # - community-network  # 连接到主网络（暂时注释）
+
+volumes:
+  ai-model-cache:
+    driver: local
+
+networks:
+  ai-model-network:
+    driver: bridge
+  # community-network:
+  #   external: true  # 连接到主项目网络（暂时注释）

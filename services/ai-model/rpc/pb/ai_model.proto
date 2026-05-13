@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package ai_model;
+option go_package = "./pb";
+
+// AI 模型服务
+service AiModel {
+  // 文本审核
+  rpc ModerateText(TextModerationRequest) returns (TextModerationResponse);
+
+  // 图片审核（预留）
+  rpc ModerateImage(ImageModerationRequest) returns (ImageModerationResponse);
+
+  // 健康检查
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+
+  // 模型信息
+  rpc GetModelInfo(ModelInfoRequest) returns (ModelInfoResponse);
+}
+
+// ============ 文本审核 ============
+message TextModerationRequest {
+  string content = 1;                    // 待审核文本
+  repeated string check_categories = 2;  // 检查维度（空=全部）
+  string context = 3;                    // 上下文（可选）
+  map<string, string> metadata = 4;      // 元数据
+}
+
+message TextModerationResponse {
+  bool is_safe = 1;                      // 是否安全
+  string risk_level = 2;                 // high/medium/low/safe
+  repeated string categories = 3;        // 命中的违规类型
+  string reason = 4;                     // 原因
+  double confidence = 5;                 // 置信度 0-1
+  int64 latency_ms = 6;                  // 推理耗时(ms)
+  string model_version = 7;              // 模型版本
+}
+
+// ============ 图片审核（预留）============
+message ImageModerationRequest {
+  bytes image_data = 1;                  // 图片二进制
+  string image_url = 2;                  // 或图片URL
+  repeated string check_categories = 3;
+}
+
+message ImageModerationResponse {
+  bool is_safe = 1;
+  string risk_level = 2;
+  repeated string categories = 3;
+  string reason = 4;
+  double confidence = 5;
+  int64 latency_ms = 6;
+  string model_version = 7;
+}
+
+// ============ 健康检查 ============
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;                     // ok/degraded/error
+  map<string, ModelStatus> models = 2;   // 各模型状态
+  int64 uptime_seconds = 3;
+}
+
+message ModelStatus {
+  string name = 1;
+  string version = 2;
+  bool loaded = 3;
+  int64 memory_mb = 4;
+  double avg_latency_ms = 5;
+  int64 total_requests = 6;
+}
+
+// ============ 模型信息 ============
+message ModelInfoRequest {
+  string model_name = 1;  // text/image/all
+}
+
+message ModelInfoResponse {
+  repeated ModelDetail models = 1;
+}
+
+message ModelDetail {
+  string name = 1;
+  string version = 2;
+  string type = 3;        // text/image/multimodal
+  int64 parameters = 4;   // 参数量
+  repeated string capabilities = 5;
+}

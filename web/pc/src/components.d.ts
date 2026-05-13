@@ -59,10 +59,13 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElTree: typeof import('element-plus/es')['ElTree']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
+    ImageTestTab: typeof import('./components/moderation/ImageTestTab.vue')['default']
     MainLayout: typeof import('./components/layout/MainLayout.vue')['default']
+    ModerationResult: typeof import('./components/moderation/ModerationResult.vue')['default']
     PermissionTree: typeof import('./components/business/PermissionTree.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    TextTestTab: typeof import('./components/moderation/TextTestTab.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

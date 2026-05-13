@@ -1,0 +1,35 @@
+Name: ai-model.rpc
+ListenOn: 0.0.0.0:8084
+Mode: dev  # dev 模式不需要 etcd
+
+# Python 推理引擎配置
+PythonEngine:
+  Host: localhost
+  Port: 8001
+  Timeout: 30000  # 30秒超时
+  MaxRetries: 2
+
+# 模型配置
+Models:
+  Text:
+    Name: Qwen2.5-7B-Instruct
+    Version: v1.0
+    Enabled: true
+  Image:
+    Name: ""
+    Version: ""
+    Enabled: false
+
+# 缓存配置（可选）
+Cache:
+  Enabled: true
+  TTL: 3600  # 1小时
+  Redis:
+    Host: localhost:6379
+    Type: node
+
+# 日志配置
+Log:
+  ServiceName: ai-model-rpc
+  Mode: console
+  Level: info
