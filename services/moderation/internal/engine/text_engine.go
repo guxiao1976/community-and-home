@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/guxiao/community-and-home/services/moderation/internal/ac"
 	"github.com/guxiao/community-and-home/services/moderation/internal/llm"
@@ -40,9 +41,26 @@ func NewTextEngine(
 	}
 }
 
-func (e *TextEngine) Check(ctx context.Context, content, contentType string) (*ModerationResult, error) {
+func (e *TextEngine) Check(ctx context.Context, content, contentType, checkMode string) (*ModerationResult, error) {
 	if content == "" {
 		return &ModerationResult{Pass: true, RiskLevel: "low"}, nil
+	}
+
+	// 默认使用组合模式
+	if checkMode == "" {
+		checkMode = "combined"
+	}
+
+	// 根据模式路由到不同的处理逻辑
+	switch checkMode {
+	case "ac_only":
+		return e.checkACOnly(content)
+	case "model_only":
+		return e.checkModelOnly(ctx, content, contentType)
+	case "combined":
+		// 继续执行现有的组合逻辑
+	default:
+		return nil, fmt.Errorf("invalid check_mode: %s", checkMode)
 	}
 
 	// 1. Normalize
@@ -177,4 +195,107 @@ func (e *TextEngine) tryLargeModel(ctx context.Context, content, contentType str
 			Confidence: result.Confidence,
 		}},
 	}, nil
+}
+
+// checkACOnly 仅执行AC引擎检查
+func (e *TextEngine) checkACOnly(content string) (*ModerationResult, error) {
+	// 1. Normalize
+	normalized, _ := e.normalizer.Normalize(content)
+
+	// 2. AC automaton match
+	acHits := e.acMachine.Match(normalized)
+
+	// 3. Whitelist filter
+	if len(acHits) > 0 {
+		_, wlLen := e.wl.LongestMatch(normalized)
+		var filtered []MatchDetail
+		for _, h := range acHits {
+			if wlLen > 0 && h.End-h.Start <= wlLen {
+				continue
+			}
+			detail := MatchDetail{
+				Layer:       "ac_engine",
+				MatchedText: h.Word,
+				Category:    h.Category,
+				Severity:    h.Severity,
+				Confidence:  1.0,
+			}
+			filtered = append(filtered, detail)
+		}
+
+		if len(filtered) == 0 {
+			return &ModerationResult{Pass: true, RiskLevel: "low"}, nil
+		}
+
+		// 检查是否有高危敏感词
+		for _, d := range filtered {
+			if d.Severity == 1 {
+				return &ModerationResult{
+					Pass:      false,
+					RiskLevel: "high",
+					Reason:    "命中敏感词: " + d.MatchedText,
+					Details:   filtered,
+				}, nil
+			}
+		}
+
+		// 灰名单词也标记为需要复审
+		return &ModerationResult{
+			Pass:       false,
+			RiskLevel:  "medium",
+			NeedReview: true,
+			Reason:     "命中灰名单敏感词",
+			Details:    filtered,
+		}, nil
+	}
+
+	// 4. Split word detection
+	splitHits := e.splitter.Detect(content, e.acMachine)
+	if len(splitHits) > 0 {
+		var details []MatchDetail
+		for _, h := range splitHits {
+			details = append(details, MatchDetail{
+				Layer:       "ac_engine",
+				MatchedText: h.Word,
+				Category:    h.Category,
+				Severity:    h.Severity,
+				Confidence:  0.9,
+			})
+		}
+		return &ModerationResult{
+			Pass:      false,
+			RiskLevel: "high",
+			Reason:    "命中拆字变体: " + details[0].MatchedText,
+			Details:   details,
+		}, nil
+	}
+
+	return &ModerationResult{Pass: true, RiskLevel: "low"}, nil
+}
+
+// checkModelOnly 仅执行AI模型检查，跳过AC引擎
+func (e *TextEngine) checkModelOnly(ctx context.Context, content, contentType string) (*ModerationResult, error) {
+	// 优先使用小模型
+	if e.smallModel != nil {
+		result, err := e.smallModel.CheckText(ctx, content, contentType)
+		if err == nil && result.Confidence >= e.highConfTh {
+			if result.Compliant {
+				return &ModerationResult{Pass: true, RiskLevel: "low"}, nil
+			}
+			return &ModerationResult{
+				Pass:      false,
+				RiskLevel: "high",
+				Reason:    result.Reason,
+				Details: []MatchDetail{{
+					Layer:      "small_model",
+					Category:   result.Category,
+					Confidence: result.Confidence,
+				}},
+			}, nil
+		}
+		// 小模型失败或置信度不足，继续尝试大模型
+	}
+
+	// 使用大模型
+	return e.tryLargeModel(ctx, content, contentType)
 }

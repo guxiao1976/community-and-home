@@ -36,8 +36,8 @@ SmallModel:
   HighConfThreshold: 0.9
 
 LargeModel:
-  Enable: false
-  Endpoint: ""
+  Enable: true
+  Endpoint: "http://localhost:8001"
   ApiKey: ""
   Model: ""
   Timeout: 15000

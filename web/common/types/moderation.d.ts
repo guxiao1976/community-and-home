@@ -28,6 +28,7 @@ export interface TextModerationRequest {
   content: string;
   userId?: string;
   scene?: string;
+  check_mode?: 'ac_only' | 'model_only' | 'combined';
 }
 
 // Text moderation response
