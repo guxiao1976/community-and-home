@@ -2,7 +2,7 @@
   <div class="roles-list">
     <div class="page-header">
       <h2>角色管理</h2>
-      <el-button type="primary" @click="handleCreate">
+      <el-button type="primary" v-permission="'role:create'" @click="handleCreate">
         <el-icon><Plus /></el-icon>
         新建角色
       </el-button>
@@ -29,9 +29,10 @@
         <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="primary" @click="handlePermissions(row)">权限配置</el-button>
+            <el-button v-permission="'role:update'" link type="primary" @click="handleEdit(row)">编辑</el-button>
+            <el-button v-permission="'role:permission'" link type="primary" @click="handlePermissions(row)">权限配置</el-button>
             <el-button
+              v-permission="'role:delete'"
               link
               type="danger"
               @click="handleDelete(row)"

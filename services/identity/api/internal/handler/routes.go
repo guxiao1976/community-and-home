@@ -200,6 +200,24 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/users/:id/permissions",
 				Handler: user.GetUserPermissionsHandler(serverCtx),
 			},
+			{
+				// Get user roles
+				Method:  http.MethodGet,
+				Path:    "/users/:id/roles",
+				Handler: user.GetUserRolesHandler(serverCtx),
+			},
+			{
+				// Assign roles to user
+				Method:  http.MethodPost,
+				Path:    "/users/:id/roles",
+				Handler: user.AssignUserRolesHandler(serverCtx),
+			},
+			{
+				// Remove role from user
+				Method:  http.MethodDelete,
+				Path:    "/users/:id/roles/:roleId",
+				Handler: user.RemoveUserRoleHandler(serverCtx),
+			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api/identity"),

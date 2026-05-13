@@ -2,8 +2,6 @@ package middleware
 
 import (
 	"net/http"
-
-	"github.com/guxiao/community-and-home/common/responsex"
 )
 
 type ScopeMiddleware struct {

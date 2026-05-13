@@ -10,6 +10,7 @@ import App from './App.vue';
 import router from './router';
 import './router/guards';
 import './styles/global.scss';
+import { setupPermissionDirective } from '@/directives/permission';
 
 const app = createApp(App);
 
@@ -30,5 +31,8 @@ app.use(ElementPlus, {
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component);
 }
+
+// Register permission directive
+setupPermissionDirective(app);
 
 app.mount('#app');

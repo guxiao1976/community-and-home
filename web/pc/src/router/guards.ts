@@ -2,6 +2,7 @@
 
 import router from './index';
 import { useAuthStore } from '@/stores/auth';
+import { usePermissionStore } from '@/stores/permission';
 import { logger } from '@/utils/logger';
 
 router.beforeEach(async (to, from, next) => {
@@ -20,13 +21,11 @@ router.beforeEach(async (to, from, next) => {
 
   // Check if route requires authentication
   if (to.meta.requiresAuth !== false) {
-    // Default to requiring auth unless explicitly set to false
     const authStore = useAuthStore();
     const authenticated = authStore.isAuthenticated;
     logger.debug('Auth check', { authenticated, toPath: to.path });
 
     if (!authenticated) {
-      // Not logged in, redirect to login
       logger.warn('Not authenticated, redirecting to login', { from: from.fullPath, to: to.fullPath });
       next({
         path: '/login',
@@ -35,12 +34,28 @@ router.beforeEach(async (to, from, next) => {
       return;
     }
 
-    // TODO: Check permissions when permission store is implemented
-    // const permissionStore = usePermissionStore();
-    // if (to.meta.permission && !permissionStore.hasPermission(to.meta.permission)) {
-    //   next('/403');
-    //   return;
-    // }
+    // Check route-level permission
+    const permission = (to.meta as any).permission as string | undefined;
+    if (permission) {
+      const permissionStore = usePermissionStore();
+
+      // If permissions not loaded yet, wait for them
+      if (!permissionStore.isLoaded && authStore.user?.id) {
+        try {
+          await permissionStore.loadUserPermissionsAndMenus(authStore.user.id);
+        } catch {
+          // If loading fails, allow through to avoid blocking all navigation
+          next();
+          return;
+        }
+      }
+
+      if (!permissionStore.hasPermission(permission)) {
+        logger.warn('Permission denied', { permission, toPath: to.fullPath });
+        next('/403');
+        return;
+      }
+    }
   }
 
   logger.info('Navigation allowed', { to: to.fullPath });
@@ -48,6 +63,5 @@ router.beforeEach(async (to, from, next) => {
 });
 
 router.afterEach(() => {
-  // Scroll to top after navigation
   window.scrollTo(0, 0);
 });

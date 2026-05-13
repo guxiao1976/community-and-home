@@ -187,7 +187,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '用户列表',
           icon: 'User',
-          requiresAuth: true
+          requiresAuth: true,
+          permission: 'user:list'
         }
       },
       {
@@ -197,7 +198,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '创建用户',
           requiresAuth: true,
-          hidden: true
+          hidden: true,
+          permission: 'user:create'
         }
       },
       {
@@ -207,7 +209,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '编辑用户',
           requiresAuth: true,
-          hidden: true
+          hidden: true,
+          permission: 'user:update'
         }
       },
       {
@@ -217,7 +220,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '用户详情',
           requiresAuth: true,
-          hidden: true
+          hidden: true,
+          permission: 'user:detail'
         }
       },
       {
@@ -227,7 +231,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '实名审核',
           icon: 'DocumentChecked',
-          requiresAuth: true
+          requiresAuth: true,
+          permission: 'verification:list'
         }
       },
       {
@@ -237,7 +242,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '角色管理',
           icon: 'UserFilled',
-          requiresAuth: true
+          requiresAuth: true,
+          permission: 'role:list'
         }
       },
       {
@@ -247,7 +253,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '权限配置',
           requiresAuth: true,
-          hidden: true
+          hidden: true,
+          permission: 'role:permission'
         }
       },
       {

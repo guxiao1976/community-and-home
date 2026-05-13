@@ -10,6 +10,7 @@ import (
 
 	"github.com/guxiao/community-and-home/services/identity/api/internal/config"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/handler"
+	"github.com/guxiao/community-and-home/services/identity/api/internal/middleware"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
@@ -45,6 +46,11 @@ func main() {
 	})
 
 	ctx := svc.NewServiceContext(c)
+
+	// Register permission middleware (after service context is available)
+	permMiddleware := middleware.NewPermissionMiddleware(ctx.AuthUserRoleModel, ctx.AuthRoleModel)
+	server.Use(permMiddleware.Handle)
+
 	handler.RegisterHandlers(server, ctx)
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)

@@ -146,21 +146,11 @@
                 placeholder="请输入审核备注（拒绝时必填）"
               />
             </el-form-item>
-            <el-form-item v-if="canApprove || canReject">
-              <el-button
-                v-if="canApprove"
-                type="success"
-                :loading="submitting"
-                @click="handleApprove"
-              >
+            <el-form-item>
+              <el-button v-permission="'verification:approve'" type="success" :loading="submitting" @click="handleApprove">
                 通过
               </el-button>
-              <el-button
-                v-if="canReject"
-                type="danger"
-                :loading="submitting"
-                @click="handleReject"
-              >
+              <el-button v-permission="'verification:reject'" type="danger" :loading="submitting" @click="handleReject">
                 拒绝
               </el-button>
             </el-form-item>
