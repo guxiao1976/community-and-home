@@ -30,11 +30,11 @@ func (l *GetResidentialAreasByDivisionLogic) GetResidentialAreasByDivision(in *p
 
 	switch {
 	case in.CommunityDivId > 0:
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCommunityDivId(l.ctx, in.CommunityDivId, nil, 1, 1000, 4)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCommunityDivId(l.ctx, in.CommunityDivId, nil, nil, 1, 1000, 4)
 	case in.StreetId > 0:
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByStreetId(l.ctx, in.StreetId, nil, 1, 1000, 4)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByStreetId(l.ctx, in.StreetId, nil, nil, 1, 1000, 4)
 	case in.CountyId > 0:
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyId(l.ctx, in.CountyId, nil, 1, 1000, 4)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyId(l.ctx, in.CountyId, nil, nil, 1, 1000, 4)
 	default:
 		areas, err = l.svcCtx.MdResidentialAreaModel.FindAll(l.ctx, nil, 1, 1000, 4)
 	}

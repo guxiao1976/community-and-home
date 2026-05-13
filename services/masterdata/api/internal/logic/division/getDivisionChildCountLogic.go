@@ -39,13 +39,13 @@ func (l *GetDivisionChildCountLogic) GetDivisionChildCount(req *types.DeleteDivi
 	var hasResidentialAreas bool
 	switch div.Level {
 	case 3:
-		count, _ := l.svcCtx.MdResidentialAreaModel.Count(l.ctx, &req.Id, nil, nil, nil, nil, nil)
+		count, _ := l.svcCtx.MdResidentialAreaModel.Count(l.ctx, &req.Id, nil, nil, nil, nil, nil, nil)
 		hasResidentialAreas = count > 0
 	case 4:
-		count, _ := l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, &req.Id, nil, nil, nil, nil)
+		count, _ := l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, &req.Id, nil, nil, nil, nil, nil)
 		hasResidentialAreas = count > 0
 	case 5:
-		count, _ := l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, &req.Id, nil, nil, nil)
+		count, _ := l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, &req.Id, nil, nil, nil, nil)
 		hasResidentialAreas = count > 0
 	}
 

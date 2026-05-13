@@ -78,46 +78,30 @@ func (l *GetResidentialAreasLogic) GetResidentialAreas(req *types.GetResidential
 	}
 
 	if keyword != "" {
-		areas, err = l.svcCtx.MdResidentialAreaModel.SearchByName(l.ctx, keyword, countyId, streetId, communityDivId, countyIds, submissionStatus, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, submissionStatus, countyIds, keywordPtr, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.SearchByName(l.ctx, keyword, countyId, streetId, communityDivId, countyIds, submissionStatus, communityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, submissionStatus, countyIds, keywordPtr, communityType, excludeArg...)
 	} else if communityDivId != nil {
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCommunityDivId(l.ctx, *communityDivId, submissionStatus, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, submissionStatus, countyIds, nil, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCommunityDivId(l.ctx, *communityDivId, submissionStatus, communityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, submissionStatus, countyIds, nil, communityType, excludeArg...)
 	} else if streetId != nil {
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByStreetId(l.ctx, *streetId, submissionStatus, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, submissionStatus, countyIds, nil, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByStreetId(l.ctx, *streetId, submissionStatus, communityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, submissionStatus, countyIds, nil, communityType, excludeArg...)
 	} else if countyId != nil {
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyId(l.ctx, *countyId, submissionStatus, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, submissionStatus, countyIds, nil, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyId(l.ctx, *countyId, submissionStatus, communityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, submissionStatus, countyIds, nil, communityType, excludeArg...)
 	} else if len(countyIds) > 0 {
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyIds(l.ctx, countyIds, submissionStatus, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, submissionStatus, countyIds, nil, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyIds(l.ctx, countyIds, submissionStatus, communityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, submissionStatus, countyIds, nil, communityType, excludeArg...)
 	} else if submissionStatus != nil {
 		areas, err = l.svcCtx.MdResidentialAreaModel.FindBySubmissionStatus(l.ctx, int64(*submissionStatus), page, pageSize)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, submissionStatus, nil, nil)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, submissionStatus, nil, nil, communityType)
 	} else {
 		areas, err = l.svcCtx.MdResidentialAreaModel.FindAll(l.ctx, nil, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, nil, nil, nil, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, nil, nil, nil, communityType, excludeArg...)
 	}
 
 	if err != nil {
 		return nil, err
-	}
-
-	// Filter by community_type if specified
-	if communityType != nil {
-		filtered := make([]*model.MdResidentialArea, 0)
-		for _, a := range areas {
-			if int32(a.CommunityType) == *communityType {
-				filtered = append(filtered, a)
-			}
-		}
-		areas = filtered
-		// Recount total with community_type filter
-		total, err = l.svcCtx.MdResidentialAreaModel.CountByCommunityType(l.ctx, *communityType, excludeArg...)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	list := make([]types.ResidentialArea, 0, len(areas))

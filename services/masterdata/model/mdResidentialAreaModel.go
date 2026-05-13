@@ -15,15 +15,15 @@ var _ MdResidentialAreaModel = (*customMdResidentialAreaModel)(nil)
 type (
 	MdResidentialAreaModel interface {
 		mdResidentialAreaModel
-		FindByCountyId(ctx context.Context, countyId int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
-		FindByCountyIds(ctx context.Context, countyIds []int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
-		FindByStreetId(ctx context.Context, streetId int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
-		FindByCommunityDivId(ctx context.Context, communityDivId int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
+		FindByCountyId(ctx context.Context, countyId int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
+		FindByCountyIds(ctx context.Context, countyIds []int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
+		FindByStreetId(ctx context.Context, streetId int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
+		FindByCommunityDivId(ctx context.Context, communityDivId int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
 		FindBySubmissionStatus(ctx context.Context, status int64, page, pageSize int64) ([]*MdResidentialArea, error)
 		FindAll(ctx context.Context, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
 		FindByCode(ctx context.Context, code string) (*MdResidentialArea, error)
-		SearchByName(ctx context.Context, keyword string, countyId *int64, streetId *int64, communityDivId *int64, countyIds []int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
-		Count(ctx context.Context, countyId *int64, streetId *int64, communityDivId *int64, submissionStatus *int32, countyIds []int64, keyword *string, excludeStatuses ...int32) (int64, error)
+		SearchByName(ctx context.Context, keyword string, countyId *int64, streetId *int64, communityDivId *int64, countyIds []int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error)
+		Count(ctx context.Context, countyId *int64, streetId *int64, communityDivId *int64, submissionStatus *int32, countyIds []int64, keyword *string, communityType *int32, excludeStatuses ...int32) (int64, error)
 		GetMaxCodeByCountyId(ctx context.Context, countyId int64, countyCode string) (string, error)
 		FindByNameAndCountyId(ctx context.Context, name string, countyId int64) (*MdResidentialArea, error)
 		CountBySubmissionStatus(ctx context.Context, status int64) (int64, error)
@@ -59,7 +59,7 @@ func appendSubmissionFilter(conditions *[]string, args *[]interface{}, submissio
 	}
 }
 
-func (m *customMdResidentialAreaModel) FindByCountyId(ctx context.Context, countyId int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
+func (m *customMdResidentialAreaModel) FindByCountyId(ctx context.Context, countyId int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
 	var areas []*MdResidentialArea
 	offset := (page - 1) * pageSize
 	var conditions []string
@@ -67,6 +67,10 @@ func (m *customMdResidentialAreaModel) FindByCountyId(ctx context.Context, count
 	conditions = append(conditions, "county_id = ?")
 	args = append(args, countyId)
 	appendSubmissionFilter(&conditions, &args, submissionStatus, excludeStatuses...)
+	if communityType != nil {
+		conditions = append(conditions, "community_type = ?")
+		args = append(args, *communityType)
+	}
 	where := strings.Join(conditions, " and ")
 	query := fmt.Sprintf("select %s from %s where %s and delete_time is null order by id desc limit ? offset ?", mdResidentialAreaRows, m.table, where)
 	args = append(args, pageSize, offset)
@@ -77,7 +81,7 @@ func (m *customMdResidentialAreaModel) FindByCountyId(ctx context.Context, count
 	return areas, nil
 }
 
-func (m *customMdResidentialAreaModel) FindByCountyIds(ctx context.Context, countyIds []int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
+func (m *customMdResidentialAreaModel) FindByCountyIds(ctx context.Context, countyIds []int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
 	if len(countyIds) == 0 {
 		return nil, nil
 	}
@@ -92,6 +96,10 @@ func (m *customMdResidentialAreaModel) FindByCountyIds(ctx context.Context, coun
 	var conditions []string
 	conditions = append(conditions, "county_id in ("+strings.Join(placeholders, ",")+")")
 	appendSubmissionFilter(&conditions, &args, submissionStatus, excludeStatuses...)
+	if communityType != nil {
+		conditions = append(conditions, "community_type = ?")
+		args = append(args, *communityType)
+	}
 	where := strings.Join(conditions, " and ")
 	query := fmt.Sprintf("select %s from %s where %s and delete_time is null order by id desc limit ? offset ?", mdResidentialAreaRows, m.table, where)
 	args = append(args, pageSize, offset)
@@ -102,7 +110,7 @@ func (m *customMdResidentialAreaModel) FindByCountyIds(ctx context.Context, coun
 	return areas, nil
 }
 
-func (m *customMdResidentialAreaModel) FindByStreetId(ctx context.Context, streetId int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
+func (m *customMdResidentialAreaModel) FindByStreetId(ctx context.Context, streetId int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
 	var areas []*MdResidentialArea
 	offset := (page - 1) * pageSize
 	var conditions []string
@@ -110,6 +118,10 @@ func (m *customMdResidentialAreaModel) FindByStreetId(ctx context.Context, stree
 	conditions = append(conditions, "street_id = ?")
 	args = append(args, streetId)
 	appendSubmissionFilter(&conditions, &args, submissionStatus, excludeStatuses...)
+	if communityType != nil {
+		conditions = append(conditions, "community_type = ?")
+		args = append(args, *communityType)
+	}
 	where := strings.Join(conditions, " and ")
 	query := fmt.Sprintf("select %s from %s where %s and delete_time is null order by id desc limit ? offset ?", mdResidentialAreaRows, m.table, where)
 	args = append(args, pageSize, offset)
@@ -120,7 +132,7 @@ func (m *customMdResidentialAreaModel) FindByStreetId(ctx context.Context, stree
 	return areas, nil
 }
 
-func (m *customMdResidentialAreaModel) FindByCommunityDivId(ctx context.Context, communityDivId int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
+func (m *customMdResidentialAreaModel) FindByCommunityDivId(ctx context.Context, communityDivId int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
 	var areas []*MdResidentialArea
 	offset := (page - 1) * pageSize
 	var conditions []string
@@ -128,6 +140,10 @@ func (m *customMdResidentialAreaModel) FindByCommunityDivId(ctx context.Context,
 	conditions = append(conditions, "community_div_id = ?")
 	args = append(args, communityDivId)
 	appendSubmissionFilter(&conditions, &args, submissionStatus, excludeStatuses...)
+	if communityType != nil {
+		conditions = append(conditions, "community_type = ?")
+		args = append(args, *communityType)
+	}
 	where := strings.Join(conditions, " and ")
 	query := fmt.Sprintf("select %s from %s where %s and delete_time is null order by id desc limit ? offset ?", mdResidentialAreaRows, m.table, where)
 	args = append(args, pageSize, offset)
@@ -178,7 +194,7 @@ func (m *customMdResidentialAreaModel) FindByCode(ctx context.Context, code stri
 	return &area, nil
 }
 
-func (m *customMdResidentialAreaModel) SearchByName(ctx context.Context, keyword string, countyId *int64, streetId *int64, communityDivId *int64, countyIds []int64, submissionStatus *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
+func (m *customMdResidentialAreaModel) SearchByName(ctx context.Context, keyword string, countyId *int64, streetId *int64, communityDivId *int64, countyIds []int64, submissionStatus *int32, communityType *int32, page, pageSize int64, excludeStatuses ...int32) ([]*MdResidentialArea, error) {
 	var areas []*MdResidentialArea
 	offset := (page - 1) * pageSize
 	like := "%" + keyword + "%"
@@ -208,6 +224,11 @@ func (m *customMdResidentialAreaModel) SearchByName(ctx context.Context, keyword
 
 	appendSubmissionFilter(&conditions, &args, submissionStatus, excludeStatuses...)
 
+	if communityType != nil {
+		conditions = append(conditions, "community_type = ?")
+		args = append(args, *communityType)
+	}
+
 	where := strings.Join(conditions, " and ")
 	query := fmt.Sprintf("select %s from %s where %s and delete_time is null order by id desc limit ? offset ?", mdResidentialAreaRows, m.table, where)
 	args = append(args, pageSize, offset)
@@ -218,7 +239,7 @@ func (m *customMdResidentialAreaModel) SearchByName(ctx context.Context, keyword
 	return areas, nil
 }
 
-func (m *customMdResidentialAreaModel) Count(ctx context.Context, countyId *int64, streetId *int64, communityDivId *int64, submissionStatus *int32, countyIds []int64, keyword *string, excludeStatuses ...int32) (int64, error) {
+func (m *customMdResidentialAreaModel) Count(ctx context.Context, countyId *int64, streetId *int64, communityDivId *int64, submissionStatus *int32, countyIds []int64, keyword *string, communityType *int32, excludeStatuses ...int32) (int64, error) {
 	var count int64
 	var conditions []string
 	var args []interface{}
@@ -246,6 +267,11 @@ func (m *customMdResidentialAreaModel) Count(ctx context.Context, countyId *int6
 	if keyword != nil && *keyword != "" {
 		conditions = append(conditions, "name like ?")
 		args = append(args, "%"+*keyword+"%")
+	}
+
+	if communityType != nil {
+		conditions = append(conditions, "community_type = ?")
+		args = append(args, *communityType)
 	}
 
 	query := fmt.Sprintf("select count(*) from %s where delete_time is null", m.table)
