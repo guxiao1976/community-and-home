@@ -56,14 +56,14 @@
           />
         </template>
 
-        <!-- Street-level progress -->
-        <template v-if="progress.total_streets > 0">
+        <!-- Keyword-level progress -->
+        <template v-if="progress.total_keywords > 0">
           <div style="margin-bottom: 8px; color: #606266; font-size: 14px">
-            街道进度：{{ progress.current_street }} / {{ progress.total_streets }}
-            <span v-if="progress.current_street_name">（{{ progress.current_street_name }}）</span>
+            关键词进度：{{ progress.current_keyword }} / {{ progress.total_keywords }}
+            <span v-if="progress.current_keyword_str">（{{ progress.current_keyword_str }}）</span>
           </div>
           <el-progress
-            :percentage="Math.round(progress.current_street / progress.total_streets * 100)"
+            :percentage="Math.round(progress.current_keyword / progress.total_keywords * 100)"
             :stroke-width="12"
             style="margin-bottom: 16px"
           />
@@ -83,10 +83,10 @@
               正在处理第 {{ progress.current_county }}/{{ progress.total_counties }} 个区县
               <span v-if="progress.current_county_name">「{{ progress.current_county_name }}」</span>
             </template>
-            <template v-if="progress.total_streets > 0">
+            <template v-if="progress.total_keywords > 0">
               <span v-if="progress.total_counties > 1">，</span>
-              第 {{ progress.current_street }}/{{ progress.total_streets }} 个街道
-              <span v-if="progress.current_street_name">「{{ progress.current_street_name }}」</span>
+              第 {{ progress.current_keyword }}/{{ progress.total_keywords }} 个关键词
+              <span v-if="progress.current_keyword_str">「{{ progress.current_keyword_str }}」</span>
             </template>
             <template v-if="progress.total_pages > 0">
               ，第 {{ progress.current_page }}/{{ progress.total_pages }} 页
