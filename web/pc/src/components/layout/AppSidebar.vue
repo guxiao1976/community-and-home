@@ -18,7 +18,7 @@
       active-text-color="#1890ff"
       @select="handleMenuSelect"
     >
-      <template v-for="item in menuItems" :key="item.path">
+      <template v-for="item in visibleMenuItems" :key="item.path">
         <!-- Single menu item -->
         <el-menu-item v-if="!item.children" :index="item.path">
           <el-icon><component :is="item.icon" /></el-icon>
@@ -48,137 +48,41 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import {
-  HomeFilled,
-  User,
-  UserFilled,
-  Location,
-  OfficeBuilding,
-  Setting,
-  Document,
-  ChatDotSquare,
-  Stamp,
-  RefreshRight,
-  DataAnalysis,
-  Download,
-  Search,
-  Fold,
-  Expand,
-  Warning,
-  Monitor
-} from '@element-plus/icons-vue';
+import { Fold, Expand } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
-
-interface MenuItem {
-  path: string;
-  title: string;
-  icon?: any;
-  children?: MenuItem[];
-  permission?: string;
-}
+import { usePermissionStore } from '@/stores/permission';
+import { getMenuItems } from '@/config/menu.config';
 
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
+const permissionStore = usePermissionStore();
 
-const menuItems: MenuItem[] = [
-  {
-    path: '/dashboard',
-    title: '仪表板',
-    icon: HomeFilled
-  },
-  {
-    path: '/masterdata',
-    title: '主数据管理',
-    icon: Setting,
-    children: [
-      {
-        path: '/masterdata/divisions',
-        title: '行政区划',
-        icon: Location
-      },
-      {
-        path: '/masterdata/grassroots',
-        title: '基层组织',
-        icon: OfficeBuilding
-      },
-      {
-        path: '/masterdata/residential-areas',
-        title: '住宅小区',
-        icon: OfficeBuilding
-      },
-      {
-        path: '/masterdata/sensitive-words',
-        title: '敏感词管理',
-        icon: ChatDotSquare
-      },
-      {
-        path: '/masterdata/configs',
-        title: '系统配置',
-        icon: Setting
-      },
-      {
-        path: '/masterdata/approval-center',
-        title: '审核中心',
-        icon: Stamp
-      },
-      {
-        path: '/masterdata/deleted-recovery',
-        title: '删除数据恢复',
-        icon: RefreshRight
-      },
-      {
-        path: '/masterdata/statistics/division-counts',
-        title: '小区数据统计',
-        icon: DataAnalysis
-      },
-      {
-        path: '/masterdata/query',
-        title: '数据查询',
-        icon: Search
-      },
-      {
-        path: '/masterdata/amap-sync',
-        title: '小区数据获取',
-        icon: Download
-      }
-    ]
-  },
-  {
-    path: '/users',
-    title: '用户管理',
-    icon: User,
-    children: [
-      {
-        path: '/users/list',
-        title: '用户列表',
-        icon: User
-      },
-      {
-        path: '/users/verifications',
-        title: '实名审核',
-        icon: Document
-      },
-      {
-        path: '/roles',
-        title: '角色管理',
-        icon: UserFilled
-      }
-    ]
-  },
-  {
-    path: '/moderation',
-    title: '内容审核',
-    icon: Warning,
-    children: [
-      {
-        path: '/moderation/test',
-        title: '内容审核测试',
-        icon: Monitor
-      }
-    ]
-  }
-];
+// 获取所有菜单项
+const allMenuItems = getMenuItems();
+
+// 根据权限过滤菜单项
+const visibleMenuItems = computed(() => {
+  return allMenuItems.filter(item => {
+    // 如果没有权限要求，直接显示
+    if (!item.permission) return true;
+
+    // 检查权限
+    return permissionStore.hasPermission(item.permission);
+  }).map(item => {
+    // 如果有子菜单，也需要过滤
+    if (item.children) {
+      return {
+        ...item,
+        children: item.children.filter(child => {
+          if (!child.permission) return true;
+          return permissionStore.hasPermission(child.permission);
+        })
+      };
+    }
+    return item;
+  });
+});
 
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed);
 const activeMenu = computed(() => route.path);
