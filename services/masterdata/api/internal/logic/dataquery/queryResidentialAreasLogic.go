@@ -46,6 +46,8 @@ func (l *QueryResidentialAreasLogic) QueryResidentialAreas(req *types.QueryResid
 	keyword := req.Keyword
 
 	var countyIds []int64
+	excludeArg := []int32{excludeDeleted}
+
 	if req.CityId != nil && countyId == nil && streetId == nil && communityDivId == nil {
 		divisions, err := l.svcCtx.MdAdministrativeDivisionModel.FindChildren(l.ctx, *req.CityId)
 		if err != nil {
@@ -54,6 +56,7 @@ func (l *QueryResidentialAreasLogic) QueryResidentialAreas(req *types.QueryResid
 		for _, d := range divisions {
 			countyIds = append(countyIds, d.Id)
 		}
+
 		if len(countyIds) == 0 {
 			return &types.QueryResidentialAreasResp{List: []types.QueryResidentialAreaItem{}, Total: 0}, nil
 		}
@@ -61,7 +64,6 @@ func (l *QueryResidentialAreasLogic) QueryResidentialAreas(req *types.QueryResid
 
 	var areas []*model.MdResidentialArea
 	var total int64
-	excludeArg := []int32{excludeDeleted}
 
 	var keywordPtr *string
 	if keyword != "" {
@@ -69,42 +71,26 @@ func (l *QueryResidentialAreasLogic) QueryResidentialAreas(req *types.QueryResid
 	}
 
 	if keyword != "" {
-		areas, err = l.svcCtx.MdResidentialAreaModel.SearchByName(l.ctx, keyword, countyId, streetId, communityDivId, countyIds, &approved, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, &approved, countyIds, keywordPtr, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.SearchByName(l.ctx, keyword, countyId, streetId, communityDivId, countyIds, &approved, req.CommunityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, &approved, countyIds, keywordPtr, req.CommunityType, excludeArg...)
 	} else if communityDivId != nil {
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCommunityDivId(l.ctx, *communityDivId, &approved, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, &approved, countyIds, nil, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCommunityDivId(l.ctx, *communityDivId, &approved, req.CommunityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, &approved, countyIds, nil, req.CommunityType, excludeArg...)
 	} else if streetId != nil {
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByStreetId(l.ctx, *streetId, &approved, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, &approved, countyIds, nil, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByStreetId(l.ctx, *streetId, &approved, req.CommunityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, &approved, countyIds, nil, req.CommunityType, excludeArg...)
 	} else if countyId != nil {
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyId(l.ctx, *countyId, &approved, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, &approved, countyIds, nil, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyId(l.ctx, *countyId, &approved, req.CommunityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, countyId, streetId, communityDivId, &approved, countyIds, nil, req.CommunityType, excludeArg...)
 	} else if len(countyIds) > 0 {
-		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyIds(l.ctx, countyIds, &approved, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, &approved, countyIds, nil, excludeArg...)
+		areas, err = l.svcCtx.MdResidentialAreaModel.FindByCountyIds(l.ctx, countyIds, &approved, req.CommunityType, page, pageSize, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, &approved, countyIds, nil, req.CommunityType, excludeArg...)
 	} else {
 		areas, err = l.svcCtx.MdResidentialAreaModel.FindAll(l.ctx, &approved, page, pageSize, excludeArg...)
-		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, &approved, nil, nil, excludeArg...)
+		total, err = l.svcCtx.MdResidentialAreaModel.Count(l.ctx, nil, nil, nil, &approved, nil, nil, req.CommunityType, excludeArg...)
 	}
 	if err != nil {
 		return nil, err
-	}
-
-	// Filter by community_type if specified
-	if req.CommunityType != nil {
-		filtered := make([]*model.MdResidentialArea, 0)
-		for _, a := range areas {
-			if int32(a.CommunityType) == *req.CommunityType {
-				filtered = append(filtered, a)
-			}
-		}
-		areas = filtered
-		total, err = l.svcCtx.MdResidentialAreaModel.CountByCommunityType(l.ctx, *req.CommunityType, excludeDeleted)
-		if err != nil {
-			return nil, err
-		}
-		// Also apply approved filter for total count
 	}
 
 	// Resolve division names with caching

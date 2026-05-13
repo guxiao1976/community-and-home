@@ -37,7 +37,7 @@ func checkChildData(ctx context.Context, svcCtx *svc.ServiceContext, divId int64
 		return nil
 	}
 
-	areaCount, err := svcCtx.MdResidentialAreaModel.Count(ctx, countyId, streetId, communityDivId, nil, nil, nil)
+	areaCount, err := svcCtx.MdResidentialAreaModel.Count(ctx, countyId, streetId, communityDivId, nil, nil, nil, nil)
 	if err != nil {
 		return errorx.NewDefaultError("检查关联小区失败")
 	}

@@ -221,10 +221,13 @@ func (e *SyncEngine) runSyncSingleCounty(ctx context.Context, p *SyncProgress, c
 
 	var countyCode string
 	var cityId int64
+	var actualCountyId int64 // The real county ID to store in database
 
 	// Handle both county (level 3) and street (level 4)
 	if county.Level == 4 {
-		// Street level: use parent county's code
+		// Street level: use parent county's code and ID
+		// Note: AMap API doesn't support street-level queries, so we query by county code
+		// The returned POIs don't contain street info, so we can't set street_id accurately
 		if !county.ParentId.Valid {
 			logx.Errorf("[AMap Sync] street %d has no parent county", countyId)
 			return
@@ -234,13 +237,15 @@ func (e *SyncEngine) runSyncSingleCounty(ctx context.Context, p *SyncProgress, c
 			logx.Errorf("[AMap Sync] find parent county %d failed: %v", county.ParentId.Int64, err)
 			return
 		}
+		actualCountyId = parentCounty.Id
 		countyCode = parentCounty.Code
 		if parentCounty.ParentId.Valid {
 			cityId = parentCounty.ParentId.Int64
 		}
-		logx.Infof("[AMap Sync] Street-level sync: using county code %s", countyCode)
+		logx.Infof("[AMap Sync] Street-level sync: using county=%d, code=%s (AMap doesn't support street level)", actualCountyId, countyCode)
 	} else {
 		// County level: use county code directly
+		actualCountyId = countyId
 		countyCode = county.Code
 		if county.ParentId.Valid {
 			cityId = county.ParentId.Int64
@@ -376,7 +381,7 @@ func (e *SyncEngine) runSyncSingleCounty(ctx context.Context, p *SyncProgress, c
 
 				now := time.Now()
 				area := &model.MdResidentialArea{
-					CountyId:         sql.NullInt64{Int64: countyId, Valid: true},
+					CountyId:         sql.NullInt64{Int64: actualCountyId, Valid: true},
 					CityId:           sql.NullInt64{Int64: cityId, Valid: true},
 					Code:             sql.NullString{String: code, Valid: true},
 					Name:             poi.Name,
@@ -390,6 +395,7 @@ func (e *SyncEngine) runSyncSingleCounty(ctx context.Context, p *SyncProgress, c
 					CreatedTime:      now,
 					UpdatedTime:      now,
 				}
+				// Note: street_id is not set because AMap API doesn't return street-level info
 
 				_, err = e.areaModel.Insert(ctx, area)
 				if err != nil {
