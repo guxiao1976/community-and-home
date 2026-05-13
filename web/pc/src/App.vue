@@ -2,12 +2,18 @@
 import { onMounted } from 'vue';
 import { RouterView } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { usePermissionStore } from '@/stores/permission';
 
 const authStore = useAuthStore();
+const permissionStore = usePermissionStore();
 
 // Restore session on app mount
 onMounted(() => {
   authStore.restoreSession();
+  // Load permissions if already authenticated
+  if (authStore.isAuthenticated && authStore.user?.id) {
+    permissionStore.loadUserPermissionsAndMenus(authStore.user.id);
+  }
 });
 </script>
 

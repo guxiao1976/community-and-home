@@ -65,20 +65,22 @@ import {
   Expand
 } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
+import { usePermissionStore } from '@/stores/permission';
 
 interface MenuItem {
   path: string;
   title: string;
   icon?: any;
   children?: MenuItem[];
-  permission?: string;
+  permissionCode?: string;
 }
 
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
+const permissionStore = usePermissionStore();
 
-const menuItems: MenuItem[] = [
+const allMenuItems: MenuItem[] = [
   {
     path: '/dashboard',
     title: '仪表板',
@@ -92,42 +94,50 @@ const menuItems: MenuItem[] = [
       {
         path: '/masterdata/divisions',
         title: '行政区划',
-        icon: Location
+        icon: Location,
+        permissionCode: 'division:list'
       },
       {
         path: '/masterdata/grassroots',
         title: '基层组织',
-        icon: OfficeBuilding
+        icon: OfficeBuilding,
+        permissionCode: 'grassroots:list'
       },
       {
         path: '/masterdata/residential-areas',
         title: '住宅小区',
-        icon: OfficeBuilding
+        icon: OfficeBuilding,
+        permissionCode: 'community:list'
       },
       {
         path: '/masterdata/sensitive-words',
         title: '敏感词管理',
-        icon: ChatDotSquare
+        icon: ChatDotSquare,
+        permissionCode: 'sensitive-word:list'
       },
       {
         path: '/masterdata/configs',
         title: '系统配置',
-        icon: Setting
+        icon: Setting,
+        permissionCode: 'config:list'
       },
       {
         path: '/masterdata/approval-center',
         title: '审核中心',
-        icon: Stamp
+        icon: Stamp,
+        permissionCode: 'approval:list'
       },
       {
         path: '/masterdata/deleted-recovery',
         title: '删除数据恢复',
-        icon: RefreshRight
+        icon: RefreshRight,
+        permissionCode: 'deleted:list'
       },
       {
         path: '/masterdata/statistics/division-counts',
         title: '小区数据统计',
-        icon: DataAnalysis
+        icon: DataAnalysis,
+        permissionCode: 'statistics:view'
       },
       {
         path: '/masterdata/query',
@@ -149,16 +159,44 @@ const menuItems: MenuItem[] = [
       {
         path: '/users/list',
         title: '用户列表',
-        icon: User
+        icon: User,
+        permissionCode: 'user:list'
       },
       {
         path: '/users/verifications',
         title: '实名审核',
-        icon: Document
+        icon: Document,
+        permissionCode: 'verification:list'
       }
     ]
+  },
+  {
+    path: '/roles',
+    title: '角色管理',
+    icon: User,
+    permissionCode: 'role:list'
   }
 ];
+
+function hasPermission(code?: string): boolean {
+  if (!code) return true;
+  return permissionStore.hasPermission(code);
+}
+
+function filterMenuItems(items: MenuItem[]): MenuItem[] {
+  return items
+    .map(item => {
+      if (item.children) {
+        const filteredChildren = item.children.filter(child => hasPermission(child.permissionCode));
+        if (filteredChildren.length === 0) return null;
+        return { ...item, children: filteredChildren };
+      }
+      return hasPermission(item.permissionCode) ? item : null;
+    })
+    .filter((item): item is MenuItem => item !== null);
+}
+
+const menuItems = computed(() => filterMenuItems(allMenuItems));
 
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed);
 const activeMenu = computed(() => route.path);

@@ -3,6 +3,15 @@
 
 package types
 
+type AssignUserRolesReq struct {
+	Id      int64   `path:"id"`
+	RoleIds []int64 `json:"role_ids"`
+}
+
+type AssignUserRolesResp struct {
+	Success bool `json:"success"`
+}
+
 type BindPropertyReq struct {
 	PropertyUnitId int64 `json:"property_unit_id"`
 }
@@ -112,7 +121,8 @@ type GetUserPermissionsReq struct {
 }
 
 type GetUserPermissionsResp struct {
-	Permissions []string `json:"permissions"`
+	Permissions []string         `json:"permissions"`
+	Menus       []PermissionTree `json:"menus"`
 }
 
 type GetUserReq struct {
@@ -121,6 +131,14 @@ type GetUserReq struct {
 
 type GetUserResp struct {
 	User User `json:"user"`
+}
+
+type GetUserRolesReq struct {
+	Id int64 `path:"id"`
+}
+
+type GetUserRolesResp struct {
+	Roles []Role `json:"roles"`
 }
 
 type GetUsersReq struct {
@@ -263,6 +281,15 @@ type RegisterResp struct {
 	UserId int64  `json:"user_id"`
 	Token  string `json:"token"`
 	Expire int64  `json:"expire"`
+}
+
+type RemoveUserRoleReq struct {
+	Id     int64 `path:"id"`
+	RoleId int64 `path:"roleId"`
+}
+
+type RemoveUserRoleResp struct {
+	Success bool `json:"success"`
 }
 
 type ReviewVerificationReq struct {

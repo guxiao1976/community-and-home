@@ -4,7 +4,7 @@
       <template #header>
         <div class="card-header">
           <span>用户管理</span>
-          <el-button type="primary" @click="handleCreate">创建用户</el-button>
+          <el-button type="primary" v-permission="'user:create'" @click="handleCreate">创建用户</el-button>
         </div>
       </template>
 
@@ -61,13 +61,14 @@
         <el-table-column prop="created_at" label="创建时间" width="180" />
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleView(row.id)">
+            <el-button v-permission="'user:detail'" link type="primary" size="small" @click="handleView(row.id)">
               查看
             </el-button>
-            <el-button link type="primary" size="small" @click="handleEdit(row.id)">
+            <el-button v-permission="'user:update'" link type="primary" size="small" @click="handleEdit(row.id)">
               编辑
             </el-button>
             <el-button
+              v-permission="'user:status'"
               link
               :type="row.status === 1 ? 'warning' : 'success'"
               size="small"

@@ -11,6 +11,9 @@ export const usePermissionStore = defineStore('permission', () => {
   const roles = ref<Role[]>([]);
   const userPermissions = ref<string[]>([]);
   const menuPermissions = ref<Permission[]>([]);
+  const userRoles = ref<Role[]>([]);
+  const currentUserId = ref<number | null>(null);
+  const loaded = ref(false);
 
   // Computed
   const permissionTree = computed(() => {
@@ -18,8 +21,10 @@ export const usePermissionStore = defineStore('permission', () => {
   });
 
   const menus = computed(() => {
-    return menuPermissions.value.filter(p => p.type === 1); // Menu type
+    return menuPermissions.value.filter(p => p.type === 1);
   });
+
+  const isLoaded = computed(() => loaded.value);
 
   // Actions
   const loadPermissions = async (): Promise<void> => {
@@ -27,14 +32,27 @@ export const usePermissionStore = defineStore('permission', () => {
     permissions.value = response || [];
   };
 
-  const loadUserPermissions = async (userId: number): Promise<void> => {
-    const response = await identityApi.getUserPermissions(userId);
-    userPermissions.value = response?.permissions || [];
-    menuPermissions.value = response?.menus || [];
+  const loadUserPermissionsAndMenus = async (userId: number): Promise<void> => {
+    currentUserId.value = userId;
+    try {
+      const response = await identityApi.getUserPermissions(userId);
+      userPermissions.value = response?.permissions || [];
+      menuPermissions.value = response?.menus || [];
+      loaded.value = true;
+    } catch {
+      userPermissions.value = [];
+      menuPermissions.value = [];
+      loaded.value = false;
+    }
   };
 
-  const hasPermission = (permissionCode: string): boolean => {
-    return userPermissions.value.includes(permissionCode);
+  const loadUserRoles = async (userId: number): Promise<void> => {
+    try {
+      const response = await identityApi.getUserRoles(userId);
+      userRoles.value = response?.roles || [];
+    } catch {
+      userRoles.value = [];
+    }
   };
 
   const loadRoles = async (): Promise<void> => {
@@ -42,11 +60,22 @@ export const usePermissionStore = defineStore('permission', () => {
     roles.value = response?.list || [];
   };
 
+  const hasPermission = (permissionCode: string): boolean => {
+    return userPermissions.value.includes(permissionCode);
+  };
+
+  const hasAnyPermission = (codes: string[]): boolean => {
+    return codes.some(code => userPermissions.value.includes(code));
+  };
+
   const clearPermissions = (): void => {
     permissions.value = [];
     roles.value = [];
     userPermissions.value = [];
     menuPermissions.value = [];
+    userRoles.value = [];
+    currentUserId.value = null;
+    loaded.value = false;
   };
 
   // Helper function to build tree structure
@@ -71,12 +100,18 @@ export const usePermissionStore = defineStore('permission', () => {
     roles,
     userPermissions,
     menuPermissions,
+    userRoles,
+    currentUserId,
+    loaded,
     permissionTree,
     menus,
+    isLoaded,
     loadPermissions,
-    loadUserPermissions,
-    hasPermission,
+    loadUserPermissionsAndMenus,
+    loadUserRoles,
     loadRoles,
+    hasPermission,
+    hasAnyPermission,
     clearPermissions
   };
 });

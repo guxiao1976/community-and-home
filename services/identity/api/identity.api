@@ -121,7 +121,29 @@ type (
 		UserId int64 `path:"id"`
 	}
 	GetUserPermissionsResp {
-		Permissions []string `json:"permissions"`
+		Permissions []string         `json:"permissions"`
+		Menus       []PermissionTree `json:"menus"`
+	}
+	// User role management
+	AssignUserRolesReq {
+		Id      int64   `path:"id"`
+		RoleIds []int64 `json:"role_ids"`
+	}
+	AssignUserRolesResp {
+		Success bool `json:"success"`
+	}
+	RemoveUserRoleReq {
+		Id     int64 `path:"id"`
+		RoleId int64 `path:"roleId"`
+	}
+	RemoveUserRoleResp {
+		Success bool `json:"success"`
+	}
+	GetUserRolesReq {
+		Id int64 `path:"id"`
+	}
+	GetUserRolesResp {
+		Roles []Role `json:"roles"`
 	}
 	// Role types
 	Role {
@@ -378,6 +400,18 @@ service identity-api {
 	@doc "Get user permissions"
 	@handler getUserPermissions
 	get /users/:id/permissions (GetUserPermissionsReq) returns (GetUserPermissionsResp)
+
+	@doc "Get user roles"
+	@handler getUserRoles
+	get /users/:id/roles (GetUserRolesReq) returns (GetUserRolesResp)
+
+	@doc "Assign roles to user"
+	@handler assignUserRoles
+	post /users/:id/roles (AssignUserRolesReq) returns (AssignUserRolesResp)
+
+	@doc "Remove role from user"
+	@handler removeUserRole
+	delete /users/:id/roles/:roleId (RemoveUserRoleReq) returns (RemoveUserRoleResp)
 }
 
 @server (

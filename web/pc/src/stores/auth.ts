@@ -5,6 +5,7 @@ import { ref, computed } from 'vue';
 import type { User, RegisterRequest, LoginResponse } from '@common/types/identity';
 import { getAccessToken, getRefreshToken, setTokens, clearTokens, getTokenExpiry } from '@common/utils/auth';
 import * as identityApi from '@/api/identity';
+import { usePermissionStore } from '@/stores/permission';
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -59,6 +60,11 @@ export const useAuthStore = defineStore('auth', () => {
   const handleLoginResponse = (response: LoginResponse): void => {
     user.value = response.user;
     updateTokens(response.accessToken, response.refreshToken, response.expiresIn);
+    // Load user permissions after login
+    if (response.user?.id) {
+      const permissionStore = usePermissionStore();
+      permissionStore.loadUserPermissionsAndMenus(response.user.id);
+    }
   };
 
   const updateTokens = (access: string, refresh: string, expiresIn: number): void => {
@@ -74,6 +80,8 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken.value = null;
     tokenExpiry.value = 0;
     clearTokens();
+    const permissionStore = usePermissionStore();
+    permissionStore.clearPermissions();
   };
 
   const restoreSession = (): void => {
