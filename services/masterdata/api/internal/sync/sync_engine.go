@@ -26,19 +26,22 @@ const (
 )
 
 type SyncProgress struct {
-	mu                sync.Mutex
-	TaskId            string     `json:"task_id"`
-	Status            SyncStatus `json:"status"`
-	TotalCounties     int32      `json:"total_counties"`
-	CurrentCountyIdx  int32      `json:"current_county"`
-	CurrentCountyName string     `json:"current_county_name"`
-	TotalPages        int32      `json:"total_pages"`
-	CurrentPage       int32      `json:"current_page"`
-	TotalFound        int32      `json:"total_found"`
-	TotalSynced       int32      `json:"total_synced"`
-	TotalSkipped      int32      `json:"total_skipped"`
-	TotalFailed       int32      `json:"total_failed"`
-	ErrorMessage      string     `json:"error_message,omitempty"`
+	mu                 sync.Mutex
+	TaskId             string     `json:"task_id"`
+	Status             SyncStatus `json:"status"`
+	TotalCounties      int32      `json:"total_counties"`
+	CurrentCountyIdx   int32      `json:"current_county"`
+	CurrentCountyName  string     `json:"current_county_name"`
+	TotalKeywords      int32      `json:"total_keywords"`
+	CurrentKeywordIdx  int32      `json:"current_keyword"`
+	CurrentKeyword     string     `json:"current_keyword"`
+	TotalPages         int32      `json:"total_pages"`
+	CurrentPage        int32      `json:"current_page"`
+	TotalFound         int32      `json:"total_found"`
+	TotalSynced        int32      `json:"total_synced"`
+	TotalSkipped       int32      `json:"total_skipped"`
+	TotalFailed        int32      `json:"total_failed"`
+	ErrorMessage       string     `json:"error_message,omitempty"`
 }
 
 type SyncEngine struct {
@@ -126,6 +129,9 @@ func (e *SyncEngine) resolveCounties(ctx context.Context, divisionId int64) ([]*
 	}
 
 	switch div.Level {
+	case 4:
+		// Street level - return the street itself for direct sync
+		return []*model.MdAdministrativeDivision{div}, nil
 	case 3:
 		return []*model.MdAdministrativeDivision{div}, nil
 	case 2:
@@ -145,7 +151,7 @@ func (e *SyncEngine) resolveCounties(ctx context.Context, divisionId int64) ([]*
 		}
 		return counties, nil
 	default:
-		return nil, fmt.Errorf("unsupported division level %d (must be 1/2/3)", div.Level)
+		return nil, fmt.Errorf("unsupported division level %d (must be 1/2/3/4)", div.Level)
 	}
 }
 
@@ -213,37 +219,51 @@ func (e *SyncEngine) runSyncSingleCounty(ctx context.Context, p *SyncProgress, c
 		return
 	}
 
-	countyCode := county.Code
-
-	// city_id = county's parent_id (level 3 county -> parent is level 2 city)
+	var countyCode string
 	var cityId int64
-	if county.ParentId.Valid {
-		cityId = county.ParentId.Int64
+	var actualCountyId int64 // The real county ID to store in database
+
+	// Handle both county (level 3) and street (level 4)
+	if county.Level == 4 {
+		// Street level: use parent county's code and ID
+		// Note: AMap API doesn't support street-level queries, so we query by county code
+		// The returned POIs don't contain street info, so we can't set street_id accurately
+		if !county.ParentId.Valid {
+			logx.Errorf("[AMap Sync] street %d has no parent county", countyId)
+			return
+		}
+		parentCounty, err := e.divModel.FindOne(ctx, county.ParentId.Int64)
+		if err != nil {
+			logx.Errorf("[AMap Sync] find parent county %d failed: %v", county.ParentId.Int64, err)
+			return
+		}
+		actualCountyId = parentCounty.Id
+		countyCode = parentCounty.Code
+		if parentCounty.ParentId.Valid {
+			cityId = parentCounty.ParentId.Int64
+		}
+		logx.Infof("[AMap Sync] Street-level sync: using county=%d, code=%s (AMap doesn't support street level)", actualCountyId, countyCode)
+	} else {
+		// County level: use county code directly
+		actualCountyId = countyId
+		countyCode = county.Code
+		if county.ParentId.Valid {
+			cityId = county.ParentId.Int64
+		}
 	}
 
-	firstResp, err := e.searchResidentialAreas(countyCode, 1)
-	if err != nil {
-		logx.Errorf("[AMap Sync] search county %s failed: %v", countyCode, err)
-		return
-	}
-
-	totalCount, _ := strconv.Atoi(firstResp.Count)
-	if totalCount == 0 {
-		return
-	}
-
-	totalPages := totalCount / 25
-	if totalCount%25 > 0 {
-		totalPages++
-	}
-	if totalPages > 100 {
-		totalPages = 100
+	// 20 common keywords for residential area names
+	keywords := []string{
+		"小区", "花园", "苑", "公寓", "村", "家园", "居", "城", "府", "庭",
+		"轩", "阁", "园", "坊", "里", "邸", "郡", "湾", "台", "座",
 	}
 
 	p.mu.Lock()
-	p.TotalPages = int32(totalPages)
-	p.TotalFound += int32(totalCount)
+	p.TotalKeywords = int32(len(keywords))
 	p.mu.Unlock()
+
+	// Memory-based deduplication using POI ID
+	seenPOIs := make(map[string]bool)
 
 	maxCode, err := e.areaModel.GetMaxCodeByCountyId(ctx, countyId, countyCode)
 	var nextSeq int
@@ -255,107 +275,166 @@ func (e *SyncEngine) runSyncSingleCounty(ctx context.Context, p *SyncProgress, c
 		nextSeq++
 	}
 
-	for page := 1; page <= totalPages; page++ {
+	for kwIdx, keyword := range keywords {
 		p.mu.Lock()
-		p.CurrentPage = int32(page)
+		p.CurrentKeywordIdx = int32(kwIdx + 1)
+		p.CurrentKeyword = keyword
+		p.TotalPages = 0
+		p.CurrentPage = 0
 		p.mu.Unlock()
 
-		var resp *amapTextSearchResp
-		if page == 1 {
-			resp = firstResp
-		} else {
-			resp, err = e.searchResidentialAreas(countyCode, page)
-			if err != nil {
-				logx.Errorf("[AMap Sync] search page %d for county %s failed: %v", page, countyCode, err)
-				p.mu.Lock()
-				p.TotalFailed += 25
-				p.mu.Unlock()
-				continue
-			}
+		logx.Infof("[AMap Sync] %d/%d 关键词: '%s'", kwIdx+1, len(keywords), keyword)
+
+		firstResp, err := e.searchResidentialAreas(countyCode, 1, keyword)
+		if err != nil {
+			logx.Errorf("[AMap Sync] search with keyword '%s' failed: %v", keyword, err)
+			continue
 		}
 
-		for _, poi := range resp.POIs {
-			existing, err := e.areaModel.FindByNameAndCountyId(ctx, poi.Name, countyId)
-			if err == nil && existing != nil {
-				p.mu.Lock()
-				p.TotalSkipped++
-				p.mu.Unlock()
-				continue
+		totalCount, _ := strconv.Atoi(firstResp.Count)
+		if totalCount == 0 {
+			continue
+		}
+
+		totalPages := totalCount / 25
+		if totalCount%25 > 0 {
+			totalPages++
+		}
+		// AMap API limit: max 18 pages (450 results)
+		if totalPages > 18 {
+			totalPages = 18
+		}
+
+		p.mu.Lock()
+		p.TotalPages = int32(totalPages)
+		p.mu.Unlock()
+
+		for page := 1; page <= totalPages; page++ {
+			p.mu.Lock()
+			p.CurrentPage = int32(page)
+			p.mu.Unlock()
+
+			var resp *amapTextSearchResp
+			if page == 1 {
+				resp = firstResp
+			} else {
+				resp, err = e.searchResidentialAreas(countyCode, page, keyword)
+				if err != nil {
+					logx.Errorf("[AMap Sync] search page %d with keyword '%s' failed: %v", page, keyword, err)
+					continue
+				}
 			}
 
-			code := fmt.Sprintf("%s%04d", countyCode, nextSeq)
-			for {
-				codeExists, _ := e.areaModel.FindByCode(ctx, code)
-				if codeExists == nil {
-					break
+			if len(resp.POIs) == 0 {
+				break
+			}
+
+			for _, poi := range resp.POIs {
+				// Deduplicate by POI ID (from AMap)
+				poiId := poi.Name + "|" + poi.Location
+				if seenPOIs[poiId] {
+					p.mu.Lock()
+					p.TotalSkipped++
+					p.mu.Unlock()
+					continue
 				}
-				nextSeq++
-				code = fmt.Sprintf("%s%04d", countyCode, nextSeq)
-				if nextSeq > 9999 {
-					logx.Errorf("[AMap Sync] cannot generate unique code for county %s", countyCode)
+				seenPOIs[poiId] = true
+
+				// Check if already exists in database
+				existing, err := e.areaModel.FindByNameAndCountyId(ctx, poi.Name, countyId)
+				if err == nil && existing != nil {
+					p.mu.Lock()
+					p.TotalSkipped++
+					p.mu.Unlock()
+					continue
+				}
+
+				code := fmt.Sprintf("%s%04d", countyCode, nextSeq)
+				for {
+					codeExists, _ := e.areaModel.FindByCode(ctx, code)
+					if codeExists == nil {
+						break
+					}
+					nextSeq++
+					code = fmt.Sprintf("%s%04d", countyCode, nextSeq)
+					if nextSeq > 9999 {
+						logx.Errorf("[AMap Sync] cannot generate unique code for county %s", countyCode)
+						p.mu.Lock()
+						p.TotalFailed++
+						p.mu.Unlock()
+						break
+					}
+				}
+
+				var longitude, latitude sql.NullFloat64
+				if poi.Location != "" {
+					parts := strings.Split(poi.Location, ",")
+					if len(parts) == 2 {
+						if lng, err := strconv.ParseFloat(parts[0], 64); err == nil {
+							longitude = sql.NullFloat64{Float64: lng, Valid: true}
+						}
+						if lat, err := strconv.ParseFloat(parts[1], 64); err == nil {
+							latitude = sql.NullFloat64{Float64: lat, Valid: true}
+						}
+					}
+				}
+
+				now := time.Now()
+				area := &model.MdResidentialArea{
+					CountyId:         sql.NullInt64{Int64: actualCountyId, Valid: true},
+					CityId:           sql.NullInt64{Int64: cityId, Valid: true},
+					Code:             sql.NullString{String: code, Valid: true},
+					Name:             poi.Name,
+					Address:          poi.GetAddress(),
+					Longitude:        longitude,
+					Latitude:         latitude,
+					DataSource:       1,
+					CommunityType:    1,
+					SubmissionStatus: 2,
+					SubmitterId:      0,
+					CreatedTime:      now,
+					UpdatedTime:      now,
+				}
+				// Note: street_id is not set because AMap API doesn't return street-level info
+
+				_, err = e.areaModel.Insert(ctx, area)
+				if err != nil {
+					logx.Errorf("[AMap Sync] insert residential area failed: %v", err)
 					p.mu.Lock()
 					p.TotalFailed++
 					p.mu.Unlock()
-					break
+					continue
 				}
-			}
 
-			var longitude, latitude sql.NullFloat64
-			if poi.Location != "" {
-				parts := strings.Split(poi.Location, ",")
-				if len(parts) == 2 {
-					if lng, err := strconv.ParseFloat(parts[0], 64); err == nil {
-						longitude = sql.NullFloat64{Float64: lng, Valid: true}
-					}
-					if lat, err := strconv.ParseFloat(parts[1], 64); err == nil {
-						latitude = sql.NullFloat64{Float64: lat, Valid: true}
-					}
-				}
-			}
-
-			now := time.Now()
-			area := &model.MdResidentialArea{
-				CountyId:         sql.NullInt64{Int64: countyId, Valid: true},
-					CityId:           sql.NullInt64{Int64: cityId, Valid: true},
-				Code:             sql.NullString{String: code, Valid: true},
-				Name:             poi.Name,
-				Address:          poi.GetAddress(),
-				Longitude:        longitude,
-				Latitude:         latitude,
-				DataSource:       1,
-				CommunityType:    1,
-				SubmissionStatus: 2,
-				SubmitterId:      0,
-				CreatedTime:      now,
-				UpdatedTime:      now,
-			}
-
-			_, err = e.areaModel.Insert(ctx, area)
-			if err != nil {
-				logx.Errorf("[AMap Sync] insert residential area failed: %v", err)
+				nextSeq++
 				p.mu.Lock()
-				p.TotalFailed++
+				p.TotalSynced++
+				p.TotalFound++
 				p.mu.Unlock()
-				continue
 			}
 
-			nextSeq++
-			p.mu.Lock()
-			p.TotalSynced++
-			p.mu.Unlock()
+			if page < totalPages {
+				delay := time.Duration(5+rand.Intn(6)) * time.Second
+				time.Sleep(delay)
+			}
 		}
 
-		if page < totalPages {
-			delay := time.Duration(5+rand.Intn(6)) * time.Second
+		// Delay between keywords
+		if kwIdx < len(keywords)-1 {
+			delay := time.Duration(3+rand.Intn(5)) * time.Second
+			logx.Infof("[AMap Sync] 等待 %v 后处理下一个关键词...", delay)
 			time.Sleep(delay)
 		}
 	}
+
+	logx.Infof("[AMap Sync] 区县 %s 完成，共发现 %d 个小区（去重后），同步 %d 个，跳过 %d 个",
+		county.Name, len(seenPOIs), p.TotalSynced, p.TotalSkipped)
 }
 
-func (e *SyncEngine) searchResidentialAreas(countyCode string, page int) (*amapTextSearchResp, error) {
+func (e *SyncEngine) searchResidentialAreas(countyCode string, page int, keywords string) (*amapTextSearchResp, error) {
 	reqUrl := fmt.Sprintf(
-		"https://restapi.amap.com/v3/place/text?keywords=&types=120300&city=%s&citylimit=true&offset=25&page=%d&key=%s",
-		countyCode, page, e.amapKey,
+		"https://restapi.amap.com/v3/place/text?keywords=%s&types=120300&city=%s&citylimit=true&offset=25&page=%d&key=%s",
+		keywords, countyCode, page, e.amapKey,
 	)
 
 	resp, err := e.client.Get(reqUrl)

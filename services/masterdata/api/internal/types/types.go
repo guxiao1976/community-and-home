@@ -290,8 +290,8 @@ type GetResidentialAreasReq struct {
 	CountyId         *int64 `form:"county_id,optional"`
 	StreetId         *int64 `form:"street_id,optional"`
 	CommunityDivId   *int64 `form:"community_div_id,optional"`
-	CommunityType    *int32 `form:"community_type,optional"`
 	Keyword          string `form:"keyword,optional"`
+	CommunityType    *int32 `form:"community_type,optional"`
 	SubmissionStatus *int32 `form:"submission_status,optional"`
 	Page             int32  `form:"page,optional,default=1"`
 	PageSize         int32  `form:"page_size,optional,default=20"`
@@ -337,6 +337,9 @@ type GetSyncProgressResp struct {
 	TotalCounties     int32  `json:"total_counties"`
 	CurrentCounty     int32  `json:"current_county"`
 	CurrentCountyName string `json:"current_county_name,optional"`
+	TotalKeywords     int32  `json:"total_keywords"`
+	CurrentKeyword    int32  `json:"current_keyword"`
+	CurrentKeywordStr string `json:"current_keyword_str,optional"`
 	TotalPages        int32  `json:"total_pages"`
 	CurrentPage       int32  `json:"current_page"`
 	TotalFound        int32  `json:"total_found"`
