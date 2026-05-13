@@ -26,6 +26,7 @@ type MatchDetail struct {
 type TextCheckReq struct {
 	Content     string `json:"content"`
 	ContentType string `json:"content_type,optional"`
+	CheckMode   string `json:"check_mode,optional,default=combined"`
 }
 
 type TextCheckResp struct {

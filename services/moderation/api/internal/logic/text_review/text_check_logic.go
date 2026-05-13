@@ -39,7 +39,12 @@ func (l *TextCheckLogic) TextCheck(req *types.TextCheckReq) (*types.TextCheckRes
 		contentType = "post"
 	}
 
-	result, err := l.svcCtx.TextEngine.Check(l.ctx, req.Content, contentType)
+	checkMode := req.CheckMode
+	if checkMode == "" {
+		checkMode = "combined"
+	}
+
+	result, err := l.svcCtx.TextEngine.Check(l.ctx, req.Content, contentType, checkMode)
 	if err != nil {
 		logx.Errorf("text check error: %v", err)
 		return nil, errorx.NewDefaultError("审核失败")

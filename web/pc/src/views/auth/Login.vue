@@ -155,9 +155,12 @@ const handlePasswordLogin = async () => {
       await authStore.login(passwordForm.phone, passwordForm.password);
       ElMessage.success('登录成功');
 
+      // Wait a bit for state to persist
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Redirect to original page or dashboard
       const redirect = (route.query.redirect as string) || '/dashboard';
-      router.push(redirect);
+      await router.push(redirect);
     } catch (error: any) {
       ElMessage.error(error.message || '登录失败');
     } finally {
@@ -178,8 +181,11 @@ const handleSmsLogin = async () => {
       await authStore.loginWithSms(smsForm.phone, smsForm.smsCode);
       ElMessage.success('登录成功');
 
+      // Wait a bit for state to persist
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const redirect = (route.query.redirect as string) || '/dashboard';
-      router.push(redirect);
+      await router.push(redirect);
     } catch (error: any) {
       ElMessage.error(error.message || '登录失败');
     } finally {

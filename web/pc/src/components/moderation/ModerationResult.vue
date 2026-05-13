@@ -1,153 +1,107 @@
 <template>
   <div class="moderation-result">
     <el-alert
-      :type="result.finalResult ? 'success' : 'error'"
-      :title="result.finalResult ? '审核通过' : '审核未通过'"
+      :type="getResultType()"
+      :title="getResultTitle()"
       :closable="false"
       show-icon
     />
 
-    <div class="result-meta">
-      <span>请求ID: {{ result.requestId }}</span>
-      <span>处理时间: {{ result.processingTime }}ms</span>
+    <div class="result-info" v-if="result.risk_level">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="风险等级">
+          <el-tag :type="getRiskLevelType(result.risk_level)">
+            {{ getRiskLevelText(result.risk_level) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="需要人工复审" v-if="result.need_review !== undefined">
+          <el-tag :type="result.need_review ? 'warning' : 'info'">
+            {{ result.need_review ? '是' : '否' }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="原因" :span="2" v-if="result.reason">
+          {{ result.reason }}
+        </el-descriptions-item>
+      </el-descriptions>
     </div>
 
-    <el-collapse v-model="activeNames" class="result-layers">
-      <!-- Traditional Technology Layer -->
-      <el-collapse-item
-        v-if="result.traditional"
-        name="traditional"
-        title="传统技术检测"
-      >
-        <div class="layer-content">
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="检测结果">
-              <el-tag :type="result.traditional.passed ? 'success' : 'danger'">
-                {{ result.traditional.passed ? '通过' : '未通过' }}
-              </el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item v-if="result.traditional.score" label="评分">
-              {{ result.traditional.score }}
-            </el-descriptions-item>
-            <el-descriptions-item v-if="result.traditional.keywords" label="关键词">
-              <el-tag
-                v-for="keyword in result.traditional.keywords"
-                :key="keyword"
-                type="warning"
-                size="small"
-                style="margin-right: 8px"
-              >
-                {{ keyword }}
-              </el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item v-if="result.traditional.reason" label="原因">
-              {{ result.traditional.reason }}
-            </el-descriptions-item>
-          </el-descriptions>
-        </div>
-      </el-collapse-item>
-
-      <!-- Small Model Layer -->
-      <el-collapse-item
-        v-if="result.smallModel"
-        name="smallModel"
-        title="小模型检测"
-      >
-        <div class="layer-content">
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="检测结果">
-              <el-tag :type="result.smallModel.passed ? 'success' : 'danger'">
-                {{ result.smallModel.passed ? '通过' : '未通过' }}
-              </el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item label="置信度">
-              <el-progress
-                :percentage="Math.round(result.smallModel.confidence * 100)"
-                :color="getConfidenceColor(result.smallModel.confidence)"
-              />
-            </el-descriptions-item>
-            <el-descriptions-item v-if="result.smallModel.categories" label="分类">
-              <el-tag
-                v-for="category in result.smallModel.categories"
-                :key="category"
-                type="info"
-                size="small"
-                style="margin-right: 8px"
-              >
-                {{ category }}
-              </el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item v-if="result.smallModel.reason" label="原因">
-              {{ result.smallModel.reason }}
-            </el-descriptions-item>
-          </el-descriptions>
-        </div>
-      </el-collapse-item>
-
-      <!-- Large Model Layer -->
-      <el-collapse-item
-        v-if="result.largeModel"
-        name="largeModel"
-        title="大模型检测"
-      >
-        <div class="layer-content">
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="检测结果">
-              <el-tag :type="result.largeModel.passed ? 'success' : 'danger'">
-                {{ result.largeModel.passed ? '通过' : '未通过' }}
-              </el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item label="置信度">
-              <el-progress
-                :percentage="Math.round(result.largeModel.confidence * 100)"
-                :color="getConfidenceColor(result.largeModel.confidence)"
-              />
-            </el-descriptions-item>
-            <el-descriptions-item v-if="result.largeModel.categories" label="分类">
-              <el-tag
-                v-for="category in result.largeModel.categories"
-                :key="category"
-                type="info"
-                size="small"
-                style="margin-right: 8px"
-              >
-                {{ category }}
-              </el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item v-if="result.largeModel.analysis" label="分析">
-              {{ result.largeModel.analysis }}
-            </el-descriptions-item>
-          </el-descriptions>
-        </div>
-      </el-collapse-item>
-    </el-collapse>
-
-    <!-- Raw JSON View -->
-    <el-collapse v-model="showRaw" class="raw-data">
-      <el-collapse-item name="raw" title="原始数据 (JSON)">
-        <pre>{{ JSON.stringify(result, null, 2) }}</pre>
-      </el-collapse-item>
-    </el-collapse>
+    <!-- 检测详情 -->
+    <div class="detection-details" v-if="result.details && result.details.length > 0">
+      <h4>检测详情</h4>
+      <el-table :data="result.details" border style="margin-top: 12px;">
+        <el-table-column prop="layer" label="检测层" width="150">
+          <template #default="{ row }">
+            <el-tag size="small">{{ getLayerName(row.layer) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="matched_text" label="匹配文本" width="150" />
+        <el-table-column prop="category" label="分类" width="120" />
+        <el-table-column prop="severity" label="严重程度" width="100">
+          <template #default="{ row }">
+            <el-tag v-if="row.severity" :type="getSeverityType(row.severity)" size="small">
+              {{ row.severity }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="confidence" label="置信度" width="120">
+          <template #default="{ row }">
+            <span v-if="row.confidence">{{ (row.confidence * 100).toFixed(1) }}%</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import type { TextModerationResponse, ImageModerationResponse } from '@common/types/moderation';
-
 interface Props {
-  result: TextModerationResponse | ImageModerationResponse;
+  result: any; // 使用any以兼容后端实际返回的结构
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
-const activeNames = ref(['traditional', 'smallModel', 'largeModel']);
-const showRaw = ref<string[]>([]);
+const getResultType = () => {
+  return props.result.pass ? 'success' : 'error';
+};
 
-const getConfidenceColor = (confidence: number) => {
-  if (confidence >= 0.8) return '#67c23a';
-  if (confidence >= 0.5) return '#e6a23c';
-  return '#f56c6c';
+const getResultTitle = () => {
+  return props.result.pass ? '审核通过' : '审核未通过';
+};
+
+const getRiskLevelType = (level: string) => {
+  const map: Record<string, any> = {
+    'safe': 'success',
+    'low': 'info',
+    'medium': 'warning',
+    'high': 'danger'
+  };
+  return map[level] || 'info';
+};
+
+const getRiskLevelText = (level: string) => {
+  const map: Record<string, string> = {
+    'safe': '安全',
+    'low': '低风险',
+    'medium': '中风险',
+    'high': '高风险'
+  };
+  return map[level] || level;
+};
+
+const getLayerName = (layer: string) => {
+  const map: Record<string, string> = {
+    'ac_engine': 'AC引擎',
+    'small_model': '小模型',
+    'large_model': '大模型'
+  };
+  return map[layer] || layer;
+};
+
+const getSeverityType = (severity: number) => {
+  if (severity === 1) return 'danger';
+  if (severity === 2) return 'warning';
+  if (severity === 3) return 'info';
+  return 'info';
 };
 </script>
 
@@ -156,31 +110,17 @@ const getConfidenceColor = (confidence: number) => {
   margin-top: 20px;
 }
 
-.result-meta {
-  display: flex;
-  justify-content: space-between;
-  margin: 16px 0;
-  padding: 12px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #606266;
+.result-info {
+  margin-top: 16px;
 }
 
-.result-layers {
-  margin-bottom: 16px;
+.detection-details {
+  margin-top: 20px;
 }
 
-.layer-content {
-  padding: 12px;
-}
-
-.raw-data pre {
-  background-color: #f5f7fa;
-  padding: 12px;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-size: 12px;
-  line-height: 1.5;
+.detection-details h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #303133;
 }
 </style>

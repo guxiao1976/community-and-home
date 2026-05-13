@@ -2,19 +2,22 @@ package svc
 
 import (
 	"github.com/guxiao/community-and-home/services/moderation/api/internal/config"
+	"github.com/guxiao/community-and-home/services/moderation/api/internal/middleware"
 	"github.com/guxiao/community-and-home/services/moderation/internal/auditlog"
 	"github.com/guxiao/community-and-home/services/moderation/internal/engine"
 	"github.com/guxiao/community-and-home/services/moderation/internal/llm"
 	"github.com/guxiao/community-and-home/services/moderation/internal/wordstore"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"github.com/zeromicro/go-zero/rest"
 )
 
 type ServiceContext struct {
-	Config      config.Config
-	WordStore   *wordstore.WordStore
-	TextEngine  *engine.TextEngine
-	ImageEngine *engine.ImageEngine
-	AuditLogger *auditlog.AuditLogger
+	Config         config.Config
+	AuthMiddleware rest.Middleware
+	WordStore      *wordstore.WordStore
+	TextEngine     *engine.TextEngine
+	ImageEngine    *engine.ImageEngine
+	AuditLogger    *auditlog.AuditLogger
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -40,7 +43,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		smallModel = llm.NewOllamaClient()
 	}
 	if c.LargeModel.Enable {
-		largeModel = llm.NewRemoteLLMClient()
+		largeModel = llm.NewRemoteLLMClient(c.LargeModel.Endpoint)
 	}
 
 	// Text engine
@@ -65,10 +68,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	auditLogger := auditlog.NewAuditLogger(logDB)
 
 	return &ServiceContext{
-		Config:      c,
-		WordStore:   ws,
-		TextEngine:  textEngine,
-		ImageEngine: imageEngine,
-		AuditLogger: auditLogger,
+		Config:         c,
+		AuthMiddleware: middleware.NewAuthMiddleware().Handle,
+		WordStore:      ws,
+		TextEngine:     textEngine,
+		ImageEngine:    imageEngine,
+		AuditLogger:    auditLogger,
 	}
 }

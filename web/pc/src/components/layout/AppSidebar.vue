@@ -64,7 +64,7 @@ import {
   Search,
   Fold,
   Expand,
-  Shield,
+  Warning,
   Monitor
 } from '@element-plus/icons-vue';
 import { useAppStore } from '@/stores/app';
@@ -169,7 +169,7 @@ const menuItems: MenuItem[] = [
   {
     path: '/moderation',
     title: '内容审核',
-    icon: Shield,
+    icon: Warning,
     children: [
       {
         path: '/moderation/test',
