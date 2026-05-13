@@ -320,9 +320,9 @@ export interface SyncProgress {
   total_counties: number
   current_county: number
   current_county_name?: string
-  total_streets: number
-  current_street: number
-  current_street_name?: string
+  total_keywords: number
+  current_keyword: number
+  current_keyword_str?: string
   total_pages: number
   current_page: number
   total_found: number
