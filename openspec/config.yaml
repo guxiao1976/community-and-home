@@ -1,7 +1,16 @@
 schema: spec-driven
+version: 1.0
+
+# Metadata
+metadata:
+  project_name: community-and-home
+  description: 社区与家园管理系统 - 基于 Go + Vue3 的微服务架构
+  repository: https://github.com/guxiao1976/community-and-home
+  documentation: docs/
+  maintainers:
+    - guxiao
 
 # Project context
-# 社区与家园管理系统 - 基于 Go + Vue3 的微服务架构
 context: |
   ## 项目概述
   社区与家园管理系统，采用微服务架构，前后端分离设计。
@@ -229,42 +238,143 @@ context: |
   - PROJECT_STRUCTURE.md：项目结构详解
   - DEPLOYMENT.md：部署文档
   - docs/api/：API 文档（identity-service.md、masterdata-service.md）
+  - openspec/README.md：OpenSpec 提案流程说明
+  - openspec/TEMPLATE.md：提案模板
+
+# Proposal lifecycle
+lifecycle:
+  statuses:
+    - draft: 草稿阶段，提案正在编写
+    - review: 评审阶段，等待团队评审
+    - approved: 已批准，可以开始实施
+    - in-progress: 实施中
+    - completed: 已完成
+    - cancelled: 已取消
+
+  required_files:
+    - .openspec.yaml: 提案元数据（必需）
+    - proposal.md: 提案说明（必需）
+    - tasks.md: 任务拆分（必需）
+    - design.md: 设计文档（可选，复杂提案建议添加）
+    - IMPLEMENTATION_SUMMARY.md: 实施总结（完成后必需）
+    - TEST_REPORT.md: 测试报告（完成后必需）
 
 # Per-artifact rules
 rules:
   proposal:
     - 提案应明确说明变更的业务价值和技术影响
+    - 必须包含 Why（为什么）、What Changes（变更内容）、Capabilities（能力变化）三个部分
     - 如果涉及多个服务，需要说明服务间的交互方式
-    - 如果涉及数据库变更，需要包含迁移策略
+    - 如果涉及数据库变更，需要包含迁移策略和回滚方案
     - 如果涉及 API 变更，需要考虑向后兼容性
-    - 包含"非目标"部分，明确不在本次变更范围内的内容
+    - 包含"Non-Goals"部分，明确不在本次变更范围内的内容
     - 提案长度控制在 500 字以内（中文）或 800 词以内（英文）
+    - 使用 kebab-case 命名提案目录（如：add-user-batch-import）
 
   tasks:
-    - 任务拆分应遵循单一职责原则
+    - 任务拆分应遵循单一职责原则，每个任务独立可测试
     - 每个任务预估时间不超过 2 小时
-    - 后端任务应包含：API 定义 → Logic 实现 → Model 操作 → 测试
+    - 任务应包含：任务描述、预估时间、验收标准
+    - 后端任务应包含：API 定义 → Logic 实现 → Model 操作 → 单元测试
     - 前端任务应包含：API 接口 → 组件开发 → 状态管理 → 路由配置
-    - 跨服务任务需要明确服务调用顺序
-    - 数据库变更任务需要包含回滚方案
+    - 跨服务任务需要明确服务调用顺序和依赖关系
+    - 数据库变更任务需要包含迁移脚本和回滚方案
+    - 任务状态使用 [ ] 未完成、[x] 已完成标记
+    - 按阶段组织任务：准备工作 → 后端开发 → 前端开发 → 测试验证 → 文档部署
 
   implementation:
-    - 后端代码必须使用 responsex.Response 返回响应
-    - goctl 生成的代码不要手动修改 types.go，应修改 .api 文件后重新生成
-    - 前端组件必须使用 Composition API
-    - 所有 API 调用必须通过 src/api/ 目录的封装函数
-    - 新增数据库表必须遵循命名规范（id_*, md_*）
-    - 提交前必须通过类型检查和代码格式化
-    - 重要功能变更需要添加单元测试
+    # 代码质量
+    - 提交前必须通过类型检查和代码格式化（Go: gofmt, TypeScript: prettier）
+    - 重要功能变更需要添加单元测试，测试覆盖率 > 80%
+    - 代码审查通过后才能合并到主分支
+    - 遵循项目代码规范（见 CLAUDE.md）
 
-    # Go-Zero 微服务开发规范
+    # 后端开发规范
+    - 后端代码必须使用 responsex.Response 返回响应，不使用 httpx.OkJsonCtx
+    - goctl 生成的代码不要手动修改 types.go，应修改 .api 文件后重新生成
+    - .api 文件中的 group 名称不能包含连字符，必须使用下划线
+    - 新增数据库表必须遵循命名规范（id_*, md_*, am_*）
+    - 所有 RPC 服务必须实现对应的 API 层 Logic 调用
+
+    # 前端开发规范
+    - 前端组件必须使用 Composition API，不使用 Options API
+    - 所有 API 调用必须通过 src/api/ 目录的封装函数
+    - 组件文件使用 PascalCase 命名
+    - 使用 TypeScript 严格模式
+
+    # Go-Zero 微服务开发规范（强制）
     - 创建数据库记录时，时间字段必须使用 time.Now()，不能使用零值 time.Time{}
     - MySQL JSON 类型字段必须使用 json.Marshal() 转换，不能直接存储字符串
     - 更新/删除操作后必须调用缓存失效方法（如 InvalidateCache）
-    - RPC 服务实现完成后，必须同步实现 API 层的 Logic 调用
     - 修改代码后必须重新编译并重启服务才能生效
 
     # API 联调测试规范
     - 新增 CRUD API 必须完整测试：创建 → 查询 → 更新 → 删除 → 验证删除
     - 测试前确认服务二进制文件是最新编译版本（检查文件时间戳）
     - 发现空实现（todo 注释）必须先实现再测试，不要假设功能已完成
+    - API 测试结果必须记录在提案的 TEST_REPORT.md 中
+
+    # 数据库变更规范
+    - 数据库迁移脚本必须包含 UP 和 DOWN 两部分
+    - 迁移脚本必须在开发环境测试通过后才能应用到生产
+    - 表结构变更必须考虑现有数据的兼容性
+    - 索引变更需要评估对性能的影响
+
+    # 文档规范
+    - 新增 API 必须更新 API 文档
+    - 架构变更必须更新 PROJECT_STRUCTURE.md
+    - 新增通用规范必须更新 CLAUDE.md 和 openspec/config.yaml
+    - 提案完成后必须编写 IMPLEMENTATION_SUMMARY.md 和 TEST_REPORT.md
+
+  review:
+    - 代码审查关注点：代码质量、安全性、性能、可维护性
+    - 提案审查关注点：业务价值、技术可行性、风险评估、资源投入
+    - 设计审查关注点：架构合理性、扩展性、兼容性
+    - 测试审查关注点：测试覆盖率、边界情况、性能指标
+
+  documentation:
+    - 提案完成后必须更新相关文档
+    - API 变更必须同步更新 API 文档
+    - 配置变更必须更新配置说明
+    - 重要技术决策必须记录在 design.md 或 IMPLEMENTATION_SUMMARY.md
+
+# Quality gates
+quality_gates:
+  proposal:
+    - 提案必须包含 Why、What Changes、Capabilities 三个部分
+    - 提案必须经过至少一人审查
+    - 涉及架构变更的提案需要技术负责人批准
+
+  implementation:
+    - 代码必须通过 lint 检查
+    - 单元测试覆盖率 > 80%（核心逻辑）
+    - 集成测试必须通过
+    - 代码审查必须通过
+
+  deployment:
+    - 必须在测试环境验证通过
+    - 必须有回滚方案
+    - 必须更新部署文档
+
+# Best practices
+best_practices:
+  proposal_naming:
+    - 使用 kebab-case 命名
+    - 名称应清晰描述变更内容
+    - 示例：add-user-batch-import, fix-login-timeout, refactor-api-response
+
+  task_breakdown:
+    - 小提案（1-2天）：单个功能、bug修复
+    - 中提案（3-5天）：模块开发、重构
+    - 大提案（1-2周）：新服务、架构调整
+
+  git_workflow:
+    - 提案分支命名：proposal/feature-name
+    - 提交信息格式：Conventional Commits（feat/fix/docs/refactor/test/chore）
+    - 提案完成后合并到 main 分支
+
+  testing:
+    - 单元测试：测试单个函数或方法
+    - 集成测试：测试模块间交互
+    - 端到端测试：测试完整业务流程
+    - 性能测试：测试响应时间和并发能力
