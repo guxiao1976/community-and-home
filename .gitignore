@@ -33,6 +33,11 @@ minio/data/
 *-api
 *-rpc
 
+# Compiled binaries
+services/ai-model/rpc/rpc
+services/ai-model/api/bin/aimodelapi
+services/ai-model/rpc/bin/aimodel
+
 # ==================== Python ====================
 __pycache__/
 *.py[cod]
