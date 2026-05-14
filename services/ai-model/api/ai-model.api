@@ -1,0 +1,436 @@
+syntax = "v1"
+
+info (
+	title:   "AI Model Management API"
+	desc:    "AI 模型统一管理服务 HTTP API"
+	author:  "guxiao"
+	version: "v1.0"
+)
+
+type (
+	// 通用响应
+	BaseResponse {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+	// 模型调用请求
+	ModelCallRequest {
+		ModelName    string                 `json:"model_name"`
+		Prompt       string                 `json:"prompt"`
+		SystemPrompt string                 `json:"system_prompt,optional"`
+		MaxTokens    int32                  `json:"max_tokens,optional"`
+		Temperature  float32                `json:"temperature,optional"`
+		Parameters   map[string]interface{} `json:"parameters,optional"`
+	}
+	// 模型调用响应
+	ModelCallResponse {
+		BaseResponse
+		Data ModelCallData `json:"data,omitempty"`
+	}
+	ModelCallData {
+		Content      string  `json:"content"`
+		InputTokens  int32   `json:"input_tokens"`
+		OutputTokens int32   `json:"output_tokens"`
+		Cost         float64 `json:"cost"`
+		Latency      int64   `json:"latency"` // 毫秒
+		ModelVersion string  `json:"model_version"`
+	}
+	// 批量调用请求
+	ModelBatchRequest {
+		Requests []ModelCallRequest `json:"requests"`
+	}
+	// 批量调用响应
+	ModelBatchResponse {
+		BaseResponse
+		Data ModelBatchData `json:"data,omitempty"`
+	}
+	ModelBatchData {
+		Results       []ModelCallData `json:"results"`
+		TotalRequests int32           `json:"total_requests"`
+		SuccessCount  int32           `json:"success_count"`
+	}
+	// 获取可用模型请求
+	GetModelsRequest {
+		Provider string `form:"provider,optional"`
+		Type     string `form:"type,optional"`
+		Status   int64  `form:"status,optional"`
+	}
+	// 获取可用模型响应
+	GetModelsResponse {
+		BaseResponse
+		Data ModelsData `json:"data,omitempty"`
+	}
+	ModelsData {
+		Models []ModelInfo `json:"models"`
+		Total  int32       `json:"total"`
+	}
+	ModelInfo {
+		Id                    int64   `json:"id"`
+		Name                  string  `json:"name"`
+		DisplayName           string  `json:"display_name"`
+		Provider              string  `json:"provider"`
+		Type                  string  `json:"type"`
+		Endpoint              string  `json:"endpoint,omitempty"`
+		MaxTokens             int32   `json:"max_tokens"`
+		SupportedFeatures     string  `json:"supported_features"`
+		CostPer1KInputTokens  float64 `json:"cost_per_1k_input_tokens"`
+		CostPer1KOutputTokens float64 `json:"cost_per_1k_output_tokens"`
+		Status                int64   `json:"status"`
+		Description           string  `json:"description,omitempty"`
+	}
+	// 健康检查响应
+	HealthCheckResponse {
+		BaseResponse
+		Data HealthCheckData `json:"data,omitempty"`
+	}
+	HealthCheckData {
+		Status string                 `json:"status"`
+		Models map[string]ModelHealth `json:"models"`
+	}
+	ModelHealth {
+		Status       string `json:"status"`
+		LastCheck    string `json:"last_check"`
+		ResponseTime int64  `json:"response_time"`
+		ErrorMessage string `json:"error_message,omitempty"`
+	}
+	// 模型配置管理
+	CreateModelRequest {
+		Name                  string  `json:"name"`
+		DisplayName           string  `json:"display_name"`
+		Provider              string  `json:"provider"`
+		Type                  string  `json:"type"`
+		Endpoint              string  `json:"endpoint,optional"`
+		MaxTokens             int32   `json:"max_tokens"`
+		SupportedFeatures     string  `json:"supported_features"`
+		CostPer1KInputTokens  float64 `json:"cost_per_1k_input_tokens"`
+		CostPer1KOutputTokens float64 `json:"cost_per_1k_output_tokens"`
+		Description           string  `json:"description,optional"`
+	}
+	UpdateModelRequest {
+		Id                    int64   `json:"id"`
+		DisplayName           string  `json:"display_name,optional"`
+		Endpoint              string  `json:"endpoint,optional"`
+		MaxTokens             int32   `json:"max_tokens,optional"`
+		SupportedFeatures     string  `json:"supported_features,optional"`
+		CostPer1KInputTokens  float64 `json:"cost_per_1k_input_tokens,optional"`
+		CostPer1KOutputTokens float64 `json:"cost_per_1k_output_tokens,optional"`
+		Status                int64   `json:"status,optional"`
+		Description           string  `json:"description,optional"`
+	}
+	GetModelRequest {
+		Id int64 `path:"id"`
+	}
+	DeleteModelRequest {
+		Id int64 `path:"id"`
+	}
+	ModelResponse {
+		BaseResponse
+		Data ModelInfo `json:"data,omitempty"`
+	}
+	// API Key 管理
+	CreateAPIKeyRequest {
+		ModelId     int64  `json:"model_id"`
+		KeyName     string `json:"key_name"`
+		ApiKey      string `json:"api_key"`
+		Description string `json:"description,optional"`
+	}
+	UpdateAPIKeyRequest {
+		Id          int64  `json:"id"`
+		KeyName     string `json:"key_name,optional"`
+		ApiKey      string `json:"api_key,optional"`
+		Status      int64  `json:"status,optional"`
+		Description string `json:"description,optional"`
+	}
+	DeleteAPIKeyRequest {
+		Id int64 `path:"id"`
+	}
+	ListAPIKeysRequest {
+		ModelId int64 `form:"model_id,optional"`
+		Status  int64 `form:"status,optional"`
+	}
+	GetAPIKeyRequest {
+		Id int64 `path:"id"`
+	}
+	APIKeyInfo {
+		Id          int64  `json:"id"`
+		ModelId     int64  `json:"model_id"`
+		KeyName     string `json:"key_name"`
+		Status      int64  `json:"status"`
+		Description string `json:"description,omitempty"`
+		CreatedAt   string `json:"created_at"`
+		UpdatedAt   string `json:"updated_at"`
+	}
+	APIKeyResponse {
+		BaseResponse
+		Data APIKeyInfo `json:"data,omitempty"`
+	}
+	APIKeysResponse {
+		BaseResponse
+		Data APIKeysData `json:"data,omitempty"`
+	}
+	APIKeysData {
+		Keys  []APIKeyInfo `json:"keys"`
+		Total int32        `json:"total"`
+	}
+	// 提示词模板管理
+	CreateTemplateRequest {
+		Name        string `json:"name"`
+		Content     string `json:"content"`
+		Category    string `json:"category"`
+		Description string `json:"description,optional"`
+	}
+	UpdateTemplateRequest {
+		Id          int64  `json:"id"`
+		Name        string `json:"name,optional"`
+		Content     string `json:"content,optional"`
+		Category    string `json:"category,optional"`
+		Description string `json:"description,optional"`
+	}
+	DeleteTemplateRequest {
+		Id int64 `path:"id"`
+	}
+	ListTemplatesRequest {
+		Category string `form:"category,optional"`
+		Status   int64  `form:"status,optional"`
+	}
+	GetTemplateRequest {
+		Id int64 `path:"id"`
+	}
+	TemplateInfo {
+		Id          int64  `json:"id"`
+		Name        string `json:"name"`
+		Content     string `json:"content"`
+		Category    string `json:"category"`
+		Description string `json:"description,omitempty"`
+		CreatedAt   string `json:"created_at"`
+		UpdatedAt   string `json:"updated_at"`
+	}
+	TemplateResponse {
+		BaseResponse
+		Data TemplateInfo `json:"data,omitempty"`
+	}
+	TemplatesResponse {
+		BaseResponse
+		Data TemplatesData `json:"data,omitempty"`
+	}
+	TemplatesData {
+		Templates []TemplateInfo `json:"templates"`
+		Total     int32          `json:"total"`
+	}
+	// 成本统计
+	GetCostStatsRequest {
+		ModelId   int64  `form:"model_id,optional"`
+		StartDate string `form:"start_date,optional"`
+		EndDate   string `form:"end_date,optional"`
+	}
+	CostStatsResponse {
+		BaseResponse
+		Data CostStatsData `json:"data,omitempty"`
+	}
+	CostStatsData {
+		TotalCost     float64            `json:"total_cost"`
+		DailyCost     float64            `json:"daily_cost"`
+		MonthlyCost   float64            `json:"monthly_cost"`
+		ModelCosts    map[string]float64 `json:"model_costs"`
+		TotalRequests int64              `json:"total_requests"`
+		TotalTokens   int64              `json:"total_tokens"`
+	}
+	// 使用统计
+	GetUsageStatisticsRequest {
+		ModelId   int64  `form:"model_id,optional"`
+		StartDate string `form:"start_date,optional"`
+		EndDate   string `form:"end_date,optional"`
+		Page      int32  `form:"page,default=1"`
+		PageSize  int32  `form:"page_size,default=10"`
+	}
+	UsageStatisticsInfo {
+		Id           int64   `json:"id"`
+		ModelId      int64   `json:"model_id"`
+		Date         string  `json:"date"`
+		TotalCalls   int64   `json:"total_calls"`
+		SuccessCalls int64   `json:"success_calls"`
+		FailedCalls  int64   `json:"failed_calls"`
+		TotalTokens  int64   `json:"total_tokens"`
+		InputTokens  int64   `json:"input_tokens"`
+		OutputTokens int64   `json:"output_tokens"`
+		TotalCost    float64 `json:"total_cost"`
+		AvgLatency   float64 `json:"avg_latency"`
+		CreatedAt    string  `json:"created_at"`
+		UpdatedAt    string  `json:"updated_at"`
+	}
+	UsageStatisticsResponse {
+		BaseResponse
+		Data UsageStatisticsData `json:"data,omitempty"`
+	}
+	UsageStatisticsData {
+		Statistics []UsageStatisticsInfo `json:"statistics"`
+		Total      int32                 `json:"total"`
+	}
+	// 成本预警配置
+	UpdateAlertConfigRequest {
+		DailyLimit           float64 `json:"daily_limit,optional"`
+		MonthlyLimit         float64 `json:"monthly_limit,optional"`
+		AlertThreshold       float64 `json:"alert_threshold,optional"`
+		EnableNotification   int64   `json:"enable_notification,optional"`
+		NotificationChannels string  `json:"notification_channels,optional"`
+	}
+	AlertConfigResponse {
+		BaseResponse
+		Data AlertConfigData `json:"data,omitempty"`
+	}
+	AlertConfigData {
+		DailyLimit           float64 `json:"daily_limit"`
+		MonthlyLimit         float64 `json:"monthly_limit"`
+		AlertThreshold       float64 `json:"alert_threshold"`
+		EnableNotification   int64   `json:"enable_notification"`
+		NotificationChannels string  `json:"notification_channels"`
+	}
+	// 预警记录
+	ListAlertRecordsRequest {
+		Status    string `form:"status,optional"`
+		StartDate string `form:"start_date,optional"`
+		EndDate   string `form:"end_date,optional"`
+	}
+	AlertRecordsResponse {
+		BaseResponse
+		Data AlertRecordsData `json:"data,omitempty"`
+	}
+	AlertRecordsData {
+		Records []AlertRecordInfo `json:"records"`
+		Total   int32             `json:"total"`
+	}
+	AlertRecordInfo {
+		Id          int64   `json:"id"`
+		AlertType   string  `json:"alert_type"`
+		Threshold   float64 `json:"threshold"`
+		ActualValue float64 `json:"actual_value"`
+		Message     string  `json:"message"`
+		ModelId     int64   `json:"model_id,omitempty"`
+		ModelName   string  `json:"model_name,omitempty"`
+		Status      string  `json:"status"`
+		AlertTime   string  `json:"alert_time"`
+	}
+)
+
+@server (
+	prefix: /api/v1
+	group:  model
+)
+service aimodelapi {
+	@doc "调用模型"
+	@handler callModel
+	post /model/call (ModelCallRequest) returns (ModelCallResponse)
+
+	@doc "批量调用模型"
+	@handler callModelBatch
+	post /model/call/batch (ModelBatchRequest) returns (ModelBatchResponse)
+
+	@doc "获取可用模型列表"
+	@handler getModels
+	get /models (GetModelsRequest) returns (GetModelsResponse)
+
+	@doc "获取模型详情"
+	@handler getModel
+	get /model/:id (GetModelRequest) returns (ModelResponse)
+
+	@doc "健康检查"
+	@handler healthCheck
+	get /health returns (HealthCheckResponse)
+
+	@doc "创建模型配置"
+	@handler createModel
+	post /model (CreateModelRequest) returns (ModelResponse)
+
+	@doc "更新模型配置"
+	@handler updateModel
+	put /model (UpdateModelRequest) returns (ModelResponse)
+
+	@doc "删除模型配置"
+	@handler deleteModel
+	delete /model/:id (DeleteModelRequest) returns (BaseResponse)
+}
+
+@server (
+	prefix: /api/v1
+	group:  apikey
+)
+service aimodelapi {
+	@doc "创建 API Key"
+	@handler createAPIKey
+	post /apikey (CreateAPIKeyRequest) returns (APIKeyResponse)
+
+	@doc "更新 API Key"
+	@handler updateAPIKey
+	put /apikey (UpdateAPIKeyRequest) returns (APIKeyResponse)
+
+	@doc "删除 API Key"
+	@handler deleteAPIKey
+	delete /apikey/:id (DeleteAPIKeyRequest) returns (BaseResponse)
+
+	@doc "获取 API Key 列表"
+	@handler listAPIKeys
+	get /apikeys (ListAPIKeysRequest) returns (APIKeysResponse)
+
+	@doc "获取 API Key 详情"
+	@handler getAPIKey
+	get /apikey/:id (GetAPIKeyRequest) returns (APIKeyResponse)
+}
+
+@server (
+	prefix: /api/v1
+	group:  template
+)
+service aimodelapi {
+	@doc "创建提示词模板"
+	@handler createTemplate
+	post /template (CreateTemplateRequest) returns (TemplateResponse)
+
+	@doc "更新提示词模板"
+	@handler updateTemplate
+	put /template (UpdateTemplateRequest) returns (TemplateResponse)
+
+	@doc "删除提示词模板"
+	@handler deleteTemplate
+	delete /template/:id (DeleteTemplateRequest) returns (BaseResponse)
+
+	@doc "获取提示词模板列表"
+	@handler listTemplates
+	get /templates (ListTemplatesRequest) returns (TemplatesResponse)
+
+	@doc "获取提示词模板详情"
+	@handler getTemplate
+	get /template/:id (GetTemplateRequest) returns (TemplateResponse)
+}
+
+@server (
+	prefix: /api/v1
+	group:  cost
+)
+service aimodelapi {
+	@doc "获取成本统计"
+	@handler getCostStats
+	get /cost/stats (GetCostStatsRequest) returns (CostStatsResponse)
+
+	@doc "更新预警配置"
+	@handler updateAlertConfig
+	put /cost/alert/config (UpdateAlertConfigRequest) returns (AlertConfigResponse)
+
+	@doc "获取预警配置"
+	@handler getAlertConfig
+	get /cost/alert/config returns (AlertConfigResponse)
+
+	@doc "获取预警记录"
+	@handler listAlertRecords
+	get /cost/alert/records (ListAlertRecordsRequest) returns (AlertRecordsResponse)
+}
+
+@server (
+	prefix: /api/v1
+	group:  statistics
+)
+service aimodelapi {
+	@doc "获取使用统计"
+	@handler getUsageStatistics
+	get /statistics (GetUsageStatisticsRequest) returns (UsageStatisticsResponse)
+}
+

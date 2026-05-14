@@ -21,31 +21,33 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ============ 文本审核 ============
-type TextModerationRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Content         string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`                                                                             // 待审核文本
-	CheckCategories []string               `protobuf:"bytes,2,rep,name=check_categories,json=checkCategories,proto3" json:"check_categories,omitempty"`                                      // 检查维度（空=全部）
-	Context         string                 `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`                                                                             // 上下文（可选）
-	Metadata        map[string]string      `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 元数据
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+// ============ 通用模型调用 ============
+type ModelCallRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ModelName     string                 `protobuf:"bytes,1,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`                                                            // 模型名称：claude-opus-4/gpt-4
+	Prompt        string                 `protobuf:"bytes,2,opt,name=prompt,proto3" json:"prompt,omitempty"`                                                                                   // 提示词
+	Parameters    map[string]string      `protobuf:"bytes,3,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 参数：temperature/max_tokens等
+	TemplateId    string                 `protobuf:"bytes,4,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`                                                         // 模板ID（可选）
+	Variables     map[string]string      `protobuf:"bytes,5,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`   // 模板变量（可选）
+	CallerService string                 `protobuf:"bytes,6,opt,name=caller_service,json=callerService,proto3" json:"caller_service,omitempty"`                                                // 调用方服务名
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *TextModerationRequest) Reset() {
-	*x = TextModerationRequest{}
+func (x *ModelCallRequest) Reset() {
+	*x = ModelCallRequest{}
 	mi := &file_pb_ai_model_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *TextModerationRequest) String() string {
+func (x *ModelCallRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TextModerationRequest) ProtoMessage() {}
+func (*ModelCallRequest) ProtoMessage() {}
 
-func (x *TextModerationRequest) ProtoReflect() protoreflect.Message {
+func (x *ModelCallRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pb_ai_model_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -57,155 +59,170 @@ func (x *TextModerationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use TextModerationRequest.ProtoReflect.Descriptor instead.
-func (*TextModerationRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ModelCallRequest.ProtoReflect.Descriptor instead.
+func (*ModelCallRequest) Descriptor() ([]byte, []int) {
 	return file_pb_ai_model_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *TextModerationRequest) GetContent() string {
+func (x *ModelCallRequest) GetModelName() string {
+	if x != nil {
+		return x.ModelName
+	}
+	return ""
+}
+
+func (x *ModelCallRequest) GetPrompt() string {
+	if x != nil {
+		return x.Prompt
+	}
+	return ""
+}
+
+func (x *ModelCallRequest) GetParameters() map[string]string {
+	if x != nil {
+		return x.Parameters
+	}
+	return nil
+}
+
+func (x *ModelCallRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *ModelCallRequest) GetVariables() map[string]string {
+	if x != nil {
+		return x.Variables
+	}
+	return nil
+}
+
+func (x *ModelCallRequest) GetCallerService() string {
+	if x != nil {
+		return x.CallerService
+	}
+	return ""
+}
+
+type ModelCallResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Content       string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`                                // 响应内容
+	InputTokens   int32                  `protobuf:"varint,2,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`    // 输入token数
+	OutputTokens  int32                  `protobuf:"varint,3,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"` // 输出token数
+	Cost          float64                `protobuf:"fixed64,4,opt,name=cost,proto3" json:"cost,omitempty"`                                    // 成本(USD)
+	LatencyMs     int64                  `protobuf:"varint,5,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"`          // 耗时(ms)
+	ModelUsed     string                 `protobuf:"bytes,6,opt,name=model_used,json=modelUsed,proto3" json:"model_used,omitempty"`           // 实际使用的模型
+	RequestId     string                 `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`           // 请求ID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModelCallResponse) Reset() {
+	*x = ModelCallResponse{}
+	mi := &file_pb_ai_model_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModelCallResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModelCallResponse) ProtoMessage() {}
+
+func (x *ModelCallResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModelCallResponse.ProtoReflect.Descriptor instead.
+func (*ModelCallResponse) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ModelCallResponse) GetContent() string {
 	if x != nil {
 		return x.Content
 	}
 	return ""
 }
 
-func (x *TextModerationRequest) GetCheckCategories() []string {
+func (x *ModelCallResponse) GetInputTokens() int32 {
 	if x != nil {
-		return x.CheckCategories
-	}
-	return nil
-}
-
-func (x *TextModerationRequest) GetContext() string {
-	if x != nil {
-		return x.Context
-	}
-	return ""
-}
-
-func (x *TextModerationRequest) GetMetadata() map[string]string {
-	if x != nil {
-		return x.Metadata
-	}
-	return nil
-}
-
-type TextModerationResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsSafe        bool                   `protobuf:"varint,1,opt,name=is_safe,json=isSafe,proto3" json:"is_safe,omitempty"`                  // 是否安全
-	RiskLevel     string                 `protobuf:"bytes,2,opt,name=risk_level,json=riskLevel,proto3" json:"risk_level,omitempty"`          // high/medium/low/safe
-	Categories    []string               `protobuf:"bytes,3,rep,name=categories,proto3" json:"categories,omitempty"`                         // 命中的违规类型
-	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`                                 // 原因
-	Confidence    float64                `protobuf:"fixed64,5,opt,name=confidence,proto3" json:"confidence,omitempty"`                       // 置信度 0-1
-	LatencyMs     int64                  `protobuf:"varint,6,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"`         // 推理耗时(ms)
-	ModelVersion  string                 `protobuf:"bytes,7,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"` // 模型版本
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TextModerationResponse) Reset() {
-	*x = TextModerationResponse{}
-	mi := &file_pb_ai_model_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TextModerationResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TextModerationResponse) ProtoMessage() {}
-
-func (x *TextModerationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TextModerationResponse.ProtoReflect.Descriptor instead.
-func (*TextModerationResponse) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *TextModerationResponse) GetIsSafe() bool {
-	if x != nil {
-		return x.IsSafe
-	}
-	return false
-}
-
-func (x *TextModerationResponse) GetRiskLevel() string {
-	if x != nil {
-		return x.RiskLevel
-	}
-	return ""
-}
-
-func (x *TextModerationResponse) GetCategories() []string {
-	if x != nil {
-		return x.Categories
-	}
-	return nil
-}
-
-func (x *TextModerationResponse) GetReason() string {
-	if x != nil {
-		return x.Reason
-	}
-	return ""
-}
-
-func (x *TextModerationResponse) GetConfidence() float64 {
-	if x != nil {
-		return x.Confidence
+		return x.InputTokens
 	}
 	return 0
 }
 
-func (x *TextModerationResponse) GetLatencyMs() int64 {
+func (x *ModelCallResponse) GetOutputTokens() int32 {
+	if x != nil {
+		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *ModelCallResponse) GetCost() float64 {
+	if x != nil {
+		return x.Cost
+	}
+	return 0
+}
+
+func (x *ModelCallResponse) GetLatencyMs() int64 {
 	if x != nil {
 		return x.LatencyMs
 	}
 	return 0
 }
 
-func (x *TextModerationResponse) GetModelVersion() string {
+func (x *ModelCallResponse) GetModelUsed() string {
 	if x != nil {
-		return x.ModelVersion
+		return x.ModelUsed
 	}
 	return ""
 }
 
-// ============ 图片审核（预留）============
-type ImageModerationRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	ImageData       []byte                 `protobuf:"bytes,1,opt,name=image_data,json=imageData,proto3" json:"image_data,omitempty"` // 图片二进制
-	ImageUrl        string                 `protobuf:"bytes,2,opt,name=image_url,json=imageUrl,proto3" json:"image_url,omitempty"`    // 或图片URL
-	CheckCategories []string               `protobuf:"bytes,3,rep,name=check_categories,json=checkCategories,proto3" json:"check_categories,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+func (x *ModelCallResponse) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
 }
 
-func (x *ImageModerationRequest) Reset() {
-	*x = ImageModerationRequest{}
+// ============ 批量调用 ============
+type ModelBatchRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ModelName     string                 `protobuf:"bytes,1,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`                                                            // 模型名称
+	Prompts       []string               `protobuf:"bytes,2,rep,name=prompts,proto3" json:"prompts,omitempty"`                                                                                 // 提示词列表
+	Parameters    map[string]string      `protobuf:"bytes,3,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 参数
+	CallerService string                 `protobuf:"bytes,4,opt,name=caller_service,json=callerService,proto3" json:"caller_service,omitempty"`                                                // 调用方服务名
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModelBatchRequest) Reset() {
+	*x = ModelBatchRequest{}
 	mi := &file_pb_ai_model_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ImageModerationRequest) String() string {
+func (x *ModelBatchRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ImageModerationRequest) ProtoMessage() {}
+func (*ModelBatchRequest) ProtoMessage() {}
 
-func (x *ImageModerationRequest) ProtoReflect() protoreflect.Message {
+func (x *ModelBatchRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pb_ai_model_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -217,59 +234,64 @@ func (x *ImageModerationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ImageModerationRequest.ProtoReflect.Descriptor instead.
-func (*ImageModerationRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ModelBatchRequest.ProtoReflect.Descriptor instead.
+func (*ModelBatchRequest) Descriptor() ([]byte, []int) {
 	return file_pb_ai_model_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ImageModerationRequest) GetImageData() []byte {
+func (x *ModelBatchRequest) GetModelName() string {
 	if x != nil {
-		return x.ImageData
-	}
-	return nil
-}
-
-func (x *ImageModerationRequest) GetImageUrl() string {
-	if x != nil {
-		return x.ImageUrl
+		return x.ModelName
 	}
 	return ""
 }
 
-func (x *ImageModerationRequest) GetCheckCategories() []string {
+func (x *ModelBatchRequest) GetPrompts() []string {
 	if x != nil {
-		return x.CheckCategories
+		return x.Prompts
 	}
 	return nil
 }
 
-type ImageModerationResponse struct {
+func (x *ModelBatchRequest) GetParameters() map[string]string {
+	if x != nil {
+		return x.Parameters
+	}
+	return nil
+}
+
+func (x *ModelBatchRequest) GetCallerService() string {
+	if x != nil {
+		return x.CallerService
+	}
+	return ""
+}
+
+type ModelBatchResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsSafe        bool                   `protobuf:"varint,1,opt,name=is_safe,json=isSafe,proto3" json:"is_safe,omitempty"`
-	RiskLevel     string                 `protobuf:"bytes,2,opt,name=risk_level,json=riskLevel,proto3" json:"risk_level,omitempty"`
-	Categories    []string               `protobuf:"bytes,3,rep,name=categories,proto3" json:"categories,omitempty"`
-	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
-	Confidence    float64                `protobuf:"fixed64,5,opt,name=confidence,proto3" json:"confidence,omitempty"`
-	LatencyMs     int64                  `protobuf:"varint,6,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"`
-	ModelVersion  string                 `protobuf:"bytes,7,opt,name=model_version,json=modelVersion,proto3" json:"model_version,omitempty"`
+	Results       []*ModelCallResponse   `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`                        // 结果列表
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`                           // 总数
+	Success       int32                  `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`                       // 成功数
+	Failed        int32                  `protobuf:"varint,4,opt,name=failed,proto3" json:"failed,omitempty"`                         // 失败数
+	TotalCost     float64                `protobuf:"fixed64,5,opt,name=total_cost,json=totalCost,proto3" json:"total_cost,omitempty"` // 总成本
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ImageModerationResponse) Reset() {
-	*x = ImageModerationResponse{}
+func (x *ModelBatchResponse) Reset() {
+	*x = ModelBatchResponse{}
 	mi := &file_pb_ai_model_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ImageModerationResponse) String() string {
+func (x *ModelBatchResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ImageModerationResponse) ProtoMessage() {}
+func (*ModelBatchResponse) ProtoMessage() {}
 
-func (x *ImageModerationResponse) ProtoReflect() protoreflect.Message {
+func (x *ModelBatchResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pb_ai_model_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -281,58 +303,265 @@ func (x *ImageModerationResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ImageModerationResponse.ProtoReflect.Descriptor instead.
-func (*ImageModerationResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ModelBatchResponse.ProtoReflect.Descriptor instead.
+func (*ModelBatchResponse) Descriptor() ([]byte, []int) {
 	return file_pb_ai_model_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ImageModerationResponse) GetIsSafe() bool {
+func (x *ModelBatchResponse) GetResults() []*ModelCallResponse {
 	if x != nil {
-		return x.IsSafe
-	}
-	return false
-}
-
-func (x *ImageModerationResponse) GetRiskLevel() string {
-	if x != nil {
-		return x.RiskLevel
-	}
-	return ""
-}
-
-func (x *ImageModerationResponse) GetCategories() []string {
-	if x != nil {
-		return x.Categories
+		return x.Results
 	}
 	return nil
 }
 
-func (x *ImageModerationResponse) GetReason() string {
+func (x *ModelBatchResponse) GetTotal() int32 {
 	if x != nil {
-		return x.Reason
-	}
-	return ""
-}
-
-func (x *ImageModerationResponse) GetConfidence() float64 {
-	if x != nil {
-		return x.Confidence
+		return x.Total
 	}
 	return 0
 }
 
-func (x *ImageModerationResponse) GetLatencyMs() int64 {
+func (x *ModelBatchResponse) GetSuccess() int32 {
 	if x != nil {
-		return x.LatencyMs
+		return x.Success
 	}
 	return 0
 }
 
-func (x *ImageModerationResponse) GetModelVersion() string {
+func (x *ModelBatchResponse) GetFailed() int32 {
 	if x != nil {
-		return x.ModelVersion
+		return x.Failed
+	}
+	return 0
+}
+
+func (x *ModelBatchResponse) GetTotalCost() float64 {
+	if x != nil {
+		return x.TotalCost
+	}
+	return 0
+}
+
+// ============ 获取模型列表 ============
+type GetModelsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`                           // 提供商过滤（可选）
+	OnlyHealthy   bool                   `protobuf:"varint,2,opt,name=only_healthy,json=onlyHealthy,proto3" json:"only_healthy,omitempty"` // 仅返回健康的模型
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetModelsRequest) Reset() {
+	*x = GetModelsRequest{}
+	mi := &file_pb_ai_model_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetModelsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetModelsRequest) ProtoMessage() {}
+
+func (x *GetModelsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetModelsRequest.ProtoReflect.Descriptor instead.
+func (*GetModelsRequest) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetModelsRequest) GetProvider() string {
+	if x != nil {
+		return x.Provider
 	}
 	return ""
+}
+
+func (x *GetModelsRequest) GetOnlyHealthy() bool {
+	if x != nil {
+		return x.OnlyHealthy
+	}
+	return false
+}
+
+type GetModelsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Models        []*ModelInfo           `protobuf:"bytes,1,rep,name=models,proto3" json:"models,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetModelsResponse) Reset() {
+	*x = GetModelsResponse{}
+	mi := &file_pb_ai_model_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetModelsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetModelsResponse) ProtoMessage() {}
+
+func (x *GetModelsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetModelsResponse.ProtoReflect.Descriptor instead.
+func (*GetModelsResponse) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetModelsResponse) GetModels() []*ModelInfo {
+	if x != nil {
+		return x.Models
+	}
+	return nil
+}
+
+type ModelInfo struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Type                   string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`         // cloud/local
+	Provider               string                 `protobuf:"bytes,4,opt,name=provider,proto3" json:"provider,omitempty"` // claude/openai/ollama
+	DisplayName            string                 `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Capabilities           []string               `protobuf:"bytes,6,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	CostPer_1KInputTokens  float64                `protobuf:"fixed64,7,opt,name=cost_per_1k_input_tokens,json=costPer1kInputTokens,proto3" json:"cost_per_1k_input_tokens,omitempty"`
+	CostPer_1KOutputTokens float64                `protobuf:"fixed64,8,opt,name=cost_per_1k_output_tokens,json=costPer1kOutputTokens,proto3" json:"cost_per_1k_output_tokens,omitempty"`
+	HealthStatus           string                 `protobuf:"bytes,9,opt,name=health_status,json=healthStatus,proto3" json:"health_status,omitempty"` // healthy/degraded/unhealthy
+	Priority               int32                  `protobuf:"varint,10,opt,name=priority,proto3" json:"priority,omitempty"`
+	Enabled                bool                   `protobuf:"varint,11,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ModelInfo) Reset() {
+	*x = ModelInfo{}
+	mi := &file_pb_ai_model_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModelInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModelInfo) ProtoMessage() {}
+
+func (x *ModelInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModelInfo.ProtoReflect.Descriptor instead.
+func (*ModelInfo) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ModelInfo) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ModelInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetCapabilities() []string {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+func (x *ModelInfo) GetCostPer_1KInputTokens() float64 {
+	if x != nil {
+		return x.CostPer_1KInputTokens
+	}
+	return 0
+}
+
+func (x *ModelInfo) GetCostPer_1KOutputTokens() float64 {
+	if x != nil {
+		return x.CostPer_1KOutputTokens
+	}
+	return 0
+}
+
+func (x *ModelInfo) GetHealthStatus() string {
+	if x != nil {
+		return x.HealthStatus
+	}
+	return ""
+}
+
+func (x *ModelInfo) GetPriority() int32 {
+	if x != nil {
+		return x.Priority
+	}
+	return 0
+}
+
+func (x *ModelInfo) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
 }
 
 // ============ 健康检查 ============
@@ -344,7 +573,7 @@ type HealthCheckRequest struct {
 
 func (x *HealthCheckRequest) Reset() {
 	*x = HealthCheckRequest{}
-	mi := &file_pb_ai_model_proto_msgTypes[4]
+	mi := &file_pb_ai_model_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -356,7 +585,7 @@ func (x *HealthCheckRequest) String() string {
 func (*HealthCheckRequest) ProtoMessage() {}
 
 func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[4]
+	mi := &file_pb_ai_model_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -369,21 +598,22 @@ func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
 func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{4}
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{7}
 }
 
 type HealthCheckResponse struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Status        string                  `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`                                                                           // ok/degraded/error
-	Models        map[string]*ModelStatus `protobuf:"bytes,2,rep,name=models,proto3" json:"models,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 各模型状态
-	UptimeSeconds int64                   `protobuf:"varint,3,opt,name=uptime_seconds,json=uptimeSeconds,proto3" json:"uptime_seconds,omitempty"`
+	state         protoimpl.MessageState        `protogen:"open.v1"`
+	Status        string                        `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"` // healthy/unhealthy
+	Models        map[string]*ModelHealthStatus `protobuf:"bytes,2,rep,name=models,proto3" json:"models,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	UptimeSeconds int64                         `protobuf:"varint,3,opt,name=uptime_seconds,json=uptimeSeconds,proto3" json:"uptime_seconds,omitempty"`
+	Version       string                        `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HealthCheckResponse) Reset() {
 	*x = HealthCheckResponse{}
-	mi := &file_pb_ai_model_proto_msgTypes[5]
+	mi := &file_pb_ai_model_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -395,7 +625,7 @@ func (x *HealthCheckResponse) String() string {
 func (*HealthCheckResponse) ProtoMessage() {}
 
 func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[5]
+	mi := &file_pb_ai_model_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -408,7 +638,7 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{5}
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *HealthCheckResponse) GetStatus() string {
@@ -418,7 +648,7 @@ func (x *HealthCheckResponse) GetStatus() string {
 	return ""
 }
 
-func (x *HealthCheckResponse) GetModels() map[string]*ModelStatus {
+func (x *HealthCheckResponse) GetModels() map[string]*ModelHealthStatus {
 	if x != nil {
 		return x.Models
 	}
@@ -432,33 +662,39 @@ func (x *HealthCheckResponse) GetUptimeSeconds() int64 {
 	return 0
 }
 
-type ModelStatus struct {
+func (x *HealthCheckResponse) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+type ModelHealthStatus struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
-	Loaded        bool                   `protobuf:"varint,3,opt,name=loaded,proto3" json:"loaded,omitempty"`
-	MemoryMb      int64                  `protobuf:"varint,4,opt,name=memory_mb,json=memoryMb,proto3" json:"memory_mb,omitempty"`
-	AvgLatencyMs  float64                `protobuf:"fixed64,5,opt,name=avg_latency_ms,json=avgLatencyMs,proto3" json:"avg_latency_ms,omitempty"`
-	TotalRequests int64                  `protobuf:"varint,6,opt,name=total_requests,json=totalRequests,proto3" json:"total_requests,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	AvgLatencyMs  int64                  `protobuf:"varint,3,opt,name=avg_latency_ms,json=avgLatencyMs,proto3" json:"avg_latency_ms,omitempty"`
+	TotalRequests int64                  `protobuf:"varint,4,opt,name=total_requests,json=totalRequests,proto3" json:"total_requests,omitempty"`
+	SuccessRate   float64                `protobuf:"fixed64,5,opt,name=success_rate,json=successRate,proto3" json:"success_rate,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ModelStatus) Reset() {
-	*x = ModelStatus{}
-	mi := &file_pb_ai_model_proto_msgTypes[6]
+func (x *ModelHealthStatus) Reset() {
+	*x = ModelHealthStatus{}
+	mi := &file_pb_ai_model_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ModelStatus) String() string {
+func (x *ModelHealthStatus) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ModelStatus) ProtoMessage() {}
+func (*ModelHealthStatus) ProtoMessage() {}
 
-func (x *ModelStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[6]
+func (x *ModelHealthStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -469,76 +705,78 @@ func (x *ModelStatus) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ModelStatus.ProtoReflect.Descriptor instead.
-func (*ModelStatus) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{6}
+// Deprecated: Use ModelHealthStatus.ProtoReflect.Descriptor instead.
+func (*ModelHealthStatus) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *ModelStatus) GetName() string {
+func (x *ModelHealthStatus) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *ModelStatus) GetVersion() string {
+func (x *ModelHealthStatus) GetStatus() string {
 	if x != nil {
-		return x.Version
+		return x.Status
 	}
 	return ""
 }
 
-func (x *ModelStatus) GetLoaded() bool {
-	if x != nil {
-		return x.Loaded
-	}
-	return false
-}
-
-func (x *ModelStatus) GetMemoryMb() int64 {
-	if x != nil {
-		return x.MemoryMb
-	}
-	return 0
-}
-
-func (x *ModelStatus) GetAvgLatencyMs() float64 {
+func (x *ModelHealthStatus) GetAvgLatencyMs() int64 {
 	if x != nil {
 		return x.AvgLatencyMs
 	}
 	return 0
 }
 
-func (x *ModelStatus) GetTotalRequests() int64 {
+func (x *ModelHealthStatus) GetTotalRequests() int64 {
 	if x != nil {
 		return x.TotalRequests
 	}
 	return 0
 }
 
-// ============ 模型信息 ============
-type ModelInfoRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ModelName     string                 `protobuf:"bytes,1,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"` // text/image/all
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+func (x *ModelHealthStatus) GetSuccessRate() float64 {
+	if x != nil {
+		return x.SuccessRate
+	}
+	return 0
 }
 
-func (x *ModelInfoRequest) Reset() {
-	*x = ModelInfoRequest{}
-	mi := &file_pb_ai_model_proto_msgTypes[7]
+// ============ 模型配置管理 ============
+type CreateModelConfigReq struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Name                   string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	DisplayName            string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Provider               string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
+	Type                   string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	Endpoint               string                 `protobuf:"bytes,5,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	MaxTokens              int32                  `protobuf:"varint,6,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
+	SupportedFeatures      string                 `protobuf:"bytes,7,opt,name=supported_features,json=supportedFeatures,proto3" json:"supported_features,omitempty"`
+	CostPer_1KInputTokens  float64                `protobuf:"fixed64,8,opt,name=cost_per_1k_input_tokens,json=costPer1kInputTokens,proto3" json:"cost_per_1k_input_tokens,omitempty"`
+	CostPer_1KOutputTokens float64                `protobuf:"fixed64,9,opt,name=cost_per_1k_output_tokens,json=costPer1kOutputTokens,proto3" json:"cost_per_1k_output_tokens,omitempty"`
+	Description            string                 `protobuf:"bytes,10,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *CreateModelConfigReq) Reset() {
+	*x = CreateModelConfigReq{}
+	mi := &file_pb_ai_model_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ModelInfoRequest) String() string {
+func (x *CreateModelConfigReq) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ModelInfoRequest) ProtoMessage() {}
+func (*CreateModelConfigReq) ProtoMessage() {}
 
-func (x *ModelInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[7]
+func (x *CreateModelConfigReq) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -549,217 +787,591 @@ func (x *ModelInfoRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ModelInfoRequest.ProtoReflect.Descriptor instead.
-func (*ModelInfoRequest) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{7}
+// Deprecated: Use CreateModelConfigReq.ProtoReflect.Descriptor instead.
+func (*CreateModelConfigReq) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *ModelInfoRequest) GetModelName() string {
-	if x != nil {
-		return x.ModelName
-	}
-	return ""
-}
-
-type ModelInfoResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Models        []*ModelDetail         `protobuf:"bytes,1,rep,name=models,proto3" json:"models,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ModelInfoResponse) Reset() {
-	*x = ModelInfoResponse{}
-	mi := &file_pb_ai_model_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ModelInfoResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ModelInfoResponse) ProtoMessage() {}
-
-func (x *ModelInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ModelInfoResponse.ProtoReflect.Descriptor instead.
-func (*ModelInfoResponse) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *ModelInfoResponse) GetModels() []*ModelDetail {
-	if x != nil {
-		return x.Models
-	}
-	return nil
-}
-
-type ModelDetail struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
-	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`              // text/image/multimodal
-	Parameters    int64                  `protobuf:"varint,4,opt,name=parameters,proto3" json:"parameters,omitempty"` // 参数量
-	Capabilities  []string               `protobuf:"bytes,5,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ModelDetail) Reset() {
-	*x = ModelDetail{}
-	mi := &file_pb_ai_model_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ModelDetail) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ModelDetail) ProtoMessage() {}
-
-func (x *ModelDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ModelDetail.ProtoReflect.Descriptor instead.
-func (*ModelDetail) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *ModelDetail) GetName() string {
+func (x *CreateModelConfigReq) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *ModelDetail) GetVersion() string {
+func (x *CreateModelConfigReq) GetDisplayName() string {
 	if x != nil {
-		return x.Version
+		return x.DisplayName
 	}
 	return ""
 }
 
-func (x *ModelDetail) GetType() string {
+func (x *CreateModelConfigReq) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *CreateModelConfigReq) GetType() string {
 	if x != nil {
 		return x.Type
 	}
 	return ""
 }
 
-func (x *ModelDetail) GetParameters() int64 {
+func (x *CreateModelConfigReq) GetEndpoint() string {
 	if x != nil {
-		return x.Parameters
+		return x.Endpoint
+	}
+	return ""
+}
+
+func (x *CreateModelConfigReq) GetMaxTokens() int32 {
+	if x != nil {
+		return x.MaxTokens
 	}
 	return 0
 }
 
-func (x *ModelDetail) GetCapabilities() []string {
+func (x *CreateModelConfigReq) GetSupportedFeatures() string {
 	if x != nil {
-		return x.Capabilities
+		return x.SupportedFeatures
 	}
-	return nil
+	return ""
+}
+
+func (x *CreateModelConfigReq) GetCostPer_1KInputTokens() float64 {
+	if x != nil {
+		return x.CostPer_1KInputTokens
+	}
+	return 0
+}
+
+func (x *CreateModelConfigReq) GetCostPer_1KOutputTokens() float64 {
+	if x != nil {
+		return x.CostPer_1KOutputTokens
+	}
+	return 0
+}
+
+func (x *CreateModelConfigReq) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type UpdateModelConfigReq struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	DisplayName            string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Endpoint               string                 `protobuf:"bytes,3,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	MaxTokens              int32                  `protobuf:"varint,4,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
+	SupportedFeatures      string                 `protobuf:"bytes,5,opt,name=supported_features,json=supportedFeatures,proto3" json:"supported_features,omitempty"`
+	CostPer_1KInputTokens  float64                `protobuf:"fixed64,6,opt,name=cost_per_1k_input_tokens,json=costPer1kInputTokens,proto3" json:"cost_per_1k_input_tokens,omitempty"`
+	CostPer_1KOutputTokens float64                `protobuf:"fixed64,7,opt,name=cost_per_1k_output_tokens,json=costPer1kOutputTokens,proto3" json:"cost_per_1k_output_tokens,omitempty"`
+	Status                 int64                  `protobuf:"varint,8,opt,name=status,proto3" json:"status,omitempty"`
+	Description            string                 `protobuf:"bytes,9,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *UpdateModelConfigReq) Reset() {
+	*x = UpdateModelConfigReq{}
+	mi := &file_pb_ai_model_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateModelConfigReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateModelConfigReq) ProtoMessage() {}
+
+func (x *UpdateModelConfigReq) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateModelConfigReq.ProtoReflect.Descriptor instead.
+func (*UpdateModelConfigReq) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *UpdateModelConfigReq) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *UpdateModelConfigReq) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *UpdateModelConfigReq) GetEndpoint() string {
+	if x != nil {
+		return x.Endpoint
+	}
+	return ""
+}
+
+func (x *UpdateModelConfigReq) GetMaxTokens() int32 {
+	if x != nil {
+		return x.MaxTokens
+	}
+	return 0
+}
+
+func (x *UpdateModelConfigReq) GetSupportedFeatures() string {
+	if x != nil {
+		return x.SupportedFeatures
+	}
+	return ""
+}
+
+func (x *UpdateModelConfigReq) GetCostPer_1KInputTokens() float64 {
+	if x != nil {
+		return x.CostPer_1KInputTokens
+	}
+	return 0
+}
+
+func (x *UpdateModelConfigReq) GetCostPer_1KOutputTokens() float64 {
+	if x != nil {
+		return x.CostPer_1KOutputTokens
+	}
+	return 0
+}
+
+func (x *UpdateModelConfigReq) GetStatus() int64 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+func (x *UpdateModelConfigReq) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type DeleteModelConfigReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteModelConfigReq) Reset() {
+	*x = DeleteModelConfigReq{}
+	mi := &file_pb_ai_model_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteModelConfigReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteModelConfigReq) ProtoMessage() {}
+
+func (x *DeleteModelConfigReq) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteModelConfigReq.ProtoReflect.Descriptor instead.
+func (*DeleteModelConfigReq) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *DeleteModelConfigReq) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type GetModelConfigReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetModelConfigReq) Reset() {
+	*x = GetModelConfigReq{}
+	mi := &file_pb_ai_model_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetModelConfigReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetModelConfigReq) ProtoMessage() {}
+
+func (x *GetModelConfigReq) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetModelConfigReq.ProtoReflect.Descriptor instead.
+func (*GetModelConfigReq) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GetModelConfigReq) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type ModelConfigResp struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	DisplayName            string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Provider               string                 `protobuf:"bytes,4,opt,name=provider,proto3" json:"provider,omitempty"`
+	Type                   string                 `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`
+	Endpoint               string                 `protobuf:"bytes,6,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	MaxTokens              int32                  `protobuf:"varint,7,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
+	SupportedFeatures      string                 `protobuf:"bytes,8,opt,name=supported_features,json=supportedFeatures,proto3" json:"supported_features,omitempty"`
+	CostPer_1KInputTokens  float64                `protobuf:"fixed64,9,opt,name=cost_per_1k_input_tokens,json=costPer1kInputTokens,proto3" json:"cost_per_1k_input_tokens,omitempty"`
+	CostPer_1KOutputTokens float64                `protobuf:"fixed64,10,opt,name=cost_per_1k_output_tokens,json=costPer1kOutputTokens,proto3" json:"cost_per_1k_output_tokens,omitempty"`
+	Status                 int64                  `protobuf:"varint,11,opt,name=status,proto3" json:"status,omitempty"`
+	Description            string                 `protobuf:"bytes,12,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ModelConfigResp) Reset() {
+	*x = ModelConfigResp{}
+	mi := &file_pb_ai_model_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModelConfigResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModelConfigResp) ProtoMessage() {}
+
+func (x *ModelConfigResp) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModelConfigResp.ProtoReflect.Descriptor instead.
+func (*ModelConfigResp) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ModelConfigResp) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ModelConfigResp) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ModelConfigResp) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *ModelConfigResp) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *ModelConfigResp) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ModelConfigResp) GetEndpoint() string {
+	if x != nil {
+		return x.Endpoint
+	}
+	return ""
+}
+
+func (x *ModelConfigResp) GetMaxTokens() int32 {
+	if x != nil {
+		return x.MaxTokens
+	}
+	return 0
+}
+
+func (x *ModelConfigResp) GetSupportedFeatures() string {
+	if x != nil {
+		return x.SupportedFeatures
+	}
+	return ""
+}
+
+func (x *ModelConfigResp) GetCostPer_1KInputTokens() float64 {
+	if x != nil {
+		return x.CostPer_1KInputTokens
+	}
+	return 0
+}
+
+func (x *ModelConfigResp) GetCostPer_1KOutputTokens() float64 {
+	if x != nil {
+		return x.CostPer_1KOutputTokens
+	}
+	return 0
+}
+
+func (x *ModelConfigResp) GetStatus() int64 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+func (x *ModelConfigResp) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type DeleteModelConfigResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteModelConfigResp) Reset() {
+	*x = DeleteModelConfigResp{}
+	mi := &file_pb_ai_model_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteModelConfigResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteModelConfigResp) ProtoMessage() {}
+
+func (x *DeleteModelConfigResp) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteModelConfigResp.ProtoReflect.Descriptor instead.
+func (*DeleteModelConfigResp) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *DeleteModelConfigResp) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
 }
 
 var File_pb_ai_model_proto protoreflect.FileDescriptor
 
 const file_pb_ai_model_proto_rawDesc = "" +
 	"\n" +
-	"\x11pb/ai_model.proto\x12\bai_model\"\xfe\x01\n" +
-	"\x15TextModerationRequest\x12\x18\n" +
-	"\acontent\x18\x01 \x01(\tR\acontent\x12)\n" +
-	"\x10check_categories\x18\x02 \x03(\tR\x0fcheckCategories\x12\x18\n" +
-	"\acontext\x18\x03 \x01(\tR\acontext\x12I\n" +
-	"\bmetadata\x18\x04 \x03(\v2-.ai_model.TextModerationRequest.MetadataEntryR\bmetadata\x1a;\n" +
-	"\rMetadataEntry\x12\x10\n" +
+	"\x11pb/ai_model.proto\x12\bai_model\"\xa3\x03\n" +
+	"\x10ModelCallRequest\x12\x1d\n" +
+	"\n" +
+	"model_name\x18\x01 \x01(\tR\tmodelName\x12\x16\n" +
+	"\x06prompt\x18\x02 \x01(\tR\x06prompt\x12J\n" +
+	"\n" +
+	"parameters\x18\x03 \x03(\v2*.ai_model.ModelCallRequest.ParametersEntryR\n" +
+	"parameters\x12\x1f\n" +
+	"\vtemplate_id\x18\x04 \x01(\tR\n" +
+	"templateId\x12G\n" +
+	"\tvariables\x18\x05 \x03(\v2).ai_model.ModelCallRequest.VariablesEntryR\tvariables\x12%\n" +
+	"\x0ecaller_service\x18\x06 \x01(\tR\rcallerService\x1a=\n" +
+	"\x0fParametersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xec\x01\n" +
-	"\x16TextModerationResponse\x12\x17\n" +
-	"\ais_safe\x18\x01 \x01(\bR\x06isSafe\x12\x1d\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a<\n" +
+	"\x0eVariablesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe6\x01\n" +
+	"\x11ModelCallResponse\x12\x18\n" +
+	"\acontent\x18\x01 \x01(\tR\acontent\x12!\n" +
+	"\finput_tokens\x18\x02 \x01(\x05R\vinputTokens\x12#\n" +
+	"\routput_tokens\x18\x03 \x01(\x05R\foutputTokens\x12\x12\n" +
+	"\x04cost\x18\x04 \x01(\x01R\x04cost\x12\x1d\n" +
 	"\n" +
-	"risk_level\x18\x02 \x01(\tR\triskLevel\x12\x1e\n" +
+	"latency_ms\x18\x05 \x01(\x03R\tlatencyMs\x12\x1d\n" +
 	"\n" +
-	"categories\x18\x03 \x03(\tR\n" +
-	"categories\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x1e\n" +
+	"model_used\x18\x06 \x01(\tR\tmodelUsed\x12\x1d\n" +
 	"\n" +
-	"confidence\x18\x05 \x01(\x01R\n" +
-	"confidence\x12\x1d\n" +
+	"request_id\x18\a \x01(\tR\trequestId\"\xff\x01\n" +
+	"\x11ModelBatchRequest\x12\x1d\n" +
 	"\n" +
-	"latency_ms\x18\x06 \x01(\x03R\tlatencyMs\x12#\n" +
-	"\rmodel_version\x18\a \x01(\tR\fmodelVersion\"\x7f\n" +
-	"\x16ImageModerationRequest\x12\x1d\n" +
+	"model_name\x18\x01 \x01(\tR\tmodelName\x12\x18\n" +
+	"\aprompts\x18\x02 \x03(\tR\aprompts\x12K\n" +
 	"\n" +
-	"image_data\x18\x01 \x01(\fR\timageData\x12\x1b\n" +
-	"\timage_url\x18\x02 \x01(\tR\bimageUrl\x12)\n" +
-	"\x10check_categories\x18\x03 \x03(\tR\x0fcheckCategories\"\xed\x01\n" +
-	"\x17ImageModerationResponse\x12\x17\n" +
-	"\ais_safe\x18\x01 \x01(\bR\x06isSafe\x12\x1d\n" +
+	"parameters\x18\x03 \x03(\v2+.ai_model.ModelBatchRequest.ParametersEntryR\n" +
+	"parameters\x12%\n" +
+	"\x0ecaller_service\x18\x04 \x01(\tR\rcallerService\x1a=\n" +
+	"\x0fParametersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb2\x01\n" +
+	"\x12ModelBatchResponse\x125\n" +
+	"\aresults\x18\x01 \x03(\v2\x1b.ai_model.ModelCallResponseR\aresults\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x18\n" +
+	"\asuccess\x18\x03 \x01(\x05R\asuccess\x12\x16\n" +
+	"\x06failed\x18\x04 \x01(\x05R\x06failed\x12\x1d\n" +
 	"\n" +
-	"risk_level\x18\x02 \x01(\tR\triskLevel\x12\x1e\n" +
-	"\n" +
-	"categories\x18\x03 \x03(\tR\n" +
-	"categories\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x1e\n" +
-	"\n" +
-	"confidence\x18\x05 \x01(\x01R\n" +
-	"confidence\x12\x1d\n" +
-	"\n" +
-	"latency_ms\x18\x06 \x01(\x03R\tlatencyMs\x12#\n" +
-	"\rmodel_version\x18\a \x01(\tR\fmodelVersion\"\x14\n" +
-	"\x12HealthCheckRequest\"\xe9\x01\n" +
+	"total_cost\x18\x05 \x01(\x01R\ttotalCost\"Q\n" +
+	"\x10GetModelsRequest\x12\x1a\n" +
+	"\bprovider\x18\x01 \x01(\tR\bprovider\x12!\n" +
+	"\fonly_healthy\x18\x02 \x01(\bR\vonlyHealthy\"@\n" +
+	"\x11GetModelsResponse\x12+\n" +
+	"\x06models\x18\x01 \x03(\v2\x13.ai_model.ModelInfoR\x06models\"\xf3\x02\n" +
+	"\tModelInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12\x1a\n" +
+	"\bprovider\x18\x04 \x01(\tR\bprovider\x12!\n" +
+	"\fdisplay_name\x18\x05 \x01(\tR\vdisplayName\x12\"\n" +
+	"\fcapabilities\x18\x06 \x03(\tR\fcapabilities\x126\n" +
+	"\x18cost_per_1k_input_tokens\x18\a \x01(\x01R\x14costPer1kInputTokens\x128\n" +
+	"\x19cost_per_1k_output_tokens\x18\b \x01(\x01R\x15costPer1kOutputTokens\x12#\n" +
+	"\rhealth_status\x18\t \x01(\tR\fhealthStatus\x12\x1a\n" +
+	"\bpriority\x18\n" +
+	" \x01(\x05R\bpriority\x12\x18\n" +
+	"\aenabled\x18\v \x01(\bR\aenabled\"\x14\n" +
+	"\x12HealthCheckRequest\"\x89\x02\n" +
 	"\x13HealthCheckResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12A\n" +
 	"\x06models\x18\x02 \x03(\v2).ai_model.HealthCheckResponse.ModelsEntryR\x06models\x12%\n" +
-	"\x0euptime_seconds\x18\x03 \x01(\x03R\ruptimeSeconds\x1aP\n" +
+	"\x0euptime_seconds\x18\x03 \x01(\x03R\ruptimeSeconds\x12\x18\n" +
+	"\aversion\x18\x04 \x01(\tR\aversion\x1aV\n" +
 	"\vModelsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12+\n" +
-	"\x05value\x18\x02 \x01(\v2\x15.ai_model.ModelStatusR\x05value:\x028\x01\"\xbd\x01\n" +
-	"\vModelStatus\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\aversion\x18\x02 \x01(\tR\aversion\x12\x16\n" +
-	"\x06loaded\x18\x03 \x01(\bR\x06loaded\x12\x1b\n" +
-	"\tmemory_mb\x18\x04 \x01(\x03R\bmemoryMb\x12$\n" +
-	"\x0eavg_latency_ms\x18\x05 \x01(\x01R\favgLatencyMs\x12%\n" +
-	"\x0etotal_requests\x18\x06 \x01(\x03R\rtotalRequests\"1\n" +
-	"\x10ModelInfoRequest\x12\x1d\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x121\n" +
+	"\x05value\x18\x02 \x01(\v2\x1b.ai_model.ModelHealthStatusR\x05value:\x028\x01\"\xaf\x01\n" +
+	"\x11ModelHealthStatus\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12$\n" +
+	"\x0eavg_latency_ms\x18\x03 \x01(\x03R\favgLatencyMs\x12%\n" +
+	"\x0etotal_requests\x18\x04 \x01(\x03R\rtotalRequests\x12!\n" +
+	"\fsuccess_rate\x18\x05 \x01(\x01R\vsuccessRate\"\xfb\x02\n" +
+	"\x14CreateModelConfigReq\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
+	"\bprovider\x18\x03 \x01(\tR\bprovider\x12\x12\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x12\x1a\n" +
+	"\bendpoint\x18\x05 \x01(\tR\bendpoint\x12\x1d\n" +
 	"\n" +
-	"model_name\x18\x01 \x01(\tR\tmodelName\"B\n" +
-	"\x11ModelInfoResponse\x12-\n" +
-	"\x06models\x18\x01 \x03(\v2\x15.ai_model.ModelDetailR\x06models\"\x93\x01\n" +
-	"\vModelDetail\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\aversion\x18\x02 \x01(\tR\aversion\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\x12\x1e\n" +
+	"max_tokens\x18\x06 \x01(\x05R\tmaxTokens\x12-\n" +
+	"\x12supported_features\x18\a \x01(\tR\x11supportedFeatures\x126\n" +
+	"\x18cost_per_1k_input_tokens\x18\b \x01(\x01R\x14costPer1kInputTokens\x128\n" +
+	"\x19cost_per_1k_output_tokens\x18\t \x01(\x01R\x15costPer1kOutputTokens\x12 \n" +
+	"\vdescription\x18\n" +
+	" \x01(\tR\vdescription\"\xdf\x02\n" +
+	"\x14UpdateModelConfigReq\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
+	"\bendpoint\x18\x03 \x01(\tR\bendpoint\x12\x1d\n" +
 	"\n" +
-	"parameters\x18\x04 \x01(\x03R\n" +
-	"parameters\x12\"\n" +
-	"\fcapabilities\x18\x05 \x03(\tR\fcapabilities2\xc7\x02\n" +
-	"\aAiModel\x12Q\n" +
-	"\fModerateText\x12\x1f.ai_model.TextModerationRequest\x1a .ai_model.TextModerationResponse\x12T\n" +
-	"\rModerateImage\x12 .ai_model.ImageModerationRequest\x1a!.ai_model.ImageModerationResponse\x12J\n" +
-	"\vHealthCheck\x12\x1c.ai_model.HealthCheckRequest\x1a\x1d.ai_model.HealthCheckResponse\x12G\n" +
-	"\fGetModelInfo\x12\x1a.ai_model.ModelInfoRequest\x1a\x1b.ai_model.ModelInfoResponseB\x06Z\x04./pbb\x06proto3"
+	"max_tokens\x18\x04 \x01(\x05R\tmaxTokens\x12-\n" +
+	"\x12supported_features\x18\x05 \x01(\tR\x11supportedFeatures\x126\n" +
+	"\x18cost_per_1k_input_tokens\x18\x06 \x01(\x01R\x14costPer1kInputTokens\x128\n" +
+	"\x19cost_per_1k_output_tokens\x18\a \x01(\x01R\x15costPer1kOutputTokens\x12\x16\n" +
+	"\x06status\x18\b \x01(\x03R\x06status\x12 \n" +
+	"\vdescription\x18\t \x01(\tR\vdescription\"&\n" +
+	"\x14DeleteModelConfigReq\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"#\n" +
+	"\x11GetModelConfigReq\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"\x9e\x03\n" +
+	"\x0fModelConfigResp\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1a\n" +
+	"\bprovider\x18\x04 \x01(\tR\bprovider\x12\x12\n" +
+	"\x04type\x18\x05 \x01(\tR\x04type\x12\x1a\n" +
+	"\bendpoint\x18\x06 \x01(\tR\bendpoint\x12\x1d\n" +
+	"\n" +
+	"max_tokens\x18\a \x01(\x05R\tmaxTokens\x12-\n" +
+	"\x12supported_features\x18\b \x01(\tR\x11supportedFeatures\x126\n" +
+	"\x18cost_per_1k_input_tokens\x18\t \x01(\x01R\x14costPer1kInputTokens\x128\n" +
+	"\x19cost_per_1k_output_tokens\x18\n" +
+	" \x01(\x01R\x15costPer1kOutputTokens\x12\x16\n" +
+	"\x06status\x18\v \x01(\x03R\x06status\x12 \n" +
+	"\vdescription\x18\f \x01(\tR\vdescription\"1\n" +
+	"\x15DeleteModelConfigResp\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xf7\x04\n" +
+	"\aAiModel\x12D\n" +
+	"\tCallModel\x12\x1a.ai_model.ModelCallRequest\x1a\x1b.ai_model.ModelCallResponse\x12K\n" +
+	"\x0eCallModelBatch\x12\x1b.ai_model.ModelBatchRequest\x1a\x1c.ai_model.ModelBatchResponse\x12M\n" +
+	"\x12GetAvailableModels\x12\x1a.ai_model.GetModelsRequest\x1a\x1b.ai_model.GetModelsResponse\x12J\n" +
+	"\vHealthCheck\x12\x1c.ai_model.HealthCheckRequest\x1a\x1d.ai_model.HealthCheckResponse\x12N\n" +
+	"\x11CreateModelConfig\x12\x1e.ai_model.CreateModelConfigReq\x1a\x19.ai_model.ModelConfigResp\x12N\n" +
+	"\x11UpdateModelConfig\x12\x1e.ai_model.UpdateModelConfigReq\x1a\x19.ai_model.ModelConfigResp\x12T\n" +
+	"\x11DeleteModelConfig\x12\x1e.ai_model.DeleteModelConfigReq\x1a\x1f.ai_model.DeleteModelConfigResp\x12H\n" +
+	"\x0eGetModelConfig\x12\x1b.ai_model.GetModelConfigReq\x1a\x19.ai_model.ModelConfigRespB\x06Z\x04./pbb\x06proto3"
 
 var (
 	file_pb_ai_model_proto_rawDescOnce sync.Once
@@ -773,39 +1385,58 @@ func file_pb_ai_model_proto_rawDescGZIP() []byte {
 	return file_pb_ai_model_proto_rawDescData
 }
 
-var file_pb_ai_model_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_pb_ai_model_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_pb_ai_model_proto_goTypes = []any{
-	(*TextModerationRequest)(nil),   // 0: ai_model.TextModerationRequest
-	(*TextModerationResponse)(nil),  // 1: ai_model.TextModerationResponse
-	(*ImageModerationRequest)(nil),  // 2: ai_model.ImageModerationRequest
-	(*ImageModerationResponse)(nil), // 3: ai_model.ImageModerationResponse
-	(*HealthCheckRequest)(nil),      // 4: ai_model.HealthCheckRequest
-	(*HealthCheckResponse)(nil),     // 5: ai_model.HealthCheckResponse
-	(*ModelStatus)(nil),             // 6: ai_model.ModelStatus
-	(*ModelInfoRequest)(nil),        // 7: ai_model.ModelInfoRequest
-	(*ModelInfoResponse)(nil),       // 8: ai_model.ModelInfoResponse
-	(*ModelDetail)(nil),             // 9: ai_model.ModelDetail
-	nil,                             // 10: ai_model.TextModerationRequest.MetadataEntry
-	nil,                             // 11: ai_model.HealthCheckResponse.ModelsEntry
+	(*ModelCallRequest)(nil),      // 0: ai_model.ModelCallRequest
+	(*ModelCallResponse)(nil),     // 1: ai_model.ModelCallResponse
+	(*ModelBatchRequest)(nil),     // 2: ai_model.ModelBatchRequest
+	(*ModelBatchResponse)(nil),    // 3: ai_model.ModelBatchResponse
+	(*GetModelsRequest)(nil),      // 4: ai_model.GetModelsRequest
+	(*GetModelsResponse)(nil),     // 5: ai_model.GetModelsResponse
+	(*ModelInfo)(nil),             // 6: ai_model.ModelInfo
+	(*HealthCheckRequest)(nil),    // 7: ai_model.HealthCheckRequest
+	(*HealthCheckResponse)(nil),   // 8: ai_model.HealthCheckResponse
+	(*ModelHealthStatus)(nil),     // 9: ai_model.ModelHealthStatus
+	(*CreateModelConfigReq)(nil),  // 10: ai_model.CreateModelConfigReq
+	(*UpdateModelConfigReq)(nil),  // 11: ai_model.UpdateModelConfigReq
+	(*DeleteModelConfigReq)(nil),  // 12: ai_model.DeleteModelConfigReq
+	(*GetModelConfigReq)(nil),     // 13: ai_model.GetModelConfigReq
+	(*ModelConfigResp)(nil),       // 14: ai_model.ModelConfigResp
+	(*DeleteModelConfigResp)(nil), // 15: ai_model.DeleteModelConfigResp
+	nil,                           // 16: ai_model.ModelCallRequest.ParametersEntry
+	nil,                           // 17: ai_model.ModelCallRequest.VariablesEntry
+	nil,                           // 18: ai_model.ModelBatchRequest.ParametersEntry
+	nil,                           // 19: ai_model.HealthCheckResponse.ModelsEntry
 }
 var file_pb_ai_model_proto_depIdxs = []int32{
-	10, // 0: ai_model.TextModerationRequest.metadata:type_name -> ai_model.TextModerationRequest.MetadataEntry
-	11, // 1: ai_model.HealthCheckResponse.models:type_name -> ai_model.HealthCheckResponse.ModelsEntry
-	9,  // 2: ai_model.ModelInfoResponse.models:type_name -> ai_model.ModelDetail
-	6,  // 3: ai_model.HealthCheckResponse.ModelsEntry.value:type_name -> ai_model.ModelStatus
-	0,  // 4: ai_model.AiModel.ModerateText:input_type -> ai_model.TextModerationRequest
-	2,  // 5: ai_model.AiModel.ModerateImage:input_type -> ai_model.ImageModerationRequest
-	4,  // 6: ai_model.AiModel.HealthCheck:input_type -> ai_model.HealthCheckRequest
-	7,  // 7: ai_model.AiModel.GetModelInfo:input_type -> ai_model.ModelInfoRequest
-	1,  // 8: ai_model.AiModel.ModerateText:output_type -> ai_model.TextModerationResponse
-	3,  // 9: ai_model.AiModel.ModerateImage:output_type -> ai_model.ImageModerationResponse
-	5,  // 10: ai_model.AiModel.HealthCheck:output_type -> ai_model.HealthCheckResponse
-	8,  // 11: ai_model.AiModel.GetModelInfo:output_type -> ai_model.ModelInfoResponse
-	8,  // [8:12] is the sub-list for method output_type
-	4,  // [4:8] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	16, // 0: ai_model.ModelCallRequest.parameters:type_name -> ai_model.ModelCallRequest.ParametersEntry
+	17, // 1: ai_model.ModelCallRequest.variables:type_name -> ai_model.ModelCallRequest.VariablesEntry
+	18, // 2: ai_model.ModelBatchRequest.parameters:type_name -> ai_model.ModelBatchRequest.ParametersEntry
+	1,  // 3: ai_model.ModelBatchResponse.results:type_name -> ai_model.ModelCallResponse
+	6,  // 4: ai_model.GetModelsResponse.models:type_name -> ai_model.ModelInfo
+	19, // 5: ai_model.HealthCheckResponse.models:type_name -> ai_model.HealthCheckResponse.ModelsEntry
+	9,  // 6: ai_model.HealthCheckResponse.ModelsEntry.value:type_name -> ai_model.ModelHealthStatus
+	0,  // 7: ai_model.AiModel.CallModel:input_type -> ai_model.ModelCallRequest
+	2,  // 8: ai_model.AiModel.CallModelBatch:input_type -> ai_model.ModelBatchRequest
+	4,  // 9: ai_model.AiModel.GetAvailableModels:input_type -> ai_model.GetModelsRequest
+	7,  // 10: ai_model.AiModel.HealthCheck:input_type -> ai_model.HealthCheckRequest
+	10, // 11: ai_model.AiModel.CreateModelConfig:input_type -> ai_model.CreateModelConfigReq
+	11, // 12: ai_model.AiModel.UpdateModelConfig:input_type -> ai_model.UpdateModelConfigReq
+	12, // 13: ai_model.AiModel.DeleteModelConfig:input_type -> ai_model.DeleteModelConfigReq
+	13, // 14: ai_model.AiModel.GetModelConfig:input_type -> ai_model.GetModelConfigReq
+	1,  // 15: ai_model.AiModel.CallModel:output_type -> ai_model.ModelCallResponse
+	3,  // 16: ai_model.AiModel.CallModelBatch:output_type -> ai_model.ModelBatchResponse
+	5,  // 17: ai_model.AiModel.GetAvailableModels:output_type -> ai_model.GetModelsResponse
+	8,  // 18: ai_model.AiModel.HealthCheck:output_type -> ai_model.HealthCheckResponse
+	14, // 19: ai_model.AiModel.CreateModelConfig:output_type -> ai_model.ModelConfigResp
+	14, // 20: ai_model.AiModel.UpdateModelConfig:output_type -> ai_model.ModelConfigResp
+	15, // 21: ai_model.AiModel.DeleteModelConfig:output_type -> ai_model.DeleteModelConfigResp
+	14, // 22: ai_model.AiModel.GetModelConfig:output_type -> ai_model.ModelConfigResp
+	15, // [15:23] is the sub-list for method output_type
+	7,  // [7:15] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_pb_ai_model_proto_init() }
@@ -819,7 +1450,7 @@ func file_pb_ai_model_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pb_ai_model_proto_rawDesc), len(file_pb_ai_model_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

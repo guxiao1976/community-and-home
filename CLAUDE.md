@@ -1,53 +1,123 @@
 # community-and-home Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-05-03
+## Tech Stack
 
-## Active Technologies
-- Vue 3.4+ with TypeScript 5.0+ + Element Plus (UI), Axios (HTTP), Pinia (state), Vue Router (routing), Vite (build) (002-web-pc-admin)
-- Browser localStorage for JWT tokens (access 24h, refresh 7d), sessionStorage for temporary state (002-web-pc-admin)
+**Backend:**
+- Go 1.21+ + go-zero 1.6+ (microservices framework)
+- MySQL 8.0 (database) + Redis 7.0 (cache)
+- gRPC (service communication) + JWT (authentication)
 
-- Go 1.21+ + go-zero 1.6+, gRPC, JWT (golang-jwt/jwt), bcrypt (golang.org/x/crypto/bcrypt) (001-identity-masterdata)
+**Frontend:**
+- Vue 3.4+ + TypeScript 5.0+ + Element Plus
+- Vite 6.0+ (build) + Pinia (state) + Vue Router + Axios
 
 ## Project Structure
 
 ```text
-src/
-tests/
+community-and-home/
+├── services/          # Microservices (identity, masterdata, ai-model, moderation)
+├── web/pc/           # Vue3 admin frontend
+├── gateway/          # API Gateway
+├── common/           # Shared libraries (errorx, jwtx, responsex)
+└── docs/             # Documentation
 ```
 
-## Commands
+See `PROJECT_STRUCTURE.md` for detailed structure and service descriptions.
 
-# Add commands for Go 1.21+
+## Quick Commands
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Build and run a service
+cd services/{service}/api && go build && ./{service}-api
+
+# Frontend development
+cd web/pc && npm run dev
+
+# Generate API code from .api file
+goctl api go -api {service}.api -dir .
+
+# Generate RPC code from .proto file
+goctl rpc protoc {service}.proto --go_out=. --go-grpc_out=. --zrpc_out=.
+```
 
 ## Code Style
 
-Go 1.21+: Follow standard conventions
+**Go:** Follow standard conventions, use gofmt
 
-### Handler 响应格式约定
+**Vue/TypeScript:** Composition API, strict mode, PascalCase components
 
-所有 handler 必须使用 `responsex.Response(w, resp, err)` 返回响应，**不要**使用 `httpx.OkJsonCtx`。`responsex.Response` 会统一包装为 `{ code: 0, message: "success", data: {...} }` 格式，前端 Axios 拦截器依赖此格式解构 `code` 和 `data`。
+## Critical Rules
 
-### goctl 代码生成注意
+1. **Handler响应格式（强制）**
+   - 使用 `responsex.Response(w, resp, err)`，不用 `httpx.OkJsonCtx`
+   - 统一返回格式：`{ code: 0, message: "success", data: {...} }`
 
-- `.api` 文件中的 `group` 名称不能包含连字符（如 `deleted-items`），否则生成的目录和 import 别名是非法 Go 标识符，应使用下划线（如 `deleted_items`）
-- goctl 会覆盖 `types.go`，手动添加的字段需同步更新到 `.api` 文件中
+2. **goctl代码生成**
+   - `.api` 文件的 `group` 名称用下划线（`deleted_items`），不用连字符（`deleted-items`）
+   - goctl 会覆盖 `types.go`，手动字段需同步到 `.api` 文件
 
-## Recent Changes
-- 002-web-pc-admin: Added Vue 3.4+ with TypeScript 5.0+ + Element Plus (UI), Axios (HTTP), Pinia (state), Vue Router (routing), Vite (build)
+3. **时间字段处理**
+   - 创建记录时使用 `time.Now()`，不用零值 `time.Time{}`
+   - 避免 MySQL datetime 错误 `'0000-00-00'`
 
-- 001-identity-masterdata: Added Go 1.21+ + go-zero 1.6+, gRPC, JWT (golang-jwt/jwt), bcrypt (golang.org/x/crypto/bcrypt)
+4. **JSON字段存储**
+   - MySQL JSON 类型必须用 `json.Marshal()` 转换，不能直接存字符串
+
+5. **缓存失效**
+   - 更新/删除操作后必须调用 `InvalidateCache(id)`
+
+## Naming Conventions
+
+- **API层**: 驼峰 (`CostPer1KInputTokens`)
+- **RPC层**: 下划线 (`CostPer_1KInputTokens`)
+- **数据库**: 蛇形 (`cost_per_1k_input_tokens`)
+- **表名**: 前缀+下划线 (`id_user`, `md_administrative_division`)
+- **时间字段**: `created_time`, `updated_time`, `delete_time`
 
 ## API Documentation
 
-Frontend API documentation is available in `docs/api/`:
+API documentation: `docs/api/` (identity-service.md, masterdata-service.md)
 
-- **docs/api/README.md** - API overview, architecture, authentication guide
-- **docs/api/quick-start.md** - Quick start guide with curl examples
-- **docs/api/constants.md** - All enums, constants, validation rules
-- **docs/api/identity-service.md** - Identity Service API reference (28 endpoints)
-- **docs/api/masterdata-service.md** - Masterdata Service API reference (18 endpoints)
+Default test credentials: Phone `13800000000`, Password `Admin@123456`
 
-Default credentials: Phone `13800000000`, Password `Admin@123456`
+## Service Ports
+
+- API Gateway: 8080 (public entry)
+- Identity API: 8888 | RPC: 8080
+- Masterdata API: 8889
+- AI-Model API: 8891 | RPC: 8084
+- Frontend PC: 3003
+- MySQL: 3306 | Redis: 6379
 
 <!-- MANUAL ADDITIONS START -->
+
+## Development Tips
+
+**Time Fields:**
+```go
+// Wrong: time.Time{} causes MySQL '0000-00-00' error
+// Right: use time.Now()
+config.CreatedTime = time.Now()
+```
+
+**JSON Fields:**
+```go
+// Wrong: storing plain string "chat,streaming"
+// Right: marshal to JSON array
+features := strings.Split(input, ",")
+jsonBytes, _ := json.Marshal(features)  // ["chat","streaming"]
+```
+
+**Cache Invalidation:**
+```go
+func (m *Manager) UpdateModel(ctx context.Context, model *Model) error {
+    err := m.modelModel.Update(ctx, model)
+    m.InvalidateCache(model.Id)  // Must clear cache
+    return err
+}
+```
+
 <!-- MANUAL ADDITIONS END -->

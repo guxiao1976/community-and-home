@@ -9,17 +9,24 @@
 community-and-home/
 ├── common/              # 公共库
 ├── services/            # 微服务
+│   ├── identity/       # 身份认证服务
+│   ├── masterdata/     # 主数据服务
+│   ├── ai-model/       # AI模型统一管理服务
+│   └── moderation/     # 内容审核服务
 ├── web/                 # 前端应用
 ├── gateway/             # API网关
-├── model/               # 数据模型（废弃，已迁移到各服务内）
-├── deploy/              # 部署配置
+├── openspec/            # OpenSpec提案和任务管理
 ├── docs/                # 文档
 ├── specs/               # 需求规格说明
 ├── scripts/             # 脚本工具
+├── deploy/              # 部署配置
 ├── mysql/               # MySQL数据目录
 ├── redis/               # Redis数据目录
 ├── minio/               # MinIO对象存储数据
 ├── etcd/                # etcd配置中心数据
+├── Sensitive-lexicon/   # 敏感词库资源
+├── model/               # 数据模型（废弃，已迁移到各服务内）
+├── .claude/             # Claude Code配置和缓存
 └── .specify/            # Specify工具配置
 ```
 
@@ -124,6 +131,72 @@ masterdata/
     └── masterdata.proto
 ```
 
+#### 2.3 services/ai-model/ - AI模型统一管理服务
+
+**服务端口:**
+- API: 8891
+- RPC: 8084
+
+**主要功能:**
+- 多模型统一调用（Claude、GPT、Ollama等）
+- 模型配置管理
+- API密钥管理
+- 提示词模板管理
+- 调用日志和成本统计
+- 健康检查和监控
+
+**目录结构:**
+```
+ai-model/
+├── api/                    # HTTP API服务
+│   ├── etc/
+│   │   └── aimodelapi.yaml
+│   ├── internal/
+│   │   ├── handler/
+│   │   ├── logic/
+│   │   └── svc/
+│   └── aimodelapi.go
+├── rpc/                    # gRPC服务
+│   ├── etc/
+│   │   └── aiModel.yaml
+│   ├── internal/
+│   │   ├── adapter/       # 模型适配器（Claude、OpenAI、Ollama）
+│   │   ├── logic/
+│   │   ├── manager/       # 业务管理器
+│   │   └── svc/
+│   ├── model/             # 数据模型
+│   ├── pb/                # Protobuf生成代码
+│   └── aiModel.go
+├── python-engine/         # Python AI引擎（可选）
+├── sql/                   # 数据库脚本
+└── docker-compose.yml
+```
+
+**数据库:** ai_model_db
+
+#### 2.4 services/moderation/ - 内容审核服务
+
+**服务端口:**
+- API: 8892
+
+**主要功能:**
+- 文本内容审核
+- 图片内容审核
+- 敏感词检测
+- AI辅助审核
+
+**目录结构:**
+```
+moderation/
+├── api/                   # HTTP API服务
+│   ├── etc/
+│   ├── internal/
+│   └── moderation.go
+├── model/                 # 数据模型
+├── migrations/            # 数据库迁移
+└── internal/              # 内部逻辑
+```
+
 ---
 
 ### 3. web/ - 前端应用
@@ -204,6 +277,8 @@ common/
 ```
 /api/identity/*   → localhost:8888  (Identity服务)
 /api/masterdata/* → localhost:8889  (Masterdata服务)
+/api/ai-model/*   → localhost:8891  (AI-Model服务)
+/api/moderation/* → localhost:8892  (Moderation服务)
 /health           → 健康检查
 ```
 
@@ -239,6 +314,14 @@ mysql/
   - md_residential_area (住宅小区表)
   - md_sensitive_word (敏感词表)
   - md_configuration (系统配置表)
+
+- **ai_model_db**:
+  - am_model_config (模型配置表)
+  - am_api_key (API密钥表)
+  - am_prompt_template (提示词模板表)
+  - am_call_log (调用日志表)
+  - am_usage_statistics (使用统计表)
+  - am_health_check (健康检查表)
 
 #### 5.2 redis/ - Redis缓存
 ```
@@ -276,7 +359,49 @@ etcd/
 
 ### 6. 其他目录
 
-#### 6.1 specs/ - 需求规格
+#### 6.1 openspec/ - OpenSpec提案管理
+```
+openspec/
+├── config.yaml          # OpenSpec配置文件
+├── changes/             # 变更提案目录
+│   ├── ai-model-service/
+│   │   ├── proposal.md
+│   │   ├── tasks.md
+│   │   ├── design.md
+│   │   └── specs/
+│   ├── ai-model-api-testing-fixes/
+│   └── ...
+└── specs/               # 规格说明
+```
+
+**用途:**
+- 管理功能提案和变更
+- 跟踪开发任务
+- 记录设计决策
+
+#### 6.2 Sensitive-lexicon/ - 敏感词库资源
+```
+Sensitive-lexicon/
+└── data/                # 敏感词数据文件
+```
+
+**用途:**
+- 存储敏感词库资源
+- 供敏感词管理功能使用
+
+#### 6.3 .claude/ - Claude Code配置
+```
+.claude/
+├── projects/            # 项目特定配置
+├── worktrees/          # 工作树缓存
+└── scheduled_tasks.json # 定时任务
+```
+
+**用途:**
+- Claude Code AI助手的配置和缓存
+- 不应提交到版本控制
+
+#### 6.4 specs/ - 需求规格
 ```
 specs/
 ├── 001-identity-masterdata/    # Phase 1规格
@@ -287,7 +412,7 @@ specs/
     └── contracts/
 ```
 
-#### 6.2 scripts/ - 脚本工具
+#### 6.5 scripts/ - 脚本工具
 ```
 scripts/
 └── sql/          # SQL脚本
@@ -295,13 +420,13 @@ scripts/
     └── masterdata_db.sql
 ```
 
-#### 6.3 docs/ - 文档
+#### 6.6 docs/ - 文档
 ```
 docs/
 └── api/          # API文档
 ```
 
-#### 6.4 deploy/ - 部署配置
+#### 6.7 deploy/ - 部署配置
 ```
 deploy/
 ├── docker-compose.yml
@@ -315,7 +440,10 @@ deploy/
 ### 配置文件
 - `services/identity/api/etc/identity-api.yaml` - Identity API配置
 - `services/masterdata/api/etc/masterdata-api.yaml` - Masterdata API配置
+- `services/ai-model/api/etc/aimodelapi.yaml` - AI-Model API配置
+- `services/ai-model/rpc/etc/aiModel.yaml` - AI-Model RPC配置
 - `web/pc/.env.development` - 前端开发环境配置
+- `openspec/config.yaml` - OpenSpec配置
 - `CLAUDE.md` - Claude AI工作指南
 - `DEPLOYMENT.md` - 部署文档
 - `PROJECT_STRUCTURE.md` - 本文档
@@ -324,6 +452,7 @@ deploy/
 - `services/identity/api/identity.api` - Identity HTTP API定义
 - `services/identity/rpc/identity.proto` - Identity gRPC定义
 - `services/masterdata/api/masterdata.api` - Masterdata HTTP API定义
+- `services/ai-model/rpc/pb/ai_model.proto` - AI-Model gRPC定义
 
 ### 数据模型
 - `services/identity/model/*Model.go` - Identity数据模型
@@ -401,7 +530,10 @@ cd web/pc && npm run dev
 - **API网关**: http://172.31.39.71:8080
 - **Identity API**: http://localhost:8888
 - **Masterdata API**: http://localhost:8889
+- **AI-Model API**: http://localhost:8891
+- **Moderation API**: http://localhost:8892
 - **Identity RPC**: http://localhost:8080
+- **AI-Model RPC**: http://localhost:8084
 
 ---
 

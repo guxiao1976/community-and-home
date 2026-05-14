@@ -1,20 +1,270 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context
+# 社区与家园管理系统 - 基于 Go + Vue3 的微服务架构
+context: |
+  ## 项目概述
+  社区与家园管理系统，采用微服务架构，前后端分离设计。
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  领域：社区物业管理平台
+  - 身份认证与权限管理
+  - 主数据管理（行政区划、社区、敏感词、系统配置）
+  - 物业绑定验证
+
+  ## 架构模式
+  - 微服务架构（Identity Service、Masterdata Service）
+  - API 网关模式（统一入口 :8080）
+  - DDD 领域驱动设计
+  - RESTful API + gRPC
+  - JWT 认证
+  - 缓存优先策略（Redis）
+
+  ## 技术栈
+
+  ### 后端
+  - 语言：Go 1.21+
+  - 框架：go-zero 1.6+
+  - 通信：HTTP/REST、gRPC
+  - 认证：JWT (golang-jwt/jwt)
+  - 加密：bcrypt (golang.org/x/crypto/bcrypt)
+  - 数据库：MySQL 8.0
+  - 缓存：Redis 7.0
+  - 对象存储：MinIO
+  - 配置中心：etcd 3.5
+  - 服务发现：etcd
+
+  ### 前端
+  - 语言：TypeScript 5.0+
+  - 框架：Vue 3.4+ (Composition API)
+  - UI 库：Element Plus 2.13+
+  - 构建工具：Vite 6.0+
+  - 状态管理：Pinia 3.0+ (with persistedstate plugin)
+  - 路由：Vue Router 4.6+
+  - HTTP 客户端：Axios 1.16+
+  - 工具库：lodash-es、dayjs
+  - 测试：Vitest、Playwright、@vue/test-utils
+
+  ## 服务端口
+  - API 网关：8080 (对外统一入口)
+  - Identity API：8888 (内部)
+  - Identity RPC：8080 (内部)
+  - Masterdata API：8889 (内部)
+  - Frontend PC：3003
+  - MySQL：3306
+  - Redis：6379
+
+  ## 项目结构
+  ```
+  community-and-home/
+  ├── common/              # 公共库 (errorx, jwtx, miniox, responsex)
+  ├── services/            # 微服务
+  │   ├── identity/       # 身份认证服务 (API:8888, RPC:8080)
+  │   │   ├── api/        # HTTP API
+  │   │   ├── rpc/        # gRPC 服务
+  │   │   └── model/      # 数据模型
+  │   └── masterdata/     # 主数据服务 (API:8889)
+  │       ├── api/
+  │       └── model/
+  ├── web/                 # 前端应用
+  │   ├── pc/             # PC 管理后台 (Vue3 + TS)
+  │   ├── mobile/         # 移动端 (待开发)
+  │   └── common/         # 前端公共库
+  ├── gateway/             # API 网关 (Go HTTP 反向代理)
+  ├── docs/                # 文档
+  │   └── api/            # API 文档
+  ├── specs/               # 需求规格说明
+  ├── scripts/             # 脚本工具
+  └── openspec/            # OpenSpec 配置
+  ```
+
+  ## 代码约定
+
+  ### 后端 Go 代码规范
+  1. **Handler 响应格式（强制）**
+     - 所有 handler 必须使用 `responsex.Response(w, resp, err)` 返回响应
+     - 不要使用 `httpx.OkJsonCtx`
+     - 统一返回格式：`{ code: 0, message: "success", data: {...} }`
+     - 前端 Axios 拦截器依赖此格式解构 `code` 和 `data`
+
+  2. **goctl 代码生成规则（强制）**
+     - `.api` 文件中的 `group` 名称不能包含连字符（如 `deleted-items`）
+     - 必须使用下划线（如 `deleted_items`）
+     - 原因：连字符生成的目录和 import 别名是非法 Go 标识符
+     - goctl 会覆盖 `types.go`，手动添加的字段需同步更新到 `.api` 文件
+
+  3. **go-zero 标准目录结构**
+     - Handler 层：只负责参数验证和调用 Logic
+     - Logic 层：实现业务逻辑
+     - Model 层：负责数据访问
+     - 统一使用 errorx 包处理错误
+
+  4. **代码风格**
+     - 遵循 Go 标准命名约定
+     - 使用 gofmt 格式化代码
+
+  ### 前端 TypeScript/Vue 代码规范
+  1. **组件开发**
+     - 使用 Composition API（不使用 Options API）
+     - 使用 TypeScript 严格模式
+     - 组件文件使用 PascalCase 命名
+
+  2. **API 调用**
+     - 所有 API 调用统一通过 `src/api/` 目录
+     - 使用封装的 Axios 实例（`utils/request.ts`）
+     - API 基础 URL：`http://172.31.39.71:8080`
+
+  3. **状态管理**
+     - 使用 Pinia stores（`src/stores/`）
+     - 认证状态：`stores/auth.ts`
+     - 用户状态：`stores/user.ts`
+
+  4. **路由配置**
+     - 集中管理在 `src/router/index.ts`
+     - 使用路由守卫处理认证
+
+  5. **样式**
+     - 使用 SCSS
+     - 遵循 BEM 命名规范
+
+  ### 数据库规范
+  1. **命名约定**
+     - 表名：下划线命名法（如 `id_user`、`md_administrative_division`）
+     - 主键：统一使用 `id`
+     - 时间字段：`created_time`、`updated_time`、`delete_time`
+
+  2. **软删除**
+     - 使用 `delete_time IS NULL` 判断未删除记录
+
+  3. **状态字段**
+     - `status`：1=启用，0=禁用
+
+  4. **数据库**
+     - `identity_db`：用户、角色、权限、物业绑定
+     - `masterdata_db`：行政区划、社区、敏感词、系统配置
+
+  ### 提交信息格式
+  使用 Conventional Commits：
+  - `feat`: 新功能
+  - `fix`: 修复
+  - `docs`: 文档
+  - `style`: 格式
+  - `refactor`: 重构
+  - `test`: 测试
+  - `chore`: 构建
+
+  示例：
+  ```
+  feat(identity): 添加用户批量导入功能
+
+  - 支持 CSV 格式导入
+  - 添加数据验证
+  - 实现事务处理
+
+  Closes #123
+  ```
+
+  ## 请求流程
+
+  ### 典型请求流程
+  ```
+  浏览器 (172.31.39.71:3003)
+    ↓ POST /api/identity/auth/login
+  API 网关 (:8080)
+    ↓ 路由转发
+  Identity API (:8888)
+    ↓ Handler → Logic → Model
+  MySQL (identity_db)
+    ↓ 返回数据
+  Redis 缓存
+    ↓ JWT Token
+  响应 { code: 0, message: "success", data: {...} }
+  ```
+
+  ### 网关路由规则
+  - `/api/identity/*` → Identity API (8888)
+  - `/api/masterdata/*` → Masterdata API (8889)
+  - `/health` → 健康检查
+
+  ## 认证机制
+  - JWT Token 存储：浏览器 localStorage
+  - Access Token 有效期：24 小时
+  - Refresh Token 有效期：7 天
+  - 临时状态：sessionStorage
+
+  ## 常用命令
+
+  ### 后端开发
+  ```bash
+  # 生成 API 代码
+  goctl api go -api identity.api -dir .
+
+  # 生成 Model 代码
+  goctl model mysql datasource -url="user:pass@tcp(127.0.0.1:3306)/db" -table="table_name" -dir="./model"
+
+  # 生成 RPC 代码
+  goctl rpc protoc identity.proto --go_out=. --go-grpc_out=. --zrpc_out=.
+  ```
+
+  ### 前端开发
+  ```bash
+  # 安装依赖
+  npm install
+
+  # 开发模式
+  npm run dev
+
+  # 构建生产版本
+  npm run build
+
+  # 类型检查
+  npm run type-check
+  ```
+
+  ## 测试账号
+  - 管理员：phone=13800000000, password=Admin@123456
+  - 测试用户：phone=13900000001, password=Test@123456
+
+  ## 相关文档
+  - CLAUDE.md：开发指南
+  - PROJECT_STRUCTURE.md：项目结构详解
+  - DEPLOYMENT.md：部署文档
+  - docs/api/：API 文档（identity-service.md、masterdata-service.md）
+
+# Per-artifact rules
+rules:
+  proposal:
+    - 提案应明确说明变更的业务价值和技术影响
+    - 如果涉及多个服务，需要说明服务间的交互方式
+    - 如果涉及数据库变更，需要包含迁移策略
+    - 如果涉及 API 变更，需要考虑向后兼容性
+    - 包含"非目标"部分，明确不在本次变更范围内的内容
+    - 提案长度控制在 500 字以内（中文）或 800 词以内（英文）
+
+  tasks:
+    - 任务拆分应遵循单一职责原则
+    - 每个任务预估时间不超过 2 小时
+    - 后端任务应包含：API 定义 → Logic 实现 → Model 操作 → 测试
+    - 前端任务应包含：API 接口 → 组件开发 → 状态管理 → 路由配置
+    - 跨服务任务需要明确服务调用顺序
+    - 数据库变更任务需要包含回滚方案
+
+  implementation:
+    - 后端代码必须使用 responsex.Response 返回响应
+    - goctl 生成的代码不要手动修改 types.go，应修改 .api 文件后重新生成
+    - 前端组件必须使用 Composition API
+    - 所有 API 调用必须通过 src/api/ 目录的封装函数
+    - 新增数据库表必须遵循命名规范（id_*, md_*）
+    - 提交前必须通过类型检查和代码格式化
+    - 重要功能变更需要添加单元测试
+
+    # Go-Zero 微服务开发规范
+    - 创建数据库记录时，时间字段必须使用 time.Now()，不能使用零值 time.Time{}
+    - MySQL JSON 类型字段必须使用 json.Marshal() 转换，不能直接存储字符串
+    - 更新/删除操作后必须调用缓存失效方法（如 InvalidateCache）
+    - RPC 服务实现完成后，必须同步实现 API 层的 Logic 调用
+    - 修改代码后必须重新编译并重启服务才能生效
+
+    # API 联调测试规范
+    - 新增 CRUD API 必须完整测试：创建 → 查询 → 更新 → 删除 → 验证删除
+    - 测试前确认服务二进制文件是最新编译版本（检查文件时间戳）
+    - 发现空实现（todo 注释）必须先实现再测试，不要假设功能已完成

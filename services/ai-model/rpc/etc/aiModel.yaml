@@ -1,0 +1,18 @@
+Name: aimodel.rpc
+ListenOn: 0.0.0.0:8080
+Etcd:
+  Hosts:
+  - 127.0.0.1:2379
+  Key: aimodel.rpc
+
+# 数据库配置
+DataSource: root:123456@tcp(127.0.0.1:3306)/ai_model_db?charset=utf8mb4&parseTime=true&loc=Local
+
+# Redis 缓存配置
+CacheRedis:
+  - Host: 127.0.0.1:6379
+    Type: node
+    Pass: "123456"
+
+# API Key 加密密钥（32字节，用于 AES-256-GCM）
+EncryptionKey: "your-32-byte-encryption-key-here!!"

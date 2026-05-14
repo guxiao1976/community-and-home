@@ -53,6 +53,11 @@ export default defineConfig({
         target: 'http://172.31.39.71:8890',
         changeOrigin: true,
         agent: false
+      },
+      '/api/v1': {
+        target: 'http://127.0.0.1:8891',
+        changeOrigin: true,
+        agent: false
       }
     }
   },

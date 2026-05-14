@@ -3,6 +3,7 @@ import { dashboardModule } from './modules/dashboard.config';
 import { masterdataModule } from './modules/masterdata.config';
 import { identityModule } from './modules/identity.config';
 import { moderationModule } from './modules/moderation.config';
+import { aimodelModule } from './modules/aimodel.config';
 
 /**
  * 聚合所有模块的菜单配置
@@ -12,7 +13,8 @@ export function getMenuItems(): MenuItemConfig[] {
     dashboardModule,
     masterdataModule,
     identityModule,
-    moderationModule
+    moderationModule,
+    aimodelModule
   ];
 
   return modules.map(module => {

@@ -19,26 +19,35 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AiModel_ModerateText_FullMethodName  = "/ai_model.AiModel/ModerateText"
-	AiModel_ModerateImage_FullMethodName = "/ai_model.AiModel/ModerateImage"
-	AiModel_HealthCheck_FullMethodName   = "/ai_model.AiModel/HealthCheck"
-	AiModel_GetModelInfo_FullMethodName  = "/ai_model.AiModel/GetModelInfo"
+	AiModel_CallModel_FullMethodName          = "/ai_model.AiModel/CallModel"
+	AiModel_CallModelBatch_FullMethodName     = "/ai_model.AiModel/CallModelBatch"
+	AiModel_GetAvailableModels_FullMethodName = "/ai_model.AiModel/GetAvailableModels"
+	AiModel_HealthCheck_FullMethodName        = "/ai_model.AiModel/HealthCheck"
+	AiModel_CreateModelConfig_FullMethodName  = "/ai_model.AiModel/CreateModelConfig"
+	AiModel_UpdateModelConfig_FullMethodName  = "/ai_model.AiModel/UpdateModelConfig"
+	AiModel_DeleteModelConfig_FullMethodName  = "/ai_model.AiModel/DeleteModelConfig"
+	AiModel_GetModelConfig_FullMethodName     = "/ai_model.AiModel/GetModelConfig"
 )
 
 // AiModelClient is the client API for AiModel service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// AI 模型服务
+// AI 模型统一管理服务
 type AiModelClient interface {
-	// 文本审核
-	ModerateText(ctx context.Context, in *TextModerationRequest, opts ...grpc.CallOption) (*TextModerationResponse, error)
-	// 图片审核（预留）
-	ModerateImage(ctx context.Context, in *ImageModerationRequest, opts ...grpc.CallOption) (*ImageModerationResponse, error)
+	// 通用模型调用（单次）
+	CallModel(ctx context.Context, in *ModelCallRequest, opts ...grpc.CallOption) (*ModelCallResponse, error)
+	// 通用模型调用（批量）
+	CallModelBatch(ctx context.Context, in *ModelBatchRequest, opts ...grpc.CallOption) (*ModelBatchResponse, error)
+	// 获取可用模型列表
+	GetAvailableModels(ctx context.Context, in *GetModelsRequest, opts ...grpc.CallOption) (*GetModelsResponse, error)
 	// 健康检查
 	HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
-	// 模型信息
-	GetModelInfo(ctx context.Context, in *ModelInfoRequest, opts ...grpc.CallOption) (*ModelInfoResponse, error)
+	// 模型配置管理
+	CreateModelConfig(ctx context.Context, in *CreateModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error)
+	UpdateModelConfig(ctx context.Context, in *UpdateModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error)
+	DeleteModelConfig(ctx context.Context, in *DeleteModelConfigReq, opts ...grpc.CallOption) (*DeleteModelConfigResp, error)
+	GetModelConfig(ctx context.Context, in *GetModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error)
 }
 
 type aiModelClient struct {
@@ -49,20 +58,30 @@ func NewAiModelClient(cc grpc.ClientConnInterface) AiModelClient {
 	return &aiModelClient{cc}
 }
 
-func (c *aiModelClient) ModerateText(ctx context.Context, in *TextModerationRequest, opts ...grpc.CallOption) (*TextModerationResponse, error) {
+func (c *aiModelClient) CallModel(ctx context.Context, in *ModelCallRequest, opts ...grpc.CallOption) (*ModelCallResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TextModerationResponse)
-	err := c.cc.Invoke(ctx, AiModel_ModerateText_FullMethodName, in, out, cOpts...)
+	out := new(ModelCallResponse)
+	err := c.cc.Invoke(ctx, AiModel_CallModel_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *aiModelClient) ModerateImage(ctx context.Context, in *ImageModerationRequest, opts ...grpc.CallOption) (*ImageModerationResponse, error) {
+func (c *aiModelClient) CallModelBatch(ctx context.Context, in *ModelBatchRequest, opts ...grpc.CallOption) (*ModelBatchResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ImageModerationResponse)
-	err := c.cc.Invoke(ctx, AiModel_ModerateImage_FullMethodName, in, out, cOpts...)
+	out := new(ModelBatchResponse)
+	err := c.cc.Invoke(ctx, AiModel_CallModelBatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aiModelClient) GetAvailableModels(ctx context.Context, in *GetModelsRequest, opts ...grpc.CallOption) (*GetModelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetModelsResponse)
+	err := c.cc.Invoke(ctx, AiModel_GetAvailableModels_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,10 +98,40 @@ func (c *aiModelClient) HealthCheck(ctx context.Context, in *HealthCheckRequest,
 	return out, nil
 }
 
-func (c *aiModelClient) GetModelInfo(ctx context.Context, in *ModelInfoRequest, opts ...grpc.CallOption) (*ModelInfoResponse, error) {
+func (c *aiModelClient) CreateModelConfig(ctx context.Context, in *CreateModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ModelInfoResponse)
-	err := c.cc.Invoke(ctx, AiModel_GetModelInfo_FullMethodName, in, out, cOpts...)
+	out := new(ModelConfigResp)
+	err := c.cc.Invoke(ctx, AiModel_CreateModelConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aiModelClient) UpdateModelConfig(ctx context.Context, in *UpdateModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModelConfigResp)
+	err := c.cc.Invoke(ctx, AiModel_UpdateModelConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aiModelClient) DeleteModelConfig(ctx context.Context, in *DeleteModelConfigReq, opts ...grpc.CallOption) (*DeleteModelConfigResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteModelConfigResp)
+	err := c.cc.Invoke(ctx, AiModel_DeleteModelConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aiModelClient) GetModelConfig(ctx context.Context, in *GetModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModelConfigResp)
+	err := c.cc.Invoke(ctx, AiModel_GetModelConfig_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -93,16 +142,21 @@ func (c *aiModelClient) GetModelInfo(ctx context.Context, in *ModelInfoRequest, 
 // All implementations must embed UnimplementedAiModelServer
 // for forward compatibility.
 //
-// AI 模型服务
+// AI 模型统一管理服务
 type AiModelServer interface {
-	// 文本审核
-	ModerateText(context.Context, *TextModerationRequest) (*TextModerationResponse, error)
-	// 图片审核（预留）
-	ModerateImage(context.Context, *ImageModerationRequest) (*ImageModerationResponse, error)
+	// 通用模型调用（单次）
+	CallModel(context.Context, *ModelCallRequest) (*ModelCallResponse, error)
+	// 通用模型调用（批量）
+	CallModelBatch(context.Context, *ModelBatchRequest) (*ModelBatchResponse, error)
+	// 获取可用模型列表
+	GetAvailableModels(context.Context, *GetModelsRequest) (*GetModelsResponse, error)
 	// 健康检查
 	HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error)
-	// 模型信息
-	GetModelInfo(context.Context, *ModelInfoRequest) (*ModelInfoResponse, error)
+	// 模型配置管理
+	CreateModelConfig(context.Context, *CreateModelConfigReq) (*ModelConfigResp, error)
+	UpdateModelConfig(context.Context, *UpdateModelConfigReq) (*ModelConfigResp, error)
+	DeleteModelConfig(context.Context, *DeleteModelConfigReq) (*DeleteModelConfigResp, error)
+	GetModelConfig(context.Context, *GetModelConfigReq) (*ModelConfigResp, error)
 	mustEmbedUnimplementedAiModelServer()
 }
 
@@ -113,17 +167,29 @@ type AiModelServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAiModelServer struct{}
 
-func (UnimplementedAiModelServer) ModerateText(context.Context, *TextModerationRequest) (*TextModerationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ModerateText not implemented")
+func (UnimplementedAiModelServer) CallModel(context.Context, *ModelCallRequest) (*ModelCallResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CallModel not implemented")
 }
-func (UnimplementedAiModelServer) ModerateImage(context.Context, *ImageModerationRequest) (*ImageModerationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ModerateImage not implemented")
+func (UnimplementedAiModelServer) CallModelBatch(context.Context, *ModelBatchRequest) (*ModelBatchResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CallModelBatch not implemented")
+}
+func (UnimplementedAiModelServer) GetAvailableModels(context.Context, *GetModelsRequest) (*GetModelsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAvailableModels not implemented")
 }
 func (UnimplementedAiModelServer) HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method HealthCheck not implemented")
 }
-func (UnimplementedAiModelServer) GetModelInfo(context.Context, *ModelInfoRequest) (*ModelInfoResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetModelInfo not implemented")
+func (UnimplementedAiModelServer) CreateModelConfig(context.Context, *CreateModelConfigReq) (*ModelConfigResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateModelConfig not implemented")
+}
+func (UnimplementedAiModelServer) UpdateModelConfig(context.Context, *UpdateModelConfigReq) (*ModelConfigResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateModelConfig not implemented")
+}
+func (UnimplementedAiModelServer) DeleteModelConfig(context.Context, *DeleteModelConfigReq) (*DeleteModelConfigResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteModelConfig not implemented")
+}
+func (UnimplementedAiModelServer) GetModelConfig(context.Context, *GetModelConfigReq) (*ModelConfigResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetModelConfig not implemented")
 }
 func (UnimplementedAiModelServer) mustEmbedUnimplementedAiModelServer() {}
 func (UnimplementedAiModelServer) testEmbeddedByValue()                 {}
@@ -146,38 +212,56 @@ func RegisterAiModelServer(s grpc.ServiceRegistrar, srv AiModelServer) {
 	s.RegisterService(&AiModel_ServiceDesc, srv)
 }
 
-func _AiModel_ModerateText_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TextModerationRequest)
+func _AiModel_CallModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModelCallRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AiModelServer).ModerateText(ctx, in)
+		return srv.(AiModelServer).CallModel(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AiModel_ModerateText_FullMethodName,
+		FullMethod: AiModel_CallModel_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AiModelServer).ModerateText(ctx, req.(*TextModerationRequest))
+		return srv.(AiModelServer).CallModel(ctx, req.(*ModelCallRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AiModel_ModerateImage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ImageModerationRequest)
+func _AiModel_CallModelBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModelBatchRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AiModelServer).ModerateImage(ctx, in)
+		return srv.(AiModelServer).CallModelBatch(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AiModel_ModerateImage_FullMethodName,
+		FullMethod: AiModel_CallModelBatch_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AiModelServer).ModerateImage(ctx, req.(*ImageModerationRequest))
+		return srv.(AiModelServer).CallModelBatch(ctx, req.(*ModelBatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AiModel_GetAvailableModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetModelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AiModelServer).GetAvailableModels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AiModel_GetAvailableModels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AiModelServer).GetAvailableModels(ctx, req.(*GetModelsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -200,20 +284,74 @@ func _AiModel_HealthCheck_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AiModel_GetModelInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ModelInfoRequest)
+func _AiModel_CreateModelConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateModelConfigReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AiModelServer).GetModelInfo(ctx, in)
+		return srv.(AiModelServer).CreateModelConfig(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AiModel_GetModelInfo_FullMethodName,
+		FullMethod: AiModel_CreateModelConfig_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AiModelServer).GetModelInfo(ctx, req.(*ModelInfoRequest))
+		return srv.(AiModelServer).CreateModelConfig(ctx, req.(*CreateModelConfigReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AiModel_UpdateModelConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateModelConfigReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AiModelServer).UpdateModelConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AiModel_UpdateModelConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AiModelServer).UpdateModelConfig(ctx, req.(*UpdateModelConfigReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AiModel_DeleteModelConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteModelConfigReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AiModelServer).DeleteModelConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AiModel_DeleteModelConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AiModelServer).DeleteModelConfig(ctx, req.(*DeleteModelConfigReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AiModel_GetModelConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetModelConfigReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AiModelServer).GetModelConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AiModel_GetModelConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AiModelServer).GetModelConfig(ctx, req.(*GetModelConfigReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -226,20 +364,36 @@ var AiModel_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*AiModelServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ModerateText",
-			Handler:    _AiModel_ModerateText_Handler,
+			MethodName: "CallModel",
+			Handler:    _AiModel_CallModel_Handler,
 		},
 		{
-			MethodName: "ModerateImage",
-			Handler:    _AiModel_ModerateImage_Handler,
+			MethodName: "CallModelBatch",
+			Handler:    _AiModel_CallModelBatch_Handler,
+		},
+		{
+			MethodName: "GetAvailableModels",
+			Handler:    _AiModel_GetAvailableModels_Handler,
 		},
 		{
 			MethodName: "HealthCheck",
 			Handler:    _AiModel_HealthCheck_Handler,
 		},
 		{
-			MethodName: "GetModelInfo",
-			Handler:    _AiModel_GetModelInfo_Handler,
+			MethodName: "CreateModelConfig",
+			Handler:    _AiModel_CreateModelConfig_Handler,
+		},
+		{
+			MethodName: "UpdateModelConfig",
+			Handler:    _AiModel_UpdateModelConfig_Handler,
+		},
+		{
+			MethodName: "DeleteModelConfig",
+			Handler:    _AiModel_DeleteModelConfig_Handler,
+		},
+		{
+			MethodName: "GetModelConfig",
+			Handler:    _AiModel_GetModelConfig_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
