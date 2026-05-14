@@ -17,13 +17,14 @@
       <div class="filter-bar">
         <el-form :inline="true" :model="filters">
           <el-form-item label="分类">
-            <el-input v-model="filters.category" placeholder="请输入分类" clearable style="width: 150px" />
+            <el-select v-model="filters.category" placeholder="全部" clearable style="width: 150px">
+              <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
           </el-form-item>
           <el-form-item label="严重等级">
             <el-select v-model="filters.severity" placeholder="全部" clearable style="width: 120px">
-              <el-option label="低 (1)" :value="1" />
-              <el-option label="中 (2)" :value="2" />
-              <el-option label="高 (3)" :value="3" />
+              <el-option label="违规" :value="3" />
+              <el-option label="可疑" :value="1" />
             </el-select>
           </el-form-item>
           <el-form-item label="提交状态">
@@ -48,16 +49,9 @@
         <el-table-column prop="category" label="分类" width="120" />
         <el-table-column label="严重等级" width="120">
           <template #default="{ row }">
-            <el-tag v-if="row.severity === 1" type="info" size="small">低</el-tag>
-            <el-tag v-else-if="row.severity === 2" type="warning" size="small">中</el-tag>
-            <el-tag v-else-if="row.severity === 3" type="danger" size="small">高</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="处理动作" width="120">
-          <template #default="{ row }">
-            <el-tag v-if="row.action === 'warn'" type="warning" size="small">警告</el-tag>
-            <el-tag v-else-if="row.action === 'block'" type="danger" size="small">拦截</el-tag>
-            <el-tag v-else-if="row.action === 'review'" type="info" size="small">审核</el-tag>
+            <el-tag v-if="row.severity === 3" type="danger" size="small">违规</el-tag>
+            <el-tag v-else-if="row.severity === 1" type="info" size="small">可疑</el-tag>
+            <el-tag v-else type="warning" size="small">未知</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="提交状态" width="100">
@@ -111,24 +105,15 @@
           />
         </el-form-item>
         <el-form-item label="分类" prop="category">
-          <el-input v-model="form.category" placeholder="如：政治、色情、暴力、广告" />
+          <el-select v-model="form.category" placeholder="请选择分类" style="width: 100%">
+            <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
         </el-form-item>
         <el-form-item label="严重等级" prop="severity">
           <el-radio-group v-model="form.severity">
-            <el-radio :label="1">低</el-radio>
-            <el-radio :label="2">中</el-radio>
-            <el-radio :label="3">高</el-radio>
+            <el-radio :label="3">违规</el-radio>
+            <el-radio :label="1">可疑</el-radio>
           </el-radio-group>
-        </el-form-item>
-        <el-form-item label="处理动作" prop="action">
-          <el-radio-group v-model="form.action">
-            <el-radio label="warn">警告</el-radio>
-            <el-radio label="block">拦截</el-radio>
-            <el-radio label="review">审核</el-radio>
-          </el-radio-group>
-          <div style="margin-top: 8px; color: #909399; font-size: 12px">
-            警告：提示用户但允许发布；拦截：禁止发布；审核：进入人工审核
-          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -149,6 +134,16 @@ import * as masterdataApi from '@/api/masterdata';
 import { logger } from '@/utils/logger'
 
 type StatusType = 'info' | 'warning' | 'success' | 'danger'
+
+const categoryOptions = [
+  { label: '政治', value: '政治' },
+  { label: '色情', value: '色情' },
+  { label: '暴力', value: '暴力' },
+  { label: '广告', value: '广告' },
+  { label: '赌博', value: '赌博' },
+  { label: '违禁品', value: '违禁品' },
+  { label: '其他', value: '其他' }
+]
 
 const submissionStatusMap: Record<number, { label: string; type: StatusType }> = {
   0: { label: '待提交', type: 'info' },
@@ -181,8 +176,7 @@ const form = reactive({
   id: 0,
   word: '',
   category: '',
-  severity: 1,
-  action: 'warn'
+  severity: 3
 });
 
 const canEdit = (row: any) => row.submission_status === 0 || row.submission_status === 3
@@ -195,13 +189,10 @@ const rules: FormRules = {
     { required: true, message: '请输入敏感词', trigger: 'blur' }
   ],
   category: [
-    { required: true, message: '请输入分类', trigger: 'blur' }
+    { required: true, message: '请选择分类', trigger: 'change' }
   ],
   severity: [
     { required: true, message: '请选择严重等级', trigger: 'change' }
-  ],
-  action: [
-    { required: true, message: '请选择处理动作', trigger: 'change' }
   ]
 };
 
@@ -261,7 +252,6 @@ const handleEdit = (row: any) => {
   form.word = row.word;
   form.category = row.category;
   form.severity = row.severity;
-  form.action = row.action;
   dialogVisible.value = true;
 };
 
@@ -332,8 +322,7 @@ const handleSubmitForm = async () => {
       if (form.id) {
         await masterdataApi.updateSensitiveWord(form.id, {
           category: form.category,
-          severity: form.severity,
-          action: form.action
+          severity: form.severity
         });
         ElMessage.success('更新成功');
       } else {
@@ -341,7 +330,7 @@ const handleSubmitForm = async () => {
           word: form.word,
           category: form.category,
           severity: form.severity,
-          action: form.action
+          action: 2  // 默认动作：屏蔽 (1=警告, 2=屏蔽, 3=人工审核)
         });
         ElMessage.success('添加成功');
       }
@@ -359,8 +348,7 @@ const resetForm = () => {
   form.id = 0;
   form.word = '';
   form.category = '';
-  form.severity = 1;
-  form.action = 'warn';
+  form.severity = 3;
   formRef.value?.resetFields();
 };
 </script>
