@@ -96,17 +96,17 @@ export function updateUser(id: number, data: {
 }
 
 /**
- * Disable user account
+ * Disable user account (set status to 2)
  */
 export function disableUser(id: number) {
-  return request.post<null>(`/api/identity/users/${id}/disable`);
+  return request.put<null>(`/api/identity/users/${id}`, { status: 2 });
 }
 
 /**
- * Enable user account
+ * Enable user account (set status to 1)
  */
 export function enableUser(id: number) {
-  return request.post<null>(`/api/identity/users/${id}/enable`);
+  return request.put<null>(`/api/identity/users/${id}`, { status: 1 });
 }
 
 /**

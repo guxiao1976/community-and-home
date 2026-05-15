@@ -6,6 +6,7 @@ package user
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/guxiao/community-and-home/common/errorx"
 	"github.com/guxiao/community-and-home/services/identity/api/internal/svc"
@@ -56,12 +57,15 @@ func (l *CreateUserLogic) CreateUser(req *types.CreateUserReq) (resp *types.Crea
 	}
 
 	// Create user
+	now := time.Now()
 	user := &model.AuthUser{
 		Phone:        req.Phone,
 		PasswordHash: string(hashedBytes),
 		Nickname:     sql.NullString{String: nickname, Valid: true},
 		UserType:     int64(req.UserType),
 		Status:       1, // Active by default
+		CreatedTime:  now,
+		UpdatedTime:  now,
 	}
 
 	if req.ScopeId != nil {
