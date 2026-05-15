@@ -45,7 +45,7 @@ func (m *customAuthPermissionModel) FindByIds(ctx context.Context, ids []int64) 
 		args[i] = id
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE id IN (%s) AND delete_time IS NULL ORDER BY sort_order ASC",
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE id IN (%s) ORDER BY sort_order ASC",
 		authPermissionRows, m.table, strings.Join(placeholders, ","))
 
 	err := m.QueryRowsNoCacheCtx(ctx, &permissions, query, args...)
@@ -58,7 +58,7 @@ func (m *customAuthPermissionModel) FindByIds(ctx context.Context, ids []int64) 
 
 func (m *customAuthPermissionModel) FindAll(ctx context.Context, status *int64) ([]*AuthPermission, error) {
 	var permissions []*AuthPermission
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE delete_time IS NULL", authPermissionRows, m.table)
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE 1=1", authPermissionRows, m.table)
 	args := []interface{}{}
 
 	if status != nil {
