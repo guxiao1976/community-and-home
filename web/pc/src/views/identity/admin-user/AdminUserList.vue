@@ -233,7 +233,7 @@ const fetchUsers = async () => {
     const { data } = await getUsers({
       userType: UserType.Staff,
       page: pagination.page,
-      pageSize: pagination.pageSize
+      page_size: pagination.pageSize
     });
 
     // Fetch roles for each user
@@ -260,7 +260,7 @@ const fetchUsers = async () => {
 
 const fetchAvailableRoles = async () => {
   try {
-    const { data } = await getRoles({ page: 1, pageSize: 100 });
+    const { data } = await getRoles({ page: 1, page_size: 100 });
     availableRoles.value = data.list;
   } catch (error) {
     ElMessage.error('获取角色列表失败');

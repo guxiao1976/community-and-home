@@ -204,7 +204,7 @@ const fetchUsers = async () => {
     const { data } = await getUsers({
       userType: UserType.Homeowner,
       page: pagination.page,
-      pageSize: pagination.pageSize
+      page_size: pagination.pageSize
     });
 
     tableData.value = data.list;
