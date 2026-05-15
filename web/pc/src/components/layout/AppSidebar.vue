@@ -63,25 +63,31 @@ const allMenuItems = getMenuItems();
 
 // 根据权限过滤菜单项
 const visibleMenuItems = computed(() => {
-  return allMenuItems.filter(item => {
-    // 如果没有权限要求，直接显示
-    if (!item.permission) return true;
-
-    // 检查权限
-    return permissionStore.hasPermission(item.permission);
-  }).map(item => {
-    // 如果有子菜单，也需要过滤
-    if (item.children) {
-      return {
-        ...item,
-        children: item.children.filter(child => {
+  return allMenuItems
+    .map(item => {
+      // 如果有子菜单，过滤子菜单
+      if (item.children) {
+        const visibleChildren = item.children.filter(child => {
           if (!child.permission) return true;
           return permissionStore.hasPermission(child.permission);
-        })
-      };
-    }
-    return item;
-  });
+        });
+
+        // 如果有可见的子菜单，返回带过滤后子菜单的项
+        if (visibleChildren.length > 0) {
+          return {
+            ...item,
+            children: visibleChildren
+          };
+        }
+        // 如果所有子菜单都被过滤掉了，返回 null
+        return null;
+      }
+
+      // 如果是单个菜单项（无子菜单），检查权限
+      if (!item.permission) return item;
+      return permissionStore.hasPermission(item.permission) ? item : null;
+    })
+    .filter(item => item !== null);
 });
 
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed);
