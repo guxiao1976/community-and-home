@@ -6,14 +6,14 @@ package handler
 import (
 	"net/http"
 
-	auth "github.com/guxiao/community-and-home/services/identity/api/internal/handler/auth"
-	file "github.com/guxiao/community-and-home/services/identity/api/internal/handler/file"
-	permission "github.com/guxiao/community-and-home/services/identity/api/internal/handler/permission"
-	property "github.com/guxiao/community-and-home/services/identity/api/internal/handler/property"
-	role "github.com/guxiao/community-and-home/services/identity/api/internal/handler/role"
-	user "github.com/guxiao/community-and-home/services/identity/api/internal/handler/user"
-	verification "github.com/guxiao/community-and-home/services/identity/api/internal/handler/verification"
-	"github.com/guxiao/community-and-home/services/identity/api/internal/svc"
+	auth "community-and-home/services/identity/api/internal/handler/auth"
+	file "community-and-home/services/identity/api/internal/handler/file"
+	permission "community-and-home/services/identity/api/internal/handler/permission"
+	property "community-and-home/services/identity/api/internal/handler/property"
+	role "community-and-home/services/identity/api/internal/handler/role"
+	user "community-and-home/services/identity/api/internal/handler/user"
+	verification "community-and-home/services/identity/api/internal/handler/verification"
+	"community-and-home/services/identity/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 )
