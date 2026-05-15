@@ -10,10 +10,16 @@ export const identityModule: ModuleConfig = {
     icon: User,
     children: [
       {
-        path: '/users/list',
-        title: '用户列表',
+        path: '/users/admin',
+        title: '管理员管理',
+        icon: UserFilled,
+        permission: 'identity:admin-user:list'
+      },
+      {
+        path: '/users/regular',
+        title: '普通用户管理',
         icon: User,
-        permission: 'user:view'
+        permission: 'identity:regular-user:list'
       },
       {
         path: '/users/verifications',
@@ -32,10 +38,22 @@ export const identityModule: ModuleConfig = {
 
   routes: [
     {
+      path: 'users/admin',
+      name: 'AdminUserList',
+      component: () => import('@/views/identity/admin-user/AdminUserList.vue'),
+      meta: { title: '管理员管理', icon: 'UserFilled', requiresAuth: true, permission: 'identity:admin-user:list' }
+    },
+    {
+      path: 'users/regular',
+      name: 'RegularUserList',
+      component: () => import('@/views/identity/regular-user/RegularUserList.vue'),
+      meta: { title: '普通用户管理', icon: 'User', requiresAuth: true, permission: 'identity:regular-user:list' }
+    },
+    {
       path: 'users/list',
       name: 'UserList',
       component: () => import('@/views/users/List.vue'),
-      meta: { title: '用户列表', icon: 'User', requiresAuth: true, permission: 'user:view' }
+      meta: { title: '用户列表', icon: 'User', requiresAuth: true, permission: 'user:view', hidden: true }
     },
     {
       path: 'users/create',

@@ -21,6 +21,23 @@ INSERT INTO auth_permission (id, parent_id, name, code, type, path, icon, sort_o
 (13, 10, '编辑用户', 'user:update', 2, NULL, NULL, 3, 1),
 (14, 10, '删除用户', 'user:delete', 2, NULL, NULL, 4, 1);
 
+-- Admin User Management
+INSERT INTO auth_permission (id, parent_id, name, code, type, path, icon, sort_order, status) VALUES
+(15, 1, '管理员管理', 'identity:admin-user', 1, '/users/admin', 'user-filled', 15, 1),
+(16, 15, '查看管理员', 'identity:admin-user:list', 2, NULL, NULL, 1, 1),
+(17, 15, '创建管理员', 'identity:admin-user:create', 2, NULL, NULL, 2, 1),
+(18, 15, '编辑管理员', 'identity:admin-user:update', 2, NULL, NULL, 3, 1),
+(19, 15, '删除管理员', 'identity:admin-user:delete', 2, NULL, NULL, 4, 1),
+(151, 15, '分配角色', 'identity:admin-user:assign-role', 2, NULL, NULL, 5, 1);
+
+-- Regular User Management
+INSERT INTO auth_permission (id, parent_id, name, code, type, path, icon, sort_order, status) VALUES
+(152, 1, '普通用户管理', 'identity:regular-user', 1, '/users/regular', 'user', 16, 1),
+(153, 152, '查看普通用户', 'identity:regular-user:list', 2, NULL, NULL, 1, 1),
+(154, 152, '创建普通用户', 'identity:regular-user:create', 2, NULL, NULL, 2, 1),
+(155, 152, '编辑普通用户', 'identity:regular-user:update', 2, NULL, NULL, 3, 1),
+(156, 152, '删除普通用户', 'identity:regular-user:delete', 2, NULL, NULL, 4, 1);
+
 -- Role Management
 INSERT INTO auth_permission (id, parent_id, name, code, type, path, icon, sort_order, status) VALUES
 (20, 1, '角色管理', 'role', 1, '/system/role', 'team', 20, 1),
