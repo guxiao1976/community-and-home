@@ -17,6 +17,9 @@ service AiModel {
   // 健康检查
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
 
+  // 单个模型健康检查
+  rpc CheckModelHealth(ModelHealthCheckReq) returns (ModelHealthCheckResp);
+
   // 模型配置管理
   rpc CreateModelConfig(CreateModelConfigReq) returns (ModelConfigResp);
   rpc UpdateModelConfig(UpdateModelConfigReq) returns (ModelConfigResp);
@@ -100,6 +103,18 @@ message ModelHealthStatus {
   int64 avg_latency_ms = 3;
   int64 total_requests = 4;
   double success_rate = 5;
+}
+
+// 单个模型健康检查
+message ModelHealthCheckReq {
+  int64 model_id = 1;
+  string api_key = 2;
+}
+
+message ModelHealthCheckResp {
+  string status = 1;        // healthy/unhealthy
+  int64 response_time = 2;  // 响应时间（毫秒）
+  string message = 3;       // 错误信息或详细说明
 }
 
 // ============ 模型配置管理 ============

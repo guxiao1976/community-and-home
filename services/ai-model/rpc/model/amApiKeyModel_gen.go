@@ -42,6 +42,7 @@ type (
 
 	AmApiKey struct {
 		Id              int64          `db:"id"`
+		ModelId         int64          `db:"model_id"`          // å…³è”çš„æ¨¡åž‹é…ç½®ID
 		KeyName         string         `db:"key_name"`          // å¯†é’¥åç§°
 		Provider        string         `db:"provider"`          // æä¾›å•†ï¼šclaude/openai/ollama
 		ApiKey          string         `db:"api_key"`           // APIå¯†é’¥ï¼ˆAESåŠ å¯†å­˜å‚¨ï¼‰
@@ -95,8 +96,8 @@ func (m *defaultAmApiKeyModel) FindOne(ctx context.Context, id int64) (*AmApiKey
 func (m *defaultAmApiKeyModel) Insert(ctx context.Context, data *AmApiKey) (sql.Result, error) {
 	aiModelDbAmApiKeyIdKey := fmt.Sprintf("%s%v", cacheAiModelDbAmApiKeyIdPrefix, data.Id)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, amApiKeyRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.KeyName, data.Provider, data.ApiKey, data.MaskedKey, data.DailyQuota, data.MonthlyQuota, data.Priority, data.Status, data.FailureCount, data.LastUsedTime, data.LastFailureTime, data.CreatedTime, data.UpdatedTime, data.DeleteTime)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, amApiKeyRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.ModelId, data.KeyName, data.Provider, data.ApiKey, data.MaskedKey, data.DailyQuota, data.MonthlyQuota, data.Priority, data.Status, data.FailureCount, data.LastUsedTime, data.LastFailureTime, data.CreatedTime, data.UpdatedTime, data.DeleteTime)
 	}, aiModelDbAmApiKeyIdKey)
 	return ret, err
 }
@@ -105,7 +106,7 @@ func (m *defaultAmApiKeyModel) Update(ctx context.Context, data *AmApiKey) error
 	aiModelDbAmApiKeyIdKey := fmt.Sprintf("%s%v", cacheAiModelDbAmApiKeyIdPrefix, data.Id)
 	_, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, amApiKeyRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, data.KeyName, data.Provider, data.ApiKey, data.MaskedKey, data.DailyQuota, data.MonthlyQuota, data.Priority, data.Status, data.FailureCount, data.LastUsedTime, data.LastFailureTime, data.CreatedTime, data.UpdatedTime, data.DeleteTime, data.Id)
+		return conn.ExecCtx(ctx, query, data.ModelId, data.KeyName, data.Provider, data.ApiKey, data.MaskedKey, data.DailyQuota, data.MonthlyQuota, data.Priority, data.Status, data.FailureCount, data.LastUsedTime, data.LastFailureTime, data.CreatedTime, data.UpdatedTime, data.DeleteTime, data.Id)
 	}, aiModelDbAmApiKeyIdKey)
 	return err
 }

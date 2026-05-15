@@ -96,8 +96,9 @@ const fetchData = async () => {
       page: pagination.value.page,
       page_size: pagination.value.pageSize
     });
-    tableData.value = res.data.list || [];
-    pagination.value.total = res.data.total || 0;
+    // Response interceptor returns data field directly, which contains models array
+    tableData.value = res.models || [];
+    pagination.value.total = res.total || 0;
   } catch (error) {
     ElMessage.error('获取模型列表失败');
     console.error(error);

@@ -93,6 +93,22 @@ type (
 		ResponseTime int64  `json:"response_time"`
 		ErrorMessage string `json:"error_message,omitempty"`
 	}
+	// 模型健康检查
+	TriggerHealthCheckRequest {
+		Id int64 `path:"id"`
+	}
+	HealthCheckRecordResponse {
+		BaseResponse
+		Data HealthCheckRecord `json:"data,omitempty"`
+	}
+	HealthCheckRecord {
+		Id           int64  `json:"id"`
+		ModelId      int64  `json:"model_id"`
+		Status       int64  `json:"status"`
+		ResponseTime int64  `json:"response_time"`
+		ErrorMessage string `json:"error_message,omitempty"`
+		CheckedTime  string `json:"checked_time"`
+	}
 	// 模型配置管理
 	CreateModelRequest {
 		Name                  string  `json:"name"`
@@ -348,6 +364,10 @@ service aimodelapi {
 	@doc "删除模型配置"
 	@handler deleteModel
 	delete /model/:id (DeleteModelRequest) returns (BaseResponse)
+
+	@doc "触发模型健康检查"
+	@handler triggerModelHealthCheck
+	post /model/:id/health-check (TriggerHealthCheckRequest) returns (HealthCheckRecordResponse)
 }
 
 @server (

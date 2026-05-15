@@ -23,6 +23,7 @@ const (
 	AiModel_CallModelBatch_FullMethodName     = "/ai_model.AiModel/CallModelBatch"
 	AiModel_GetAvailableModels_FullMethodName = "/ai_model.AiModel/GetAvailableModels"
 	AiModel_HealthCheck_FullMethodName        = "/ai_model.AiModel/HealthCheck"
+	AiModel_CheckModelHealth_FullMethodName   = "/ai_model.AiModel/CheckModelHealth"
 	AiModel_CreateModelConfig_FullMethodName  = "/ai_model.AiModel/CreateModelConfig"
 	AiModel_UpdateModelConfig_FullMethodName  = "/ai_model.AiModel/UpdateModelConfig"
 	AiModel_DeleteModelConfig_FullMethodName  = "/ai_model.AiModel/DeleteModelConfig"
@@ -43,6 +44,8 @@ type AiModelClient interface {
 	GetAvailableModels(ctx context.Context, in *GetModelsRequest, opts ...grpc.CallOption) (*GetModelsResponse, error)
 	// 健康检查
 	HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
+	// 单个模型健康检查
+	CheckModelHealth(ctx context.Context, in *ModelHealthCheckReq, opts ...grpc.CallOption) (*ModelHealthCheckResp, error)
 	// 模型配置管理
 	CreateModelConfig(ctx context.Context, in *CreateModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error)
 	UpdateModelConfig(ctx context.Context, in *UpdateModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error)
@@ -92,6 +95,16 @@ func (c *aiModelClient) HealthCheck(ctx context.Context, in *HealthCheckRequest,
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(HealthCheckResponse)
 	err := c.cc.Invoke(ctx, AiModel_HealthCheck_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aiModelClient) CheckModelHealth(ctx context.Context, in *ModelHealthCheckReq, opts ...grpc.CallOption) (*ModelHealthCheckResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ModelHealthCheckResp)
+	err := c.cc.Invoke(ctx, AiModel_CheckModelHealth_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +165,8 @@ type AiModelServer interface {
 	GetAvailableModels(context.Context, *GetModelsRequest) (*GetModelsResponse, error)
 	// 健康检查
 	HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error)
+	// 单个模型健康检查
+	CheckModelHealth(context.Context, *ModelHealthCheckReq) (*ModelHealthCheckResp, error)
 	// 模型配置管理
 	CreateModelConfig(context.Context, *CreateModelConfigReq) (*ModelConfigResp, error)
 	UpdateModelConfig(context.Context, *UpdateModelConfigReq) (*ModelConfigResp, error)
@@ -178,6 +193,9 @@ func (UnimplementedAiModelServer) GetAvailableModels(context.Context, *GetModels
 }
 func (UnimplementedAiModelServer) HealthCheck(context.Context, *HealthCheckRequest) (*HealthCheckResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method HealthCheck not implemented")
+}
+func (UnimplementedAiModelServer) CheckModelHealth(context.Context, *ModelHealthCheckReq) (*ModelHealthCheckResp, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckModelHealth not implemented")
 }
 func (UnimplementedAiModelServer) CreateModelConfig(context.Context, *CreateModelConfigReq) (*ModelConfigResp, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateModelConfig not implemented")
@@ -284,6 +302,24 @@ func _AiModel_HealthCheck_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AiModel_CheckModelHealth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModelHealthCheckReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AiModelServer).CheckModelHealth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AiModel_CheckModelHealth_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AiModelServer).CheckModelHealth(ctx, req.(*ModelHealthCheckReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AiModel_CreateModelConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateModelConfigReq)
 	if err := dec(in); err != nil {
@@ -378,6 +414,10 @@ var AiModel_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "HealthCheck",
 			Handler:    _AiModel_HealthCheck_Handler,
+		},
+		{
+			MethodName: "CheckModelHealth",
+			Handler:    _AiModel_CheckModelHealth_Handler,
 		},
 		{
 			MethodName: "CreateModelConfig",

@@ -56,7 +56,7 @@ func (l *GetAPIKeyLogic) GetAPIKey(req *types.GetAPIKeyRequest) (resp *types.API
 		},
 		Data: types.APIKeyInfo{
 			Id:          apiKey.Id,
-			ModelId:     0, // TODO: 需要添加model_id字段到数据库
+			ModelId:     apiKey.ModelId,
 			KeyName:     apiKey.KeyName,
 			Status:      apiKey.Status,
 			Description: "", // TODO: 需要添加description字段到数据库

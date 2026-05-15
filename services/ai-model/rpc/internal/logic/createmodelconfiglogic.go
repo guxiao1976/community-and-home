@@ -30,59 +30,56 @@ func NewCreateModelConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 
 // 模型配置管理
 func (l *CreateModelConfigLogic) CreateModelConfig(in *pb.CreateModelConfigReq) (*pb.ModelConfigResp, error) {
-	// 构造数据模型
-	// 转换 supported_features 为 JSON 数组格式
-	var capabilitiesJSON string
+	l.Logger.Infof("CreateModelConfig called with: name=%s, provider=%s, type=%s", in.Name, in.Provider, in.Type)
+
+	// 将 supported_features 转换为 JSON 数组
+	var capabilitiesJSON sql.NullString
 	if in.SupportedFeatures != "" {
-		// 如果是逗号分隔的字符串，转换为JSON数组
 		features := strings.Split(in.SupportedFeatures, ",")
 		for i := range features {
 			features[i] = strings.TrimSpace(features[i])
 		}
-		capabilitiesBytes, err := json.Marshal(features)
+		jsonBytes, err := json.Marshal(features)
 		if err != nil {
-			l.Errorf("marshal capabilities failed: %v", err)
+			l.Logger.Errorf("Failed to marshal capabilities: %v", err)
 			return nil, err
 		}
-		capabilitiesJSON = string(capabilitiesBytes)
+		capabilitiesJSON = sql.NullString{String: string(jsonBytes), Valid: true}
 	}
 
-	modelConfig := &model.AmModelConfig{
+	// 插入模型配置到数据库
+	now := time.Now()
+	result, err := l.svcCtx.ModelConfigModel.Insert(l.ctx, &model.AmModelConfig{
 		ModelName:             in.Name,
-		ModelType:             in.Type,
-		Provider:              in.Provider,
 		DisplayName:           sql.NullString{String: in.DisplayName, Valid: in.DisplayName != ""},
-		Description:           sql.NullString{String: in.Description, Valid: in.Description != ""},
+		Provider:              in.Provider,
+		ModelType:             in.Type,
 		Endpoint:              sql.NullString{String: in.Endpoint, Valid: in.Endpoint != ""},
-		MaxRetries:            2,
-		Timeout:               30000,
+		Capabilities:          capabilitiesJSON,
 		CostPer1KInputTokens:  in.CostPer_1KInputTokens,
 		CostPer1KOutputTokens: in.CostPer_1KOutputTokens,
-		Status:                1,
+		Status:                1, // 默认启用
+		Description:           sql.NullString{String: in.Description, Valid: in.Description != ""},
 		HealthStatus:          "unknown",
-		Priority:              100,
-		CreatedTime:           time.Now(),
-		UpdatedTime:           time.Now(),
-	}
-
-	// 如果提供了 supported_features，设置 capabilities
-	if capabilitiesJSON != "" {
-		modelConfig.Capabilities = sql.NullString{String: capabilitiesJSON, Valid: true}
-	}
-
-	// 插入数据库
-	result, err := l.svcCtx.ModelManager.CreateModelConfig(l.ctx, modelConfig)
+		Timeout:               30000, // 默认30秒超时
+		MaxRetries:            3,     // 默认重试3次
+		Priority:              100,   // 默认优先级
+		CreatedTime:           now,
+		UpdatedTime:           now,
+	})
 	if err != nil {
-		l.Errorf("create model config failed: %v", err)
+		l.Logger.Errorf("Failed to insert model config: %v", err)
 		return nil, err
 	}
 
-	// 获取插入的ID
+	// 获取插入的 ID
 	id, err := result.LastInsertId()
 	if err != nil {
-		l.Errorf("get last insert id failed: %v", err)
+		l.Logger.Errorf("Failed to get last insert id: %v", err)
 		return nil, err
 	}
+
+	l.Logger.Infof("Model config created successfully with id=%d", id)
 
 	// 返回创建的模型配置
 	return &pb.ModelConfigResp{

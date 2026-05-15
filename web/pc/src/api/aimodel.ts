@@ -179,10 +179,10 @@ export function getApiKeyById(id: number) {
  * Create API key
  */
 export function createApiKey(data: {
-  model_id?: number;
-  provider: string;
+  model_id: number;
   key_name: string;
   api_key: string;
+  description?: string;
 }) {
   return request.post<{ id: number }>('/api/v1/apikey', data);
 }

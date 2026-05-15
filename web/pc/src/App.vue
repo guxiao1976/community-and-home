@@ -8,11 +8,25 @@ const authStore = useAuthStore();
 const permissionStore = usePermissionStore();
 
 // Restore session on app mount
-onMounted(() => {
+onMounted(async () => {
   authStore.restoreSession();
-  // Load permissions if already authenticated
+  // Load permissions if already authenticated and token not expired
   if (authStore.isAuthenticated && authStore.user?.id) {
-    permissionStore.loadUserPermissionsAndMenus(authStore.user.id);
+    // Check if token is expired
+    const now = Date.now();
+    if (authStore.tokenExpiry && authStore.tokenExpiry > now) {
+      try {
+        await permissionStore.loadUserPermissionsAndMenus(authStore.user.id);
+      } catch (error: any) {
+        // If 401, clear session to stop the loop
+        if (error.response?.status === 401) {
+          authStore.clearSession();
+        }
+      }
+    } else {
+      // Token expired, clear session
+      authStore.clearSession();
+    }
   }
 });
 </script>

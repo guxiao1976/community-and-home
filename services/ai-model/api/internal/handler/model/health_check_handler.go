@@ -1,6 +1,3 @@
-// Code scaffolded by goctl. Safe to edit.
-// goctl 1.10.1
-
 package model
 
 import (
@@ -11,7 +8,6 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
-// 健康检查
 func HealthCheckHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		l := model.NewHealthCheckLogic(r.Context(), svcCtx)

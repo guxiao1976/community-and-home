@@ -145,8 +145,8 @@ const fetchData = async () => {
       page: pagination.value.page,
       page_size: pagination.value.pageSize
     });
-    tableData.value = res.data.list || [];
-    pagination.value.total = res.data.total || 0;
+    tableData.value = res.templates || [];
+    pagination.value.total = res.total || 0;
   } catch (error) {
     ElMessage.error('获取模板列表失败');
     console.error(error);

@@ -745,6 +745,119 @@ func (x *ModelHealthStatus) GetSuccessRate() float64 {
 	return 0
 }
 
+// 单个模型健康检查
+type ModelHealthCheckReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ModelId       int64                  `protobuf:"varint,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	ApiKey        string                 `protobuf:"bytes,2,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModelHealthCheckReq) Reset() {
+	*x = ModelHealthCheckReq{}
+	mi := &file_pb_ai_model_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModelHealthCheckReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModelHealthCheckReq) ProtoMessage() {}
+
+func (x *ModelHealthCheckReq) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModelHealthCheckReq.ProtoReflect.Descriptor instead.
+func (*ModelHealthCheckReq) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ModelHealthCheckReq) GetModelId() int64 {
+	if x != nil {
+		return x.ModelId
+	}
+	return 0
+}
+
+func (x *ModelHealthCheckReq) GetApiKey() string {
+	if x != nil {
+		return x.ApiKey
+	}
+	return ""
+}
+
+type ModelHealthCheckResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`                                  // healthy/unhealthy
+	ResponseTime  int64                  `protobuf:"varint,2,opt,name=response_time,json=responseTime,proto3" json:"response_time,omitempty"` // 响应时间（毫秒）
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`                                // 错误信息或详细说明
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModelHealthCheckResp) Reset() {
+	*x = ModelHealthCheckResp{}
+	mi := &file_pb_ai_model_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModelHealthCheckResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModelHealthCheckResp) ProtoMessage() {}
+
+func (x *ModelHealthCheckResp) ProtoReflect() protoreflect.Message {
+	mi := &file_pb_ai_model_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModelHealthCheckResp.ProtoReflect.Descriptor instead.
+func (*ModelHealthCheckResp) Descriptor() ([]byte, []int) {
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ModelHealthCheckResp) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ModelHealthCheckResp) GetResponseTime() int64 {
+	if x != nil {
+		return x.ResponseTime
+	}
+	return 0
+}
+
+func (x *ModelHealthCheckResp) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 // ============ 模型配置管理 ============
 type CreateModelConfigReq struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
@@ -764,7 +877,7 @@ type CreateModelConfigReq struct {
 
 func (x *CreateModelConfigReq) Reset() {
 	*x = CreateModelConfigReq{}
-	mi := &file_pb_ai_model_proto_msgTypes[10]
+	mi := &file_pb_ai_model_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -776,7 +889,7 @@ func (x *CreateModelConfigReq) String() string {
 func (*CreateModelConfigReq) ProtoMessage() {}
 
 func (x *CreateModelConfigReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[10]
+	mi := &file_pb_ai_model_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -789,7 +902,7 @@ func (x *CreateModelConfigReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateModelConfigReq.ProtoReflect.Descriptor instead.
 func (*CreateModelConfigReq) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{10}
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateModelConfigReq) GetName() string {
@@ -879,7 +992,7 @@ type UpdateModelConfigReq struct {
 
 func (x *UpdateModelConfigReq) Reset() {
 	*x = UpdateModelConfigReq{}
-	mi := &file_pb_ai_model_proto_msgTypes[11]
+	mi := &file_pb_ai_model_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -891,7 +1004,7 @@ func (x *UpdateModelConfigReq) String() string {
 func (*UpdateModelConfigReq) ProtoMessage() {}
 
 func (x *UpdateModelConfigReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[11]
+	mi := &file_pb_ai_model_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -904,7 +1017,7 @@ func (x *UpdateModelConfigReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateModelConfigReq.ProtoReflect.Descriptor instead.
 func (*UpdateModelConfigReq) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{11}
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateModelConfigReq) GetId() int64 {
@@ -979,7 +1092,7 @@ type DeleteModelConfigReq struct {
 
 func (x *DeleteModelConfigReq) Reset() {
 	*x = DeleteModelConfigReq{}
-	mi := &file_pb_ai_model_proto_msgTypes[12]
+	mi := &file_pb_ai_model_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -991,7 +1104,7 @@ func (x *DeleteModelConfigReq) String() string {
 func (*DeleteModelConfigReq) ProtoMessage() {}
 
 func (x *DeleteModelConfigReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[12]
+	mi := &file_pb_ai_model_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1004,7 +1117,7 @@ func (x *DeleteModelConfigReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteModelConfigReq.ProtoReflect.Descriptor instead.
 func (*DeleteModelConfigReq) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{12}
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteModelConfigReq) GetId() int64 {
@@ -1023,7 +1136,7 @@ type GetModelConfigReq struct {
 
 func (x *GetModelConfigReq) Reset() {
 	*x = GetModelConfigReq{}
-	mi := &file_pb_ai_model_proto_msgTypes[13]
+	mi := &file_pb_ai_model_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1035,7 +1148,7 @@ func (x *GetModelConfigReq) String() string {
 func (*GetModelConfigReq) ProtoMessage() {}
 
 func (x *GetModelConfigReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[13]
+	mi := &file_pb_ai_model_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1048,7 +1161,7 @@ func (x *GetModelConfigReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetModelConfigReq.ProtoReflect.Descriptor instead.
 func (*GetModelConfigReq) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{13}
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetModelConfigReq) GetId() int64 {
@@ -1078,7 +1191,7 @@ type ModelConfigResp struct {
 
 func (x *ModelConfigResp) Reset() {
 	*x = ModelConfigResp{}
-	mi := &file_pb_ai_model_proto_msgTypes[14]
+	mi := &file_pb_ai_model_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1090,7 +1203,7 @@ func (x *ModelConfigResp) String() string {
 func (*ModelConfigResp) ProtoMessage() {}
 
 func (x *ModelConfigResp) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[14]
+	mi := &file_pb_ai_model_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1103,7 +1216,7 @@ func (x *ModelConfigResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModelConfigResp.ProtoReflect.Descriptor instead.
 func (*ModelConfigResp) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{14}
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ModelConfigResp) GetId() int64 {
@@ -1199,7 +1312,7 @@ type DeleteModelConfigResp struct {
 
 func (x *DeleteModelConfigResp) Reset() {
 	*x = DeleteModelConfigResp{}
-	mi := &file_pb_ai_model_proto_msgTypes[15]
+	mi := &file_pb_ai_model_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1211,7 +1324,7 @@ func (x *DeleteModelConfigResp) String() string {
 func (*DeleteModelConfigResp) ProtoMessage() {}
 
 func (x *DeleteModelConfigResp) ProtoReflect() protoreflect.Message {
-	mi := &file_pb_ai_model_proto_msgTypes[15]
+	mi := &file_pb_ai_model_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1224,7 +1337,7 @@ func (x *DeleteModelConfigResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteModelConfigResp.ProtoReflect.Descriptor instead.
 func (*DeleteModelConfigResp) Descriptor() ([]byte, []int) {
-	return file_pb_ai_model_proto_rawDescGZIP(), []int{15}
+	return file_pb_ai_model_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DeleteModelConfigResp) GetSuccess() bool {
@@ -1317,7 +1430,14 @@ const file_pb_ai_model_proto_rawDesc = "" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12$\n" +
 	"\x0eavg_latency_ms\x18\x03 \x01(\x03R\favgLatencyMs\x12%\n" +
 	"\x0etotal_requests\x18\x04 \x01(\x03R\rtotalRequests\x12!\n" +
-	"\fsuccess_rate\x18\x05 \x01(\x01R\vsuccessRate\"\xfb\x02\n" +
+	"\fsuccess_rate\x18\x05 \x01(\x01R\vsuccessRate\"I\n" +
+	"\x13ModelHealthCheckReq\x12\x19\n" +
+	"\bmodel_id\x18\x01 \x01(\x03R\amodelId\x12\x17\n" +
+	"\aapi_key\x18\x02 \x01(\tR\x06apiKey\"m\n" +
+	"\x14ModelHealthCheckResp\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12#\n" +
+	"\rresponse_time\x18\x02 \x01(\x03R\fresponseTime\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"\xfb\x02\n" +
 	"\x14CreateModelConfigReq\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
@@ -1362,12 +1482,13 @@ const file_pb_ai_model_proto_rawDesc = "" +
 	"\x06status\x18\v \x01(\x03R\x06status\x12 \n" +
 	"\vdescription\x18\f \x01(\tR\vdescription\"1\n" +
 	"\x15DeleteModelConfigResp\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xf7\x04\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xca\x05\n" +
 	"\aAiModel\x12D\n" +
 	"\tCallModel\x12\x1a.ai_model.ModelCallRequest\x1a\x1b.ai_model.ModelCallResponse\x12K\n" +
 	"\x0eCallModelBatch\x12\x1b.ai_model.ModelBatchRequest\x1a\x1c.ai_model.ModelBatchResponse\x12M\n" +
 	"\x12GetAvailableModels\x12\x1a.ai_model.GetModelsRequest\x1a\x1b.ai_model.GetModelsResponse\x12J\n" +
-	"\vHealthCheck\x12\x1c.ai_model.HealthCheckRequest\x1a\x1d.ai_model.HealthCheckResponse\x12N\n" +
+	"\vHealthCheck\x12\x1c.ai_model.HealthCheckRequest\x1a\x1d.ai_model.HealthCheckResponse\x12Q\n" +
+	"\x10CheckModelHealth\x12\x1d.ai_model.ModelHealthCheckReq\x1a\x1e.ai_model.ModelHealthCheckResp\x12N\n" +
 	"\x11CreateModelConfig\x12\x1e.ai_model.CreateModelConfigReq\x1a\x19.ai_model.ModelConfigResp\x12N\n" +
 	"\x11UpdateModelConfig\x12\x1e.ai_model.UpdateModelConfigReq\x1a\x19.ai_model.ModelConfigResp\x12T\n" +
 	"\x11DeleteModelConfig\x12\x1e.ai_model.DeleteModelConfigReq\x1a\x1f.ai_model.DeleteModelConfigResp\x12H\n" +
@@ -1385,7 +1506,7 @@ func file_pb_ai_model_proto_rawDescGZIP() []byte {
 	return file_pb_ai_model_proto_rawDescData
 }
 
-var file_pb_ai_model_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_pb_ai_model_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_pb_ai_model_proto_goTypes = []any{
 	(*ModelCallRequest)(nil),      // 0: ai_model.ModelCallRequest
 	(*ModelCallResponse)(nil),     // 1: ai_model.ModelCallResponse
@@ -1397,43 +1518,47 @@ var file_pb_ai_model_proto_goTypes = []any{
 	(*HealthCheckRequest)(nil),    // 7: ai_model.HealthCheckRequest
 	(*HealthCheckResponse)(nil),   // 8: ai_model.HealthCheckResponse
 	(*ModelHealthStatus)(nil),     // 9: ai_model.ModelHealthStatus
-	(*CreateModelConfigReq)(nil),  // 10: ai_model.CreateModelConfigReq
-	(*UpdateModelConfigReq)(nil),  // 11: ai_model.UpdateModelConfigReq
-	(*DeleteModelConfigReq)(nil),  // 12: ai_model.DeleteModelConfigReq
-	(*GetModelConfigReq)(nil),     // 13: ai_model.GetModelConfigReq
-	(*ModelConfigResp)(nil),       // 14: ai_model.ModelConfigResp
-	(*DeleteModelConfigResp)(nil), // 15: ai_model.DeleteModelConfigResp
-	nil,                           // 16: ai_model.ModelCallRequest.ParametersEntry
-	nil,                           // 17: ai_model.ModelCallRequest.VariablesEntry
-	nil,                           // 18: ai_model.ModelBatchRequest.ParametersEntry
-	nil,                           // 19: ai_model.HealthCheckResponse.ModelsEntry
+	(*ModelHealthCheckReq)(nil),   // 10: ai_model.ModelHealthCheckReq
+	(*ModelHealthCheckResp)(nil),  // 11: ai_model.ModelHealthCheckResp
+	(*CreateModelConfigReq)(nil),  // 12: ai_model.CreateModelConfigReq
+	(*UpdateModelConfigReq)(nil),  // 13: ai_model.UpdateModelConfigReq
+	(*DeleteModelConfigReq)(nil),  // 14: ai_model.DeleteModelConfigReq
+	(*GetModelConfigReq)(nil),     // 15: ai_model.GetModelConfigReq
+	(*ModelConfigResp)(nil),       // 16: ai_model.ModelConfigResp
+	(*DeleteModelConfigResp)(nil), // 17: ai_model.DeleteModelConfigResp
+	nil,                           // 18: ai_model.ModelCallRequest.ParametersEntry
+	nil,                           // 19: ai_model.ModelCallRequest.VariablesEntry
+	nil,                           // 20: ai_model.ModelBatchRequest.ParametersEntry
+	nil,                           // 21: ai_model.HealthCheckResponse.ModelsEntry
 }
 var file_pb_ai_model_proto_depIdxs = []int32{
-	16, // 0: ai_model.ModelCallRequest.parameters:type_name -> ai_model.ModelCallRequest.ParametersEntry
-	17, // 1: ai_model.ModelCallRequest.variables:type_name -> ai_model.ModelCallRequest.VariablesEntry
-	18, // 2: ai_model.ModelBatchRequest.parameters:type_name -> ai_model.ModelBatchRequest.ParametersEntry
+	18, // 0: ai_model.ModelCallRequest.parameters:type_name -> ai_model.ModelCallRequest.ParametersEntry
+	19, // 1: ai_model.ModelCallRequest.variables:type_name -> ai_model.ModelCallRequest.VariablesEntry
+	20, // 2: ai_model.ModelBatchRequest.parameters:type_name -> ai_model.ModelBatchRequest.ParametersEntry
 	1,  // 3: ai_model.ModelBatchResponse.results:type_name -> ai_model.ModelCallResponse
 	6,  // 4: ai_model.GetModelsResponse.models:type_name -> ai_model.ModelInfo
-	19, // 5: ai_model.HealthCheckResponse.models:type_name -> ai_model.HealthCheckResponse.ModelsEntry
+	21, // 5: ai_model.HealthCheckResponse.models:type_name -> ai_model.HealthCheckResponse.ModelsEntry
 	9,  // 6: ai_model.HealthCheckResponse.ModelsEntry.value:type_name -> ai_model.ModelHealthStatus
 	0,  // 7: ai_model.AiModel.CallModel:input_type -> ai_model.ModelCallRequest
 	2,  // 8: ai_model.AiModel.CallModelBatch:input_type -> ai_model.ModelBatchRequest
 	4,  // 9: ai_model.AiModel.GetAvailableModels:input_type -> ai_model.GetModelsRequest
 	7,  // 10: ai_model.AiModel.HealthCheck:input_type -> ai_model.HealthCheckRequest
-	10, // 11: ai_model.AiModel.CreateModelConfig:input_type -> ai_model.CreateModelConfigReq
-	11, // 12: ai_model.AiModel.UpdateModelConfig:input_type -> ai_model.UpdateModelConfigReq
-	12, // 13: ai_model.AiModel.DeleteModelConfig:input_type -> ai_model.DeleteModelConfigReq
-	13, // 14: ai_model.AiModel.GetModelConfig:input_type -> ai_model.GetModelConfigReq
-	1,  // 15: ai_model.AiModel.CallModel:output_type -> ai_model.ModelCallResponse
-	3,  // 16: ai_model.AiModel.CallModelBatch:output_type -> ai_model.ModelBatchResponse
-	5,  // 17: ai_model.AiModel.GetAvailableModels:output_type -> ai_model.GetModelsResponse
-	8,  // 18: ai_model.AiModel.HealthCheck:output_type -> ai_model.HealthCheckResponse
-	14, // 19: ai_model.AiModel.CreateModelConfig:output_type -> ai_model.ModelConfigResp
-	14, // 20: ai_model.AiModel.UpdateModelConfig:output_type -> ai_model.ModelConfigResp
-	15, // 21: ai_model.AiModel.DeleteModelConfig:output_type -> ai_model.DeleteModelConfigResp
-	14, // 22: ai_model.AiModel.GetModelConfig:output_type -> ai_model.ModelConfigResp
-	15, // [15:23] is the sub-list for method output_type
-	7,  // [7:15] is the sub-list for method input_type
+	10, // 11: ai_model.AiModel.CheckModelHealth:input_type -> ai_model.ModelHealthCheckReq
+	12, // 12: ai_model.AiModel.CreateModelConfig:input_type -> ai_model.CreateModelConfigReq
+	13, // 13: ai_model.AiModel.UpdateModelConfig:input_type -> ai_model.UpdateModelConfigReq
+	14, // 14: ai_model.AiModel.DeleteModelConfig:input_type -> ai_model.DeleteModelConfigReq
+	15, // 15: ai_model.AiModel.GetModelConfig:input_type -> ai_model.GetModelConfigReq
+	1,  // 16: ai_model.AiModel.CallModel:output_type -> ai_model.ModelCallResponse
+	3,  // 17: ai_model.AiModel.CallModelBatch:output_type -> ai_model.ModelBatchResponse
+	5,  // 18: ai_model.AiModel.GetAvailableModels:output_type -> ai_model.GetModelsResponse
+	8,  // 19: ai_model.AiModel.HealthCheck:output_type -> ai_model.HealthCheckResponse
+	11, // 20: ai_model.AiModel.CheckModelHealth:output_type -> ai_model.ModelHealthCheckResp
+	16, // 21: ai_model.AiModel.CreateModelConfig:output_type -> ai_model.ModelConfigResp
+	16, // 22: ai_model.AiModel.UpdateModelConfig:output_type -> ai_model.ModelConfigResp
+	17, // 23: ai_model.AiModel.DeleteModelConfig:output_type -> ai_model.DeleteModelConfigResp
+	16, // 24: ai_model.AiModel.GetModelConfig:output_type -> ai_model.ModelConfigResp
+	16, // [16:25] is the sub-list for method output_type
+	7,  // [7:16] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -1450,7 +1575,7 @@ func file_pb_ai_model_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pb_ai_model_proto_rawDesc), len(file_pb_ai_model_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

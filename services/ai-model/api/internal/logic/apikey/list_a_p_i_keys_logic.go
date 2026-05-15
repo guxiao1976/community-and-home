@@ -54,7 +54,7 @@ func (l *ListAPIKeysLogic) ListAPIKeys(req *types.ListAPIKeysRequest) (resp *typ
 
 	// 查询列表
 	query := fmt.Sprintf(`
-		SELECT id, key_name, status, created_time, updated_time
+		SELECT id, model_id, key_name, status, created_time, updated_time
 		FROM am_api_key %s
 		ORDER BY created_time DESC
 		LIMIT 100
@@ -77,6 +77,7 @@ func (l *ListAPIKeysLogic) ListAPIKeys(req *types.ListAPIKeysRequest) (resp *typ
 
 		err = rows.Scan(
 			&key.Id,
+			&key.ModelId,
 			&key.KeyName,
 			&key.Status,
 			&key.CreatedAt,

@@ -5,7 +5,7 @@ Port: 8891
 # RPC 客户端配置（直接连接模式）
 AiModelRpc:
   Endpoints:
-    - 127.0.0.1:8080
+    - 127.0.0.1:8084
 
 # 数据库配置
 DataSource: root:123456@tcp(127.0.0.1:3306)/ai_model_db?charset=utf8mb4&parseTime=true&loc=Local

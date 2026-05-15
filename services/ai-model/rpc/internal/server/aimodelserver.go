@@ -47,6 +47,12 @@ func (s *AiModelServer) HealthCheck(ctx context.Context, in *pb.HealthCheckReque
 	return l.HealthCheck(in)
 }
 
+// 单个模型健康检查
+func (s *AiModelServer) CheckModelHealth(ctx context.Context, in *pb.ModelHealthCheckReq) (*pb.ModelHealthCheckResp, error) {
+	l := logic.NewCheckModelHealthLogic(ctx, s.svcCtx)
+	return l.CheckModelHealth(in)
+}
+
 // 模型配置管理
 func (s *AiModelServer) CreateModelConfig(ctx context.Context, in *pb.CreateModelConfigReq) (*pb.ModelConfigResp, error) {
 	l := logic.NewCreateModelConfigLogic(ctx, s.svcCtx)

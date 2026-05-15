@@ -70,8 +70,9 @@ request.interceptors.response.use(
       { code, message, dataSize: JSON.stringify(data ?? null).length }
     );
 
-    // Success
-    if (code === ErrorCode.Success) {
+    // Success - accept both 0 and 200 as success codes
+    // Backend services may return different success codes
+    if (code === ErrorCode.Success || code === 200) {
       return data as any;
     }
 
@@ -148,9 +149,18 @@ request.interceptors.response.use(
         processQueue(refreshError as AxiosError, null);
         clearTokens();
 
-        // Redirect to login page
+        // Clear auth store to prevent loops
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          // Use dynamic import to avoid circular dependency
+          import('@/stores/auth').then(({ useAuthStore }) => {
+            const authStore = useAuthStore();
+            authStore.clearSession();
+          });
+
+          // Only redirect if not already on login page
+          if (!window.location.pathname.startsWith('/login')) {
+            window.location.href = '/login';
+          }
         }
 
         return Promise.reject(refreshError);

@@ -116,6 +116,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: model.DeleteModelHandler(serverCtx),
 			},
 			{
+				// 触发模型健康检查
+				Method:  http.MethodPost,
+				Path:    "/model/:id/health-check",
+				Handler: model.TriggerModelHealthCheckHandler(serverCtx),
+			},
+			{
 				// 调用模型
 				Method:  http.MethodPost,
 				Path:    "/model/call",

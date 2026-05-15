@@ -24,14 +24,7 @@ func NewDeleteModelConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *DeleteModelConfigLogic) DeleteModelConfig(in *pb.DeleteModelConfigReq) (*pb.DeleteModelConfigResp, error) {
-	// 删除模型配置
-	err := l.svcCtx.ModelManager.DeleteModelConfig(l.ctx, in.Id)
-	if err != nil {
-		l.Errorf("delete model config failed: %v", err)
-		return nil, err
-	}
+	// todo: add your logic here and delete this line
 
-	return &pb.DeleteModelConfigResp{
-		Success: true,
-	}, nil
+	return &pb.DeleteModelConfigResp{}, nil
 }

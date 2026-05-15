@@ -47,7 +47,18 @@ func (l *CreateAPIKeyLogic) CreateAPIKey(req *types.CreateAPIKeyRequest) (resp *
 	}
 
 	// 生成脱敏显示
-	maskedKey := apiKey[:10] + "***" + apiKey[len(apiKey)-6:]
+	var maskedKey string
+	if len(apiKey) <= 16 {
+		// 短密钥：只显示前3个字符
+		if len(apiKey) > 3 {
+			maskedKey = apiKey[:3] + "***"
+		} else {
+			maskedKey = "***"
+		}
+	} else {
+		// 长密钥：显示前10个和后6个字符
+		maskedKey = apiKey[:10] + "***" + apiKey[len(apiKey)-6:]
+	}
 
 	// 查询模型信息获取 provider
 	conn, _ := l.svcCtx.DB.RawDB()
@@ -61,6 +72,7 @@ func (l *CreateAPIKeyLogic) CreateAPIKey(req *types.CreateAPIKeyRequest) (resp *
 	// 构建数据库记录
 	now := time.Now()
 	record := &model.AmApiKey{
+		ModelId:  req.ModelId,
 		KeyName:  req.KeyName,
 		Provider: provider,
 		ApiKey:   apiKey, // 实际应该加密存储

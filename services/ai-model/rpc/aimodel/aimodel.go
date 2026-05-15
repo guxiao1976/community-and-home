@@ -27,6 +27,8 @@ type (
 	ModelCallRequest      = pb.ModelCallRequest
 	ModelCallResponse     = pb.ModelCallResponse
 	ModelConfigResp       = pb.ModelConfigResp
+	ModelHealthCheckReq   = pb.ModelHealthCheckReq
+	ModelHealthCheckResp  = pb.ModelHealthCheckResp
 	ModelHealthStatus     = pb.ModelHealthStatus
 	ModelInfo             = pb.ModelInfo
 	UpdateModelConfigReq  = pb.UpdateModelConfigReq
@@ -40,6 +42,8 @@ type (
 		GetAvailableModels(ctx context.Context, in *GetModelsRequest, opts ...grpc.CallOption) (*GetModelsResponse, error)
 		// 健康检查
 		HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error)
+		// 单个模型健康检查
+		CheckModelHealth(ctx context.Context, in *ModelHealthCheckReq, opts ...grpc.CallOption) (*ModelHealthCheckResp, error)
 		// 模型配置管理
 		CreateModelConfig(ctx context.Context, in *CreateModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error)
 		UpdateModelConfig(ctx context.Context, in *UpdateModelConfigReq, opts ...grpc.CallOption) (*ModelConfigResp, error)
@@ -80,6 +84,12 @@ func (m *defaultAiModel) GetAvailableModels(ctx context.Context, in *GetModelsRe
 func (m *defaultAiModel) HealthCheck(ctx context.Context, in *HealthCheckRequest, opts ...grpc.CallOption) (*HealthCheckResponse, error) {
 	client := pb.NewAiModelClient(m.cli.Conn())
 	return client.HealthCheck(ctx, in, opts...)
+}
+
+// 单个模型健康检查
+func (m *defaultAiModel) CheckModelHealth(ctx context.Context, in *ModelHealthCheckReq, opts ...grpc.CallOption) (*ModelHealthCheckResp, error) {
+	client := pb.NewAiModelClient(m.cli.Conn())
+	return client.CheckModelHealth(ctx, in, opts...)
 }
 
 // 模型配置管理

@@ -1,0 +1,372 @@
+=== AI Model API Integration Test ===
+Test started at: Fri May 15 12:12:09 CST 2026
+
+----------------------------------------
+Test #1: Get Models List
+Method: GET /models?page=1&page_size=10
+HTTP Status: 200
+Response Body:
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "models": [
+            {
+                "id": 1,
+                "name": "claude-opus-4",
+                "display_name": "Claude Opus 4",
+                "provider": "claude",
+                "type": "cloud",
+                "max_tokens": 0,
+                "supported_features": "",
+                "cost_per_1k_input_tokens": 15,
+                "cost_per_1k_output_tokens": 75,
+                "status": 1
+            },
+            {
+                "id": 2,
+                "name": "gpt-4",
+                "display_name": "GPT-4",
+                "provider": "openai",
+                "type": "cloud",
+                "max_tokens": 0,
+                "supported_features": "",
+                "cost_per_1k_input_tokens": 30,
+                "cost_per_1k_output_tokens": 60,
+                "status": 1
+            },
+            {
+                "id": 3,
+                "name": "llama2",
+                "display_name": "Llama 2",
+                "provider": "ollama",
+                "type": "local",
+                "max_tokens": 0,
+                "supported_features": "",
+                "cost_per_1k_input_tokens": 0,
+                "cost_per_1k_output_tokens": 0,
+                "status": 1
+            },
+            {
+                "id": 5,
+                "name": "test-model",
+                "display_name": "Test Model",
+                "provider": "claude",
+                "type": "chat",
+                "max_tokens": 0,
+                "supported_features": "",
+                "cost_per_1k_input_tokens": 0.01,
+                "cost_per_1k_output_tokens": 0.03,
+                "status": 1
+            },
+            {
+                "id": 6,
+                "name": "claude-opus47",
+                "display_name": "ccibe",
+                "provider": "claude",
+                "type": "chat",
+                "max_tokens": 0,
+                "supported_features": "",
+                "cost_per_1k_input_tokens": 0,
+                "cost_per_1k_output_tokens": 0,
+                "status": 1
+            }
+        ],
+        "total": 5
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #2: Get Model by ID
+Method: GET /model/1
+HTTP Status: 200
+Response Body:
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "id": 1,
+        "name": "claude-opus-4",
+        "display_name": "Claude Opus 4",
+        "provider": "claude",
+        "type": "cloud",
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "max_tokens": 0,
+        "supported_features": "[\"text_generation\", \"system_prompt\", \"temperature\"]",
+        "cost_per_1k_input_tokens": 15,
+        "cost_per_1k_output_tokens": 75,
+        "status": 1,
+        "description": "Most capable Claude model"
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #3: Create Model
+Method: POST /model
+HTTP Status: 200
+Response Body:
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "id": 7,
+        "name": "test-integration-model",
+        "display_name": "Test Integration Model",
+        "provider": "openai",
+        "type": "chat",
+        "endpoint": "https://api.openai.com/v1",
+        "max_tokens": 4096,
+        "supported_features": "streaming,function_calling",
+        "cost_per_1k_input_tokens": 0.03,
+        "cost_per_1k_output_tokens": 0.06,
+        "status": 1,
+        "description": "Integration test model"
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #4: Get API Keys List
+Method: GET /apikeys?page=1&page_size=10
+HTTP Status: 200
+Response Body:
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "keys": [
+            {
+                "id": 2,
+                "model_id": 0,
+                "key_name": "Claude Test Key",
+                "status": 1,
+                "created_at": "2026-05-14T18:08:51+08:00",
+                "updated_at": "2026-05-14T10:27:39+08:00"
+            },
+            {
+                "id": 3,
+                "model_id": 0,
+                "key_name": "OpenAI Test Key",
+                "status": 1,
+                "created_at": "2026-05-14T18:08:51+08:00",
+                "updated_at": "2026-05-14T10:13:31+08:00"
+            }
+        ],
+        "total": 2
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #5: Create API Key
+Method: POST /apikey
+HTTP Status: 200
+Response Body:
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "id": 5,
+        "model_id": 1,
+        "key_name": "test-api-key",
+        "status": 1,
+        "description": "Test API key",
+        "created_at": "2026-05-15 12:12:10",
+        "updated_at": "2026-05-15 12:12:10"
+    }
+}
+Result: PASS
+
+Created API key ID: 6
+----------------------------------------
+Test #6: Get API Key by ID
+Method: GET /apikey/6
+HTTP Status: 200
+Response Body:
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "id": 6,
+        "model_id": 0,
+        "key_name": "test-api-key",
+        "status": 1,
+        "created_at": "2026-05-15 12:12:10",
+        "updated_at": "2026-05-15 12:12:10"
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #7: Update API Key
+Method: PUT /apikey
+HTTP Status: 200
+Response Body:
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "id": 6,
+        "model_id": 0,
+        "key_name": "updated-test-key",
+        "status": 1,
+        "created_at": "2026-05-15 12:12:10",
+        "updated_at": "2026-05-15 12:12:10"
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #8: Delete API Key
+Method: DELETE /apikey/6
+HTTP Status: 200
+Response Body:
+{
+    "code": 200,
+    "message": "success"
+}
+Result: PASS
+
+----------------------------------------
+Test #9: Get Templates List
+Method: GET /templates?page=1&page_size=10
+HTTP Status: 200
+Response Body:
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "templates": [
+            {
+                "id": 2,
+                "name": "test-template",
+                "content": "test content",
+                "category": "test",
+                "description": "test desc",
+                "created_at": "2026-05-14T17:44:40+08:00",
+                "updated_at": "2026-05-14T17:44:40+08:00"
+            },
+            {
+                "id": 1,
+                "name": "\u00e6\u2022\u008f\u00e6\u201e\u0178\u00e8\u00af\u008d\u00e5\u02c6\u2020\u00e7\u00b1\u00bb\u00e6\u00a8\u00a1\u00e6\u009d\u00bf",
+                "content": "\u00e8\u00af\u00b7\u00e5\u00af\u00b9\u00e4\u00bb\u00a5\u00e4\u00b8\u2039\u00e6\u2022\u008f\u00e6\u201e\u0178\u00e8\u00af\u008d\u00e8\u00bf\u203a\u00e8\u00a1\u0152\u00e5\u02c6\u2020\u00e7\u00b1\u00bb\u00ef\u00bc\u0152\u00e5\u02c6\u2020\u00e7\u00b1\u00bb\u00e5\u0152\u2026\u00e6\u2039\u00ac\u00ef\u00bc\u0161\u00e6\u201d\u00bf\u00e6\u00b2\u00bb\u00e6\u2022\u008f\u00e6\u201e\u0178\u00e3\u20ac\u0081\u00e8\u2030\u00b2\u00e6\u0192\u2026\u00e4\u00bd\u017d\u00e4\u00bf\u2014\u00e3\u20ac\u0081\u00e6\u0161\u00b4\u00e5\u0160\u203a\u00e6\u0081\u0090\u00e6\u20ac\u2013\u00e3\u20ac\u0081\u00e8\u00bf\u009d\u00e6\u00b3\u2022\u00e7\u0160\u00af\u00e7\u00bd\u00aa\u00e3\u20ac\u0081\u00e4\u00ba\u00ba\u00e8\u00ba\u00ab\u00e6\u201d\u00bb\u00e5\u2021\u00bb\u00e3\u20ac\u0081\u00e5\u00b9\u00bf\u00e5\u2018\u0160\u00e8\u0090\u00a5\u00e9\u201d\u20ac\u00e3\u20ac\u0081\u00e5\u2026\u00b6\u00e4\u00bb\u2013\u00e3\u20ac\u201a\n\n\u00e8\u00a6\u0081\u00e6\u00b1\u201a\u00ef\u00bc\u0161\n1. \u00e4\u00b8\u00a5\u00e6\u00a0\u00bc\u00e6\u0152\u2030\u00e7\u2026\u00a7JSON\u00e6\u2022\u00b0\u00e7\u00bb\u201e\u00e6\u00a0\u00bc\u00e5\u00bc\u008f\u00e8\u00bf\u201d\u00e5\u203a\u017e\n2. \u00e6\u00af\u008f\u00e4\u00b8\u00aa\u00e8\u00af\u008d\u00e5\u00bf\u2026\u00e9\u00a1\u00bb\u00e5\u02c6\u2020\u00e9\u2026\u008d\u00e4\u00b8\u20ac\u00e4\u00b8\u00aa\u00e5\u02c6\u2020\u00e7\u00b1\u00bb\n3. \u00e6\u00a0\u00bc\u00e5\u00bc\u008f\u00ef\u00bc\u0161[{\"word\": \"\u00e8\u00af\u008d1\", \"category\": \"\u00e5\u02c6\u2020\u00e7\u00b1\u00bb1\", \"confidence\": 0.95}, ...]\n\n\u00e6\u2022\u008f\u00e6\u201e\u0178\u00e8\u00af\u008d\u00e5\u02c6\u2014\u00e8\u00a1\u00a8\u00ef\u00bc\u0161\n{{words}}",
+                "category": "classification",
+                "created_at": "2026-05-14T07:36:32+08:00",
+                "updated_at": "2026-05-14T07:36:32+08:00"
+            }
+        ],
+        "total": 2
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #10: Create Template
+Method: POST /template
+HTTP Status: 200
+Response Body:
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "id": 5,
+        "name": "test-template",
+        "content": "You are a helpful assistant. {{user_input}}",
+        "category": "general",
+        "description": "Test template",
+        "created_at": "2026-05-15 12:12:10",
+        "updated_at": "2026-05-15 12:12:10"
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #11: Get Usage Statistics
+Method: GET /statistics?page=1&page_size=10
+HTTP Status: 200
+Response Body:
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "statistics": [],
+        "total": 0
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #12: Get Cost Stats
+Method: GET /cost/stats
+HTTP Status: 200
+Response Body:
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "total_cost": 0,
+        "daily_cost": 0,
+        "monthly_cost": 0,
+        "model_costs": {},
+        "total_requests": 0,
+        "total_tokens": 0
+    }
+}
+Result: PASS
+
+----------------------------------------
+Test #13: Health Check
+Method: GET /health
+HTTP Status: 200
+Response Body:
+{
+    "code": 200,
+    "message": "success",
+    "data": {
+        "status": "degraded",
+        "models": {
+            "claude-opus-4": {
+                "status": "unknown",
+                "last_check": "",
+                "response_time": 0
+            },
+            "claude-opus47": {
+                "status": "unknown",
+                "last_check": "",
+                "response_time": 0
+            },
+            "gpt-4": {
+                "status": "unknown",
+                "last_check": "",
+                "response_time": 0
+            },
+            "llama2": {
+                "status": "unknown",
+                "last_check": "",
+                "response_time": 0
+            },
+            "test-integration-model": {
+                "status": "unknown",
+                "last_check": "",
+                "response_time": 0
+            },
+            "test-model": {
+                "status": "unknown",
+                "last_check": "",
+                "response_time": 0
+            }
+        }
+    }
+}
+Result: PASS
+
+
+========================================
+Test Summary
+========================================
+Total Tests: 13
+Passed: 13
+Failed: 0
+Test completed at: Fri May 15 12:12:10 CST 2026

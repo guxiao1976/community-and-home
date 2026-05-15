@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"encoding/json"
 
 	"community-and-home/services/ai-model/rpc/internal/svc"
 	"community-and-home/services/ai-model/rpc/pb"
@@ -25,25 +26,33 @@ func NewGetAvailableModelsLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 
 // 获取可用模型列表
 func (l *GetAvailableModelsLogic) GetAvailableModels(in *pb.GetModelsRequest) (*pb.GetModelsResponse, error) {
-	configs, err := l.svcCtx.ModelManager.GetAvailableModels(l.ctx, in.Provider)
+	l.Logger.Infof("GetAvailableModels called with provider=%s, only_healthy=%v", in.Provider, in.OnlyHealthy)
+
+	// 构建状态过滤条件
+	var status int64 = 0
+	if in.OnlyHealthy {
+		status = 1 // 只返回启用的模型
+	}
+
+	// 查询列表（不分页，返回所有）
+	configs, err := l.svcCtx.ModelConfigModel.FindList(l.ctx, in.Provider, status, 1, 1000)
 	if err != nil {
+		l.Logger.Errorf("Failed to query models: %v", err)
 		return nil, err
 	}
 
-	models := make([]*pb.ModelInfo, 0, len(configs))
+	l.Logger.Infof("Found %d models", len(configs))
+
+	// 转换为响应格式
+	var models []*pb.ModelInfo
 	for _, config := range configs {
-		// Filter by health status if requested
-		if in.OnlyHealthy && config.HealthStatus != "healthy" {
-			continue
-		}
-
-		// Parse capabilities from JSON if needed
+		// 解析 capabilities JSON 数组
 		var capabilities []string
-		// For now, just return empty array - would need to parse JSON in production
-
-		displayName := config.ModelName
-		if config.DisplayName.Valid {
-			displayName = config.DisplayName.String
+		if config.Capabilities.Valid && config.Capabilities.String != "" {
+			if err := json.Unmarshal([]byte(config.Capabilities.String), &capabilities); err != nil {
+				l.Logger.Errorf("Failed to parse capabilities for model %s: %v", config.ModelName, err)
+				capabilities = []string{}
+			}
 		}
 
 		models = append(models, &pb.ModelInfo{
@@ -51,7 +60,7 @@ func (l *GetAvailableModelsLogic) GetAvailableModels(in *pb.GetModelsRequest) (*
 			Name:                    config.ModelName,
 			Type:                    config.ModelType,
 			Provider:                config.Provider,
-			DisplayName:             displayName,
+			DisplayName:             config.DisplayName.String,
 			Capabilities:            capabilities,
 			CostPer_1KInputTokens:   config.CostPer1KInputTokens,
 			CostPer_1KOutputTokens:  config.CostPer1KOutputTokens,

@@ -158,7 +158,7 @@ const formatNumber = (num: number) => {
 const fetchModelList = async () => {
   try {
     const res = await getModelConfigs({ page: 1, page_size: 100 });
-    modelList.value = res.data.list || [];
+    modelList.value = res.models || [];
   } catch (error) {
     console.error('获取模型列表失败:', error);
   }
@@ -184,7 +184,7 @@ const fetchData = async () => {
     const res = await getUsageStatistics(params);
 
     // Merge model names
-    const dataWithModelNames = (res.data.list || []).map(item => {
+    const dataWithModelNames = (res.statistics || []).map(item => {
       const model = modelList.value.find(m => m.id === item.model_config_id);
       return {
         ...item,
@@ -193,7 +193,7 @@ const fetchData = async () => {
     });
 
     tableData.value = dataWithModelNames;
-    pagination.value.total = res.data.total || 0;
+    pagination.value.total = res.total || 0;
   } catch (error) {
     ElMessage.error('获取统计数据失败');
     console.error(error);

@@ -163,6 +163,20 @@ type HealthCheckData struct {
 	Models map[string]ModelHealth `json:"models"`
 }
 
+type HealthCheckRecord struct {
+	Id           int64  `json:"id"`
+	ModelId      int64  `json:"model_id"`
+	Status       int64  `json:"status"`
+	ResponseTime int64  `json:"response_time"`
+	ErrorMessage string `json:"error_message,omitempty"`
+	CheckedTime  string `json:"checked_time"`
+}
+
+type HealthCheckRecordResponse struct {
+	BaseResponse
+	Data HealthCheckRecord `json:"data,omitempty"`
+}
+
 type HealthCheckResponse struct {
 	BaseResponse
 	Data HealthCheckData `json:"data,omitempty"`
@@ -277,6 +291,10 @@ type TemplatesData struct {
 type TemplatesResponse struct {
 	BaseResponse
 	Data TemplatesData `json:"data,omitempty"`
+}
+
+type TriggerHealthCheckRequest struct {
+	Id int64 `path:"id"`
 }
 
 type UpdateAPIKeyRequest struct {

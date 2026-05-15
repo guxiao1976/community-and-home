@@ -85,11 +85,14 @@
           <el-input v-model="formData.key_name" placeholder="例如: OpenAI Production Key" />
         </el-form-item>
 
-        <el-form-item label="提供商" prop="provider">
-          <el-select v-model="formData.provider" placeholder="请选择提供商" :disabled="isEdit">
-            <el-option label="OpenAI" value="openai" />
-            <el-option label="Claude" value="claude" />
-            <el-option label="Ollama" value="ollama" />
+        <el-form-item label="模型" prop="model_id">
+          <el-select v-model="formData.model_id" placeholder="请选择模型" :disabled="isEdit">
+            <el-option
+              v-for="model in modelList"
+              :key="model.id"
+              :label="`${model.display_name} (${model.provider})`"
+              :value="model.id"
+            />
           </el-select>
         </el-form-item>
 
@@ -99,6 +102,15 @@
             type="textarea"
             :rows="3"
             placeholder="请输入API密钥"
+          />
+        </el-form-item>
+
+        <el-form-item label="描述" prop="description">
+          <el-input
+            v-model="formData.description"
+            type="textarea"
+            :rows="2"
+            placeholder="可选：添加密钥描述"
           />
         </el-form-item>
       </el-form>
@@ -118,8 +130,8 @@ import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
 import { Plus, Edit, Delete, View, Hide } from '@element-plus/icons-vue';
-import { getApiKeys, createApiKey, updateApiKey, deleteApiKey } from '@/api/aimodel';
-import type { ApiKey } from '@/api/aimodel';
+import { getApiKeys, createApiKey, updateApiKey, deleteApiKey, getModelConfigs } from '@/api/aimodel';
+import type { ApiKey, ModelConfig } from '@/api/aimodel';
 
 interface ApiKeyWithVisibility extends ApiKey {
   showKey?: boolean;
@@ -130,6 +142,7 @@ const submitting = ref(false);
 const dialogVisible = ref(false);
 const isEdit = ref(false);
 const formRef = ref<FormInstance>();
+const modelList = ref<ModelConfig[]>([]);
 
 const tableData = ref<ApiKeyWithVisibility[]>([]);
 const pagination = ref({
@@ -141,16 +154,17 @@ const pagination = ref({
 const formData = reactive({
   id: undefined as number | undefined,
   key_name: '',
-  provider: '',
-  api_key: ''
+  model_id: undefined as number | undefined,
+  api_key: '',
+  description: ''
 });
 
 const rules: FormRules = {
   key_name: [
     { required: true, message: '请输入密钥名称', trigger: 'blur' }
   ],
-  provider: [
-    { required: true, message: '请选择提供商', trigger: 'change' }
+  model_id: [
+    { required: true, message: '请选择模型', trigger: 'change' }
   ],
   api_key: [
     { required: true, message: '请输入API密钥', trigger: 'blur' }
@@ -182,11 +196,11 @@ const fetchData = async () => {
       page: pagination.value.page,
       page_size: pagination.value.pageSize
     });
-    tableData.value = (res.data.list || []).map(item => ({
+    tableData.value = (res.keys || []).map(item => ({
       ...item,
       showKey: false
     }));
-    pagination.value.total = res.data.total || 0;
+    pagination.value.total = res.total || 0;
   } catch (error) {
     ElMessage.error('获取密钥列表失败');
     console.error(error);
@@ -200,8 +214,9 @@ const handleCreate = () => {
   Object.assign(formData, {
     id: undefined,
     key_name: '',
-    provider: '',
-    api_key: ''
+    model_id: undefined,
+    api_key: '',
+    description: ''
   });
   dialogVisible.value = true;
 };
@@ -211,8 +226,9 @@ const handleEdit = (row: ApiKey) => {
   Object.assign(formData, {
     id: row.id,
     key_name: row.key_name,
-    provider: row.provider,
-    api_key: ''
+    model_id: row.model_id,
+    api_key: '',
+    description: row.description || ''
   });
   dialogVisible.value = true;
 };
@@ -233,9 +249,10 @@ const handleSubmit = async () => {
         ElMessage.success('更新成功');
       } else {
         await createApiKey({
+          model_id: formData.model_id!,
           key_name: formData.key_name,
-          provider: formData.provider,
-          api_key: formData.api_key
+          api_key: formData.api_key,
+          description: formData.description
         });
         ElMessage.success('创建成功');
       }
@@ -274,7 +291,17 @@ const handleDelete = async (row: ApiKey) => {
   }
 };
 
+const fetchModelList = async () => {
+  try {
+    const res = await getModelConfigs({ page: 1, page_size: 100 });
+    modelList.value = res.models || [];
+  } catch (error) {
+    console.error('获取模型列表失败:', error);
+  }
+};
+
 onMounted(() => {
+  fetchModelList();
   fetchData();
 });
 </script>
