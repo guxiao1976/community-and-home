@@ -122,10 +122,12 @@
         <el-form-item label="昵称" prop="nickname">
           <el-input v-model="form.nickname" placeholder="请输入昵称" />
         </el-form-item>
-        <el-form-item label="权限范围" prop="scope">
-          <el-input
-            v-model="form.scope"
-            placeholder="请输入权限范围（可选）"
+        <el-form-item label="权限范围ID" prop="scope_id">
+          <el-input-number
+            v-model="form.scope_id"
+            placeholder="请输入权限范围ID（可选）"
+            :min="1"
+            style="width: 100%"
           />
         </el-form-item>
       </el-form>
@@ -208,7 +210,7 @@ const form = reactive({
   phone: '',
   password: '',
   nickname: '',
-  scope: ''
+  scope_id: undefined as number | undefined
 });
 
 const dialogTitle = computed(() => (form.id ? '编辑管理员' : '新建管理员'));
@@ -230,7 +232,7 @@ const formRules: FormRules = {
 const fetchUsers = async () => {
   loading.value = true;
   try {
-    const { data } = await getUsers({
+    const data = await getUsers({
       userType: UserType.Staff,
       page: pagination.page,
       page_size: pagination.pageSize
@@ -240,8 +242,8 @@ const fetchUsers = async () => {
     const usersWithRoles = await Promise.all(
       data.list.map(async (user) => {
         try {
-          const { data: rolesData } = await getUserRoles(user.id);
-          return { ...user, roles: rolesData.roles };
+          const rolesData = await getUserRoles(user.id);
+          return { ...user, roles: rolesData?.roles || [] };
         } catch {
           return { ...user, roles: [] };
         }
@@ -260,7 +262,7 @@ const fetchUsers = async () => {
 
 const fetchAvailableRoles = async () => {
   try {
-    const { data } = await getRoles({ page: 1, page_size: 100 });
+    const data = await getRoles({ page: 1, page_size: 100 });
     availableRoles.value = data.list;
   } catch (error) {
     ElMessage.error('获取角色列表失败');
@@ -276,7 +278,7 @@ const handleEdit = (row: User) => {
   form.id = row.id;
   form.phone = row.phone;
   form.nickname = row.nickname;
-  form.scope = row.scope;
+  form.scope_id = row.scope_id;
   dialogVisible.value = true;
 };
 
@@ -330,7 +332,7 @@ const handleSubmit = async () => {
       if (form.id) {
         await updateUser(form.id, {
           nickname: form.nickname,
-          scope: form.scope
+          scope_id: form.scope_id
         });
         ElMessage.success('更新成功');
       } else {
@@ -339,7 +341,7 @@ const handleSubmit = async () => {
           password: form.password,
           nickname: form.nickname,
           user_type: UserType.Staff,
-          scope: form.scope
+          scope_id: form.scope_id
         });
         ElMessage.success('创建成功');
       }
@@ -383,7 +385,7 @@ const resetForm = () => {
   form.phone = '';
   form.password = '';
   form.nickname = '';
-  form.scope = '';
+  form.scope_id = undefined;
   formRef.value?.resetFields();
 };
 

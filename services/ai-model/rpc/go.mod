@@ -1,4 +1,4 @@
-module community-and-home/services/ai-model/rpc
+module github.com/guxiao/community-and-home/services/ai-model/rpc
 
 go 1.25.0
 

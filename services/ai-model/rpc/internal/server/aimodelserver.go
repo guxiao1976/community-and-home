@@ -7,9 +7,9 @@ package server
 import (
 	"context"
 
-	"community-and-home/services/ai-model/rpc/internal/logic"
-	"community-and-home/services/ai-model/rpc/internal/svc"
-	"community-and-home/services/ai-model/rpc/pb"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/internal/logic"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/internal/svc"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/pb"
 )
 
 type AiModelServer struct {

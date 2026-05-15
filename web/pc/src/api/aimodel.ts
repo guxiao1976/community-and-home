@@ -140,7 +140,10 @@ export function createModelConfig(data: {
  */
 export function updateModelConfig(data: {
   id: number;
+  name?: string;
   display_name?: string;
+  provider?: string;
+  type?: string;
   endpoint?: string;
   max_tokens?: number;
   supported_features?: string;

@@ -37,7 +37,7 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000,
+    port: 3003,
     proxy: {
       '/api/identity': {
         target: 'http://172.31.39.71:8888',

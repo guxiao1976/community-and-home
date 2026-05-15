@@ -7,7 +7,7 @@ package aimodel
 import (
 	"context"
 
-	"community-and-home/services/ai-model/rpc/pb"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/pb"
 
 	"github.com/zeromicro/go-zero/zrpc"
 	"google.golang.org/grpc"

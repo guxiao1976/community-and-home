@@ -7,9 +7,9 @@ import (
 	"flag"
 	"fmt"
 
-	"community-and-home/services/ai-model/api/internal/config"
-	"community-and-home/services/ai-model/api/internal/handler"
-	"community-and-home/services/ai-model/api/internal/svc"
+	"github.com/guxiao/community-and-home/services/ai-model/api/internal/config"
+	"github.com/guxiao/community-and-home/services/ai-model/api/internal/handler"
+	"github.com/guxiao/community-and-home/services/ai-model/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"

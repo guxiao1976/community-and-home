@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"community-and-home/services/ai-model/rpc/internal/svc"
-	"community-and-home/services/ai-model/rpc/model"
-	"community-and-home/services/ai-model/rpc/pb"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/internal/svc"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/model"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/pb"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

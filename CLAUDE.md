@@ -55,9 +55,14 @@ goctl rpc protoc {service}.proto --go_out=. --go-grpc_out=. --zrpc_out=.
    - 使用 `responsex.Response(w, resp, err)`，不用 `httpx.OkJsonCtx`
    - 统一返回格式：`{ code: 0, message: "success", data: {...} }`
 
-2. **goctl代码生成**
+2. **goctl代码生成（危险操作）**
+   - ⚠️ **goctl 会覆盖已有实现，导致功能失效但无编译错误**
+   - 重新生成前必须备份：`cp -r internal/logic internal/logic.backup`
+   - 重新生成后必须恢复业务逻辑（对比 `.backup` 文件）
+   - 必须检查并恢复 `ServiceContext` 中的自定义字段（如 RPC 客户端）
    - `.api` 文件的 `group` 名称用下划线（`deleted_items`），不用连字符（`deleted-items`）
    - goctl 会覆盖 `types.go`，手动字段需同步到 `.api` 文件
+   - **最佳实践**：尽量减少重新生成，优先手动修改代码
 
 3. **时间字段处理**
    - 创建记录时使用 `time.Now()`，不用零值 `time.Time{}`
@@ -68,6 +73,12 @@ goctl rpc protoc {service}.proto --go_out=. --go-grpc_out=. --zrpc_out=.
 
 5. **缓存失效**
    - 更新/删除操作后必须调用 `InvalidateCache(id)`
+
+6. **前后端联调验证**
+   - 每个页面开发完必须浏览器实测 API 调用
+   - 验证返回数据正确显示（不是 null/空）
+   - 检查 Console 和 Network 无报错
+   - 联调通过才算完成
 
 ## Naming Conventions
 
@@ -95,6 +106,31 @@ Default test credentials: Phone `13800000000`, Password `Admin@123456`
 <!-- MANUAL ADDITIONS START -->
 
 ## Development Tips
+
+**goctl Code Generation Safety:**
+```bash
+# ⚠️ BEFORE regenerating code with goctl
+cd services/{service}/api  # or rpc
+cp -r internal/logic internal/logic.backup
+cp internal/svc/servicecontext.go internal/svc/servicecontext.go.backup
+
+# Regenerate code
+goctl api go -api {service}.api -dir .
+# or: goctl rpc protoc {service}.proto --go_out=. --go-grpc_out=. --zrpc_out=.
+
+# ⚠️ AFTER regenerating - MUST restore implementations
+# 1. Compare and restore business logic
+diff -r internal/logic.backup internal/logic
+# Manually copy back non-empty implementations (not just "todo" comments)
+
+# 2. Restore ServiceContext custom fields (RPC clients, etc.)
+diff internal/svc/servicecontext.go.backup internal/svc/servicecontext.go
+
+# 3. Rebuild and test
+go build && ./test-api-endpoint
+
+# Common mistake: Forgetting to restore causes "null" responses with no errors
+```
 
 **Time Fields:**
 ```go

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"community-and-home/services/ai-model/rpc/internal/svc"
-	"community-and-home/services/ai-model/rpc/model"
-	"community-and-home/services/ai-model/rpc/pb"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/internal/adapter"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/internal/svc"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/model"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/pb"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -37,26 +38,36 @@ func (l *CheckModelHealthLogic) CheckModelHealth(in *pb.ModelHealthCheckReq) (*p
 		}, nil
 	}
 
-	// 2. 根据 provider 调用对应的 API 进行测试
-	startTime := time.Now()
+	// 2. 获取 API Key
+	apiKey := in.ApiKey
+	if apiKey == "" {
+		// 如果请求中没有提供 API Key，尝试从数据库获取
+		apiKeyModel, err := l.svcCtx.ApiKeyModel.FindOneByModelId(l.ctx, in.ModelId)
+		if err != nil {
+			return &pb.ModelHealthCheckResp{
+				Status:  "unhealthy",
+				Message: fmt.Sprintf("未找到可用的 API Key: %v", err),
+			}, nil
+		}
+		apiKey = apiKeyModel.ApiKey
+	}
 
-	// 简单的健康检查：尝试调用模型 API
-	// 这里使用一个简单的测试提示词
-	testPrompt := "Hello"
+	// 3. 根据 provider 调用对应的 API 进行测试
+	startTime := time.Now()
 
 	var checkErr error
 	switch modelConfig.Provider {
 	case "openai":
-		checkErr = l.checkOpenAI(modelConfig, in.ApiKey, testPrompt)
+		checkErr = l.checkOpenAI(modelConfig, apiKey)
 	case "anthropic", "claude":
-		checkErr = l.checkAnthropic(modelConfig, in.ApiKey, testPrompt)
+		checkErr = l.checkAnthropic(modelConfig, apiKey)
 	default:
 		checkErr = fmt.Errorf("不支持的 provider: %s", modelConfig.Provider)
 	}
 
 	responseTime := time.Since(startTime).Milliseconds()
 
-	// 3. 返回结果
+	// 4. 返回结果
 	if checkErr != nil {
 		return &pb.ModelHealthCheckResp{
 			Status:       "unhealthy",
@@ -73,17 +84,45 @@ func (l *CheckModelHealthLogic) CheckModelHealth(in *pb.ModelHealthCheckReq) (*p
 }
 
 // checkOpenAI 检查 OpenAI 模型健康状态
-func (l *CheckModelHealthLogic) checkOpenAI(modelConfig *model.AmModelConfig, apiKey, prompt string) error {
-	// TODO: 实现 OpenAI API 调用
-	// 这里暂时返回成功，实际应该调用 OpenAI API
-	logx.Infof("Checking OpenAI model: %s", modelConfig.ModelName)
-	return nil
+func (l *CheckModelHealthLogic) checkOpenAI(modelConfig *model.AmModelConfig, apiKey string) error {
+	// 获取 endpoint，如果为空则使用默认值
+	endpoint := "https://api.openai.com/v1/chat/completions"
+	if modelConfig.Endpoint.Valid && modelConfig.Endpoint.String != "" {
+		endpoint = modelConfig.Endpoint.String
+	}
+
+	// 创建 OpenAI Adapter
+	adapterConfig := &adapter.ModelConfig{
+		Provider:    modelConfig.Provider,
+		ModelName:   modelConfig.ModelName,
+		APIEndpoint: endpoint,
+		APIKey:      apiKey,
+		MaxTokens:   100,
+		Timeout:     10 * time.Second,
+	}
+
+	openaiAdapter := adapter.NewOpenAIAdapter(adapterConfig)
+	return openaiAdapter.HealthCheck(l.ctx)
 }
 
 // checkAnthropic 检查 Anthropic/Claude 模型健康状态
-func (l *CheckModelHealthLogic) checkAnthropic(modelConfig *model.AmModelConfig, apiKey, prompt string) error {
-	// TODO: 实现 Anthropic API 调用
-	// 这里暂时返回成功，实际应该调用 Anthropic API
-	logx.Infof("Checking Anthropic model: %s", modelConfig.ModelName)
-	return nil
+func (l *CheckModelHealthLogic) checkAnthropic(modelConfig *model.AmModelConfig, apiKey string) error {
+	// 获取 endpoint，如果为空则使用默认值
+	endpoint := "https://api.anthropic.com/v1/messages"
+	if modelConfig.Endpoint.Valid && modelConfig.Endpoint.String != "" {
+		endpoint = modelConfig.Endpoint.String
+	}
+
+	// 创建 Claude Adapter
+	adapterConfig := &adapter.ModelConfig{
+		Provider:    modelConfig.Provider,
+		ModelName:   modelConfig.ModelName,
+		APIEndpoint: endpoint,
+		APIKey:      apiKey,
+		MaxTokens:   100,
+		Timeout:     10 * time.Second,
+	}
+
+	claudeAdapter := adapter.NewClaudeAdapter(adapterConfig)
+	return claudeAdapter.HealthCheck(l.ctx)
 }

@@ -1,8 +1,8 @@
 package svc
 
 import (
-	"community-and-home/services/ai-model/rpc/internal/config"
-	"community-and-home/services/ai-model/rpc/model"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/internal/config"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/model"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/cache"

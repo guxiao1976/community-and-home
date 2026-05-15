@@ -42,9 +42,16 @@
         </el-form-item>
 
         <el-form-item label="用户类型" prop="user_type">
-          <el-select v-model="formData.user_type" placeholder="请选择用户类型" :disabled="isEdit">
+          <el-select v-model="formData.user_type" placeholder="请选择用户类型">
             <el-option label="普通用户" :value="0" />
             <el-option label="管理员" :value="1" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="状态" prop="status" v-if="isEdit">
+          <el-select v-model="formData.status" placeholder="请选择状态">
+            <el-option label="启用" :value="1" />
+            <el-option label="禁用" :value="2" />
           </el-select>
         </el-form-item>
 
@@ -92,6 +99,7 @@ const formData = reactive({
   password: '',
   nickname: '',
   user_type: 0,
+  status: 1,
   scope: ''
 })
 
@@ -135,6 +143,7 @@ const loadUser = async () => {
     formData.phone = user.phone
     formData.nickname = user.nickname || ''
     formData.user_type = user.userType
+    formData.status = user.status
     formData.scope = user.scope || ''
   } catch (error) {
     ElMessage.error('加载用户信息失败')
@@ -153,6 +162,8 @@ const handleSubmit = async () => {
     if (isEdit.value) {
       await updateUser(userId.value!, {
         nickname: formData.nickname,
+        user_type: formData.user_type,
+        status: formData.status,
         scope: formData.user_type === 1 ? formData.scope : undefined
       })
       ElMessage.success('用户更新成功')

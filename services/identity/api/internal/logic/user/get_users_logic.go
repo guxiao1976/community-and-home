@@ -39,12 +39,12 @@ func (l *GetUsersLogic) GetUsers(req *types.GetUsersReq) (resp *types.GetUsersRe
 		status = &v
 	}
 
-	total, err := l.svcCtx.AuthUserModel.CountByFilter(l.ctx, userType, status)
+	total, err := l.svcCtx.AuthUserModel.CountByFilter(l.ctx, req.Phone, req.Nickname, userType, status)
 	if err != nil {
 		return nil, errorx.NewDefaultError("failed to count users")
 	}
 
-	users, err := l.svcCtx.AuthUserModel.FindPage(l.ctx, userType, status, int64(req.Page), int64(req.PageSize))
+	users, err := l.svcCtx.AuthUserModel.FindPage(l.ctx, req.Phone, req.Nickname, userType, status, int64(req.Page), int64(req.PageSize))
 	if err != nil {
 		return nil, errorx.NewDefaultError("failed to get users")
 	}

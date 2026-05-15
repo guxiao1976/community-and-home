@@ -9,7 +9,7 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 
-	"community-and-home/services/ai-model/rpc/model"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/model"
 )
 
 type CostManager struct {

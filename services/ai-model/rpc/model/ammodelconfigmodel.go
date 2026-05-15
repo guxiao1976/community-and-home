@@ -37,6 +37,9 @@ func (m *customAmModelConfigModel) FindList(ctx context.Context, provider string
 	var conditions []string
 	var args []interface{}
 
+	// 过滤已删除的记录
+	conditions = append(conditions, "delete_time IS NULL")
+
 	if provider != "" {
 		conditions = append(conditions, "provider = ?")
 		args = append(args, provider)
@@ -69,6 +72,9 @@ func (m *customAmModelConfigModel) FindList(ctx context.Context, provider string
 func (m *customAmModelConfigModel) Count(ctx context.Context, provider string, status int64) (int64, error) {
 	var conditions []string
 	var args []interface{}
+
+	// 过滤已删除的记录
+	conditions = append(conditions, "delete_time IS NULL")
 
 	if provider != "" {
 		conditions = append(conditions, "provider = ?")

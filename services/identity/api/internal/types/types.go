@@ -144,6 +144,8 @@ type GetUserRolesResp struct {
 type GetUsersReq struct {
 	Page     int32  `form:"page,optional,default=1"`
 	PageSize int32  `form:"page_size,optional,default=20"`
+	Phone    string `form:"phone,optional"`
+	Nickname string `form:"nickname,optional"`
 	UserType *int32 `form:"user_type,optional"`
 	Status   *int32 `form:"status,optional"`
 	ScopeId  *int64 `form:"scope_id,optional"`

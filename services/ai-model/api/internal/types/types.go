@@ -315,7 +315,10 @@ type UpdateAlertConfigRequest struct {
 
 type UpdateModelRequest struct {
 	Id                    int64   `json:"id"`
+	Name                  string  `json:"name,optional"`
 	DisplayName           string  `json:"display_name,optional"`
+	Provider              string  `json:"provider,optional"`
+	Type                  string  `json:"type,optional"`
 	Endpoint              string  `json:"endpoint,optional"`
 	MaxTokens             int32   `json:"max_tokens,optional"`
 	SupportedFeatures     string  `json:"supported_features,optional"`

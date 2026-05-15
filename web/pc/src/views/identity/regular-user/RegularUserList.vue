@@ -201,7 +201,7 @@ const getVerificationTagType = (status: VerificationStatus) => {
 const fetchUsers = async () => {
   loading.value = true;
   try {
-    const { data } = await getUsers({
+    const data = await getUsers({
       userType: UserType.Homeowner,
       page: pagination.page,
       page_size: pagination.pageSize

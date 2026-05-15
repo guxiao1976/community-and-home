@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"community-and-home/services/ai-model/rpc/internal/svc"
-	"community-and-home/services/ai-model/rpc/pb"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/internal/svc"
+	"github.com/guxiao/community-and-home/services/ai-model/rpc/pb"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

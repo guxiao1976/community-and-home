@@ -67,8 +67,14 @@ request.interceptors.response.use(
       response.config.method?.toUpperCase() || 'GET',
       response.config.url || '',
       response.status,
-      { code, message, dataSize: JSON.stringify(data ?? null).length }
+      { code, message, dataSize: JSON.stringify(data ?? response.data).length }
     );
+
+    // If response doesn't have code field, treat it as success and return raw data
+    // This handles APIs that don't follow the standard ApiResponse format
+    if (code === undefined) {
+      return response.data as any;
+    }
 
     // Success - accept both 0 and 200 as success codes
     // Backend services may return different success codes

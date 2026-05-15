@@ -172,16 +172,16 @@ const fetchModelData = async () => {
   try {
     const res = await getModelConfigById(modelId.value);
     Object.assign(formData, {
-      name: res.data.name,
-      display_name: res.data.display_name,
-      provider: res.data.provider,
-      type: res.data.type,
-      endpoint: res.data.endpoint || '',
-      max_tokens: res.data.max_tokens,
-      supported_features: res.data.supported_features,
-      cost_per_1k_input_tokens: res.data.cost_per_1k_input_tokens,
-      cost_per_1k_output_tokens: res.data.cost_per_1k_output_tokens,
-      description: res.data.description || ''
+      name: res.name,
+      display_name: res.display_name,
+      provider: res.provider,
+      type: res.type,
+      endpoint: res.endpoint || '',
+      max_tokens: res.max_tokens,
+      supported_features: res.supported_features,
+      cost_per_1k_input_tokens: res.cost_per_1k_input_tokens,
+      cost_per_1k_output_tokens: res.cost_per_1k_output_tokens,
+      description: res.description || ''
     });
   } catch (error) {
     ElMessage.error('获取模型信息失败');

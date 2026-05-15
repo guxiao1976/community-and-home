@@ -16,8 +16,8 @@ type (
 		authUserModel
 		FindAll(ctx context.Context) ([]*AuthUser, error)
 		FindByUserType(ctx context.Context, userType int64) ([]*AuthUser, error)
-		CountByFilter(ctx context.Context, userType *int64, status *int64) (int64, error)
-		FindPage(ctx context.Context, userType *int64, status *int64, page, pageSize int64) ([]*AuthUser, error)
+		CountByFilter(ctx context.Context, phone, nickname string, userType *int64, status *int64) (int64, error)
+		FindPage(ctx context.Context, phone, nickname string, userType *int64, status *int64, page, pageSize int64) ([]*AuthUser, error)
 		SoftDelete(ctx context.Context, id int64) error
 	}
 
@@ -52,10 +52,18 @@ func (m *customAuthUserModel) FindByUserType(ctx context.Context, userType int64
 	return users, nil
 }
 
-func (m *customAuthUserModel) CountByFilter(ctx context.Context, userType *int64, status *int64) (int64, error) {
+func (m *customAuthUserModel) CountByFilter(ctx context.Context, phone, nickname string, userType *int64, status *int64) (int64, error) {
 	var where []string
 	var args []interface{}
 	where = append(where, "delete_time is null")
+	if phone != "" {
+		where = append(where, "phone LIKE ?")
+		args = append(args, "%"+phone+"%")
+	}
+	if nickname != "" {
+		where = append(where, "nickname LIKE ?")
+		args = append(args, "%"+nickname+"%")
+	}
 	if userType != nil {
 		where = append(where, "user_type = ?")
 		args = append(args, *userType)
@@ -74,10 +82,18 @@ func (m *customAuthUserModel) CountByFilter(ctx context.Context, userType *int64
 	return count, nil
 }
 
-func (m *customAuthUserModel) FindPage(ctx context.Context, userType *int64, status *int64, page, pageSize int64) ([]*AuthUser, error) {
+func (m *customAuthUserModel) FindPage(ctx context.Context, phone, nickname string, userType *int64, status *int64, page, pageSize int64) ([]*AuthUser, error) {
 	var where []string
 	var args []interface{}
 	where = append(where, "delete_time is null")
+	if phone != "" {
+		where = append(where, "phone LIKE ?")
+		args = append(args, "%"+phone+"%")
+	}
+	if nickname != "" {
+		where = append(where, "nickname LIKE ?")
+		args = append(args, "%"+nickname+"%")
+	}
 	if userType != nil {
 		where = append(where, "user_type = ?")
 		args = append(args, *userType)

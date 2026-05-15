@@ -6,12 +6,12 @@ package handler
 import (
 	"net/http"
 
-	apikey "community-and-home/services/ai-model/api/internal/handler/apikey"
-	cost "community-and-home/services/ai-model/api/internal/handler/cost"
-	model "community-and-home/services/ai-model/api/internal/handler/model"
-	statistics "community-and-home/services/ai-model/api/internal/handler/statistics"
-	template "community-and-home/services/ai-model/api/internal/handler/template"
-	"community-and-home/services/ai-model/api/internal/svc"
+	apikey "github.com/guxiao/community-and-home/services/ai-model/api/internal/handler/apikey"
+	cost "github.com/guxiao/community-and-home/services/ai-model/api/internal/handler/cost"
+	model "github.com/guxiao/community-and-home/services/ai-model/api/internal/handler/model"
+	statistics "github.com/guxiao/community-and-home/services/ai-model/api/internal/handler/statistics"
+	template "github.com/guxiao/community-and-home/services/ai-model/api/internal/handler/template"
+	"github.com/guxiao/community-and-home/services/ai-model/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 )

@@ -1,4 +1,4 @@
-module community-and-home
+module github.com/guxiao/community-and-home
 
 go 1.25.0
 

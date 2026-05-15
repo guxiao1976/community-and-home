@@ -28,9 +28,12 @@ func NewGetUserPermissionsLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *GetUserPermissionsLogic) GetUserPermissions(req *types.GetUserPermissionsReq) (resp *types.GetUserPermissionsResp, err error) {
+	l.Infof("GetUserPermissions called for userId: %d", req.UserId)
+
 	// 1. Get user's active roles
 	userRoles, err := l.svcCtx.AuthUserRoleModel.FindActiveByUserId(l.ctx, req.UserId)
 	if err != nil {
+		l.Errorf("FindActiveByUserId error: %v", err)
 		if err == sql.ErrNoRows || err == model.ErrNotFound {
 			return &types.GetUserPermissionsResp{
 				Permissions: []string{},
@@ -40,6 +43,7 @@ func (l *GetUserPermissionsLogic) GetUserPermissions(req *types.GetUserPermissio
 		return nil, err
 	}
 
+	l.Infof("Found %d user roles", len(userRoles))
 	if len(userRoles) == 0 {
 		return &types.GetUserPermissionsResp{
 			Permissions: []string{},
@@ -50,15 +54,19 @@ func (l *GetUserPermissionsLogic) GetUserPermissions(req *types.GetUserPermissio
 	// 2. Collect all permission IDs from all roles
 	permissionIds := make(map[int64]struct{})
 	for _, ur := range userRoles {
+		l.Infof("Processing role_id: %d", ur.RoleId)
 		rp, err := l.svcCtx.AuthRolePermissionModel.FindByRoleId(l.ctx, ur.RoleId)
 		if err != nil {
+			l.Errorf("FindByRoleId error for role_id %d: %v", ur.RoleId, err)
 			return nil, err
 		}
+		l.Infof("Found %d permissions for role_id: %d", len(rp), ur.RoleId)
 		for _, p := range rp {
 			permissionIds[p.PermissionId] = struct{}{}
 		}
 	}
 
+	l.Infof("Total unique permission IDs: %d", len(permissionIds))
 	if len(permissionIds) == 0 {
 		return &types.GetUserPermissionsResp{
 			Permissions: []string{},
@@ -72,10 +80,13 @@ func (l *GetUserPermissionsLogic) GetUserPermissions(req *types.GetUserPermissio
 		ids = append(ids, id)
 	}
 
+	l.Infof("Fetching permissions for IDs: %v", ids)
 	permissions, err := l.svcCtx.AuthPermissionModel.FindByIds(l.ctx, ids)
 	if err != nil {
+		l.Errorf("FindByIds error: %v", err)
 		return nil, err
 	}
+	l.Infof("Found %d permissions", len(permissions))
 
 	// 4. Build response: permission codes (active only) and menu tree
 	var permissionCodes []string
@@ -85,6 +96,7 @@ func (l *GetUserPermissionsLogic) GetUserPermissions(req *types.GetUserPermissio
 		}
 	}
 
+	l.Infof("Active permission codes: %v", permissionCodes)
 	menus := buildPermissionTree(permissions)
 
 	return &types.GetUserPermissionsResp{

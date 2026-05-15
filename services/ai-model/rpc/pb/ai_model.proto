@@ -133,14 +133,17 @@ message CreateModelConfigReq {
 
 message UpdateModelConfigReq {
   int64 id = 1;
-  string display_name = 2;
-  string endpoint = 3;
-  int32 max_tokens = 4;
-  string supported_features = 5;
-  double cost_per_1k_input_tokens = 6;
-  double cost_per_1k_output_tokens = 7;
-  int64 status = 8;
-  string description = 9;
+  string name = 2;
+  string display_name = 3;
+  string provider = 4;
+  string type = 5;
+  string endpoint = 6;
+  int32 max_tokens = 7;
+  string supported_features = 8;
+  double cost_per_1k_input_tokens = 9;
+  double cost_per_1k_output_tokens = 10;
+  int64 status = 11;
+  string description = 12;
 }
 
 message DeleteModelConfigReq {

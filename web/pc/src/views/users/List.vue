@@ -17,15 +17,15 @@
           <el-input v-model="filterForm.nickname" placeholder="请输入昵称" clearable />
         </el-form-item>
         <el-form-item label="用户类型">
-          <el-select v-model="filterForm.user_type" placeholder="请选择" clearable>
+          <el-select v-model="filterForm.user_type" placeholder="请选择" clearable style="width: 150px">
             <el-option label="普通用户" :value="0" />
             <el-option label="管理员" :value="1" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="filterForm.is_active" placeholder="请选择" clearable>
-            <el-option label="启用" :value="true" />
-            <el-option label="禁用" :value="false" />
+          <el-select v-model="filterForm.status" placeholder="请选择" clearable style="width: 150px">
+            <el-option label="启用" :value="1" />
+            <el-option label="禁用" :value="2" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -43,7 +43,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="nickname" label="昵称" />
-        <el-table-column prop="user_type" label="用户类型" width="100">
+        <el-table-column prop="user_type" label="用户类型" width="120">
           <template #default="{ row }">
             <el-tag :type="row.user_type === 1 ? 'warning' : 'info'">
               {{ row.user_type === 1 ? '管理员' : '普通用户' }}
@@ -110,7 +110,7 @@ const filterForm = ref({
   phone: '',
   nickname: '',
   user_type: undefined as number | undefined,
-  is_active: undefined as boolean | undefined
+  status: undefined as number | undefined
 })
 
 // Mask phone number (show first 3 and last 4 digits)
@@ -127,7 +127,7 @@ const loadUsers = async () => {
       ...(filterForm.value.phone && { phone: filterForm.value.phone }),
       ...(filterForm.value.nickname && { nickname: filterForm.value.nickname }),
       ...(filterForm.value.user_type !== undefined && { user_type: filterForm.value.user_type }),
-      ...(filterForm.value.is_active !== undefined && { is_active: filterForm.value.is_active })
+      ...(filterForm.value.status !== undefined && { status: filterForm.value.status })
     }
     const response = await getUsers(params)
     userStore.setUsers(response.list, response.total)
@@ -149,7 +149,7 @@ const handleResetFilter = () => {
     phone: '',
     nickname: '',
     user_type: undefined,
-    is_active: undefined
+    status: undefined
   }
   userStore.resetFilters()
   loadUsers()

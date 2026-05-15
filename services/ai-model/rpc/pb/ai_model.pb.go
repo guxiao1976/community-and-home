@@ -978,14 +978,17 @@ func (x *CreateModelConfigReq) GetDescription() string {
 type UpdateModelConfigReq struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	Id                     int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	DisplayName            string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Endpoint               string                 `protobuf:"bytes,3,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	MaxTokens              int32                  `protobuf:"varint,4,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
-	SupportedFeatures      string                 `protobuf:"bytes,5,opt,name=supported_features,json=supportedFeatures,proto3" json:"supported_features,omitempty"`
-	CostPer_1KInputTokens  float64                `protobuf:"fixed64,6,opt,name=cost_per_1k_input_tokens,json=costPer1kInputTokens,proto3" json:"cost_per_1k_input_tokens,omitempty"`
-	CostPer_1KOutputTokens float64                `protobuf:"fixed64,7,opt,name=cost_per_1k_output_tokens,json=costPer1kOutputTokens,proto3" json:"cost_per_1k_output_tokens,omitempty"`
-	Status                 int64                  `protobuf:"varint,8,opt,name=status,proto3" json:"status,omitempty"`
-	Description            string                 `protobuf:"bytes,9,opt,name=description,proto3" json:"description,omitempty"`
+	Name                   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	DisplayName            string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Provider               string                 `protobuf:"bytes,4,opt,name=provider,proto3" json:"provider,omitempty"`
+	Type                   string                 `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`
+	Endpoint               string                 `protobuf:"bytes,6,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	MaxTokens              int32                  `protobuf:"varint,7,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
+	SupportedFeatures      string                 `protobuf:"bytes,8,opt,name=supported_features,json=supportedFeatures,proto3" json:"supported_features,omitempty"`
+	CostPer_1KInputTokens  float64                `protobuf:"fixed64,9,opt,name=cost_per_1k_input_tokens,json=costPer1kInputTokens,proto3" json:"cost_per_1k_input_tokens,omitempty"`
+	CostPer_1KOutputTokens float64                `protobuf:"fixed64,10,opt,name=cost_per_1k_output_tokens,json=costPer1kOutputTokens,proto3" json:"cost_per_1k_output_tokens,omitempty"`
+	Status                 int64                  `protobuf:"varint,11,opt,name=status,proto3" json:"status,omitempty"`
+	Description            string                 `protobuf:"bytes,12,opt,name=description,proto3" json:"description,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -1027,9 +1030,30 @@ func (x *UpdateModelConfigReq) GetId() int64 {
 	return 0
 }
 
+func (x *UpdateModelConfigReq) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 func (x *UpdateModelConfigReq) GetDisplayName() string {
 	if x != nil {
 		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *UpdateModelConfigReq) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *UpdateModelConfigReq) GetType() string {
+	if x != nil {
+		return x.Type
 	}
 	return ""
 }
@@ -1450,18 +1474,22 @@ const file_pb_ai_model_proto_rawDesc = "" +
 	"\x18cost_per_1k_input_tokens\x18\b \x01(\x01R\x14costPer1kInputTokens\x128\n" +
 	"\x19cost_per_1k_output_tokens\x18\t \x01(\x01R\x15costPer1kOutputTokens\x12 \n" +
 	"\vdescription\x18\n" +
-	" \x01(\tR\vdescription\"\xdf\x02\n" +
+	" \x01(\tR\vdescription\"\xa3\x03\n" +
 	"\x14UpdateModelConfigReq\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
-	"\bendpoint\x18\x03 \x01(\tR\bendpoint\x12\x1d\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1a\n" +
+	"\bprovider\x18\x04 \x01(\tR\bprovider\x12\x12\n" +
+	"\x04type\x18\x05 \x01(\tR\x04type\x12\x1a\n" +
+	"\bendpoint\x18\x06 \x01(\tR\bendpoint\x12\x1d\n" +
 	"\n" +
-	"max_tokens\x18\x04 \x01(\x05R\tmaxTokens\x12-\n" +
-	"\x12supported_features\x18\x05 \x01(\tR\x11supportedFeatures\x126\n" +
-	"\x18cost_per_1k_input_tokens\x18\x06 \x01(\x01R\x14costPer1kInputTokens\x128\n" +
-	"\x19cost_per_1k_output_tokens\x18\a \x01(\x01R\x15costPer1kOutputTokens\x12\x16\n" +
-	"\x06status\x18\b \x01(\x03R\x06status\x12 \n" +
-	"\vdescription\x18\t \x01(\tR\vdescription\"&\n" +
+	"max_tokens\x18\a \x01(\x05R\tmaxTokens\x12-\n" +
+	"\x12supported_features\x18\b \x01(\tR\x11supportedFeatures\x126\n" +
+	"\x18cost_per_1k_input_tokens\x18\t \x01(\x01R\x14costPer1kInputTokens\x128\n" +
+	"\x19cost_per_1k_output_tokens\x18\n" +
+	" \x01(\x01R\x15costPer1kOutputTokens\x12\x16\n" +
+	"\x06status\x18\v \x01(\x03R\x06status\x12 \n" +
+	"\vdescription\x18\f \x01(\tR\vdescription\"&\n" +
 	"\x14DeleteModelConfigReq\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"#\n" +
 	"\x11GetModelConfigReq\x12\x0e\n" +
