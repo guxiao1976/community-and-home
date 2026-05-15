@@ -59,7 +59,7 @@ export const identityModule: ModuleConfig = {
       path: 'users/verifications',
       name: 'VerificationList',
       component: () => import('@/views/verification/List.vue'),
-      meta: { title: '实名审核', icon: 'DocumentChecked', requiresAuth: true, permission: 'homeowner_verification:view' }
+      meta: { title: '实名审核', icon: 'DocumentChecked', requiresAuth: true, permission: 'verification:view' }
     },
     {
       path: 'roles',
