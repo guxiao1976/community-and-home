@@ -13,19 +13,19 @@ export const identityModule: ModuleConfig = {
         path: '/users/list',
         title: '用户列表',
         icon: User,
-        permission: 'user:list'
+        permission: 'user:view'
       },
       {
         path: '/users/verifications',
         title: '实名审核',
         icon: Document,
-        permission: 'verification:list'
+        permission: 'verification:view'
       },
       {
         path: '/roles',
         title: '角色管理',
         icon: UserFilled,
-        permission: 'role:list'
+        permission: 'role:view'
       }
     ]
   },
@@ -35,7 +35,7 @@ export const identityModule: ModuleConfig = {
       path: 'users/list',
       name: 'UserList',
       component: () => import('@/views/users/List.vue'),
-      meta: { title: '用户列表', icon: 'User', requiresAuth: true, permission: 'user:list' }
+      meta: { title: '用户列表', icon: 'User', requiresAuth: true, permission: 'user:view' }
     },
     {
       path: 'users/create',
@@ -53,19 +53,19 @@ export const identityModule: ModuleConfig = {
       path: 'users/:id',
       name: 'UserDetail',
       component: () => import('@/views/users/Detail.vue'),
-      meta: { title: '用户详情', requiresAuth: true, hidden: true, permission: 'user:detail' }
+      meta: { title: '用户详情', requiresAuth: true, hidden: true, permission: 'user:view' }
     },
     {
       path: 'users/verifications',
       name: 'VerificationList',
       component: () => import('@/views/verification/List.vue'),
-      meta: { title: '实名审核', icon: 'DocumentChecked', requiresAuth: true, permission: 'verification:list' }
+      meta: { title: '实名审核', icon: 'DocumentChecked', requiresAuth: true, permission: 'homeowner_verification:view' }
     },
     {
       path: 'roles',
       name: 'RoleList',
       component: () => import('@/views/roles/List.vue'),
-      meta: { title: '角色管理', icon: 'UserFilled', requiresAuth: true, permission: 'role:list' }
+      meta: { title: '角色管理', icon: 'UserFilled', requiresAuth: true, permission: 'role:view' }
     },
     {
       path: 'roles/:id/permissions',
