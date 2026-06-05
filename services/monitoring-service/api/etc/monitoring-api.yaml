@@ -1,0 +1,52 @@
+Name: monitoring-api
+Host: 0.0.0.0
+Port: 8886
+
+Monitoring:
+  Services:
+    - Name: user-service
+      DisplayName: 用户服务
+      ApiPort: 8882
+      RpcPort: 8082
+    - Name: auth-service
+      DisplayName: 认证服务
+      ApiPort: 8881
+      RpcPort: 8083
+    - Name: permission-service
+      DisplayName: 权限服务
+      ApiPort: 8883
+      RpcPort: 8084
+    - Name: file-service
+      DisplayName: 文件服务
+      ApiPort: 8884
+      RpcPort: 8085
+    - Name: master-data-service
+      DisplayName: 主数据服务
+      ApiPort: 8889
+      RpcPort: 8087
+    - Name: moderation-service
+      DisplayName: 审核服务
+      ApiPort: 8890
+      RpcPort: 0
+    - Name: ai-model-service
+      DisplayName: AI模型服务
+      ApiPort: 8891
+      RpcPort: 8080
+    - Name: monitoring-service
+      DisplayName: 监控服务
+      ApiPort: 8886
+      RpcPort: 0
+  Containers:
+    - Name: mysql
+      DisplayName: MySQL 8.0
+    - Name: etcd
+      DisplayName: etcd v3.5
+    - Name: redis
+      DisplayName: Redis 7
+    - Name: apisix
+      DisplayName: APISIX
+    - Name: minio
+      DisplayName: MinIO
+  AiModelCheck:
+    Endpoint: http://127.0.0.1:8891/api/v1/models
+    Timeout: 5s

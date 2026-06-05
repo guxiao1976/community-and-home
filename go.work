@@ -1,0 +1,15 @@
+go 1.25.10
+
+use (
+	./api-proto
+	./common
+	./services/ai-model-service/api
+	./services/ai-model-service/rpc
+	./services/auth-service
+	./services/file-service
+	./services/master-data-service
+	./services/monitoring-service
+	./services/moderation-service
+	./services/permission-service
+	./services/user-service
+)
