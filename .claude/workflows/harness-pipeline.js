@@ -111,7 +111,7 @@ function reviewPrompt() {
 
 ## 约束
 - 只读权限：Read、Grep、Glob、Bash（go build、go vet、go test、git diff 等）
-- 严禁 Write、Edit`
+- 严禁 Write、Edit
 
 ## QA VERDICT 解析
 - QA PASS — 继续到 Review
