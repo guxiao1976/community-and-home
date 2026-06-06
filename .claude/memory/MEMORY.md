@@ -7,6 +7,7 @@
 
 - [Proto int64 字段必须加 jstype=JS_STRING](proto-jstype.md) — api-proto, must-follow, `proto int64 jstype JS_STRING Snowflake`
 - [服务间通信仅通过 gRPC](grpc-only-comms.md) — all, must-follow, `gRPC 服务间调用 直连数据库`
+- [API 调用前验证路由存在 + 禁止静默吞错](verify-api-before-calling.md) — all, must-follow, `API 路由 404 catch 空 静默`
 
 
 ## 应该遵守 (should-follow)
