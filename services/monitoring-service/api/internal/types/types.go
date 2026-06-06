@@ -9,14 +9,17 @@ type HealthResponse struct {
 }
 
 type ServiceHealth struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"display_name"`
-	ApiPort     int    `json:"api_port"`
-	ApiStatus   string `json:"api_status"`
-	ApiError    string `json:"api_error,omitempty"`
-	RpcPort     int    `json:"rpc_port"`
-	RpcStatus   string `json:"rpc_status"`
-	RpcError    string `json:"rpc_error,omitempty"`
+	Name          string `json:"name"`
+	DisplayName   string `json:"display_name"`
+	ApiPort       int    `json:"api_port"`
+	ApiStatus     string `json:"api_status"`
+	ApiError      string `json:"api_error,omitempty"`
+	RpcPort       int    `json:"rpc_port"`
+	RpcStatus     string `json:"rpc_status"`
+	RpcError      string `json:"rpc_error,omitempty"`
+	HealthStatus  string `json:"health_status"`
+	HealthError   string `json:"health_error,omitempty"`
+	HealthEndpoint string `json:"health_endpoint,omitempty"`
 }
 
 type ContainerHealth struct {

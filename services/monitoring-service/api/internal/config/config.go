@@ -18,10 +18,12 @@ type MonitoringConfig struct {
 }
 
 type ServiceMonitorConfig struct {
-	Name        string
-	DisplayName string
-	ApiPort     int
-	RpcPort     int
+	Name            string
+	DisplayName     string
+	ApiPort         int
+	RpcPort         int
+	HealthEndpoint  string
+	HealthTimeout   time.Duration
 }
 
 type ContainerMonitorConfig struct {

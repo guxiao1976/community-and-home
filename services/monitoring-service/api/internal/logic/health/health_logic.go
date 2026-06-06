@@ -27,7 +27,7 @@ func (l *HealthLogic) CheckHealth(ctx context.Context) (*types.HealthResponse, e
 	resp.AiModels = checkAiModels(l.cfg)
 
 	for _, s := range resp.Services {
-		if s.ApiStatus == "unhealthy" || s.RpcStatus == "unhealthy" {
+		if s.ApiStatus == "unhealthy" || s.RpcStatus == "unhealthy" || s.HealthStatus == "unhealthy" {
 			resp.OverallStatus = "unhealthy"
 			break
 		}

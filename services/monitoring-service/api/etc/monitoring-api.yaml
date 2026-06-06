@@ -8,34 +8,50 @@ Monitoring:
       DisplayName: 用户服务
       ApiPort: 8882
       RpcPort: 8082
+      HealthEndpoint: ""
+      HealthTimeout: 0s
     - Name: auth-service
       DisplayName: 认证服务
       ApiPort: 8881
       RpcPort: 8083
+      HealthEndpoint: ""
+      HealthTimeout: 0s
     - Name: permission-service
       DisplayName: 权限服务
       ApiPort: 8883
       RpcPort: 8084
+      HealthEndpoint: ""
+      HealthTimeout: 0s
     - Name: file-service
       DisplayName: 文件服务
       ApiPort: 8884
       RpcPort: 8085
+      HealthEndpoint: ""
+      HealthTimeout: 0s
     - Name: master-data-service
       DisplayName: 主数据服务
       ApiPort: 8889
       RpcPort: 8087
+      HealthEndpoint: ""
+      HealthTimeout: 0s
     - Name: moderation-service
       DisplayName: 审核服务
       ApiPort: 8890
       RpcPort: 0
+      HealthEndpoint: http://127.0.0.1:8890/api/moderation/health
+      HealthTimeout: 5s
     - Name: ai-model-service
       DisplayName: AI模型服务
       ApiPort: 8891
       RpcPort: 8080
+      HealthEndpoint: ""
+      HealthTimeout: 0s
     - Name: monitoring-service
       DisplayName: 监控服务
       ApiPort: 8886
       RpcPort: 0
+      HealthEndpoint: ""
+      HealthTimeout: 0s
   Containers:
     - Name: mysql
       DisplayName: MySQL 8.0

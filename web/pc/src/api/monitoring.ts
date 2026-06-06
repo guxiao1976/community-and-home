@@ -9,6 +9,9 @@ export interface ServiceHealth {
   rpc_port: number
   rpc_status: 'healthy' | 'unhealthy' | 'unknown'
   rpc_error?: string
+  health_status: 'healthy' | 'unhealthy' | 'unknown'
+  health_error?: string
+  health_endpoint?: string
 }
 
 export interface ContainerHealth {
