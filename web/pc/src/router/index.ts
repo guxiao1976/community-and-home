@@ -33,20 +33,6 @@ const routes: RouteRecordRaw[] = [
     children: getModuleRoutes()  // 动态加载所有模块路由
   },
   {
-    path: '/monitoring',
-    name: 'Monitoring',
-    component: () => import('@/components/layout/MainLayout.vue'),
-    meta: { title: '运行监控', icon: 'Monitor' },
-    children: [
-      {
-        path: 'health',
-        name: 'HealthDashboard',
-        component: () => import('@/views/monitoring/HealthDashboard.vue'),
-        meta: { title: '服务健康' }
-      }
-    ]
-  },
-  {
     path: '/403',
     name: 'Forbidden',
     component: () => import('@/views/error/403.vue'),
