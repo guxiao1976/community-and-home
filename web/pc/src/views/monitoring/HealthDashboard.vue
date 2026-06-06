@@ -30,7 +30,7 @@ const overallHealthy = computed(() => data.value?.overall_status === 'healthy')
 async function fetchHealth() {
   try {
     const res = await getHealthStatus()
-    data.value = res.data
+    data.value = res as any
     lastRefresh.value = new Date().toLocaleTimeString()
   } catch (e) {
     console.error('Failed to fetch health status:', e)
