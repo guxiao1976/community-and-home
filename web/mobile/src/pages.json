@@ -1,0 +1,92 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/notice/notice",
+      "style": {
+        "navigationBarTitleText": "公告信息"
+      }
+    },
+    {
+      "path": "pages/interact/interact",
+      "style": {
+        "navigationBarTitleText": "邻里互动"
+      }
+    },
+    {
+      "path": "pages/mine/mine",
+      "style": {
+        "navigationBarTitleText": "我的家庭"
+      }
+    },
+    {
+      "path": "pages/my/my",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/notice-detail/notice-detail",
+      "style": {
+        "navigationBarTitleText": "通知详情"
+      }
+    },
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "社区家园",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/join-community/join-community",
+      "style": {
+        "navigationBarTitleText": "加入小区",
+        "navigationBarBackgroundColor": "#FFFFFF"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "社区家园",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#FFFFFF"
+  },
+  "tabBar": {
+    "color": "#A6988A",
+    "selectedColor": "#B8956A",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/notice/notice",
+        "text": "公告信息",
+        "iconPath": "static/tabbar/notice.png",
+        "selectedIconPath": "static/tabbar/notice-active.png"
+      },
+      {
+        "pagePath": "pages/interact/interact",
+        "text": "邻里互动",
+        "iconPath": "static/tabbar/interact.png",
+        "selectedIconPath": "static/tabbar/interact-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的家庭",
+        "iconPath": "static/tabbar/mine.png",
+        "selectedIconPath": "static/tabbar/mine-active.png"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "我的",
+        "iconPath": "static/tabbar/mine.png",
+        "selectedIconPath": "static/tabbar/mine-active.png"
+      }
+    ]
+  }
+}
