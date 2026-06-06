@@ -39,6 +39,8 @@
 import { onMounted } from 'vue';
 import { useUserStore } from '@/stores/user';
 import { useCommunityStore } from '@/stores/community';
+import { isAuthenticated } from '@common/utils/auth';
+import { getUserProfile } from '@/api/identity';
 
 const userStore = useUserStore();
 const communityStore = useCommunityStore();
@@ -47,7 +49,14 @@ function goLogin() {
   uni.navigateTo({ url: '/pages/login/login' });
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Ensure user profile is loaded (token may exist without user in store)
+  if (isAuthenticated() && !userStore.user) {
+    try {
+      const user = await getUserProfile();
+      userStore.setUser(user);
+    } catch { /* ignore */ }
+  }
   if (userStore.isLoggedIn) {
     communityStore.loadMemberships();
   }
