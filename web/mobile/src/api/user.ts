@@ -43,6 +43,15 @@ export async function joinCommunity(communityId: string): Promise<CommunityMembe
 }
 
 /**
+ * Leave a community. Requires JWT.
+ */
+export async function leaveCommunity(communityId: string): Promise<void> {
+  await request.post('/api/users/communities/leave', {
+    community_id: communityId,
+  });
+}
+
+/**
  * Get user's active community memberships. Requires JWT.
  */
 export async function getUserMemberships(): Promise<CommunityMembership[]> {

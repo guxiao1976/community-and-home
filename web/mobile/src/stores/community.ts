@@ -69,6 +69,16 @@ export const useCommunityStore = defineStore('community', () => {
     }
   }
 
+  function removeCommunity(id: string): void {
+    communities.value = communities.value.filter(c => c.communityId !== id);
+    // If current community was removed, switch to first remaining or clear
+    if (currentCommunityId.value === id) {
+      const next = communities.value[0];
+      currentCommunityId.value = next?.communityId || '';
+      saveStoredCommunityId(currentCommunityId.value);
+    }
+  }
+
   function switchCommunity(id: string): void {
     const exists = communities.value.some(c => c.communityId === id);
     if (!exists) return;
@@ -103,5 +113,6 @@ export const useCommunityStore = defineStore('community', () => {
     loadMemberships,
     switchCommunity,
     addCommunity,
+    removeCommunity,
   };
 });
