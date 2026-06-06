@@ -16,6 +16,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodGet,
+				Path:    "/api/users/profile",
+				Handler: user.GetProfileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/api/users",
 				Handler: user.ListUsersHandler(serverCtx),
 			},
