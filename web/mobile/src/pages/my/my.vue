@@ -1,7 +1,12 @@
 <template>
   <view class="page">
+    <!-- 加载中 -->
+    <view v-if="pageLoading" class="loading-wrap">
+      <text class="loading-text">加载中...</text>
+    </view>
+
     <!-- 未登录 -->
-    <view v-if="!userStore.isLoggedIn" class="login-prompt" @click="goLogin">
+    <view v-else-if="!userStore.isLoggedIn" class="login-prompt" @click="goLogin">
       <view class="avatar-placeholder">
         <text class="avatar-icon">👤</text>
       </view>
@@ -173,17 +178,22 @@ function goLogin() {
   uni.navigateTo({ url: '/pages/login/login' });
 }
 
+const pageLoading = ref(true);
+
 onMounted(async () => {
   // Ensure user profile is loaded (token may exist without user in store)
   if (isAuthenticated() && !userStore.user) {
     try {
       const user = await getUserProfile();
       userStore.setUser(user);
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn('[my] Failed to load user profile:', e);
+    }
   }
   if (userStore.isLoggedIn) {
-    communityStore.loadMemberships();
+    await communityStore.loadMemberships();
   }
+  pageLoading.value = false;
 });
 </script>
 
@@ -191,6 +201,17 @@ onMounted(async () => {
 .page {
   min-height: 100vh;
   background-color: $uni-bg-color;
+}
+
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 200rpx 0;
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: $uni-text-color-placeholder;
 }
 
 .login-prompt {

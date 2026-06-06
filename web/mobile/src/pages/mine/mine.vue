@@ -1,7 +1,12 @@
 <template>
   <view class="page">
+    <!-- Loading -->
+    <view v-if="pageLoading" class="loading-wrap">
+      <text class="loading-text">加载中...</text>
+    </view>
+
     <!-- Not logged in -->
-    <view v-if="!userStore.isLoggedIn" class="login-prompt" @click="goLogin">
+    <view v-else-if="!userStore.isLoggedIn" class="login-prompt" @click="goLogin">
       <view class="avatar-placeholder">
         <text class="avatar-icon">👤</text>
       </view>
@@ -36,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useUserStore } from '@/stores/user';
 import { useCommunityStore } from '@/stores/community';
 import { isAuthenticated } from '@common/utils/auth';
@@ -49,17 +54,22 @@ function goLogin() {
   uni.navigateTo({ url: '/pages/login/login' });
 }
 
+const pageLoading = ref(true);
+
 onMounted(async () => {
   // Ensure user profile is loaded (token may exist without user in store)
   if (isAuthenticated() && !userStore.user) {
     try {
       const user = await getUserProfile();
       userStore.setUser(user);
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn('[mine] Failed to load user profile:', e);
+    }
   }
   if (userStore.isLoggedIn) {
-    communityStore.loadMemberships();
+    await communityStore.loadMemberships();
   }
+  pageLoading.value = false;
 });
 </script>
 
@@ -67,6 +77,17 @@ onMounted(async () => {
 .page {
   min-height: 100vh;
   padding: 32px 24px;
+}
+
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 200rpx 0;
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: $uni-text-color-placeholder;
 }
 
 .login-prompt {
