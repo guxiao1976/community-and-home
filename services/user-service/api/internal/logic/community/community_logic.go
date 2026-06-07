@@ -28,6 +28,9 @@ func (l *JoinCommunityLogic) JoinCommunity(req *types.JoinCommunityReq) (*types.
 	resp, err := l.svcCtx.UserRpc.JoinCommunity(l.ctx, &userv1.JoinCommunityRequest{
 		UserId:      userId,
 		CommunityId: req.CommunityId,
+		Building:    int32(req.Building),
+		Unit:        int32(req.Unit),
+		Room:        int32(req.Room),
 	})
 	if err != nil {
 		return nil, err
@@ -136,5 +139,8 @@ func toMembership(m *userv1.CommunityMembership) types.CommunityMembership {
 		LeaveTime:   m.LeaveTime,
 		CreatedAt:   m.CreatedAt,
 		UpdatedAt:   m.UpdatedAt,
+		Building:    int(m.Building),
+		Unit:        int(m.Unit),
+		Room:        int(m.Room),
 	}
 }
