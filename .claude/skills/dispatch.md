@@ -22,17 +22,10 @@
 
 ## 两种模式
 
-### 模式一：仅开发（快速）
-用户只派发开发任务，后续手动触发审查。
+### 模式一：全流程管线（默认）
+默认行为，派发后自动走完 开发→测试→审查 全流程。
 
-触发词：用户说"派发"但**没有**提到"走管线""全流程""自动审查"
-
-行为：仅派发 Generator Agent，完成后告知用户"你可以说'审查 <服务名>'进入下一步"
-
-### 模式二：全流程管线
-用户要求自动走完 开发→测试→审查 全流程。
-
-触发词："走管线" / "全流程" / "自动审查" / "harness"
+触发条件：**用户说"派发"时，默认进入此模式**（无需额外触发词）
 
 行为：使用 Workflow 工具启动 `harness-pipeline` 工作流：
 ```
@@ -41,6 +34,13 @@ Workflow({ scriptPath: ".claude/workflows/harness-pipeline.js",
 ```
 
 管线会自动循环：Generator → QA → Review，任一失败回到 Generator 修复重来，最多 3 轮。全部通过后通知用户。
+
+### 模式二：仅开发（快速，需显式触发）
+跳过 QA 和 Review，仅派发开发任务。仅在用户明确要求跳过时使用。
+
+触发词：**"快速" / "仅开发" / "跳过审查" / "不用审查"**
+
+行为：仅派发 Generator Agent，完成后告知用户"你可以说'审查 <服务名>'进入下一步"
 
 ## 流程
 
@@ -74,6 +74,7 @@ Workflow({ scriptPath: ".claude/workflows/harness-pipeline.js",
 - 服务间通信仅通过 gRPC（etcd 服务发现），禁止直连其他服务数据库
 - 所有 int64 ID 字段在 Proto 中加 [jstype = JS_STRING]，REST API 中加 json:",string"
 - 不修改 common/ 和 api-proto/（需要全局 Claude 评估影响）
+- **提交前必须运行 `bash scripts/harness-checks.sh --service <服务目录名>`，有 FAIL 则不可提交**
 
 ## 任务
 <用户的任务描述，保持原文>
@@ -81,6 +82,7 @@ Workflow({ scriptPath: ".claude/workflows/harness-pipeline.js",
 ## 完成标准
 - 代码通过 go build ./...（Go 服务）
 - 代码通过 go test ./...（如有测试）
+- **运行 `bash scripts/harness-checks.sh --service <服务目录名>` 全部 PASS（无 FAIL）**
 - 更新 services/<service-name>/CHANGELOG.md — 记录做了什么、为什么、影响范围
 - 如果涉及 Proto 变更 → 告知用户切换到全局 Claude，不要自己修改 api-proto/
 - 如果涉及 common/ 变更 → 告知用户（需要全局评估影响）
