@@ -1,0 +1,16 @@
+Name: user.rpc
+ListenOn: 0.0.0.0:8082
+Timeout: 30000
+
+Etcd:
+  Hosts:
+    - 127.0.0.1:2379
+  Key: user.rpc
+
+# 数据库 user，见 docker-compose.yml
+DataSource: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(localhost:3306)/user?charset=utf8mb4&parseTime=true&loc=Local
+Cache:
+  Host: localhost:6379
+
+# AES 加密密钥（16字节）— 用于手机号加密存储，需与 Auth Service 一致
+AesKey: "${AES_KEY}"
