@@ -160,6 +160,23 @@ func (m *mockMembershipModel) UpdateBindStatus(ctx context.Context, id int64, s 
 	return nil
 }
 
+func (m *mockMembershipModel) FindByAddress(ctx context.Context, communityId int64, building, unit, room int) (*model.UserCommunityMembership, error) {
+	for _, d := range m.data {
+		if d.CommunityId == communityId && d.Building == building && d.Unit == unit && d.Room == room && d.BindStatus == model.MembershipBindStatusActive {
+			return d, nil
+		}
+	}
+	return nil, model.ErrNotFound
+}
+func (m *mockMembershipModel) UpdateAddress(ctx context.Context, id int64, building, unit, room int) error {
+	if d, ok := m.data[id]; ok {
+		d.Building = building
+		d.Unit = unit
+		d.Room = room
+	}
+	return nil
+}
+
 var _ model.UserCommunityMembershipModel = (*mockMembershipModel)(nil)
 
 // =============================================================================
