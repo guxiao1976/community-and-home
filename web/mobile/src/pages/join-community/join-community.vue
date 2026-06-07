@@ -23,9 +23,14 @@
         <text class="step-label">选择县区</text>
       </view>
       <view class="step-line" :class="{ done: step > 3 }" />
-      <view class="step" :class="{ active: step === 4 }">
-        <view class="step-num">4</view>
+      <view class="step" :class="{ active: step === 4, done: step > 4 }">
+        <view class="step-num">{{ step > 4 ? '✓' : '4' }}</view>
         <text class="step-label">搜索小区</text>
+      </view>
+      <view class="step-line" :class="{ done: step > 4 }" />
+      <view class="step" :class="{ active: step === 5 }">
+        <view class="step-num">5</view>
+        <text class="step-label">输入地址</text>
       </view>
     </view>
 
@@ -124,7 +129,7 @@
       <!-- Results -->
       <view v-if="searching" class="loading-text">搜索中...</view>
       <scroll-view v-else-if="areas.length > 0" class="list" scroll-y>
-        <view v-for="area in areas" :key="area.id" class="list-item" @click="joinCommunity(area)">
+        <view v-for="area in areas" :key="area.id" class="list-item" @click="goToStep5(area)">
           <view class="item-content">
             <text class="item-name">{{ area.name }}</text>
             <text v-if="area.address" class="item-addr">{{ area.address }}</text>
@@ -135,6 +140,65 @@
       </scroll-view>
       <view v-else-if="!searching && searched" class="empty-text">未找到匹配的小区</view>
       <view v-else-if="!searching && !searched" class="loading-text">输入名称后点击搜索</view>
+    </view>
+
+    <!-- Step 5: Enter Address -->
+    <view v-if="step === 5" class="card">
+      <view class="back-row" @click="step = 4">
+        <text class="back-icon">←</text>
+        <text class="back-text">返回</text>
+      </view>
+
+      <!-- Selected Community Info -->
+      <view class="community-info">
+        <text class="community-icon">🏘️</text>
+        <text class="community-name">{{ selectedCommunity?.name }}</text>
+        <text v-if="selectedCommunity?.address" class="community-addr">{{ selectedCommunity?.address }}</text>
+      </view>
+
+      <!-- Address Format Example -->
+      <view class="address-example">
+        <text class="example-title">示例</text>
+        <text class="example-text">5号楼 2单元 301房间：5-2-301</text>
+      </view>
+
+      <!-- Address Inputs -->
+      <view class="address-inputs-row">
+        <view class="input-col">
+          <text class="input-label">楼号</text>
+          <input
+            v-model="step5building"
+            class="addr-input"
+            :class="{ 'input-error': buildingError }"
+            type="number"
+            placeholder="例：5"
+          />
+        </view>
+        <text class="input-sep">-</text>
+        <view class="input-col">
+          <text class="input-label">单元号</text>
+          <input
+            v-model="step5unit"
+            class="addr-input"
+            :class="{ 'input-error': unitError }"
+            type="number"
+            placeholder="例：2"
+          />
+        </view>
+        <text class="input-sep">-</text>
+        <view class="input-col">
+          <text class="input-label">房号</text>
+          <input
+            v-model="step5room"
+            class="addr-input"
+            :class="{ 'input-error': roomError }"
+            type="number"
+            placeholder="例：301"
+          />
+        </view>
+      </view>
+
+      <button class="btn" @click="submitJoin">确认加入</button>
     </view>
 
     <!-- Join Success -->
@@ -190,6 +254,15 @@ const searched = ref(false);
 const myCommunities = ref<(CommunityMembership & { communityName?: string })[]>([]);
 const showMaxWarning = ref(false);
 
+// Step 5: Enter Address
+const selectedCommunity = ref<ResidentialArea | null>(null);
+const step5building = ref('');
+const step5unit = ref('');
+const step5room = ref('');
+const buildingError = ref(false);
+const unitError = ref(false);
+const roomError = ref(false);
+
 onMounted(async () => {
   provincesLoading.value = true;
   try {
@@ -244,24 +317,89 @@ async function doSearch() {
 
 const joinedArea = ref<ResidentialArea | null>(null);
 
-async function joinCommunity(area: ResidentialArea) {
+function goToStep5(area: ResidentialArea) {
   if (myCommunities.value.length >= 3) {
     showMaxWarning.value = true;
     setTimeout(() => { showMaxWarning.value = false; }, 2000);
     return;
   }
   if (isJoined(area.id)) return;
+  selectedCommunity.value = area;
+  step5building.value = '';
+  step5unit.value = '';
+  step5room.value = '';
+  buildingError.value = false;
+  unitError.value = false;
+  roomError.value = false;
+  step.value = 5;
+}
+
+function validateStep5(): string | null {
+  buildingError.value = false;
+  unitError.value = false;
+  roomError.value = false;
+
+  const building = step5building.value.trim();
+  const unit = step5unit.value.trim();
+  const room = step5room.value.trim();
+
+  if (!building) {
+    buildingError.value = true;
+    return '请输入楼号';
+  }
+  const buildingNum = Number(building);
+  if (isNaN(buildingNum) || !Number.isInteger(buildingNum) || buildingNum < 1 || buildingNum > 150) {
+    buildingError.value = true;
+    return '楼号必须为数字，且不大于150';
+  }
+
+  if (!unit) {
+    unitError.value = true;
+    return '请输入单元号';
+  }
+  const unitNum = Number(unit);
+  if (isNaN(unitNum) || !Number.isInteger(unitNum) || unitNum < 1 || unitNum > 5) {
+    unitError.value = true;
+    return '单元号必须为数字，且不大于5';
+  }
+
+  if (!room) {
+    roomError.value = true;
+    return '请输入房号';
+  }
+  if (!/^\d{3}$/.test(room)) {
+    roomError.value = true;
+    return '房号必须为3位数字';
+  }
+
+  return null;
+}
+
+async function submitJoin() {
+  const error = validateStep5();
+  if (error) {
+    uni.showToast({ title: error, icon: 'none', duration: 2000 });
+    return;
+  }
+
+  if (!selectedCommunity.value) return;
+
   try {
     uni.showLoading({ title: '加入中...', mask: true });
-    const mem = await joinCommunityApi(area.id);
-    myCommunities.value.push({ ...mem, communityName: area.name });
+    const mem = await joinCommunityApi({
+      community_id: selectedCommunity.value.id,
+      building: Number(step5building.value.trim()),
+      unit: Number(step5unit.value.trim()),
+      room: Number(step5room.value.trim()),
+    });
+    myCommunities.value.push({ ...mem, communityName: selectedCommunity.value.name });
     const communityStore = useCommunityStore();
     communityStore.addCommunity({
-      communityId: area.id,
-      communityName: area.name,
-      address: area.address,
+      communityId: selectedCommunity.value.id,
+      communityName: selectedCommunity.value.name,
+      address: selectedCommunity.value.address,
     });
-    joinedArea.value = area;
+    joinedArea.value = selectedCommunity.value;
     uni.hideLoading();
   } catch (_) {
     uni.hideLoading();
@@ -352,5 +490,25 @@ function isJoined(id: string): boolean {
   .success-actions { display: flex; gap: 24rpx; justify-content: center; }
   .success-btn { padding: 16rpx 48rpx; border-radius: 44rpx; background: linear-gradient(135deg, #B8956A, #D4B896); color: #fff; font-size: 28rpx; font-weight: 600; }
   .success-btn-outline { padding: 16rpx 48rpx; border-radius: 44rpx; border: 2rpx solid #B8956A; color: #B8956A; font-size: 28rpx; font-weight: 600; }
+}
+// Step 5: Enter Address
+.community-info { background: #fff; border-radius: 12rpx; padding: 28rpx; margin-bottom: 24rpx; text-align: center;
+  .community-icon { font-size: 48rpx; display: block; margin-bottom: 8rpx; }
+  .community-name { font-size: 32rpx; font-weight: 700; color: $uni-text-color; display: block; margin-bottom: 4rpx; }
+  .community-addr { font-size: 24rpx; color: $uni-text-color-grey; display: block; }
+}
+
+.address-example { background: #fff; border-radius: 12rpx; padding: 20rpx 24rpx; margin-bottom: 32rpx;
+  .example-title { font-size: 22rpx; color: $uni-text-color-grey; display: block; margin-bottom: 6rpx; }
+  .example-text { font-size: 26rpx; color: $uni-text-color; display: block; }
+}
+
+.address-inputs-row { display: flex; align-items: flex-start; justify-content: center; gap: 12rpx; margin-bottom: 8rpx;
+  .input-col { display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 180rpx; }
+  .input-label { font-size: 24rpx; color: $uni-text-color; margin-bottom: 10rpx; }
+  .addr-input { width: 100%; height: 80rpx; background: #FAF8F5; border: 2rpx solid #E8DCCF; border-radius: 14rpx; text-align: center; font-size: 28rpx; color: $uni-text-color; padding: 0 8rpx;
+    &.input-error { border-color: #D4958A; background: #FFF5F3; }
+  }
+  .input-sep { font-size: 36rpx; color: $uni-text-color-grey; font-weight: 600; line-height: 80rpx; padding-top: 34rpx; }
 }
 </style>
