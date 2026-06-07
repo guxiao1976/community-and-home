@@ -49,6 +49,12 @@
         "navigationBarTitleText": "加入小区",
         "navigationBarBackgroundColor": "#FFFFFF"
       }
+    },
+    {
+      "path": "pages/leave-community/leave-community",
+      "style": {
+        "navigationBarTitleText": "退出小区"
+      }
     }
   ],
   "globalStyle": {
