@@ -47,6 +47,18 @@ export const useCommunityStore = defineStore('community', () => {
       const memberships = await getUserMemberships();
       // API returns snake_case proto fields (community_id), map to camelCase
       // Note: membership API does NOT return community name/address
+
+      // Resolve community names from master-data-service
+      const ids = memberships.map((m: any) => m.community_id || m.communityId || '').filter(Boolean);
+      let nameMap: Map<string, string> = new Map();
+      if (ids.length > 0) {
+        try {
+          const { getResidentialAreasByIds } = await import('@/api/user');
+          const areas = await getResidentialAreasByIds(ids);
+          areas.forEach(a => nameMap.set(a.id, a.name));
+        } catch { /* ignore - will use existing names or ID fallback */ }
+      }
+
       const existingMap = new Map(communities.value.map(c => [c.communityId, c]));
       communities.value = memberships.map((m: any) => {
         const cid = m.community_id || m.communityId || '';
@@ -54,7 +66,7 @@ export const useCommunityStore = defineStore('community', () => {
         return {
           communityId: cid,
           // Preserve existing name/address if available, otherwise use ID fallback
-          communityName: existing?.communityName || m.community_name || m.communityName || ('小区 ' + cid.slice(-6)),
+          communityName: existing?.communityName || nameMap.get(cid) || m.community_name || m.communityName || ('小区 ' + cid.slice(-6)),
           address: existing?.address || m.address || undefined,
         };
       });

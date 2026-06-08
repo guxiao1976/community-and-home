@@ -132,6 +132,15 @@ export async function applyRole(params: {
 }
 
 /**
+ * Get residential areas by IDs (batch query).
+ */
+export async function getResidentialAreasByIds(ids: string[]): Promise<ResidentialArea[]> {
+  const res = await request.post<any>('/api/masterdata/residential-areas/batch', { ids });
+  const data = res as unknown as { list?: ResidentialArea[] };
+  return data.list || [];
+}
+
+/**
  * Get user's roles.
  * Requires JWT.
  *
