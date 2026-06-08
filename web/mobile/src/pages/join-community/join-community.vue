@@ -270,6 +270,7 @@ async function joinSelectedCommunity(area: ResidentialArea) {
   if (isJoined(area.id)) return;
 
   try {
+    uni.hideLoading(); // clear any lingering loading state
     uni.showLoading({ title: '加入中...', mask: true });
     await joinCommunity(area.id);
     communityStore.addCommunity({
@@ -278,10 +279,10 @@ async function joinSelectedCommunity(area: ResidentialArea) {
       address: area.address,
     });
     joinedArea.value = area;
-    uni.hideLoading();
   } catch (_) {
-    uni.hideLoading();
     uni.showToast({ title: '加入失败，请稍后重试', icon: 'none', duration: 2000 });
+  } finally {
+    uni.hideLoading();
   }
 }
 
