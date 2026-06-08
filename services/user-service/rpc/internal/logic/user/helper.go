@@ -5,6 +5,7 @@ import (
 	"time"
 
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	"github.com/guxiao1976/community-user/model"
 )
 
@@ -15,9 +16,13 @@ func toProtoUser(u *model.UserBase) *userv1.User {
 	if u == nil {
 		return nil
 	}
+	phone := u.Phone
+	if decrypted, err := crypto.AESDecrypt(phone); err == nil {
+		phone = decrypted
+	}
 	user := &userv1.User{
 		Id:          u.Id,
-		Phone:       u.Phone,
+		Phone:       phone,
 		AvatarUrl:   u.AvatarUrl.String,
 		RealName:    u.RealName.String,
 		IdCardNumber: u.IdCardNumber.String,
