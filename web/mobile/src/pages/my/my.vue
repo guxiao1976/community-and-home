@@ -105,7 +105,7 @@
             <text class="settings-item-label">个人信息</text>
             <text class="settings-item-arrow">→</text>
           </view>
-          <view class="settings-item" hover-class="settings-item--hover" @click="showDevToast">
+          <view class="settings-item" hover-class="settings-item--hover" @click="goAccountSecurity">
             <text class="settings-item-label">账号安全</text>
             <text class="settings-item-arrow">→</text>
           </view>
@@ -204,6 +204,10 @@ function goJoinCommunity() {
 
 function goLeaveCommunity() {
   uni.navigateTo({ url: '/pages/leave-community/leave-community' });
+}
+
+function goAccountSecurity() {
+  uni.navigateTo({ url: '/pages/account-security/account-security' });
 }
 
 function showDevToast() {

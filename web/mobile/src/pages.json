@@ -55,6 +55,12 @@
       "style": {
         "navigationBarTitleText": "退出小区"
       }
+    },
+    {
+      "path": "pages/account-security/account-security",
+      "style": {
+        "navigationBarTitleText": "账号安全"
+      }
     }
   ],
   "globalStyle": {
