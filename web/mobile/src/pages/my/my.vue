@@ -13,7 +13,7 @@
       <text class="login-text">点击登录</text>
     </view>
 
-    <!-- Authenticated: V9 Card Layout -->
+    <!-- Authenticated: Hierarchical List Layout -->
     <template v-else>
       <!-- Gradient Header -->
       <view class="header">
@@ -24,110 +24,115 @@
         <text class="header-phone">{{ displayPhone }}</text>
       </view>
 
-      <!-- Community Management Section -->
-      <view class="section">
-        <view class="section-header">
-          <text class="section-title">🏘️ 小区管理</text>
-          <text class="section-badge">已加入 {{ communityStore.communityCount }}/3</text>
-        </view>
-        <view class="card-row">
-          <view class="action-card" hover-class="action-card--hover" @click="goJoinCommunity">
-            <view class="action-icon-box action-icon-box--join">
-              <text class="action-icon-emoji">➕</text>
+      <!-- 1. 小区管理 -->
+      <view class="menu-section">
+        <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'community' ? '' : 'community')">
+          <view class="menu-left">
+            <text class="menu-icon">🏘️</text>
+            <view class="menu-text">
+              <text class="menu-title">小区管理</text>
+              <text class="menu-desc">加入小区 · 退出小区 · 已加入 {{ communityStore.communityCount }}/3</text>
             </view>
-            <text class="action-label">加入小区</text>
           </view>
-          <view class="action-card" hover-class="action-card--hover" @click="goLeaveCommunity">
-            <view class="action-icon-box action-icon-box--leave">
-              <text class="action-icon-emoji">🚪</text>
-            </view>
-            <text class="action-label">退出小区</text>
+          <text class="menu-arrow" :class="{ 'menu-arrow--open': expanded === 'community' }">→</text>
+        </view>
+        <view v-if="expanded === 'community'" class="sub-menu">
+          <view class="sub-item" hover-class="sub-item--hover" @click="goJoinCommunity">
+            <view class="sub-icon sub-icon--join">➕</view>
+            <text class="sub-label">加入小区</text>
+            <text class="sub-arrow">→</text>
+          </view>
+          <view class="sub-item" hover-class="sub-item--hover" @click="goLeaveCommunity">
+            <view class="sub-icon sub-icon--leave">🚪</view>
+            <text class="sub-label">退出小区</text>
+            <text class="sub-arrow">→</text>
           </view>
         </view>
       </view>
 
-      <!-- Identity Section -->
-      <view class="section">
-        <view class="settings-box">
-          <view class="settings-header">
-            <text>🪪</text>
-            <text class="settings-title">身份认证</text>
+      <!-- 2. 身份认证 -->
+      <view class="menu-section">
+        <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'identity' ? '' : 'identity')">
+          <view class="menu-left">
+            <text class="menu-icon">🪪</text>
+            <view class="menu-text">
+              <text class="menu-title">身份认证</text>
+              <text class="menu-desc">业主认证 · 租户认证 · 业委会 · 网格员 · 物业管理员 · 社区管理员 · 商家</text>
+            </view>
           </view>
-
-          <!-- Owner (only if has communities) -->
-          <view v-if="communityStore.hasCommunities" class="setting-item" @click="startOwnerAuth">
-            <text>业主认证</text>
+          <text class="menu-arrow" :class="{ 'menu-arrow--open': expanded === 'identity' }">→</text>
+        </view>
+        <view v-if="expanded === 'identity'" class="sub-menu">
+          <view v-if="communityStore.hasCommunities" class="sub-item" hover-class="sub-item--hover" @click="startOwnerAuth">
+            <text class="sub-label">业主认证</text>
             <text class="item-hint">需绑房</text>
-            <text class="arrow">→</text>
+            <text class="sub-arrow">→</text>
           </view>
-
-          <!-- Tenant (only if has communities) -->
-          <view v-if="communityStore.hasCommunities" class="setting-item" @click="startTenantAuth">
-            <text>租户认证</text>
+          <view v-if="communityStore.hasCommunities" class="sub-item" hover-class="sub-item--hover" @click="startTenantAuth">
+            <text class="sub-label">租户认证</text>
             <text class="item-hint">需绑房</text>
-            <text class="arrow">→</text>
+            <text class="sub-arrow">→</text>
           </view>
-
-          <!-- Committee (only if has approved owner role) -->
-          <view v-if="hasOwnerRole" class="setting-item" @click="applyForRole('committee')">
-            <text>业委会认证</text>
+          <view v-if="hasOwnerRole" class="sub-item" hover-class="sub-item--hover" @click="applyForRole('committee')">
+            <text class="sub-label">业委会认证</text>
             <text class="item-hint">需先认证业主</text>
-            <text class="arrow">→</text>
+            <text class="sub-arrow">→</text>
           </view>
-
-          <!-- Always visible roles -->
-          <view class="setting-item" @click="applyForRole('grid_worker')">
-            <text>网格员认证</text>
-            <text class="arrow">→</text>
+          <view class="sub-item" hover-class="sub-item--hover" @click="applyForRole('grid_worker')">
+            <text class="sub-label">网格员认证</text>
+            <text class="sub-arrow">→</text>
           </view>
-          <view class="setting-item" @click="applyForRole('property_admin')">
-            <text>物业管理员认证</text>
-            <text class="arrow">→</text>
+          <view class="sub-item" hover-class="sub-item--hover" @click="applyForRole('property_admin')">
+            <text class="sub-label">物业管理员认证</text>
+            <text class="sub-arrow">→</text>
           </view>
-          <view class="setting-item" @click="applyForRole('community_admin')">
-            <text>社区管理员认证</text>
-            <text class="arrow">→</text>
+          <view class="sub-item" hover-class="sub-item--hover" @click="applyForRole('community_admin')">
+            <text class="sub-label">社区管理员认证</text>
+            <text class="sub-arrow">→</text>
           </view>
-          <view class="setting-item setting-item--last" @click="applyForRole('merchant')">
-            <text>商家认证</text>
-            <text class="arrow">→</text>
+          <view class="sub-item" hover-class="sub-item--hover" @click="applyForRole('merchant')">
+            <text class="sub-label">商家认证</text>
+            <text class="sub-arrow">→</text>
           </view>
         </view>
       </view>
 
-      <!-- Settings Section -->
-      <view class="section">
-        <view class="section-header">
-          <text class="section-title">⚙️ 设置</text>
+      <!-- 3. 账户管理 -->
+      <view class="menu-section">
+        <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'account' ? '' : 'account')">
+          <view class="menu-left">
+            <text class="menu-icon">⚙️</text>
+            <view class="menu-text">
+              <text class="menu-title">账户管理</text>
+              <text class="menu-desc">个人信息 · 账号安全 · 关于我们</text>
+            </view>
+          </view>
+          <text class="menu-arrow" :class="{ 'menu-arrow--open': expanded === 'account' }">→</text>
         </view>
-        <view class="settings-list">
-          <view class="settings-item" hover-class="settings-item--hover" @click="showDevToast">
-            <text class="settings-item-label">个人信息</text>
-            <text class="settings-item-arrow">→</text>
+        <view v-if="expanded === 'account'" class="sub-menu">
+          <view class="sub-item" hover-class="sub-item--hover" @click="showDevToast">
+            <text class="sub-label">个人信息</text>
+            <text class="sub-arrow">→</text>
           </view>
-          <view class="settings-item" hover-class="settings-item--hover" @click="goAccountSecurity">
-            <text class="settings-item-label">账号安全</text>
-            <text class="settings-item-arrow">→</text>
+          <view class="sub-item" hover-class="sub-item--hover" @click="goAccountSecurity">
+            <text class="sub-label">账号安全</text>
+            <text class="sub-arrow">→</text>
           </view>
-          <view class="settings-item settings-item--last" hover-class="settings-item--hover" @click="showDevToast">
-            <text class="settings-item-label">关于我们</text>
-            <text class="settings-item-arrow">→</text>
+          <view class="sub-item" hover-class="sub-item--hover" @click="showDevToast">
+            <text class="sub-label">关于我们</text>
+            <text class="sub-arrow">→</text>
           </view>
         </view>
       </view>
 
-      <!-- Bind Residence Modal -->
+      <!-- Bind Residence Modal (unchanged) -->
       <view v-if="showBindResidence" class="modal-mask" @click="showBindResidence = false">
         <view class="modal-box" @click.stop>
           <text class="modal-title">绑定房产</text>
           <text class="modal-sub">认证{{ authTarget === 'owner' ? '业主' : '租户' }}身份需要绑定房产</text>
-
-          <!-- Example -->
           <view class="address-example">
             <text>示例：5号楼 2单元 301房间 → 5-2-301</text>
           </view>
-
-          <!-- Three inputs -->
           <view class="address-inputs-row">
             <view class="input-col">
               <text class="input-label">楼号</text>
@@ -144,7 +149,6 @@
               <input v-model="bindRoom" type="number" placeholder="301" class="addr-input" />
             </view>
           </view>
-
           <view class="modal-btns">
             <view class="btn-cancel" @click="showBindResidence = false">取消</view>
             <view class="btn-confirm" @click="submitBindAndApply">确认绑定并申请</view>
@@ -167,6 +171,9 @@ const userStore = useUserStore();
 const communityStore = useCommunityStore();
 
 const pageLoading = ref(true);
+
+// Hierarchical menu expansion state: '' | 'community' | 'identity' | 'account'
+const expanded = ref('');
 
 // Identity / role state
 const showBindResidence = ref(false);
@@ -396,65 +403,106 @@ onMounted(async () => {
   color: #3D3226;
 }
 
-// ---- Sections ----
-.section {
+// ---- Hierarchical Menu Sections ----
+.menu-section {
   padding: 0 40rpx;
-  margin-top: 32rpx;
+  margin-top: 20rpx;
 }
 
-.section-header {
+.menu-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20rpx;
-}
-
-.section-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #3D3226;
-}
-
-.section-badge {
-  font-size: 24rpx;
-  color: #B8956A;
-  background-color: rgba(184, 149, 106, 0.1);
-  padding: 6rpx 16rpx;
-  border-radius: 20rpx;
-}
-
-// ---- Action Cards ----
-.card-row {
-  display: flex;
-  gap: 20rpx;
-}
-
-.action-card {
-  flex: 1;
-  height: 260rpx;
   background-color: #FAF8F5;
-  border-radius: 24rpx;
-  box-shadow: 0 4rpx 16rpx rgba(184, 149, 106, 0.08);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  border-radius: 16rpx;
+  padding: 32rpx;
 
   &--hover {
-    opacity: 0.85;
-    transform: scale(0.97);
-    transition: all 0.15s ease;
+    background-color: rgba(184, 149, 106, 0.06);
+    transition: background-color 0.15s ease;
   }
 }
 
-.action-icon-box {
-  width: 160rpx;
-  height: 160rpx;
-  border-radius: 32rpx;
+.menu-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-icon {
+  font-size: 44rpx;
+  flex-shrink: 0;
+}
+
+.menu-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #3D3226;
+  display: block;
+}
+
+.menu-desc {
+  font-size: 24rpx;
+  color: #A6988A;
+  margin-top: 6rpx;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-arrow {
+  font-size: 28rpx;
+  color: #CCC4BA;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+
+  &--open {
+    transform: rotate(90deg);
+  }
+}
+
+// ---- Sub-menu (expanded items) ----
+.sub-menu {
+  padding: 12rpx 0 0 60rpx;
+}
+
+.sub-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background-color: #FAF8F5;
+  border-radius: 12rpx;
+  margin-bottom: 8rpx;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &--hover {
+    background-color: rgba(184, 149, 106, 0.08);
+    transition: background-color 0.15s ease;
+  }
+}
+
+.sub-icon {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 14rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16rpx;
+  font-size: 30rpx;
+  color: #fff;
+  margin-right: 16rpx;
+  flex-shrink: 0;
 
   &--join {
     background: linear-gradient(135deg, #B8956A, #D4B896);
@@ -465,68 +513,16 @@ onMounted(async () => {
   }
 }
 
-.action-icon-emoji {
-  font-size: 84rpx;
-}
-
-.action-label {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: #3D3226;
-}
-
-// ---- Settings ----
-.settings-list {
-  background-color: #FAF8F5;
-  border-radius: 20rpx;
-  padding: 28rpx 32rpx;
-}
-
-.settings-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14rpx 0;
-  border-bottom: 1rpx solid rgba(184, 149, 106, 0.1);
-
-  &--last {
-    border-bottom: none;
-  }
-
-  &--hover {
-    background-color: rgba(184, 149, 106, 0.04);
-    transition: background-color 0.15s ease;
-  }
-}
-
-.settings-item-label {
+.sub-label {
   font-size: 28rpx;
   color: #3D3226;
+  flex: 1;
 }
 
-.settings-item-arrow {
+.sub-arrow {
   font-size: 24rpx;
   color: #CCC4BA;
-}
-
-// ---- Settings Header (for identity section) ----
-.settings-box {
-  background-color: #FAF8F5;
-  border-radius: 20rpx;
-  padding: 28rpx 32rpx;
-}
-
-.settings-header {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-  margin-bottom: 12rpx;
-}
-
-.settings-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #3D3226;
+  flex-shrink: 0;
 }
 
 // ---- Identity hints ----
@@ -536,13 +532,7 @@ onMounted(async () => {
   background: rgba(184, 149, 106, 0.08);
   padding: 2rpx 10rpx;
   border-radius: 8rpx;
-  margin-left: auto;
   margin-right: 8rpx;
-}
-
-.arrow {
-  font-size: 24rpx;
-  color: #CCC4BA;
 }
 
 // ---- Bind Residence Modal ----
