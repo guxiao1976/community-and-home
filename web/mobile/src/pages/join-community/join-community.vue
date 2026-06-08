@@ -279,8 +279,9 @@ async function joinSelectedCommunity(area: ResidentialArea) {
       address: area.address,
     });
     joinedArea.value = area;
-  } catch (_) {
-    uni.showToast({ title: '加入失败，请稍后重试', icon: 'none', duration: 2000 });
+  } catch (e: any) {
+    const msg = e?.message || e?.msg || '加入失败，请稍后重试';
+    uni.showToast({ title: msg, icon: 'none', duration: 3000 });
   } finally {
     uni.hideLoading();
   }
