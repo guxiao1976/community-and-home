@@ -46,6 +46,55 @@
         </view>
       </view>
 
+      <!-- Identity Section -->
+      <view class="section">
+        <view class="settings-box">
+          <view class="settings-header">
+            <text>🪪</text>
+            <text class="settings-title">身份认证</text>
+          </view>
+
+          <!-- Owner (only if has communities) -->
+          <view v-if="communityStore.hasCommunities" class="setting-item" @click="startOwnerAuth">
+            <text>业主认证</text>
+            <text class="item-hint">需绑房</text>
+            <text class="arrow">→</text>
+          </view>
+
+          <!-- Tenant (only if has communities) -->
+          <view v-if="communityStore.hasCommunities" class="setting-item" @click="startTenantAuth">
+            <text>租户认证</text>
+            <text class="item-hint">需绑房</text>
+            <text class="arrow">→</text>
+          </view>
+
+          <!-- Committee (only if has approved owner role) -->
+          <view v-if="hasOwnerRole" class="setting-item" @click="applyForRole('committee')">
+            <text>业委会认证</text>
+            <text class="item-hint">需先认证业主</text>
+            <text class="arrow">→</text>
+          </view>
+
+          <!-- Always visible roles -->
+          <view class="setting-item" @click="applyForRole('grid_worker')">
+            <text>网格员认证</text>
+            <text class="arrow">→</text>
+          </view>
+          <view class="setting-item" @click="applyForRole('property_admin')">
+            <text>物业管理员认证</text>
+            <text class="arrow">→</text>
+          </view>
+          <view class="setting-item" @click="applyForRole('community_admin')">
+            <text>社区管理员认证</text>
+            <text class="arrow">→</text>
+          </view>
+          <view class="setting-item setting-item--last" @click="applyForRole('merchant')">
+            <text>商家认证</text>
+            <text class="arrow">→</text>
+          </view>
+        </view>
+      </view>
+
       <!-- Settings Section -->
       <view class="section">
         <view class="section-header">
@@ -66,6 +115,42 @@
           </view>
         </view>
       </view>
+
+      <!-- Bind Residence Modal -->
+      <view v-if="showBindResidence" class="modal-mask" @click="showBindResidence = false">
+        <view class="modal-box" @click.stop>
+          <text class="modal-title">绑定房产</text>
+          <text class="modal-sub">认证{{ authTarget === 'owner' ? '业主' : '租户' }}身份需要绑定房产</text>
+
+          <!-- Example -->
+          <view class="address-example">
+            <text>示例：5号楼 2单元 301房间 → 5-2-301</text>
+          </view>
+
+          <!-- Three inputs -->
+          <view class="address-inputs-row">
+            <view class="input-col">
+              <text class="input-label">楼号</text>
+              <input v-model="bindBuilding" type="number" placeholder="如 5" class="addr-input" />
+            </view>
+            <text class="input-sep">-</text>
+            <view class="input-col">
+              <text class="input-label">单元号</text>
+              <input v-model="bindUnit" type="number" placeholder="2" class="addr-input" />
+            </view>
+            <text class="input-sep">-</text>
+            <view class="input-col">
+              <text class="input-label">房号</text>
+              <input v-model="bindRoom" type="number" placeholder="301" class="addr-input" />
+            </view>
+          </view>
+
+          <view class="modal-btns">
+            <view class="btn-cancel" @click="showBindResidence = false">取消</view>
+            <view class="btn-confirm" @click="submitBindAndApply">确认绑定并申请</view>
+          </view>
+        </view>
+      </view>
     </template>
   </view>
 </template>
@@ -76,11 +161,24 @@ import { useUserStore } from '@/stores/user';
 import { useCommunityStore } from '@/stores/community';
 import { isAuthenticated } from '@common/utils/auth';
 import { getUserProfile } from '@/api/identity';
+import { applyRole, bindResidence, getUserMemberships } from '@/api/user';
 
 const userStore = useUserStore();
 const communityStore = useCommunityStore();
 
 const pageLoading = ref(true);
+
+// Identity / role state
+const showBindResidence = ref(false);
+const authTarget = ref<'owner' | 'tenant'>('owner');
+const bindBuilding = ref('');
+const bindUnit = ref('');
+const bindRoom = ref('');
+
+const hasOwnerRole = computed(() => {
+  // Placeholder — will be enhanced with API-loaded roles in future iteration
+  return false;
+});
 
 // Phone display with masking
 const displayPhone = computed(() => {
@@ -110,6 +208,85 @@ function goLeaveCommunity() {
 
 function showDevToast() {
   uni.showToast({ title: '页面开发中', icon: 'none', duration: 1500 });
+}
+
+// Identity / role actions
+function startOwnerAuth() {
+  authTarget.value = 'owner';
+  showBindResidence.value = true;
+}
+
+function startTenantAuth() {
+  authTarget.value = 'tenant';
+  showBindResidence.value = true;
+}
+
+async function submitBindAndApply() {
+  const b = bindBuilding.value.trim();
+  const u = bindUnit.value.trim();
+  const r = bindRoom.value.trim();
+
+  if (!b || !u || !r) {
+    uni.showToast({ title: '请填写完整的楼号、单元号、房号', icon: 'none' });
+    return;
+  }
+
+  const currentCommunityId = communityStore.currentCommunityId;
+  if (!currentCommunityId) {
+    uni.showToast({ title: '请先加入小区', icon: 'none' });
+    return;
+  }
+
+  try {
+    // Find the membership_id for the current community
+    const memberships = await getUserMemberships();
+    const membership = memberships.find(
+      (m: any) => (m.community_id || m.communityId) === currentCommunityId,
+    );
+    if (!membership) {
+      uni.showToast({ title: '未找到小区成员关系', icon: 'none' });
+      return;
+    }
+    const membershipId = membership.id;
+
+    // Step 1: Bind residence
+    await bindResidence({
+      membership_id: membershipId,
+      building: b,
+      unit: u,
+      room: r,
+      is_primary: 1,
+    });
+
+    // Step 2: Apply for role
+    await applyRole({
+      community_id: currentCommunityId,
+      role_code: authTarget.value,
+    });
+
+    showBindResidence.value = false;
+    uni.showToast({ title: '认证申请已提交，等待审核', icon: 'success' });
+  } catch (e: any) {
+    uni.showToast({ title: e.message || '操作失败', icon: 'none' });
+  }
+}
+
+function applyForRole(roleCode: string) {
+  // TODO: In production, this should call applyRole API with proper community_id
+  // For non-owner/tenant roles (no bind-residence needed), submit directly
+  const currentCommunityId = communityStore.currentCommunityId;
+  if (!currentCommunityId) {
+    uni.showToast({ title: '请先加入小区', icon: 'none' });
+    return;
+  }
+  applyRole({
+    community_id: currentCommunityId,
+    role_code: roleCode,
+  }).then(() => {
+    uni.showToast({ title: '认证申请已提交，等待审核', icon: 'success' });
+  }).catch((e: any) => {
+    uni.showToast({ title: e.message || '操作失败', icon: 'none' });
+  });
 }
 
 onMounted(async () => {
@@ -326,5 +503,162 @@ onMounted(async () => {
 .settings-item-arrow {
   font-size: 24rpx;
   color: #CCC4BA;
+}
+
+// ---- Settings Header (for identity section) ----
+.settings-box {
+  background-color: #FAF8F5;
+  border-radius: 20rpx;
+  padding: 28rpx 32rpx;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 12rpx;
+}
+
+.settings-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #3D3226;
+}
+
+// ---- Identity hints ----
+.item-hint {
+  font-size: 20rpx;
+  color: #B8956A;
+  background: rgba(184, 149, 106, 0.08);
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+  margin-left: auto;
+  margin-right: 8rpx;
+}
+
+.arrow {
+  font-size: 24rpx;
+  color: #CCC4BA;
+}
+
+// ---- Bind Residence Modal ----
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  width: 640rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 40rpx 32rpx;
+}
+
+.modal-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #3D3226;
+  display: block;
+  text-align: center;
+  margin-bottom: 8rpx;
+}
+
+.modal-sub {
+  font-size: 24rpx;
+  color: #A6988A;
+  display: block;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.address-example {
+  background: #FAF8F5;
+  border-radius: 10rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 24rpx;
+  text-align: center;
+}
+
+.address-example text {
+  font-size: 24rpx;
+  color: #8C7B6B;
+}
+
+.address-inputs-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12rpx;
+  margin-bottom: 32rpx;
+}
+
+.input-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.input-label {
+  font-size: 22rpx;
+  color: #8C7B6B;
+  margin-bottom: 8rpx;
+}
+
+.addr-input {
+  width: 100%;
+  height: 72rpx;
+  background: #FAF8F5;
+  border: 2rpx solid #E8DCCF;
+  border-radius: 12rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #3D3226;
+  padding: 0 8rpx;
+}
+
+.input-sep {
+  font-size: 32rpx;
+  color: #CCC4BA;
+  line-height: 72rpx;
+  padding-top: 30rpx;
+}
+
+.modal-btns {
+  display: flex;
+  gap: 16rpx;
+}
+
+.btn-cancel {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 40rpx;
+  background: #F0EBE3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: #8C7B6B;
+}
+
+.btn-confirm {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 40rpx;
+  background: linear-gradient(135deg, #B8956A, #D4B896);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 600;
 }
 </style>

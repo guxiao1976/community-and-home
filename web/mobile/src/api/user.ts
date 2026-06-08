@@ -95,3 +95,51 @@ export async function searchResidentialAreas(params: {
   const data = res as unknown as { list?: ResidentialArea[] };
   return data.list || [];
 }
+
+/**
+ * Bind a residence (building/unit/room) to a membership.
+ * Required before applying for owner/tenant role.
+ *
+ * TODO: Backend route POST /api/users/residences/bind needs to be created
+ * in services/user-service/api/internal/handler/routes.go
+ */
+export async function bindResidence(params: {
+  membership_id: string;
+  building: string;
+  unit: string;
+  room: string;
+  is_primary?: number;
+  start_date?: string;
+  end_date?: string;
+}): Promise<any> {
+  const res = await request.post('/api/users/residences/bind', params);
+  return res;
+}
+
+/**
+ * Apply for a role (owner, tenant, grid_worker, etc.)
+ * Requires JWT.
+ *
+ * TODO: Backend route POST /api/users/roles/apply needs to be created
+ * in services/user-service/api/internal/handler/routes.go
+ */
+export async function applyRole(params: {
+  community_id: string;
+  role_code: string;
+}): Promise<any> {
+  const res = await request.post('/api/users/roles/apply', params);
+  return res;
+}
+
+/**
+ * Get user's roles.
+ * Requires JWT.
+ *
+ * TODO: Backend route GET /api/users/roles needs to be created
+ * in services/user-service/api/internal/handler/routes.go
+ */
+export async function getUserRoles(): Promise<any[]> {
+  const res = await request.get<any>('/api/users/roles');
+  const data = res as unknown as { roles?: any[] };
+  return data.roles || [];
+}
