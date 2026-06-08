@@ -144,11 +144,30 @@
         </view>
       </view>
 
-      <!-- Bind Residence Modal (unchanged) -->
+      <!-- Bind Residence Modal -->
       <view v-if="showBindResidence" class="modal-mask" @click="showBindResidence = false">
         <view class="modal-box" @click.stop>
           <text class="modal-title">{{ authTarget === 'owner' ? '业主' : '租户' }}登记</text>
-          <text class="modal-sub">登记您的房号信息</text>
+
+          <!-- Step 1: Select Community -->
+          <text class="modal-label">选择小区</text>
+          <scroll-view v-if="communityStore.communities.length > 1" class="community-picker" scroll-y>
+            <view
+              v-for="c in communityStore.communities"
+              :key="c.communityId"
+              class="community-option"
+              :class="{ 'community-option--selected': bindCommunityId === c.communityId }"
+              @click="bindCommunityId = c.communityId"
+            >
+              <text>{{ c.communityName }}</text>
+              <text v-if="bindCommunityId === c.communityId" class="community-check">✓</text>
+            </view>
+          </scroll-view>
+          <view v-else class="community-single">
+            <text>{{ communityStore.communities[0]?.communityName || '当前小区' }}</text>
+          </view>
+
+          <text class="modal-label" style="margin-top: 24rpx;">登记房号</text>
           <view class="address-example">
             <text>示例：5号楼 2单元 301房间 → 5-2-301</text>
           </view>
@@ -170,7 +189,7 @@
           </view>
           <view class="modal-btns">
             <view class="btn-cancel" @click="showBindResidence = false">取消</view>
-            <view class="btn-confirm" @click="submitBindAndApply">确认绑定并申请</view>
+            <view class="btn-confirm" @click="submitBindAndApply">确认登记</view>
           </view>
         </view>
       </view>
@@ -197,6 +216,7 @@ const expanded = ref('');
 // Identity / role state
 const showBindResidence = ref(false);
 const authTarget = ref<'owner' | 'tenant'>('owner');
+const bindCommunityId = ref('');
 const bindBuilding = ref('');
 const bindUnit = ref('');
 const bindRoom = ref('');
@@ -247,11 +267,19 @@ function showDevToast() {
 // Identity / role actions
 function startOwnerAuth() {
   authTarget.value = 'owner';
+  bindCommunityId.value = communityStore.currentCommunityId || communityStore.communities[0]?.communityId || '';
+  bindBuilding.value = '';
+  bindUnit.value = '';
+  bindRoom.value = '';
   showBindResidence.value = true;
 }
 
 function startTenantAuth() {
   authTarget.value = 'tenant';
+  bindCommunityId.value = communityStore.currentCommunityId || communityStore.communities[0]?.communityId || '';
+  bindBuilding.value = '';
+  bindUnit.value = '';
+  bindRoom.value = '';
   showBindResidence.value = true;
 }
 
@@ -265,17 +293,17 @@ async function submitBindAndApply() {
     return;
   }
 
-  const currentCommunityId = communityStore.currentCommunityId;
-  if (!currentCommunityId) {
-    uni.showToast({ title: '请先加入小区', icon: 'none' });
+  const targetCommunityId = bindCommunityId.value;
+  if (!targetCommunityId) {
+    uni.showToast({ title: '请先选择小区', icon: 'none' });
     return;
   }
 
   try {
-    // Find the membership_id for the current community
+    // Find the membership_id for the selected community
     const memberships = await getUserMemberships();
     const membership = memberships.find(
-      (m: any) => (m.community_id || m.communityId) === currentCommunityId,
+      (m: any) => (m.community_id || m.communityId) === targetCommunityId,
     );
     if (!membership) {
       uni.showToast({ title: '未找到小区成员关系', icon: 'none' });
@@ -294,7 +322,7 @@ async function submitBindAndApply() {
 
     // Step 2: Apply for role
     await applyRole({
-      community_id: currentCommunityId,
+      community_id: targetCommunityId,
       role_code: authTarget.value,
     });
 
@@ -603,6 +631,54 @@ onMounted(async () => {
   display: block;
   text-align: center;
   margin-bottom: 24rpx;
+}
+
+.modal-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #3D3226;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+// ---- Community Picker ----
+.community-picker {
+  max-height: 240rpx;
+  margin-bottom: 8rpx;
+}
+
+.community-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 20rpx;
+  background: #FAF8F5;
+  border-radius: 10rpx;
+  margin-bottom: 8rpx;
+  font-size: 26rpx;
+  color: #3D3226;
+  border: 2rpx solid transparent;
+
+  &--selected {
+    border-color: #B8956A;
+    background: rgba(184, 149, 106, 0.06);
+  }
+}
+
+.community-check {
+  font-size: 28rpx;
+  color: #B8956A;
+  font-weight: 700;
+}
+
+.community-single {
+  padding: 16rpx 20rpx;
+  background: #FAF8F5;
+  border-radius: 10rpx;
+  font-size: 26rpx;
+  color: #3D3226;
+  text-align: center;
+  margin-bottom: 8rpx;
 }
 
 .address-example {
