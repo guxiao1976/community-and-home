@@ -226,21 +226,15 @@ const hasOwnerRole = computed(() => {
   return false;
 });
 
-// Phone display with masking (read from store first, fallback to storage)
+// Phone display (full number from store, fallback to storage)
 const displayPhone = computed(() => {
   const phone = userStore.user?.phone;
-  if (phone && phone.length >= 11) {
-    return phone.slice(0, 3) + '****' + phone.slice(-4);
-  }
+  if (phone) return phone;
   try {
-    const stored = uni.getStorageSync('user_phone') as string;
-    if (stored && stored.length >= 11) {
-      return stored.slice(0, 3) + '****' + stored.slice(-4);
-    }
+    return (uni.getStorageSync('user_phone') as string) || '未绑定手机号';
   } catch {
-    // ignore storage errors
+    return '未绑定手机号';
   }
-  return '未绑定手机号';
 });
 
 // Navigation
