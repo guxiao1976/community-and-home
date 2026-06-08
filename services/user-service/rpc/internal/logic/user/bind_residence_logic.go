@@ -26,8 +26,8 @@ func NewBindResidenceLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Bin
 	}
 }
 
-// BindResidence 绑定房屋（仅认证业主/租户可操作）
-// 一个小区只需一次认证，认证后可追加多套房屋
+// BindResidence 绑定房屋（活跃成员即可操作，不要求已审批角色）
+// 用户可先绑房再申请业主/租户角色，解耦绑房与角色审批
 func (l *BindResidenceLogic) BindResidence(in *userv1.BindResidenceRequest) (*userv1.BindResidenceResponse, error) {
 	// 1. 校验：只有认证业主/租户才能绑定房屋
 	membership, err := l.svcCtx.UserCommunityMembershipModel.FindOne(l.ctx, in.MembershipId)
@@ -46,22 +46,7 @@ func (l *BindResidenceLogic) BindResidence(in *userv1.BindResidenceRequest) (*us
 		}, nil
 	}
 
-	// 确认用户有认证通过的业主或租户角色
-	ownerRole, err := l.svcCtx.UserMembershipRoleModel.FindByMembershipAndRole(l.ctx, membership.Id, model.RoleCodeOwner)
-	if err != nil && err != model.ErrNotFound {
-		return nil, err
-	}
-	isCertified := ownerRole != nil && ownerRole.VerfStatus == model.RoleVerfStatusApproved
-	if !isCertified {
-		tenantRole, _ := l.svcCtx.UserMembershipRoleModel.FindByMembershipAndRole(l.ctx, membership.Id, model.RoleCodeTenant)
-		if tenantRole == nil || tenantRole.VerfStatus != model.RoleVerfStatusApproved {
-			return &userv1.BindResidenceResponse{
-				Base: responsex.NewBaseRespWithError(10005, "只有认证通过的业主或租户才能绑定房屋"),
-			}, nil
-		}
-	}
-
-	// 2. 创建或更新房屋记录
+	// 2. 创建或更新房屋记录（绑房不再要求已审批角色，用户可先绑房再申请角色）
 	houseId := buildHouseId(in.Building, in.Unit, in.Room)
 
 	existing, err := l.svcCtx.UserResidenceModel.FindByMembershipAndHouse(l.ctx, in.MembershipId, houseId)
