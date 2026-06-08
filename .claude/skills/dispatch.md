@@ -33,6 +33,9 @@ Workflow({ scriptPath: ".claude/workflows/harness-pipeline.js",
            args: { serviceName: "<中文名>", serviceDir: "services/<dir>", task: "<任务>" } })
 ```
 
+QA 阶段默认只扫描本次 git diff 变更的文件。用户说以下词时切换为全量扫描：
+- **"全量" / "全量扫描" / "完整检查" / "全面检查"** → QA 使用 `--full`
+
 管线会自动循环：Generator → QA → Review，任一失败回到 Generator 修复重来，最多 3 轮。全部通过后通知用户。
 
 ### 模式二：仅开发（快速，需显式触发）
