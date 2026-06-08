@@ -50,29 +50,48 @@
         </view>
       </view>
 
-      <!-- 2. 身份认证 -->
+      <!-- 2. 业主/租户登记 -->
+      <view class="menu-section">
+        <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'registration' ? '' : 'registration')">
+          <view class="menu-left">
+            <text class="menu-icon">🏠</text>
+            <view class="menu-text">
+              <text class="menu-title">业主/租户登记</text>
+              <text class="menu-desc">业主登记 · 租户登记</text>
+            </view>
+          </view>
+          <text class="menu-arrow" :class="{ 'menu-arrow--open': expanded === 'registration' }">→</text>
+        </view>
+        <view v-if="expanded === 'registration'" class="sub-menu">
+          <view v-if="communityStore.hasCommunities" class="sub-item" hover-class="sub-item--hover" @click="startOwnerAuth">
+            <text class="sub-label">业主登记</text>
+            <text class="item-hint">登记房号</text>
+            <text class="sub-arrow">→</text>
+          </view>
+          <view v-if="communityStore.hasCommunities" class="sub-item" hover-class="sub-item--hover" @click="startTenantAuth">
+            <text class="sub-label">租户登记</text>
+            <text class="item-hint">登记房号</text>
+            <text class="sub-arrow">→</text>
+          </view>
+          <view v-if="!communityStore.hasCommunities" class="sub-item sub-item--disabled">
+            <text class="sub-label sub-label--muted">请先加入小区</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 3. 身份认证 -->
       <view class="menu-section">
         <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'identity' ? '' : 'identity')">
           <view class="menu-left">
             <text class="menu-icon">🪪</text>
             <view class="menu-text">
               <text class="menu-title">身份认证</text>
-              <text class="menu-desc">业主认证 · 租户认证 · 业委会 · 网格员 · 物业管理员 · 社区管理员 · 商家</text>
+              <text class="menu-desc">业委会 · 网格员 · 物业管理员 · 社区管理员 · 商家</text>
             </view>
           </view>
           <text class="menu-arrow" :class="{ 'menu-arrow--open': expanded === 'identity' }">→</text>
         </view>
         <view v-if="expanded === 'identity'" class="sub-menu">
-          <view v-if="communityStore.hasCommunities" class="sub-item" hover-class="sub-item--hover" @click="startOwnerAuth">
-            <text class="sub-label">业主认证</text>
-            <text class="item-hint">需绑房</text>
-            <text class="sub-arrow">→</text>
-          </view>
-          <view v-if="communityStore.hasCommunities" class="sub-item" hover-class="sub-item--hover" @click="startTenantAuth">
-            <text class="sub-label">租户认证</text>
-            <text class="item-hint">需绑房</text>
-            <text class="sub-arrow">→</text>
-          </view>
           <view v-if="hasOwnerRole" class="sub-item" hover-class="sub-item--hover" @click="applyForRole('committee')">
             <text class="sub-label">业委会认证</text>
             <text class="item-hint">需先认证业主</text>
@@ -97,7 +116,7 @@
         </view>
       </view>
 
-      <!-- 3. 账户管理 -->
+      <!-- 4. 账户管理 -->
       <view class="menu-section">
         <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'account' ? '' : 'account')">
           <view class="menu-left">
@@ -128,8 +147,8 @@
       <!-- Bind Residence Modal (unchanged) -->
       <view v-if="showBindResidence" class="modal-mask" @click="showBindResidence = false">
         <view class="modal-box" @click.stop>
-          <text class="modal-title">绑定房产</text>
-          <text class="modal-sub">认证{{ authTarget === 'owner' ? '业主' : '租户' }}身份需要绑定房产</text>
+          <text class="modal-title">{{ authTarget === 'owner' ? '业主' : '租户' }}登记</text>
+          <text class="modal-sub">登记您的房号信息</text>
           <view class="address-example">
             <text>示例：5号楼 2单元 301房间 → 5-2-301</text>
           </view>
@@ -187,12 +206,16 @@ const hasOwnerRole = computed(() => {
   return false;
 });
 
-// Phone display with masking
+// Phone display with masking (read from store first, fallback to storage)
 const displayPhone = computed(() => {
+  const phone = userStore.user?.phone;
+  if (phone && phone.length >= 11) {
+    return phone.slice(0, 3) + '****' + phone.slice(-4);
+  }
   try {
-    const phone = uni.getStorageSync('user_phone') as string;
-    if (phone && phone.length >= 11) {
-      return phone.slice(0, 3) + '****' + phone.slice(-4);
+    const stored = uni.getStorageSync('user_phone') as string;
+    if (stored && stored.length >= 11) {
+      return stored.slice(0, 3) + '****' + stored.slice(-4);
     }
   } catch {
     // ignore storage errors
@@ -276,7 +299,7 @@ async function submitBindAndApply() {
     });
 
     showBindResidence.value = false;
-    uni.showToast({ title: '认证申请已提交，等待审核', icon: 'success' });
+    uni.showToast({ title: '房号登记成功', icon: 'success' });
   } catch (e: any) {
     uni.showToast({ title: e.message || '操作失败', icon: 'none' });
   }
@@ -523,6 +546,15 @@ onMounted(async () => {
   font-size: 24rpx;
   color: #CCC4BA;
   flex-shrink: 0;
+}
+
+.sub-item--disabled {
+  opacity: 0.5;
+}
+
+.sub-label--muted {
+  font-size: 26rpx;
+  color: #A6988A;
 }
 
 // ---- Identity hints ----
