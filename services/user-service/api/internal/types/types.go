@@ -87,9 +87,6 @@ type PageInfo struct {
 
 type JoinCommunityReq struct {
 	CommunityId int64 `json:"community_id,string"`
-	Building    int   `json:"building"` // 楼号
-	Unit        int   `json:"unit"`     // 单元号
-	Room        int   `json:"room"`     // 房号
 }
 
 type JoinCommunityResp struct {

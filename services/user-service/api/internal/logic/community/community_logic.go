@@ -28,9 +28,6 @@ func (l *JoinCommunityLogic) JoinCommunity(req *types.JoinCommunityReq) (*types.
 	resp, err := l.svcCtx.UserRpc.JoinCommunity(l.ctx, &userv1.JoinCommunityRequest{
 		UserId:      userId,
 		CommunityId: req.CommunityId,
-		Building:    int32(req.Building),
-		Unit:        int32(req.Unit),
-		Room:        int32(req.Room),
 	})
 	if err != nil {
 		return nil, err
