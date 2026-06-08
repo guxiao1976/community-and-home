@@ -198,7 +198,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useUserStore } from '@/stores/user';
 import { useCommunityStore } from '@/stores/community';
 import { isAuthenticated } from '@common/utils/auth';
@@ -243,11 +243,13 @@ function goLogin() {
 }
 
 function goJoinCommunity() {
-  uni.navigateTo({ url: '/pages/join-community/join-community' });
+  expanded.value = ''; // collapse sections before navigation
+  nextTick(() => { uni.navigateTo({ url: '/pages/join-community/join-community' }); });
 }
 
 function goLeaveCommunity() {
-  uni.navigateTo({ url: '/pages/leave-community/leave-community' });
+  expanded.value = '';
+  nextTick(() => { uni.navigateTo({ url: '/pages/leave-community/leave-community' }); });
 }
 
 function goAccountSecurity() {
