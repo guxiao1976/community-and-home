@@ -6,6 +6,21 @@
       <text class="header-sub">选择您的小区，开始社区生活</text>
     </view>
 
+    <!-- Max Limit Banner -->
+    <view v-if="maxReached" class="max-banner">
+      <text>⚠️ 您已加入 {{ activeCount }}/3 个小区，已达上限。如需加入新小区，请先退出已有小区。</text>
+    </view>
+
+    <!-- My Communities (always visible, loaded from store) -->
+    <view v-if="storeCommunities.length > 0" class="my-section-top">
+      <text class="my-title">已加入 {{ activeCount }}/3 个小区</text>
+      <view class="my-tags">
+        <view v-for="c in storeCommunities" :key="c.communityId" class="my-badge">
+          <text>{{ c.communityName }}</text>
+        </view>
+      </view>
+    </view>
+
     <!-- Step Indicator -->
     <view class="steps">
       <view class="step" :class="{ active: step === 1, done: step > 1 }">
@@ -37,7 +52,10 @@
     <!-- Step 1: Select Province -->
     <view v-if="step === 1" class="card">
       <text class="card-title">请选择省份</text>
-      <view v-if="provincesLoading" class="loading-text">加载中...</view>
+      <view v-if="maxReached" class="max-inline">
+        <text>已达加入上限（3个），无法选择。</text>
+      </view>
+      <view v-else-if="provincesLoading" class="loading-text">加载中...</view>
       <scroll-view v-else class="list" scroll-y>
         <view
           v-for="p in provinces"
@@ -50,7 +68,7 @@
           <text v-if="selectedProvince?.id === p.id" class="item-check">✓</text>
         </view>
       </scroll-view>
-      <button class="btn" :class="{ 'btn--disabled': !selectedProvince }" :disabled="!selectedProvince" @click="step = 2">
+      <button class="btn" :class="{ 'btn--disabled': !selectedProvince || maxReached }" :disabled="!selectedProvince || maxReached" @click="step = 2">
         下一步
       </button>
     </view>
@@ -110,14 +128,6 @@
       <view class="back-row" @click="step = 3">
         <text class="back-icon">←</text>
         <text class="back-text">{{ selectedProvince?.name }} · {{ selectedCity?.name }} · {{ selectedDistrict?.name }}</text>
-      </view>
-
-      <!-- My Communities -->
-      <view v-if="myCommunities.length > 0" class="my-section">
-        <text class="my-title">已加入 {{ myCommunities.length }}/3 个小区</text>
-        <view v-for="c in myCommunities" :key="c.community_id" class="my-badge">
-          <text>{{ c.communityName || '小区 ' + c.community_id }}</text>
-        </view>
       </view>
 
       <!-- Search -->
@@ -219,13 +229,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import {
-  type Division, type ResidentialArea, type CommunityMembership,
+  type Division, type ResidentialArea,
   getDivisions, searchResidentialAreas,
-  joinCommunity as joinCommunityApi, getUserMemberships,
+  joinCommunity as joinCommunityApi,
 } from '@/api/user';
 import { useCommunityStore } from '@/stores/community';
+
+const communityStore = useCommunityStore();
+
+// Active count and max check (from store, only bind_status=1)
+const activeCount = computed(() => communityStore.communityCount);
+const maxReached = computed(() => activeCount.value >= 3);
+// Store communities have preserved names from previous loads
+const storeCommunities = computed(() => communityStore.communities);
 
 const step = ref(1);
 
@@ -250,8 +268,7 @@ const areas = ref<ResidentialArea[]>([]);
 const searching = ref(false);
 const searched = ref(false);
 
-// Memberships
-const myCommunities = ref<(CommunityMembership & { communityName?: string })[]>([]);
+// Memberships (from store, loaded on mount)
 const showMaxWarning = ref(false);
 
 // Step 5: Enter Address
@@ -266,12 +283,11 @@ const roomError = ref(false);
 onMounted(async () => {
   provincesLoading.value = true;
   try {
-    const [divs, mems] = await Promise.all([
-      getDivisions(),
-      getUserMemberships().catch(() => [] as CommunityMembership[]),
+    // Load store first to get community names, then divisions
+    await Promise.all([
+      communityStore.loadMemberships().catch(() => {}),
+      getDivisions().then(d => { provinces.value = d; }).catch(() => {}),
     ]);
-    provinces.value = divs;
-    myCommunities.value = mems;
   } catch (_) { /* ignore */ }
   finally { provincesLoading.value = false; }
 });
@@ -318,7 +334,7 @@ async function doSearch() {
 const joinedArea = ref<ResidentialArea | null>(null);
 
 function goToStep5(area: ResidentialArea) {
-  if (myCommunities.value.length >= 3) {
+  if (maxReached.value) {
     showMaxWarning.value = true;
     setTimeout(() => { showMaxWarning.value = false; }, 2000);
     return;
@@ -386,14 +402,12 @@ async function submitJoin() {
 
   try {
     uni.showLoading({ title: '加入中...', mask: true });
-    const mem = await joinCommunityApi({
+    await joinCommunityApi({
       community_id: selectedCommunity.value.id,
       building: Number(step5building.value.trim()),
       unit: Number(step5unit.value.trim()),
       room: Number(step5room.value.trim()),
     });
-    myCommunities.value.push({ ...mem, communityName: selectedCommunity.value.name });
-    const communityStore = useCommunityStore();
     communityStore.addCommunity({
       communityId: selectedCommunity.value.id,
       communityName: selectedCommunity.value.name,
@@ -412,7 +426,7 @@ function goHome() {
 }
 
 function isJoined(id: string): boolean {
-  return myCommunities.value.some(m => m.community_id === id);
+  return communityStore.communities.some(c => c.communityId === id);
 }
 </script>
 
@@ -471,10 +485,18 @@ function isJoined(id: string): boolean {
   }
 }
 
-.my-section { margin-bottom: 24rpx; padding: 20rpx; background: #fff; border-radius: 12rpx;
+.max-banner { background: #FFF5F3; border-radius: 12rpx; padding: 20rpx 24rpx; margin-top: 16rpx;
+  text { font-size: 24rpx; color: #D4958A; line-height: 1.6; }
+}
+.max-inline { text-align: center; padding: 40rpx 0;
+  text { font-size: 28rpx; color: #D4958A; }
+}
+
+.my-section-top { padding: 20rpx 0; margin-bottom: 16rpx;
   .my-title { font-size: 24rpx; color: $uni-text-color-grey; margin-bottom: 12rpx; display: block; }
-  .my-badge { display: inline-block; padding: 6rpx 16rpx; background: rgba(184, 149, 106, 0.1); border-radius: 8rpx; margin-right: 12rpx; margin-bottom: 8rpx;
-    text { font-size: 22rpx; color: $uni-color-primary; }
+  .my-tags { display: flex; flex-wrap: wrap; gap: 8rpx; }
+  .my-badge { display: inline-block; padding: 8rpx 20rpx; background: rgba(184, 149, 106, 0.1); border-radius: 8rpx;
+    text { font-size: 24rpx; color: $uni-color-primary; }
   }
 }
 
