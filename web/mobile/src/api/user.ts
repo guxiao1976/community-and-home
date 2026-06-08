@@ -13,6 +13,9 @@ export interface CommunityMembership {
   leave_time: number;
   created_at: number;
   updated_at: number;
+  building: number;
+  unit: number;
+  room: number;
 }
 
 export interface Division {
