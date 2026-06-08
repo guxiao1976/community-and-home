@@ -126,6 +126,116 @@ func getUserId(ctx context.Context) int64 {
 	}
 }
 
+// ==================== Bind Residence ====================
+
+type BindResidenceLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewBindResidenceLogic(ctx context.Context, svcCtx *svc.ServiceContext) *BindResidenceLogic {
+	return &BindResidenceLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
+}
+
+func (l *BindResidenceLogic) BindResidence(req *types.BindResidenceReq) (*types.BindResidenceResp, error) {
+	resp, err := l.svcCtx.UserRpc.BindResidence(l.ctx, &userv1.BindResidenceRequest{
+		MembershipId: req.MembershipId,
+		Building:     req.Building,
+		Unit:         req.Unit,
+		Room:         req.Room,
+		IsPrimary:    req.IsPrimary,
+		StartDate:    req.StartDate,
+		EndDate:      req.EndDate,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.Base.GetCode() != 0 {
+		return nil, fmt.Errorf(resp.Base.GetMsg())
+	}
+	return &types.BindResidenceResp{Residence: toResidence(resp.Residence)}, nil
+}
+
+func toResidence(r *userv1.Residence) types.Residence {
+	if r == nil {
+		return types.Residence{}
+	}
+	return types.Residence{
+		Id:           r.Id,
+		MembershipId: r.MembershipId,
+		HouseId:      r.HouseId,
+		Building:     r.Building,
+		Unit:         r.Unit,
+		Room:         r.Room,
+		IsPrimary:    r.IsPrimary,
+	}
+}
+
+// ==================== Apply Role ====================
+
+type ApplyRoleLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewApplyRoleLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ApplyRoleLogic {
+	return &ApplyRoleLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
+}
+
+func (l *ApplyRoleLogic) ApplyRole(req *types.ApplyRoleReq) (*types.ApplyRoleResp, error) {
+	userId := getUserId(l.ctx)
+	resp, err := l.svcCtx.UserRpc.ApplyRole(l.ctx, &userv1.ApplyRoleRequest{
+		UserId:      userId,
+		CommunityId: req.CommunityId,
+		RoleCode:    req.RoleCode,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.Base.GetCode() != 0 {
+		return nil, fmt.Errorf(resp.Base.GetMsg())
+	}
+	return &types.ApplyRoleResp{}, nil
+}
+
+// ==================== Get User Roles ====================
+
+type GetUserRolesLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewGetUserRolesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUserRolesLogic {
+	return &GetUserRolesLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
+}
+
+func (l *GetUserRolesLogic) GetUserRoles() (*types.GetUserRolesResp, error) {
+	userId := getUserId(l.ctx)
+	resp, err := l.svcCtx.UserRpc.GetUserRoles(l.ctx, &userv1.GetUserRolesRequest{
+		UserId: userId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.Base.GetCode() != 0 {
+		return nil, fmt.Errorf(resp.Base.GetMsg())
+	}
+	roles := make([]types.RoleInfo, 0, len(resp.Roles))
+	for _, r := range resp.Roles {
+		roles = append(roles, types.RoleInfo{
+			Id:          r.Id,
+			UserId:      r.UserId,
+			CommunityId: r.CommunityId,
+			RoleCode:    r.RoleCode,
+			VerfStatus:  r.VerfStatus,
+		})
+	}
+	return &types.GetUserRolesResp{Roles: roles}, nil
+}
+
 func toMembership(m *userv1.CommunityMembership) types.CommunityMembership {
 	if m == nil {
 		return types.CommunityMembership{}

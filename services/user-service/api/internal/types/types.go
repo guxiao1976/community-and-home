@@ -87,6 +87,9 @@ type PageInfo struct {
 
 type JoinCommunityReq struct {
 	CommunityId int64 `json:"community_id,string"`
+	Building    int   `json:"building"` // 楼号
+	Unit        int   `json:"unit"`     // 单元号
+	Room        int   `json:"room"`     // 房号
 }
 
 type JoinCommunityResp struct {
@@ -114,4 +117,60 @@ type CommunityMembership struct {
 	LeaveTime   int64  `json:"leave_time"`
 	CreatedAt   int64  `json:"created_at"`
 	UpdatedAt   int64  `json:"updated_at"`
+	Building    int    `json:"building"` // 楼号
+	Unit        int    `json:"unit"`     // 单元号
+	Room        int    `json:"room"`     // 房号
+}
+
+// =============================================================================
+// 房产绑定
+// =============================================================================
+
+type BindResidenceReq struct {
+	MembershipId int64  `json:"membership_id,string"`
+	Building     string `json:"building"`
+	Unit         string `json:"unit"`
+	Room         string `json:"room"`
+	IsPrimary    int32  `json:"is_primary,optional"`
+	StartDate    string `json:"start_date,optional"`
+	EndDate      string `json:"end_date,optional"`
+}
+
+type BindResidenceResp struct {
+	Residence Residence `json:"residence"`
+}
+
+type Residence struct {
+	Id           int64  `json:"id,string"`
+	MembershipId int64  `json:"membership_id,string"`
+	HouseId      string `json:"house_id"`
+	Building     string `json:"building"`
+	Unit         string `json:"unit"`
+	Room         string `json:"room"`
+	IsPrimary    int32  `json:"is_primary"`
+	StartDate    string `json:"start_date,optional"`
+	EndDate      string `json:"end_date,optional"`
+}
+
+// =============================================================================
+// 角色申请
+// =============================================================================
+
+type ApplyRoleReq struct {
+	CommunityId int64  `json:"community_id,string"`
+	RoleCode    string `json:"role_code"`
+}
+
+type ApplyRoleResp struct{}
+
+type GetUserRolesResp struct {
+	Roles []RoleInfo `json:"roles"`
+}
+
+type RoleInfo struct {
+	Id          int64  `json:"id,string"`
+	UserId      int64  `json:"user_id,string"`
+	CommunityId int64  `json:"community_id,string"`
+	RoleCode    string `json:"role_code"`
+	VerfStatus  int32  `json:"verf_status"`
 }

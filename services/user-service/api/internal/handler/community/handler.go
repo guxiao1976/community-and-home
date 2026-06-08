@@ -43,3 +43,37 @@ func GetMembershipsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		responsex.Response(w, resp, err)
 	}
 }
+
+func BindResidenceHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.BindResidenceReq
+		if err := httpx.Parse(r, &req); err != nil {
+			responsex.Response(w, nil, err)
+			return
+		}
+		l := community.NewBindResidenceLogic(r.Context(), svcCtx)
+		resp, err := l.BindResidence(&req)
+		responsex.Response(w, resp, err)
+	}
+}
+
+func ApplyRoleHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.ApplyRoleReq
+		if err := httpx.Parse(r, &req); err != nil {
+			responsex.Response(w, nil, err)
+			return
+		}
+		l := community.NewApplyRoleLogic(r.Context(), svcCtx)
+		resp, err := l.ApplyRole(&req)
+		responsex.Response(w, resp, err)
+	}
+}
+
+func GetUserRolesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		l := community.NewGetUserRolesLogic(r.Context(), svcCtx)
+		resp, err := l.GetUserRoles()
+		responsex.Response(w, resp, err)
+	}
+}
