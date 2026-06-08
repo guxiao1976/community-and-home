@@ -44,14 +44,14 @@
 
     <!-- 实际内容 -->
     <template v-else-if="communityStore.hasCommunities">
-      <!-- 通知公告 -->
+      <!-- 通知公告（跑马灯） -->
       <view class="section">
-        <view class="section-header">
-          <view class="section-header-left">
-            <text class="section-icon">📢</text>
-            <text class="section-title">通知公告</text>
+        <view class="marquee-bar" @click="onMoreNotice">
+          <text class="marquee-icon">📢</text>
+          <view class="marquee-track">
+            <text class="marquee-text">{{ marqueeText }}</text>
           </view>
-          <text class="section-more" @click="onMoreNotice">全部 →</text>
+          <text class="marquee-more">更多 →</text>
         </view>
         <view v-if="notices.length === 0" class="empty-state">
           <text class="empty-icon">📭</text>
@@ -276,9 +276,16 @@ const contactGroups = computed<ContactGroup[]>(() => {
 const lostFoundItems = ref<LostFoundItem[]>([]);
 const imageErrors = ref<Set<string>>(new Set());
 
+// ---- Marquee ----
+const marqueeText = computed(() => {
+  if (notices.value.length === 0) return '暂无通知公告';
+  return notices.value.map(n => n.title).join('  ·  ');
+});
+
 // ---- Actions ----
 function onMoreNotice() {
-  uni.showToast({ title: '通知列表开发中...', icon: 'none', duration: 2000 });
+  if (notices.value.length === 0) return;
+  uni.navigateTo({ url: '/pages/notice-browse/notice-browse' });
 }
 
 function onNoticeClick(id: string) {
@@ -494,6 +501,50 @@ onPullDownRefresh(async () => {
 .section {
   padding: 0 32rpx;
   margin-bottom: 36rpx;
+}
+
+// ---- Marquee Bar ----
+.marquee-bar {
+  display: flex;
+  align-items: center;
+  background: #FAF8F5;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 16rpx;
+  overflow: hidden;
+}
+
+.marquee-icon {
+  font-size: 32rpx;
+  flex-shrink: 0;
+  margin-right: 12rpx;
+}
+
+.marquee-track {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.marquee-text {
+  display: inline-block;
+  font-size: 26rpx;
+  color: #3D3226;
+  animation: marquee-scroll 20s linear infinite;
+  padding-right: 40rpx;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee-more {
+  font-size: 24rpx;
+  color: #B8956A;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-weight: 500;
 }
 
 .section-header {

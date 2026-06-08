@@ -61,6 +61,12 @@
       "style": {
         "navigationBarTitleText": "账号安全"
       }
+    },
+    {
+      "path": "pages/notice-browse/notice-browse",
+      "style": {
+        "navigationBarTitleText": "通知公告"
+      }
     }
   ],
   "globalStyle": {

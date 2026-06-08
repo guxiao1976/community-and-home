@@ -6,7 +6,6 @@
       <view class="cs-trigger" @click.stop="toggle">
         <text class="cs-trigger-icon">🏘️</text>
         <view class="cs-trigger-body">
-          <text class="cs-trigger-label">当前小区</text>
           <text class="cs-trigger-name">{{ currentName }}</text>
         </view>
         <view v-if="communityCount > 0" class="cs-badge">
