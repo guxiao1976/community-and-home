@@ -56,6 +56,12 @@ func ParseInfra(projectRoot string) (*ParseInfraResult, error) {
 		result.Rels = append(result.Rels, goModRels...)
 	}
 
+	// 4. Detect cross-service dependencies from Go source file proto imports
+	protoDeps, err := detectProtoDependencies(projectRoot)
+	if err == nil {
+		result.Rels = append(result.Rels, protoDeps...)
+	}
+
 	return result, nil
 }
 
@@ -273,4 +279,100 @@ func extractGoRequireDirectDeps(content string, knownServices map[string]string,
 			}
 		}
 	}
+}
+
+// detectProtoDependencies scans Go source files for proto imports and creates DEPENDS_ON relationships.
+func detectProtoDependencies(projectRoot string) ([]RelDef, error) {
+	var rels []RelDef
+
+	// Map proto package to service name
+	protoPkgToService := map[string]string{
+		"user":       "user-service",
+		"auth":       "auth-service",
+		"permission": "permission-service",
+		"masterdata": "master-data-service",
+		"aimodel":    "ai-model-service",
+		"file":       "file-service",
+		"moderation": "moderation-service",
+		"community":  "community-hub-service",
+	}
+
+	// Map service name to its directory name (with prefix mapping)
+	serviceNameToDir := map[string]string{
+		"user-service":          "user-service",
+		"auth-service":          "auth-service",
+		"permission-service":    "permission-service",
+		"master-data-service":   "master-data-service",
+		"ai-model-service":      "ai-model-service",
+		"file-service":          "file-service",
+		"moderation-service":    "moderation-service",
+		"community-hub-service": "community-hub-service",
+	}
+
+	servicesDir := filepath.Join(projectRoot, "services")
+	serviceDirs, err := os.ReadDir(servicesDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Proto import pattern: "github.com/guxiao1976/api-proto/gen/go/<pkg>/v1"
+	protoImportRe := regexp.MustCompile(`github\.com/guxiao1976/api-proto/gen/go/([a-z]+)/v1`)
+
+	for _, dir := range serviceDirs {
+		if !dir.IsDir() {
+			continue
+		}
+		svcName := dir.Name()
+		svcDir := filepath.Join(servicesDir, svcName)
+
+		// Track which proto packages are imported by this service
+		importedProtos := make(map[string]bool)
+
+		// Walk through all .go files in this service directory
+		filepath.Walk(svcDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() {
+				return nil
+			}
+			if !strings.HasSuffix(info.Name(), ".go") {
+				return nil
+			}
+			data, readErr := os.ReadFile(path)
+			if readErr != nil {
+				return nil
+			}
+			matches := protoImportRe.FindAllStringSubmatch(string(data), -1)
+			for _, m := range matches {
+				importedProtos[m[1]] = true
+			}
+			return nil
+		})
+
+		for pkg := range importedProtos {
+			depSvcName, ok := protoPkgToService[pkg]
+			if !ok || depSvcName == svcName {
+				continue // skip self-dependency and unknown pkgs
+			}
+			rels = append(rels, RelDef{
+				FromID: svcName,
+				Type:   "DEPENDS_ON",
+				ToID:   depSvcName,
+			})
+		}
+
+		_ = serviceNameToDir // kept for future use
+	}
+
+	// Deduplicate
+	seen := make(map[string]bool)
+	var deduped []RelDef
+	for _, r := range rels {
+		key := r.FromID + "|" + r.ToID
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		deduped = append(deduped, r)
+	}
+
+	return deduped, nil
 }

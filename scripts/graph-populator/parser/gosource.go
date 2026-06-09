@@ -42,13 +42,15 @@ func ParseGoSources(projectRoot string) (*ParseGoSourcesResult, error) {
 		serviceName := dir.Name()
 		svcPath := filepath.Join(servicesDir, serviceName)
 
-		// Create a Service node
+		// Create a Service node with port info from YAML configs
 		serviceID := serviceName
-		result.Nodes.Services = append(result.Nodes.Services, map[string]any{
+		svcProps := map[string]any{
 			"id":       serviceID,
 			"name":     serviceName,
 			"language": "go",
-		})
+		}
+		parseServicePorts(svcPath, svcProps)
+		result.Nodes.Services = append(result.Nodes.Services, svcProps)
 
 		// Parse routes from handler/routes.go
 		routes, routeRels := parseGoRoutes(svcPath, serviceName)
@@ -72,7 +74,10 @@ func ParseGoSources(projectRoot string) (*ParseGoSourcesResult, error) {
 	return result, nil
 }
 
+
+
 // parseGoRoutes extracts REST routes from a service's handler/routes.go.
+// Handles rest.WithPrefix() by extracting it from each AddRoutes block.
 func parseGoRoutes(svcPath, serviceName string) ([]map[string]any, []RelDef) {
 	routesPath := filepath.Join(svcPath, "api", "internal", "handler", "routes.go")
 	data, err := os.ReadFile(routesPath)
@@ -84,37 +89,72 @@ func parseGoRoutes(svcPath, serviceName string) ([]map[string]any, []RelDef) {
 	var routes []map[string]any
 	var rels []RelDef
 
-	// Pattern: Method: http.MethodGet, Path: "/api/something"
-	routeRe := regexp.MustCompile(`Method:\s*(http\.\w+),\s*Path:\s*"([^"]+)"`)
-	matches := routeRe.FindAllStringSubmatch(content, -1)
+	// Find all server.AddRoutes( blocks with balanced paren matching
+	addRoutesRe := regexp.MustCompile(`server\.AddRoutes\(`)
+	addRoutesLocs := addRoutesRe.FindAllStringIndex(content, -1)
 
 	seen := make(map[string]bool)
-	for _, m := range matches {
-		method := strings.TrimPrefix(m[1], "http.Method")
-		path := m[2]
-		routeID := fmt.Sprintf("%s:%s:%s", serviceName, method, path)
-		if seen[routeID] {
+
+	for _, loc := range addRoutesLocs {
+		start := loc[1] // position right after "(" in "server.AddRoutes("
+
+		// Find matching closing parenthesis
+		depth := 1
+		pos := start
+		for pos < len(content) && depth > 0 {
+			switch content[pos] {
+			case '(':
+				depth++
+			case ')':
+				depth--
+			}
+			pos++
+		}
+		if depth != 0 {
 			continue
 		}
-		seen[routeID] = true
+		blockContent := content[start : pos-1]
 
-		routes = append(routes, map[string]any{
-			"id":      routeID,
-			"method":  method,
-			"path":    path,
-			"service": serviceName,
-		})
+		// Extract prefix if present: rest.WithPrefix("/api/xxx")
+		prefix := ""
+		prefixRe := regexp.MustCompile(`rest\.WithPrefix\("([^"]+)"\)`)
+		if prefixMatch := prefixRe.FindStringSubmatch(blockContent); len(prefixMatch) >= 2 {
+			prefix = prefixMatch[1]
+		}
 
-		rels = append(rels, RelDef{
-			FromID: serviceName,
-			Type:   "EXPOSES",
-			ToID:   routeID,
-		})
+		// Extract routes from this AddRoutes block
+		routeRe := regexp.MustCompile(`Method:\s*(http\.\w+),\s*Path:\s*"([^"]+)"`)
+		matches := routeRe.FindAllStringSubmatch(blockContent, -1)
+
+		for _, m := range matches {
+			method := strings.TrimPrefix(m[1], "http.Method")
+			path := m[2]
+			if prefix != "" {
+				path = prefix + path
+			}
+			routeID := fmt.Sprintf("%s:%s:%s", serviceName, method, path)
+			if seen[routeID] {
+				continue
+			}
+			seen[routeID] = true
+
+			routes = append(routes, map[string]any{
+				"id":      routeID,
+				"method":  method,
+				"path":    path,
+				"service": serviceName,
+			})
+
+			rels = append(rels, RelDef{
+				FromID: serviceName,
+				Type:   "EXPOSES",
+				ToID:   routeID,
+			})
+		}
 	}
 
 	return routes, rels
 }
-
 // parseGoTypes extracts struct definitions from api/internal/types/types.go.
 func parseGoTypes(svcPath, serviceName string) ([]map[string]any, []map[string]any, []RelDef) {
 	typesPath := filepath.Join(svcPath, "api", "internal", "types", "types.go")
@@ -199,7 +239,7 @@ func parseGoModels(svcPath, serviceName string) ([]map[string]any, []map[string]
 	var rels []RelDef
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), "_gen.go") {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || entry.Name() == "vars.go" || strings.HasSuffix(entry.Name(), "_test.go") {
 			continue
 		}
 
@@ -420,4 +460,43 @@ func resolveGoModule(svcPath string) string {
 		return matches[1]
 	}
 	return fmt.Sprintf("github.com/guxiao1976/%s", filepath.Base(svcPath))
+}
+
+// parseServicePorts scans YAML config files for port numbers and adds them to svcProps.
+func parseServicePorts(svcPath string, svcProps map[string]any) {
+	// Scan rpc config: services/*/rpc/etc/*.yaml — pattern ListenOn: 0.0.0.0:PORT
+	rpcEtcDir := filepath.Join(svcPath, "rpc", "etc")
+	if entries, err := os.ReadDir(rpcEtcDir); err == nil {
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".yaml") {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(rpcEtcDir, e.Name()))
+			if err != nil {
+				continue
+			}
+			re := regexp.MustCompile(`ListenOn:\s*[^:]+:(\d+)`)
+			if m := re.FindStringSubmatch(string(data)); len(m) >= 2 {
+				svcProps["port"] = m[1]
+			}
+		}
+	}
+
+	// Scan api config: services/*/api/etc/*.yaml — pattern Port: PORT
+	apiEtcDir := filepath.Join(svcPath, "api", "etc")
+	if entries, err := os.ReadDir(apiEtcDir); err == nil {
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(e.Name(), ".yaml") {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(apiEtcDir, e.Name()))
+			if err != nil {
+				continue
+			}
+			re := regexp.MustCompile(`Port:\s*(\d+)`)
+			if m := re.FindStringSubmatch(string(data)); len(m) >= 2 {
+				svcProps["apiPort"] = m[1]
+			}
+		}
+	}
 }

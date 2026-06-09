@@ -182,17 +182,29 @@ func alignServiceToProtoRpc(goRes *ParseGoSourcesResult, protoRes *ParseProtosRe
 	return rels
 }
 
+// normalizeURLPath strips trailing slashes and normalizes path parameter format.
+func normalizeURLPath(path string) string {
+	// Strip trailing slash (but keep leading slash)
+	for len(path) > 1 && path[len(path)-1] == '/' {
+		path = path[:len(path)-1]
+	}
+	// Normalize {id} to :id (OpenAPI style → go-zero style)
+	path = strings.ReplaceAll(path, "{", ":")
+	path = strings.ReplaceAll(path, "}", "")
+	return path
+}
+
 // alignApiCallToRoute creates PROXIES_TO relationships between frontend API calls and backend REST routes.
 func alignApiCallToRoute(goRes *ParseGoSourcesResult, tsRes *ParseTypeScriptResult) []RelDef {
 	var rels []RelDef
 
-	// Build route index: method+path -> route ID
+	// Build route index: method+path -> route ID (method normalized to uppercase)
 	routeIndex := make(map[string]string)
 	for _, r := range goRes.Nodes.Routes {
 		method, _ := r["method"].(string)
 		path, _ := r["path"].(string)
 		routeID, _ := r["id"].(string)
-		key := fmt.Sprintf("%s:%s", method, path)
+		key := fmt.Sprintf("%s:%s", strings.ToUpper(method), normalizeURLPath(path))
 		routeIndex[key] = routeID
 	}
 
@@ -200,9 +212,10 @@ func alignApiCallToRoute(goRes *ParseGoSourcesResult, tsRes *ParseTypeScriptResu
 		method, _ := apiCall["method"].(string)
 		url, _ := apiCall["url"].(string)
 		apiCallID, _ := apiCall["id"].(string)
+		normalizedURL := normalizeURLPath(url)
 
 		// Try exact match first
-		key := fmt.Sprintf("%s:%s", method, url)
+		key := fmt.Sprintf("%s:%s", method, normalizedURL)
 		if routeID, ok := routeIndex[key]; ok {
 			rels = append(rels, RelDef{
 				FromID: apiCallID,
@@ -215,7 +228,7 @@ func alignApiCallToRoute(goRes *ParseGoSourcesResult, tsRes *ParseTypeScriptResu
 		// Try matching just by path (any method)
 		for routeKey, routeID := range routeIndex {
 			routeParts := strings.SplitN(routeKey, ":", 2)
-			if len(routeParts) == 2 && routeParts[1] == url {
+			if len(routeParts) == 2 && routeParts[1] == normalizedURL {
 				rels = append(rels, RelDef{
 					FromID: apiCallID,
 					Type:   "PROXIES_TO",

@@ -166,8 +166,8 @@ func parseTsApiCalls(content, prefix, fileName string) ([]map[string]any, []RelD
 	var apiCalls []map[string]any
 	var rels []RelDef
 
-	// Match exported functions that make API calls
-	funcRe := regexp.MustCompile(`(?m)^export\s+(?:const\s+)?(\w+)\s*[:=]`)
+	// Match exported functions that make API calls (both `export const` and `export async function` patterns)
+	funcRe := regexp.MustCompile(`(?m)^export\s+(?:(?:async\s+)?function\s+|const\s+)(\w+)\s*[:=\(]`)
 	funcLocs := funcRe.FindAllStringSubmatchIndex(content, -1)
 
 	for _, loc := range funcLocs {
@@ -209,13 +209,6 @@ func parseTsApiCalls(content, prefix, fileName string) ([]map[string]any, []RelD
 				"method": method,
 				"url":    url,
 				"file":   fmt.Sprintf("%s/src/api/%s", prefix, fileName),
-			})
-
-			// PROXIES_TO relationship: frontend API call -> backend route
-			rels = append(rels, RelDef{
-				FromID: apiCallID,
-				Type:   "PROXIES_TO",
-				ToID:   fmt.Sprintf("%s:%s", method, url),
 			})
 		}
 	}

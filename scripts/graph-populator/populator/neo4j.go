@@ -51,7 +51,7 @@ func (g *Graph) CreateNodes(ctx context.Context, label string, nodes []map[strin
 			continue
 		}
 		_, err := session.Run(ctx,
-			fmt.Sprintf("MERGE (n:%s {id: $id}) SET n = $props", label),
+			fmt.Sprintf("MERGE (n:%s {id: $id}) SET n += $props", label),
 			map[string]any{"id": id, "props": props},
 		)
 		if err != nil {
