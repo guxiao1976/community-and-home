@@ -177,6 +177,25 @@ func (m *mockMembershipModel) UpdateAddress(ctx context.Context, id int64, build
 	return nil
 }
 
+func (m *mockMembershipModel) CountDistinctCommunities(ctx context.Context, userId int64) (int64, error) {
+	seen := make(map[int64]bool)
+	for _, d := range m.data {
+		if d.UserId == userId {
+			seen[d.CommunityId] = true
+		}
+	}
+	return int64(len(seen)), nil
+}
+func (m *mockMembershipModel) CountDistinctCommunitiesThisYear(ctx context.Context, userId int64, yearStart time.Time) (int64, error) {
+	seen := make(map[int64]bool)
+	for _, d := range m.data {
+		if d.UserId == userId && !d.JoinTime.Before(yearStart) {
+			seen[d.CommunityId] = true
+		}
+	}
+	return int64(len(seen)), nil
+}
+
 var _ model.UserCommunityMembershipModel = (*mockMembershipModel)(nil)
 
 // =============================================================================
