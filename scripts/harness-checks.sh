@@ -23,6 +23,7 @@
 #   8. Hardcoded secrets       — no password/token/secret literals in Go code
 #   9. Knowledge graph freshness — graph should be synced after latest commit
 #  10. CLAUDE.md structural data — warn if structural data (RPC/routes/DB tables) duplicated in CLAUDE.md
+#  11. Proto→TypeScript alignment — every proto message field has a matching TS interface field
 
 set -euo pipefail
 
@@ -134,7 +135,7 @@ fi
 # ─── Check 1: go build ───────────────────────────────────────────────
 
 check_go_build() {
-  echo "[1/10] go build ./..." >&2
+  echo "[1/11] go build ./..." >&2
   local out err rc
   cd "$TARGET_DIR"
   set +e
@@ -157,7 +158,7 @@ check_go_build() {
 # ─── Check 2: go vet ─────────────────────────────────────────────────
 
 check_go_vet() {
-  echo "[2/10] go vet ./..." >&2
+  echo "[2/11] go vet ./..." >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -180,7 +181,7 @@ check_go_vet() {
 # ─── Check 3: go test (with 0/0 detection) ───────────────────────────
 
 check_go_test() {
-  echo "[3/10] go test ./... (with 0/0 detection)" >&2
+  echo "[3/11] go test ./... (with 0/0 detection)" >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -242,7 +243,7 @@ check_go_test() {
 # ─── Check 4: Proto int64 jstype ─────────────────────────────────────
 
 check_proto_jstype() {
-  echo "[4/10] Proto int64 jstype" >&2
+  echo "[4/11] Proto int64 jstype" >&2
   local proto_dir="$PROJECT_ROOT/api-proto/api"
   local violations=()
 
@@ -298,7 +299,7 @@ check_proto_jstype() {
 # ─── Check 5: Go json:",string" ──────────────────────────────────────
 
 check_json_string() {
-  echo "[5/10] Go json:\",string\"" >&2
+  echo "[5/11] Go json:\",string\"" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -363,7 +364,7 @@ check_json_string() {
 # ─── Check 6: Cross-service DB import ────────────────────────────────
 
 check_cross_service_import() {
-  echo "[6/10] Cross-service DB import" >&2
+  echo "[6/11] Cross-service DB import" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -427,7 +428,7 @@ check_cross_service_import() {
 # ─── Check 7: Error code format ──────────────────────────────────────
 
 check_error_codes() {
-  echo "[7/10] Error code format" >&2
+  echo "[7/11] Error code format" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -469,7 +470,7 @@ check_error_codes() {
 # ─── Check 8: Hardcoded secrets ──────────────────────────────────────
 
 check_hardcoded_secrets() {
-  echo "[8/10] Hardcoded secrets" >&2
+  echo "[8/11] Hardcoded secrets" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -523,7 +524,7 @@ check_hardcoded_secrets() {
 # ─── Check 9: Knowledge graph freshness ───────────────────────────────
 
 check_graph_freshness() {
-  echo "[9/10] Knowledge graph freshness" >&2
+  echo "[9/11] Knowledge graph freshness" >&2
   local stamp_file="$PROJECT_ROOT/.claude/.graph_last_sync"
 
   if [[ ! -f "$stamp_file" ]]; then
@@ -559,7 +560,7 @@ check_graph_freshness() {
 # ─── Check 10: CLAUDE.md structural data ──────────────────────────
 
 check_claude_structural_data() {
-  echo "[10/10] CLAUDE.md structural data check" >&2
+  echo "[10/11] CLAUDE.md structural data check" >&2
   local violations=()
 
   # Determine which CLAUDE.md files to scan
@@ -633,6 +634,33 @@ check_claude_structural_data() {
   fi
 }
 
+# ─── Check 11: Proto→TypeScript alignment ─────────────────────────
+
+check_proto_ts_align() {
+  echo "[11/11] Proto→TypeScript alignment" >&2
+  local check_script="$PROJECT_ROOT/scripts/check-proto-ts-align.sh"
+
+  if [[ ! -f "$check_script" ]]; then
+    log_pass "proto_ts_align" "check script not found (skipped)"
+    return
+  fi
+
+  local out rc
+  set +e
+  out="$("$check_script" 2>&1)"
+  rc=$?
+  set -e
+
+  if [[ $rc -eq 0 ]]; then
+    log_pass "proto_ts_align" "all proto fields match TS interfaces"
+  else
+    local detail
+    detail="$(echo "$out" | grep -E '^(MISMATCH|MISSING)' | head -10 | tr '\n' '; ')"
+    detail="$(json_escape "$detail")"
+    log_fail "proto_ts_align" "violations: $detail"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -653,6 +681,7 @@ main() {
   check_hardcoded_secrets
   check_graph_freshness
   check_claude_structural_data
+  check_proto_ts_align
 
   # Count results
   local pass=0 fail=0 warn=0
@@ -684,7 +713,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data")
+    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment")
     for result in "${RESULTS[@]}"; do
       local status label detail
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

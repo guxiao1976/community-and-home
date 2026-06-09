@@ -86,6 +86,7 @@ export enum ConfigValueType {
 export interface SensitiveWord {
   id: string;
   word: string;
+  word_type: number;
   category: string;
   severity: Severity;
   action: SensitiveWordAction;
