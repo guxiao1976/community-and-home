@@ -39,7 +39,7 @@ func getRolesFromCache(ctx context.Context, rds *redis.Redis, userId int64) *use
 }
 
 // setRolesToCache 将角色数据写入 Redis 缓存
-func setRolesToCache(ctx context.Context, rds *redis.Redis, userId int64, resp *userv1.GetUserRolesResponse) {
+func setRolesToCache(ctx context.Context, rds *redis.Redis, userId int64, resp *userv1.GetUserRolesResponse, ttl int) {
 	if rds == nil || resp == nil {
 		return
 	}
@@ -47,7 +47,10 @@ func setRolesToCache(ctx context.Context, rds *redis.Redis, userId int64, resp *
 	if err != nil {
 		return
 	}
-	_ = rds.SetexCtx(ctx, rolesCacheKey(userId), string(data), rolesCacheTTL)
+	if ttl <= 0 {
+		ttl = 300
+	}
+	_ = rds.SetexCtx(ctx, rolesCacheKey(userId), string(data), ttl)
 }
 
 // invalidateRolesCache 主动失效指定用户的角色缓存

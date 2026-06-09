@@ -1,0 +1,27 @@
+Name: file.rpc
+ListenOn: 0.0.0.0:8085
+Timeout: 10000
+
+Etcd:
+  Hosts:
+    - 127.0.0.1:2379
+  Key: file.rpc
+
+DataSource:
+  Driver: mysql
+  Source: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(127.0.0.1:3306)/file_db?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
+
+Cache:
+  - Host: 127.0.0.1:6379
+    Pass: "${REDIS_PASSWORD}"
+
+SysConfigRedis:
+  Host: 127.0.0.1:6379
+  Pass: "${REDIS_PASSWORD}"
+
+Minio:
+  Endpoint: localhost:9000
+  AccessKey: ${MINIO_ACCESS_KEY}
+  SecretKey: ${MINIO_SECRET_KEY}
+  Bucket: community-home
+  UseSSL: false

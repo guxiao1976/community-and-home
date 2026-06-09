@@ -1,0 +1,16 @@
+Name: permission.rpc
+ListenOn: 0.0.0.0:8084
+Timeout: 30000
+
+Etcd:
+  Hosts:
+    - 127.0.0.1:2379
+  Key: permission.rpc
+
+# 数据库 permission
+DataSource: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(localhost:3306)/permission?charset=utf8mb4&parseTime=true&loc=Local
+Cache:
+  - Host: localhost:6379
+
+SysConfigRedis:
+  Host: localhost:6379

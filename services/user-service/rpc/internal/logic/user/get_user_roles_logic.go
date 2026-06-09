@@ -63,7 +63,13 @@ func (l *GetUserRolesLogic) GetUserRoles(in *userv1.GetUserRolesRequest) (*userv
 
 	// 回填缓存（仅已认证角色）
 	if in.VerfStatus != nil && *in.VerfStatus == model.RoleVerfStatusApproved {
-		setRolesToCache(l.ctx, l.svcCtx.Redis, in.UserId, resp)
+		ttl := 300
+		if l.svcCtx.SysConfig != nil {
+			if v, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.cache.roles_ttl_seconds"); err == nil {
+				ttl = v
+			}
+		}
+		setRolesToCache(l.ctx, l.svcCtx.Redis, in.UserId, resp, ttl)
 	}
 
 	return resp, nil

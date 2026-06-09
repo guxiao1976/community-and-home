@@ -1,0 +1,15 @@
+Name: community-hub.rpc
+ListenOn: 0.0.0.0:8087
+Timeout: 30000
+
+Etcd:
+  Hosts:
+    - 127.0.0.1:2379
+  Key: community-hub.rpc
+
+# 数据库 community_hub_db，见 docker-compose.yml
+DataSource: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(localhost:3306)/community_hub_db?charset=utf8mb4&parseTime=true&loc=Local
+
+SysConfigRedis:
+  Host: 127.0.0.1:6379
+  Pass: "${REDIS_PASSWORD}"

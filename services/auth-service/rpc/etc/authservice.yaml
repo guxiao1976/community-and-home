@@ -1,0 +1,36 @@
+Name: auth.rpc
+ListenOn: 0.0.0.0:8083
+Timeout: 30000
+
+Etcd:
+  Hosts:
+    - 127.0.0.1:2379
+  Key: auth.rpc
+
+# 数据库 auth，见 docker-compose.yml
+DataSource: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(localhost:3306)/auth?charset=utf8mb4&parseTime=true&loc=Local
+Cache:
+  - Host: localhost:6379
+
+SysConfigRedis:
+  Host: localhost:6379
+
+JwtAuth:
+  AccessSecret: ${JWT_ACCESS_SECRET}
+  AccessExpire: 900
+  RefreshSecret: ${JWT_REFRESH_SECRET}
+  RefreshExpire: 1296000
+
+UserServiceRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: user.rpc
+
+# AES 密钥从环境变量注入
+AesKey: "${AES_KEY}"
+# RSA 公钥（PEM 格式，非敏感，保留在 YAML 中）
+RsaPublicKey: "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxs8nHkU1+0io9iIBpqcE\nJVzb6JcYE7CG84Nbz9XpCgt6H89qXNJN6LFNt78I/VU0ISKs+Z7A8WfRHghOnQXz\njUSihS2m5PC8lji55GLkPbKqBzsklIDF8LGIsWGFJ6jEgIbrMva3HATrUHUzVZvD\nq7pcgj8fR1yqj2dmUqthOANWxlU/kfu6bejBXt97VUL+tWDWumdgi6MmP52Bzw3R\n+RLdwXXdZH4vK4K+LlkLbqX31aXB+Qhb+hPOgSGKSaX9bsXI/w8SQsQA9jo3Gij1\nO3v/laVIRIaNra9bPV3hj6Yseo6q3MHAw7JOVyT/mG5LVBPdXbiSVR7tbuoDGlJ+\nPwIDAQAB\n-----END PUBLIC KEY-----"
+# RSA 私钥文件路径（私钥已从 YAML 移出到独立 .pem 文件，文件由 .gitignore 忽略）
+RsaPrivateKeyPath: "etc/rsa_private.pem"
+RsaPrivateKey: ""
