@@ -1,0 +1,28 @@
+Name: auth-api
+Host: 0.0.0.0
+Port: 8881
+
+# Auth Service gRPC 客户端配置（通过 etcd 发现 auth.rpc）
+AuthRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: auth.rpc
+
+# JWT 配置
+JwtAuth:
+  AccessSecret: ${JWT_ACCESS_SECRET}
+
+# Redis 地址（用于短信验证码存储和限流）
+RedisAddr: localhost:6379
+
+# 系统参数配置 Redis（用于 sysconfig 客户端，读取 P0 配置项）
+SysConfigRedis:
+  Host: localhost:6379
+  Pass: "${REDIS_PASSWORD}"
+
+# RSA 公钥（PEM 格式，非敏感，保留在 YAML 中，供 /api/auth/public-key 端点使用）
+RsaPublicKey: "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxs8nHkU1+0io9iIBpqcE\nJVzb6JcYE7CG84Nbz9XpCgt6H89qXNJN6LFNt78I/VU0ISKs+Z7A8WfRHghOnQXz\njUSihS2m5PC8lji55GLkPbKqBzsklIDF8LGIsWGFJ6jEgIbrMva3HATrUHUzVZvD\nq7pcgj8fR1yqj2dmUqthOANWxlU/kfu6bejBXt97VUL+tWDWumdgi6MmP52Bzw3R\n+RLdwXXdZH4vK4K+LlkLbqX31aXB+Qhb+hPOgSGKSaX9bsXI/w8SQsQA9jo3Gij1\nO3v/laVIRIaNra9bPV3hj6Yseo6q3MHAw7JOVyT/mG5LVBPdXbiSVR7tbuoDGlJ+\nPwIDAQAB\n-----END PUBLIC KEY-----"
+# RSA 私钥文件路径（私钥已从 YAML 移出到独立 .pem 文件，文件由 .gitignore 忽略）
+RsaPrivateKeyPath: "etc/rsa_private.pem"
+RsaPrivateKey: ""

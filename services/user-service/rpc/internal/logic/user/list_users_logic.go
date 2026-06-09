@@ -30,8 +30,22 @@ func (l *ListUsersLogic) ListUsers(in *userv1.ListUsersRequest) (*userv1.ListUse
 	if page < 1 {
 		page = 1
 	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
+
+	maxPageSize := int32(100)
+	if l.svcCtx.SysConfig != nil {
+		if v, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.list.max_page_size"); err == nil {
+			maxPageSize = int32(v)
+		}
+	}
+	defaultPageSize := int32(10)
+	if l.svcCtx.SysConfig != nil {
+		if v, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.list.default_page_size"); err == nil {
+			defaultPageSize = int32(v)
+		}
+	}
+
+	if pageSize < 1 || pageSize > maxPageSize {
+		pageSize = defaultPageSize
 	}
 
 	keyword := ""

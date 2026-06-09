@@ -155,19 +155,30 @@ func (l *ReviewCertificationLogic) ReviewCertification(in *userv1.ReviewCertific
 	return &userv1.ReviewCertificationResponse{Base: responsex.NewBaseResp()}, nil
 }
 
+// getRoleExpiryHours 从 sysconfig 读取角色过期时长（小时），fallback 到硬编码默认值
+func getRoleExpiryHours(ctx context.Context, svcCtx *svc.ServiceContext, roleCode string) int64 {
+	defaults := map[string]int64{
+		"grid_worker":     8760,
+		"community_admin": 17520,
+		"committee":       17520,
+		"property_admin":  8760,
+		"tenant":          8760,
+	}
+	if svcCtx.SysConfig != nil {
+		key := "user.role_expiry_hours." + roleCode
+		if v, err := svcCtx.SysConfig.GetInt(ctx, key); err == nil {
+			return int64(v)
+		}
+	}
+	return defaults[roleCode]
+}
+
 // defaultExpiry 返回角色的默认过期时间
 func (l *ReviewCertificationLogic) defaultExpiry(roleCode string) sql.NullTime {
 	now := time.Now()
-	switch roleCode {
-	case model.RoleCodeGridWorker:
-		return sql.NullTime{Time: now.Add(365 * 24 * time.Hour), Valid: true}
-	case model.RoleCodeCommunityAdmin, model.RoleCodeCommittee:
-		return sql.NullTime{Time: now.Add(2 * 365 * 24 * time.Hour), Valid: true}
-	case model.RoleCodePropertyAdmin:
-		return sql.NullTime{Time: now.Add(365 * 24 * time.Hour), Valid: true}
-	case model.RoleCodeTenant:
-		return sql.NullTime{Time: now.Add(365 * 24 * time.Hour), Valid: true}
-	default:
+	expiryHours := getRoleExpiryHours(l.ctx, l.svcCtx, roleCode)
+	if expiryHours == 0 {
 		return sql.NullTime{} // 永久
 	}
+	return sql.NullTime{Time: now.Add(time.Duration(expiryHours) * time.Hour), Valid: true}
 }
