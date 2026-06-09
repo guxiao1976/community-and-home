@@ -40,7 +40,7 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 		return nil, err
 	}
 
-	// 1. 校验：最多加入 5 个小区
+	// 1. 校验：最多加入 3 个小区
 	count, err := l.svcCtx.UserCommunityMembershipModel.CountActiveByUserId(l.ctx, in.UserId)
 	if err != nil {
 		l.Errorf("count active memberships error: %v", err)
@@ -48,7 +48,7 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 	}
 	if count >= model.MaxCommunities {
 		return &userv1.JoinCommunityResponse{
-			Base: responsex.NewBaseRespWithError(10006, "最多加入 5 个小区"),
+			Base: responsex.NewBaseRespWithError(10006, "最多加入 3 个小区"),
 		}, nil
 	}
 
@@ -59,13 +59,41 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 		return nil, err
 	}
 	if existing != nil && existing.BindStatus == model.MembershipBindStatusActive {
-		// 已加入，不能重复加入
 		return &userv1.JoinCommunityResponse{
 			Base: responsex.NewBaseRespWithError(10007, "不能重复加入同一个小区"),
 		}, nil
 	}
 
-	// 2.5. 校验同小区同地址唯一性
+	// 2.5. 频次限制：非认证业主/租户，首次加入新小区受频次限制
+	if !l.isVerifiedOwnerOrTenant(in.UserId) {
+		isFirstJoin := existing == nil
+		if isFirstJoin {
+			yearStart := time.Date(time.Now().Year(), 1, 1, 0, 0, 0, 0, time.Local)
+			yearCount, err := l.svcCtx.UserCommunityMembershipModel.CountDistinctCommunitiesThisYear(l.ctx, in.UserId, yearStart)
+			if err != nil {
+				l.Errorf("count distinct communities this year error: %v", err)
+				return nil, err
+			}
+			if yearCount >= model.MaxNewCommunitiesPerYear {
+				return &userv1.JoinCommunityResponse{
+					Base: responsex.NewBaseRespWithError(10012, "每年最多加入 3 个新小区"),
+				}, nil
+			}
+
+			totalCount, err := l.svcCtx.UserCommunityMembershipModel.CountDistinctCommunities(l.ctx, in.UserId)
+			if err != nil {
+				l.Errorf("count distinct communities error: %v", err)
+				return nil, err
+			}
+			if totalCount >= model.MaxTotalCommunitiesLifetime {
+				return &userv1.JoinCommunityResponse{
+					Base: responsex.NewBaseRespWithError(10013, "总计最多加入 12 个不同小区"),
+				}, nil
+			}
+		}
+	}
+
+	// 3. 校验同小区同地址唯一性
 	if in.Building > 0 && in.Room > 0 {
 		addrExisting, err := l.svcCtx.UserCommunityMembershipModel.FindByAddress(
 			l.ctx, in.CommunityId, int(in.Building), int(in.Unit), int(in.Room))
@@ -133,6 +161,21 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 		Base:       responsex.NewBaseResp(),
 		Membership: toProtoMembership(created),
 	}, nil
+}
+
+// isVerifiedOwnerOrTenant 检查用户是否有已认证的业主或租户角色
+func (l *JoinCommunityLogic) isVerifiedOwnerOrTenant(userId int64) bool {
+	roles, err := l.svcCtx.UserMembershipRoleModel.FindByUserId(l.ctx, userId)
+	if err != nil {
+		return false
+	}
+	for _, r := range roles {
+		if r.VerfStatus == model.RoleVerfStatusApproved &&
+			(r.RoleCode == model.RoleCodeOwner || r.RoleCode == model.RoleCodeTenant) {
+			return true
+		}
+	}
+	return false
 }
 
 // updateDefaultCommunity 首次加入小区时设置默认小区偏好

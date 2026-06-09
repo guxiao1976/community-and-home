@@ -71,6 +71,11 @@ const (
 
 const MaxCommunities = 3
 
+// ==================== 频次限制 ====================
+
+const MaxNewCommunitiesPerYear = 3    // 每年最多首次加入 3 个新小区
+const MaxTotalCommunitiesLifetime = 12 // 终身最多首次加入 12 个不同小区
+
 // ==================== 角色是否需要房屋 ====================
 
 var RolesRequiringResidence = map[string]bool{

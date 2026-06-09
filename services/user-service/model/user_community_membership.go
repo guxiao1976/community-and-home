@@ -35,6 +35,10 @@ type UserCommunityMembershipModel interface {
 	FindByAddress(ctx context.Context, communityId int64, building, unit, room int) (*UserCommunityMembership, error)
 	// UpdateAddress 更新地址信息（重新激活时使用）
 	UpdateAddress(ctx context.Context, id int64, building, unit, room int) error
+	// CountDistinctCommunities 用户历史上加入过的不同小区总数（所有状态）
+	CountDistinctCommunities(ctx context.Context, userId int64) (int64, error)
+	// CountDistinctCommunitiesThisYear 用户今年首次加入的不同小区数
+	CountDistinctCommunitiesThisYear(ctx context.Context, userId int64, yearStart time.Time) (int64, error)
 }
 
 type defaultUserCommunityMembershipModel struct {
@@ -123,4 +127,18 @@ func (m *defaultUserCommunityMembershipModel) UpdateBindStatus(ctx context.Conte
 	query := fmt.Sprintf(`UPDATE %s SET bind_status=?, leave_time=?, updated_time=? WHERE id=?`, m.table)
 	_, err := m.conn.ExecCtx(ctx, query, bindStatus, leaveTime, time.Now(), id)
 	return err
+}
+
+func (m *defaultUserCommunityMembershipModel) CountDistinctCommunities(ctx context.Context, userId int64) (int64, error) {
+	query := fmt.Sprintf(`SELECT COUNT(DISTINCT community_id) FROM %s WHERE user_id = ?`, m.table)
+	var count int64
+	err := m.conn.QueryRowCtx(ctx, &count, query, userId)
+	return count, err
+}
+
+func (m *defaultUserCommunityMembershipModel) CountDistinctCommunitiesThisYear(ctx context.Context, userId int64, yearStart time.Time) (int64, error) {
+	query := fmt.Sprintf(`SELECT COUNT(DISTINCT community_id) FROM %s WHERE user_id = ? AND join_time >= ?`, m.table)
+	var count int64
+	err := m.conn.QueryRowCtx(ctx, &count, query, userId, yearStart)
+	return count, err
 }
