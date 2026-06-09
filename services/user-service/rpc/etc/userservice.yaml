@@ -17,5 +17,12 @@ Cache:
 SysConfigRedis:
   Host: localhost:6379
 
+# gRPC fallback for sysconfig cache-miss: calls master-data GetConfig
+MasterDataRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: masterdata.rpc
+
 # AES 加密密钥（16字节）— 用于手机号加密存储，需与 Auth Service 一致
 AesKey: "${AES_KEY}"

@@ -1,12 +1,16 @@
 package svc
 
 import (
+	"context"
+
+	masterdatav1 "github.com/guxiao1976/api-proto/gen/go/masterdata/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	sysconfig "github.com/guxiao1976/community-common/v2/pkg/sysconfig"
 	"github.com/guxiao1976/community-user/model"
 	"github.com/guxiao1976/community-user/rpc/internal/config"
 	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"github.com/zeromicro/go-zero/zrpc"
 )
 
 // ServiceContext 用户中心 RPC 服务上下文
@@ -42,7 +46,23 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	// 初始化系统参数配置客户端（无 gRPC fallback，需单独配置）
 	// 若要启用 Redis 未命中时回退到 master-data-service，可传入带 GetConfig RPC 的 FallbackFunc
-	sysCfg := sysconfig.MustInit(c.SysConfigRedis, "", nil)
+	sysCfg := sysconfig.MustInit(c.SysConfigRedis, "", func(ctx context.Context, key string) (*sysconfig.ConfigValue, error) {
+		// gRPC fallback to master-data GetConfig
+		conn, err := zrpc.NewClient(c.MasterDataRpc)
+		if err != nil {
+			return nil, err
+		}
+		client := masterdatav1.NewMasterdataServiceClient(conn.Conn())
+		resp, err := client.GetConfig(ctx, &masterdatav1.GetConfigReq{ConfigKey: key})
+		if err != nil {
+			return nil, err
+		}
+		return &sysconfig.ConfigValue{
+			Value: resp.ConfigValue,
+			Type:  resp.ValueType,
+			Desc:  resp.Description,
+		}, nil
+	})
 
 	return &ServiceContext{
 		Config:                     c,

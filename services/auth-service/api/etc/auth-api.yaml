@@ -9,6 +9,13 @@ AuthRpc:
       - 127.0.0.1:2379
     Key: auth.rpc
 
+# gRPC fallback for sysconfig cache-miss: calls master-data GetConfig
+MasterDataRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: masterdata.rpc
+
 # JWT 配置
 JwtAuth:
   AccessSecret: ${JWT_ACCESS_SECRET}

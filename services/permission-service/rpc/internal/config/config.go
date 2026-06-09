@@ -12,4 +12,5 @@ type Config struct {
 	DataSource     string
 	Cache          cache.CacheConf
 	SysConfigRedis redis.RedisConf
+	MasterDataRpc  zrpc.RpcClientConf // Master Data Service gRPC 客户端配置（用于 sysconfig fallback）
 }

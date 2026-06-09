@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	masterdatav1 "github.com/guxiao1976/api-proto/gen/go/masterdata/v1"
 	"github.com/guxiao1976/community-file/model"
 	"github.com/guxiao1976/community-file/rpc/internal/config"
 	"github.com/guxiao1976/community-common/v2/pkg/minio"
@@ -11,6 +12,7 @@ import (
 	gominio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	"github.com/zeromicro/go-zero/zrpc"
 )
 
 type ServiceContext struct {
@@ -51,7 +53,23 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 
 	// 初始化系统参数配置客户端
-	sysCfg := sysconfig.MustInit(c.SysConfigRedis, "", nil)
+	sysCfg := sysconfig.MustInit(c.SysConfigRedis, "", func(ctx context.Context, key string) (*sysconfig.ConfigValue, error) {
+		// gRPC fallback to master-data GetConfig
+		conn, err := zrpc.NewClient(c.MasterDataRpc)
+		if err != nil {
+			return nil, err
+		}
+		client := masterdatav1.NewMasterdataServiceClient(conn.Conn())
+		resp, err := client.GetConfig(ctx, &masterdatav1.GetConfigReq{ConfigKey: key})
+		if err != nil {
+			return nil, err
+		}
+		return &sysconfig.ConfigValue{
+			Value: resp.ConfigValue,
+			Type:  resp.ValueType,
+			Desc:  resp.Description,
+		}, nil
+	})
 
 	return &ServiceContext{
 		Config:    c,

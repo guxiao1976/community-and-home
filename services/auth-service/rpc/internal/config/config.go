@@ -14,6 +14,7 @@ type Config struct {
 	SysConfigRedis redis.RedisConf // 系统参数配置 Redis
 	JwtAuth        JwtAuthConfig   // JWT 签发配置
 	UserServiceRpc zrpc.RpcClientConf // User Service gRPC 客户端配置
+	MasterDataRpc  zrpc.RpcClientConf // Master Data Service gRPC 客户端配置（用于 sysconfig fallback）
 	RsaPrivateKey     string      // RSA 私钥（PEM 格式，用于解密手机号和密码）— 已废弃，优先使用 RsaPrivateKeyPath
 	RsaPrivateKeyPath string      // RSA 私钥文件路径（推荐，从文件读取 PEM）
 	RsaPublicKey      string      // RSA 公钥（PEM 格式，供 API Gateway 验签 AT）

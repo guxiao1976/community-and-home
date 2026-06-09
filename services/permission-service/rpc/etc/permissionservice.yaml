@@ -12,5 +12,12 @@ DataSource: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(localhost:3306)/permission?chars
 Cache:
   - Host: localhost:6379
 
+# gRPC fallback for sysconfig cache-miss: calls master-data GetConfig
+MasterDataRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: masterdata.rpc
+
 SysConfigRedis:
   Host: localhost:6379

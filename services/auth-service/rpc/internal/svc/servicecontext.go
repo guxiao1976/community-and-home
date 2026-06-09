@@ -1,7 +1,10 @@
 package svc
 
 import (
+	"context"
+
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
+	masterdatav1 "github.com/guxiao1976/api-proto/gen/go/masterdata/v1"
 	"github.com/guxiao1976/community-auth/model"
 	"github.com/guxiao1976/community-auth/rpc/internal/config"
 	sysconfig "github.com/guxiao1976/community-common/v2/pkg/sysconfig"
@@ -34,7 +37,23 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	userRpcCli := zrpc.MustNewClient(c.UserServiceRpc)
 
 	// 初始化系统参数配置客户端
-	sysCfg := sysconfig.MustInit(c.SysConfigRedis, "", nil)
+	sysCfg := sysconfig.MustInit(c.SysConfigRedis, "", func(ctx context.Context, key string) (*sysconfig.ConfigValue, error) {
+		// gRPC fallback to master-data GetConfig
+		conn, err := zrpc.NewClient(c.MasterDataRpc)
+		if err != nil {
+			return nil, err
+		}
+		client := masterdatav1.NewMasterdataServiceClient(conn.Conn())
+		resp, err := client.GetConfig(ctx, &masterdatav1.GetConfigReq{ConfigKey: key})
+		if err != nil {
+			return nil, err
+		}
+		return &sysconfig.ConfigValue{
+			Value: resp.ConfigValue,
+			Type:  resp.ValueType,
+			Desc:  resp.Description,
+		}, nil
+	})
 
 	return &ServiceContext{
 		Config:          c,

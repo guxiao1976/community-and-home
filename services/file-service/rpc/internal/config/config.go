@@ -8,6 +8,7 @@ import (
 type Config struct {
 	zrpc.RpcServerConf
 	SysConfigRedis redis.RedisConf
+	MasterDataRpc  zrpc.RpcClientConf // Master Data Service gRPC 客户端配置（用于 sysconfig fallback）
 	DataSource struct {
 		Driver string
 		Source string

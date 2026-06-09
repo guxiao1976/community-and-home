@@ -10,6 +10,7 @@ import (
 type Config struct {
 	rest.RestConf
 	AuthRpc        zrpc.RpcClientConf // Auth Service gRPC 客户端配置（etcd 发现）
+	MasterDataRpc  zrpc.RpcClientConf // Master Data Service gRPC 客户端配置（用于 sysconfig fallback）
 	JwtAuth        JwtAuthConfig      // JWT 配置（用于 rest.WithJwt）
 	RedisAddr      string             // Redis 地址（用于短信验证码存储和限流）
 	SysConfigRedis redis.RedisConf    // 系统参数配置 Redis（用于 sysconfig 客户端）

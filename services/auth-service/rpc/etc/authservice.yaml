@@ -27,6 +27,13 @@ UserServiceRpc:
       - 127.0.0.1:2379
     Key: user.rpc
 
+# gRPC fallback for sysconfig cache-miss: calls master-data GetConfig
+MasterDataRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: masterdata.rpc
+
 # AES 密钥从环境变量注入
 AesKey: "${AES_KEY}"
 # RSA 公钥（PEM 格式，非敏感，保留在 YAML 中）
