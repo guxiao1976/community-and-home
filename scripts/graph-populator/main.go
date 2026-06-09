@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 
@@ -9,7 +10,15 @@ import (
 	"graph-populator/populator"
 )
 
+var (
+	fullMode        = flag.Bool("full", false, "Full rebuild (clear all + repopulate)")
+	incrementalMode = flag.Bool("incremental", false, "[reserved] Incremental mode (ClearAll skipped via MERGE idempotency)")
+	filesList       = flag.String("files", "", "[reserved] Path to file listing changed files for selective re-parse")
+)
+
 func main() {
+	flag.Parse()
+
 	neo4jURI := getEnv("NEO4J_URI", "bolt://localhost:7687")
 	neo4jUser := getEnv("NEO4J_USER", "neo4j")
 	neo4jPass := getEnv("NEO4J_PASSWORD", "neo4j123456")
@@ -25,11 +34,19 @@ func main() {
 	}
 	defer graph.Close(ctx)
 
-	// Clear existing project data
-	log.Println("Clearing existing graph data...")
-	if err := graph.ClearAll(ctx); err != nil {
-		log.Fatalf("Failed to clear graph: %v", err)
+	if *fullMode {
+		// Clear existing project data
+		log.Println("Clearing existing graph data...")
+		if err := graph.ClearAll(ctx); err != nil {
+			log.Fatalf("Failed to clear graph: %v", err)
+		}
+	} else {
+		log.Println("Incremental mode: skipping ClearAll (MERGE is idempotent)...")
 	}
+
+	// The --incremental and --files flags are accepted by the shell wrapper
+	// but the Go binary itself only needs --full. When --full is not set,
+	// MERGE idempotency makes ClearAll unnecessary.
 
 	// Parse and populate Proto files
 	log.Println("Parsing Proto files...")
