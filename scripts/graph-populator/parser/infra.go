@@ -1,0 +1,276 @@
+package parser
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+)
+
+// InfraNodes holds all node types parsed from infra config files.
+type InfraNodes struct {
+	Services []map[string]any
+}
+
+// ParseInfraResult groups parsed infra nodes and relationships.
+type ParseInfraResult struct {
+	Nodes InfraNodes
+	Rels  []RelDef
+}
+
+// ParseInfra scans docker-compose.yml, go.mod files, and vite.config.ts for infrastructure metadata.
+func ParseInfra(projectRoot string) (*ParseInfraResult, error) {
+	result := &ParseInfraResult{}
+
+	// 1. Parse docker-compose.yml for middleware services
+	dockerServices, err := parseDockerCompose(filepath.Join(projectRoot, "docker-compose.yml"))
+	if err == nil {
+		result.Nodes.Services = append(result.Nodes.Services, dockerServices...)
+	}
+
+	// 2. Parse vite.config.ts for service proxy mappings (service -> port)
+	viteServices, viteRels, err := parseViteConfig(filepath.Join(projectRoot, "web", "pc", "vite.config.ts"))
+	if err == nil {
+		result.Nodes.Services = append(result.Nodes.Services, viteServices...)
+		result.Rels = append(result.Rels, viteRels...)
+	}
+
+	// 3. Parse go.mod files for module paths and dependencies
+	goModServices, goModRels, err := parseGoMods(projectRoot)
+	if err == nil {
+		// Merge into existing services, preferring first-seen
+		seen := make(map[string]bool)
+		for _, s := range result.Nodes.Services {
+			if id, ok := s["id"]; ok {
+				seen[id.(string)] = true
+			}
+		}
+		for _, s := range goModServices {
+			if id, ok := s["id"]; ok && !seen[id.(string)] {
+				result.Nodes.Services = append(result.Nodes.Services, s)
+				seen[id.(string)] = true
+			}
+		}
+		result.Rels = append(result.Rels, goModRels...)
+	}
+
+	return result, nil
+}
+
+// parseDockerCompose extracts service info from docker-compose.yml.
+func parseDockerCompose(path string) ([]map[string]any, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	content := string(data)
+
+	var services []map[string]any
+
+	// Find service blocks: ^  service_name:
+	// We look for top-level service entries (indented by 2 spaces, ending with colon)
+	// that are NOT x- prefixed (those are anchors)
+	re := regexp.MustCompile(`(?m)^\s{2}([a-zA-Z][a-zA-Z0-9_-]+):\s*$`)
+	matches := re.FindAllStringSubmatch(content, -1)
+
+	for _, m := range matches {
+		svcName := m[1]
+		if strings.HasPrefix(svcName, "x-") {
+			continue
+		}
+
+		svc := map[string]any{
+			"id":       fmt.Sprintf("middleware-%s", svcName),
+			"name":     svcName,
+			"language": "infra",
+		}
+
+		// Extract port
+		portRe := regexp.MustCompile(svcName + `:\s*\n(?s:.*?)ports:\s*\["(\d+):`)
+		if portMatch := portRe.FindStringSubmatch(content); len(portMatch) >= 2 {
+			svc["port"] = portMatch[1]
+		}
+
+		// Extract IP
+		ipRe := regexp.MustCompile(svcName + `:\s*\n(?s:.*?)ipv4_address:\s*([\d.]+)`)
+		if ipMatch := ipRe.FindStringSubmatch(content); len(ipMatch) >= 2 {
+			svc["ip"] = ipMatch[1]
+		}
+
+		services = append(services, svc)
+	}
+
+	return services, nil
+}
+
+// parseViteConfig extracts proxy mappings from vite.config.ts.
+func parseViteConfig(path string) ([]map[string]any, []RelDef, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	content := string(data)
+
+	var services []map[string]any
+	var rels []RelDef
+
+	// Pattern: '/api/xxx': { target: 'http://127.0.0.1:PORT', ... }
+	proxyRe := regexp.MustCompile(`'/(api/[^']+)':\s*\{\s*target:\s*'http://127\.0\.0\.1:(\d+)'`)
+	matches := proxyRe.FindAllStringSubmatch(content, -1)
+
+	serviceNames := map[string]string{
+		"8881": "auth-service",
+		"8882": "user-service",
+		"8883": "permission-service",
+		"8884": "file-service",
+		"8886": "monitoring-service",
+		"8889": "master-data-service",
+		"8890": "moderation-service",
+		"8891": "ai-model-service",
+	}
+
+	for _, m := range matches {
+		apiPath := m[1]
+		port := m[2]
+		svcName := serviceNames[port]
+		if svcName == "" {
+			continue
+		}
+
+		// Add proxy mapping relationship: api path -> service
+		rels = append(rels, RelDef{
+			FromID: fmt.Sprintf("vite-proxy:%s", apiPath),
+			Type:   "PROXIES_TO",
+			ToID:   svcName,
+		})
+	}
+
+	return services, rels, nil
+}
+
+// parseGoMods scans services/*/go.mod and the root go.mod for module paths and dependencies.
+func parseGoMods(projectRoot string) ([]map[string]any, []RelDef, error) {
+	var services []map[string]any
+	var rels []RelDef
+
+	// Service name patterns for known services
+	knownServices := map[string]string{
+		"github.com/guxiao1976/community-user":                    "user-service",
+		"github.com/guxiao1976/community-auth":                    "auth-service",
+		"github.com/guxiao1976/community-permission":              "permission-service",
+		"github.com/guxiao1976/community-file":                    "file-service",
+		"github.com/guxiao1976/community-master-data-service":     "master-data-service",
+		"github.com/guxiao1976/community-moderation-service":      "moderation-service",
+		"github.com/guxiao1976/community-common/v2":              "common",
+		"github.com/guxiao1976/api-proto":                        "api-proto",
+		"github.com/guxiao1976/community-community-hub-service":  "community-hub-service",
+	}
+
+	svcDirs := []string{
+		"services/auth-service",
+		"services/user-service",
+		"services/permission-service",
+		"services/file-service",
+		"services/master-data-service",
+		"services/moderation-service",
+		"services/community-hub-service",
+		"services/ai-model-service",
+	}
+
+	for _, svcDir := range svcDirs {
+		goModPath := filepath.Join(projectRoot, svcDir, "go.mod")
+		data, err := os.ReadFile(goModPath)
+		if err != nil {
+			continue
+		}
+		content := string(data)
+
+		// Extract module path
+		modRe := regexp.MustCompile(`^module\s+(\S+)`)
+		modMatch := modRe.FindStringSubmatch(content)
+		if modMatch == nil {
+			continue
+		}
+		modPath := modMatch[1]
+
+		svcName := filepath.Base(svcDir)
+		if name, ok := knownServices[modPath]; ok {
+			svcName = name
+		}
+
+		services = append(services, map[string]any{
+			"id":       svcName,
+			"name":     svcName,
+			"module":   modPath,
+			"language": "go",
+		})
+
+		// Extract replace directives to find project-local dependencies
+		replaceRe := regexp.MustCompile(`replace\s+(\S+)\s*=>\s*(\.\./\S+)`)
+		replaceMatches := replaceRe.FindAllStringSubmatch(content, -1)
+
+		for _, rm := range replaceMatches {
+			depMod := rm[1]
+			if depSvcName, ok := knownServices[depMod]; ok {
+				rels = append(rels, RelDef{
+					FromID: svcName,
+					Type:   "DEPENDS_ON",
+					ToID:   depSvcName,
+				})
+			}
+		}
+
+		// Also extract require directives for direct project dependencies
+		extractGoRequireDirectDeps(content, knownServices, svcName, &rels)
+	}
+
+	return services, rels, nil
+}
+
+// extractGoRequireDirectDeps finds direct require dependencies that are project services.
+func extractGoRequireDirectDeps(content string, knownServices map[string]string, svcName string, rels *[]RelDef) {
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	inRequire := false
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		if strings.HasPrefix(line, "require (") {
+			inRequire = true
+			continue
+		}
+		if inRequire {
+			if line == ")" {
+				break
+			}
+			// Parse lines like: github.com/guxiao1976/api-proto v0.0.0
+			parts := strings.Fields(line)
+			if len(parts) >= 1 {
+				modPath := parts[0]
+				// Skip indirect deps and std lib
+				if len(parts) >= 3 && parts[len(parts)-1] == "// indirect" {
+					continue
+				}
+				if depSvcName, ok := knownServices[modPath]; ok && depSvcName != svcName {
+					// Check we haven't already added this relationship
+					alreadyExists := false
+					for _, r := range *rels {
+						if r.FromID == svcName && r.ToID == depSvcName && r.Type == "DEPENDS_ON" {
+							alreadyExists = true
+							break
+						}
+					}
+					if !alreadyExists {
+						*rels = append(*rels, RelDef{
+							FromID: svcName,
+							Type:   "DEPENDS_ON",
+							ToID:   depSvcName,
+						})
+					}
+				}
+			}
+		}
+	}
+}
