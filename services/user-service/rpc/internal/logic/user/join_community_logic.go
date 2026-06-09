@@ -40,7 +40,9 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 		return nil, err
 	}
 
-	// 1. 校验：最多加入 3 个小区
+	// 1. 校验：最多加入 3 个小区（可通过 sysconfig 动态配置）
+	// 示例：maxCommunities, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.max_community_join_count")
+	// if err != nil { maxCommunities = 3 } // fallback default
 	count, err := l.svcCtx.UserCommunityMembershipModel.CountActiveByUserId(l.ctx, in.UserId)
 	if err != nil {
 		l.Errorf("count active memberships error: %v", err)
@@ -74,6 +76,8 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 				l.Errorf("count distinct communities this year error: %v", err)
 				return nil, err
 			}
+			// 示例：yearMax, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.max_new_communities_per_year")
+			// if err != nil { yearMax = 3 }
 			if yearCount >= model.MaxNewCommunitiesPerYear {
 				return &userv1.JoinCommunityResponse{
 					Base: responsex.NewBaseRespWithError(10012, "每年最多加入 3 个新小区"),
@@ -85,6 +89,8 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 				l.Errorf("count distinct communities error: %v", err)
 				return nil, err
 			}
+			// 示例：maxTotal, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.max_total_communities_lifetime")
+			// if err != nil { maxTotal = 12 }
 			if totalCount >= model.MaxTotalCommunitiesLifetime {
 				return &userv1.JoinCommunityResponse{
 					Base: responsex.NewBaseRespWithError(10013, "总计最多加入 12 个不同小区"),

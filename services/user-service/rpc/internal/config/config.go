@@ -8,7 +8,8 @@ import (
 // Config 用户中心 RPC 服务配置
 type Config struct {
 	zrpc.RpcServerConf
-	DataSource string          // MySQL 数据源
-	Cache      redis.RedisConf // Redis 缓存配置
-	AesKey     string          // AES 密钥（用于手机号加密存储）
+	DataSource     string          // MySQL 数据源
+	Cache          redis.RedisConf // Redis 缓存配置
+	SysConfigRedis redis.RedisConf // 系统参数配置 Redis（用于 sysconfig 客户端）
+	AesKey         string          // AES 密钥（用于手机号加密存储）
 }

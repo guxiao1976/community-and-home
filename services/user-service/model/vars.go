@@ -69,12 +69,18 @@ const (
 
 // ==================== 最大小区数 ====================
 
+// MaxCommunities 最多加入 3 个小区
+// TODO: 可通过 sysconfig 动态配置（key: user.max_community_join_count）
 const MaxCommunities = 3
 
 // ==================== 频次限制 ====================
 
-const MaxNewCommunitiesPerYear = 3    // 每年最多首次加入 3 个新小区
-const MaxTotalCommunitiesLifetime = 12 // 终身最多首次加入 12 个不同小区
+// MaxNewCommunitiesPerYear 每年最多首次加入 3 个新小区
+// TODO: 可通过 sysconfig 动态配置（key: user.max_new_communities_per_year）
+const MaxNewCommunitiesPerYear = 3
+// MaxTotalCommunitiesLifetime 终身最多首次加入 12 个不同小区
+// TODO: 可通过 sysconfig 动态配置（key: user.max_total_communities_lifetime）
+const MaxTotalCommunitiesLifetime = 12
 
 // ==================== 角色是否需要房屋 ====================
 

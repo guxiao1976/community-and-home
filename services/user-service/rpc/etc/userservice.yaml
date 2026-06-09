@@ -12,5 +12,10 @@ DataSource: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(localhost:3306)/user?charset=utf
 Cache:
   Host: localhost:6379
 
+# 系统参数配置 Redis（与 Cache 共用同一个 Redis 实例）
+# 如果未来需要独立 Redis，可单独配置不同的 Host
+SysConfigRedis:
+  Host: localhost:6379
+
 # AES 加密密钥（16字节）— 用于手机号加密存储，需与 Auth Service 一致
 AesKey: "${AES_KEY}"
