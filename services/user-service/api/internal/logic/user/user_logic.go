@@ -173,7 +173,7 @@ func (l *GetProfileLogic) GetProfile() (*types.GetUserResp, error) {
 		return nil, err
 	}
 	if resp.Base.GetCode() != 0 {
-		return nil, fmt.Errorf(resp.Base.GetMsg())
+		return nil, fmt.Errorf("%s", resp.Base.GetMsg())
 	}
 	return &types.GetUserResp{User: toUserInfo(resp.User)}, nil
 }

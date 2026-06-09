@@ -60,8 +60,8 @@ func TestJoinCommunity_Idempotent(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, int32(0), resp.Base.Code)
-	assert.Equal(t, int64(5001), resp.Membership.Id, "应返回已有 membership")
+	// 已活跃加入，不能重复，返回 10007
+	assert.Equal(t, int32(10007), resp.Base.Code)
 
 	// 不应创建重复记录
 	count, _ := mm.CountActiveByUserId(context.Background(), 1002)

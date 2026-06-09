@@ -33,7 +33,7 @@ func (l *JoinCommunityLogic) JoinCommunity(req *types.JoinCommunityReq) (*types.
 		return nil, err
 	}
 	if resp.Base.GetCode() != 0 {
-		return nil, fmt.Errorf(resp.Base.GetMsg())
+		return nil, fmt.Errorf("%s", resp.Base.GetMsg())
 	}
 
 	return &types.JoinCommunityResp{
@@ -94,7 +94,7 @@ func (l *LeaveCommunityLogic) LeaveCommunity(req *types.LeaveCommunityReq) (*typ
 		return nil, err
 	}
 	if resp.Base.GetCode() != 0 {
-		return nil, fmt.Errorf(resp.Base.GetMsg())
+		return nil, fmt.Errorf("%s", resp.Base.GetMsg())
 	}
 
 	return &types.LeaveCommunityResp{}, nil
@@ -149,7 +149,7 @@ func (l *BindResidenceLogic) BindResidence(req *types.BindResidenceReq) (*types.
 		return nil, err
 	}
 	if resp.Base.GetCode() != 0 {
-		return nil, fmt.Errorf(resp.Base.GetMsg())
+		return nil, fmt.Errorf("%s", resp.Base.GetMsg())
 	}
 	return &types.BindResidenceResp{Residence: toResidence(resp.Residence)}, nil
 }
@@ -192,7 +192,7 @@ func (l *ApplyRoleLogic) ApplyRole(req *types.ApplyRoleReq) (*types.ApplyRoleRes
 		return nil, err
 	}
 	if resp.Base.GetCode() != 0 {
-		return nil, fmt.Errorf(resp.Base.GetMsg())
+		return nil, fmt.Errorf("%s", resp.Base.GetMsg())
 	}
 	return &types.ApplyRoleResp{}, nil
 }
@@ -218,7 +218,7 @@ func (l *GetUserRolesLogic) GetUserRoles() (*types.GetUserRolesResp, error) {
 		return nil, err
 	}
 	if resp.Base.GetCode() != 0 {
-		return nil, fmt.Errorf(resp.Base.GetMsg())
+		return nil, fmt.Errorf("%s", resp.Base.GetMsg())
 	}
 	roles := make([]types.RoleInfo, 0, len(resp.Roles))
 	for _, r := range resp.Roles {
