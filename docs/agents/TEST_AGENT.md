@@ -11,15 +11,15 @@
 ## 记忆系统
 
 ### 启动时加载经验
-1. 读取 `.claude/memory/MEMORY.md`（全局经验索引）
-2. 读取 `services/<目标服务>/.claude/memory/MEMORY.md`（服务特有经验）
+1. 读取 `.harness/memory/MEMORY.md`（全局经验索引）
+2. 读取 `services/<目标服务>/.harness/memory/MEMORY.md`（服务特有经验）
 3. 根据测试目标，精读相关记忆文件中的"怎么验证"章节
 4. 在测试报告中引用相关经验
 
 ### 测试失败时记录经验
 当 QA 返回 FAIL 时，分析根本原因并创建记忆文件：
 1. 确定根因（不是表面错误，是为什么产生这个错误）
-2. 写入 `.claude/memory/<slug>.md`（全局）或 `services/<svc>/.claude/memory/<slug>.md`（服务特有）
+2. 写入 `.harness/memory/<slug>.md`（全局）或 `services/<svc>/.harness/memory/<slug>.md`（服务特有）
 3. 记忆文件必须包含：原因、复现步骤、修复方案、验证方法
 4. 更新对应的 MEMORY.md 索引
 

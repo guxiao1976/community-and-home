@@ -17,7 +17,7 @@
 1. 根 `CLAUDE.md` — 了解项目架构、服务划分、全局约束
 2. `openspec/specs/` — 现有规格文档，了解已有功能
 3. 相关服务的 `docs/design.md` — 了解现有数据模型和业务流程
-4. `.claude/memory/MEMORY.md` — **读取经验索引**，精读相关记忆文件，避免提出已知不可行的方案
+4. `.harness/memory/MEMORY.md` — **读取经验索引**，精读相关记忆文件，避免提出已知不可行的方案
 
 ## 输入
 

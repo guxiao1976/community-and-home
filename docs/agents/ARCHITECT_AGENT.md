@@ -18,7 +18,7 @@
 2. 受影响服务的 `docs/design.md` — 了解现有数据模型和接口
 3. 根 `CLAUDE.md` — 了解全局架构约束
 4. `api-proto/api/` — 现有 Proto 定义，避免重复或冲突
-5. `.claude/memory/MEMORY.md` — **读取经验索引**，精读相关记忆，利用已有决策
+5. `.harness/memory/MEMORY.md` — **读取经验索引**，精读相关记忆，利用已有决策
 
 ## 输入
 

@@ -7,7 +7,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 HOOK_SCRIPT='#!/usr/bin/env bash
 # Auto-sync knowledge graph on commit
-nohup bash "'$PROJECT_ROOT'/scripts/graph-sync.sh" > /tmp/graph-sync.log 2>&1 &
+nohup bash "'$PROJECT_ROOT'/.harness/scripts/graph-sync.sh" > /tmp/graph-sync.log 2>&1 &
 '
 
 # Install in each nested git repo
