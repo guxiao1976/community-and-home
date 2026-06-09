@@ -20,8 +20,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 工程结构 / 服务分层 / 中间件 | [`.harness/rules/工程结构.md`](.harness/rules/工程结构.md) |
 | Proto 管理规则 / 变更流程 | [`.harness/rules/Proto管理规范.md`](.harness/rules/Proto管理规范.md) |
 | 编码规范 / 硬性约束 / 提交前检查 | [`.harness/rules/项目编码规范.md`](.harness/rules/项目编码规范.md) |
-| 踩过的坑 / 经验记忆 | [`.harness/memory/MEMORY.md`](.harness/memory/MEMORY.md) |
-| 历史变更追溯 | [`.harness/changes/INDEX.md`](.harness/changes/INDEX.md) |
+| 踩过的坑 / 经验记忆 | [`.harness/knowledge/memory/MEMORY.md`](.harness/knowledge/memory/MEMORY.md) |
+| 历史变更追溯 | [`.harness/knowledge/changes/INDEX.md`](.harness/knowledge/changes/INDEX.md) |
 | AI 团队工作流程 / 工具选择 | [`docs/specs/ai-dev-team-design.md`](docs/specs/ai-dev-team-design.md) |
 | 执行日志 / 流程遵守 | [`docs/specs/execution-log.md`](docs/specs/execution-log.md) |
 

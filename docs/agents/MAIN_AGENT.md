@@ -60,7 +60,7 @@
 ## 记忆系统
 
 ### 启动时加载
-在开始任何工作前，读取 `.harness/memory/MEMORY.md` 了解历史经验。
+在开始任何工作前，读取 `.harness/knowledge/memory/MEMORY.md` 了解历史经验。
 
 ### 运行时记录
 当遇到以下情况，创建或更新记忆文件：

@@ -29,7 +29,7 @@
 └───────────────────────────────────────────────────────┘
          ↑ 经验回流 ↑
 ┌───────────────────────────────────────────────────────┐
-│  知识层：集体记忆（.harness/memory/ + services/*/memory/） │
+│  知识层：集体记忆（.harness/knowledge/memory/ + services/*/memory/） │
 │  自动捕获 → 审核 → 检索 → 避免再犯                        │
 └───────────────────────────────────────────────────────┘
 ```
@@ -166,11 +166,11 @@ updated: 2026-06-05
 ### 存储位置
 
 ```
-.harness/memory/MEMORY.md           ← 全局经验索引
-.harness/memory/proto-jstype.md
-.harness/memory/grpc-only-comms.md
+.harness/knowledge/memory/MEMORY.md           ← 全局经验索引
+.harness/knowledge/memory/proto-jstype.md
+.harness/knowledge/memory/grpc-only-comms.md
 
-services/<name>/.harness/memory/    ← 服务特有经验
+services/<name>/.harness/knowledge/memory/    ← 服务特有经验
 ```
 
 ### 自动捕获触发点
@@ -258,7 +258,7 @@ Harness Pipeline:
   CLAUDE.md       → 角色 + 全局公约引用 + Ralph 执行模式
   docs/design.md  → 数据模型 + 业务流程 + 接口契约
   CHANGELOG.md    → 变更历史
-  .harness/memory/ → 服务特有经验
+  .harness/knowledge/memory/ → 服务特有经验
 ```
 
 ### Harness Pipeline — 质量门禁
@@ -424,7 +424,7 @@ Reviewer Agent（全局）:
 
 - [x] 修复 `.ralphrc` ALLOWED_TOOLS（已完成）
 - [x] 重置 Ralph 熔断器（已完成）
-- [ ] 创建 `.harness/memory/` 目录和初始 `MEMORY.md`
+- [ ] 创建 `.harness/knowledge/memory/` 目录和初始 `MEMORY.md`
 - [ ] 从现有文档中提取初始经验（CLAUDE.md 硬规则 + 已知踩坑）
 
 ### 第二步：标准化 Agent Prompt
@@ -464,4 +464,4 @@ Reviewer Agent（全局）:
 | Code Reviewer | Reviewer Agent | `deepseek-v4-pro` | 多维度代码审查 |
 | DevOps/CI | Ralph + Workflow 编排 | — | 自动化执行和调度 |
 | 技术文档 | 各 Agent 产出 | — | design.md / CHANGELOG.md / spec.md |
-| 集体记忆 | .harness/memory/ 系统 | — | 经验积累和自动避坑 |
+| 集体记忆 | .harness/knowledge/memory/ 系统 | — | 经验积累和自动避坑 |

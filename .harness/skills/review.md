@@ -41,7 +41,7 @@ git diff main...HEAD -- services/<name>/   # 相对 main 的变更
 3. services/<name>/CLAUDE.md             — 服务角色、关键规则
 4. services/<name>/docs/design.md        — 数据模型、业务流程
 5. services/<name>/CHANGELOG.md          — 近期变更
-6. .harness/memory/MEMORY.md              — 全局经验索引（M3 用）
+6. .harness/knowledge/memory/MEMORY.md              — 全局经验索引（M3 用）
 7. services/<name>/_qa.md                — QA 报告（如存在，了解测试结果）
 ```
 

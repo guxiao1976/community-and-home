@@ -20,7 +20,7 @@
   │     条件：1-2 个文件、原因明确、不需理解业务逻辑
   │     示例：字段名修正、路径修正、配置调整、类型修正
   │     → 直接 Edit，然后 build 验证
-  │     → 完成后记录到 .harness/memory/（如踩坑）
+  │     → 完成后记录到 .harness/knowledge/memory/（如踩坑）
   │
   ├─ 单服务、改动明确？
   │     → 使用 dispatch Skill 派发 Dev Agent 到该服务目录

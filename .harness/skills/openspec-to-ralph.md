@@ -41,7 +41,7 @@ openspec/changes/<change-name>/
 1. 服务 CLAUDE.md
 2. docs/design.md
 3. CHANGELOG.md
-4. .harness/memory/MEMORY.md ← 加载经验
+4. .harness/knowledge/memory/MEMORY.md ← 加载经验
 
 ## 任务清单
 

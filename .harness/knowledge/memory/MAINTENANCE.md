@@ -2,7 +2,7 @@
 
 ## 日常
 
-- 每次 Agent 执行完毕后，检查是否有新记忆被创建（`git status .harness/memory/`）
+- 每次 Agent 执行完毕后，检查是否有新记忆被创建（`git status .harness/knowledge/memory/`）
 - 新记忆 status: draft → 快速浏览，确认内容合理 → 改为 status: active
 - 确认 `type` 字段正确：`pitfall`=踩过的坑 | `guideline`=编码/架构规范 | `process`=流程约束 | `decision`=技术决策 | `model`=数据模型
 
@@ -25,14 +25,14 @@
 
 ```bash
 # 查看所有记忆
-ls -la .harness/memory/ services/*/.harness/memory/
+ls -la .harness/knowledge/memory/ services/*/.harness/knowledge/memory/
 
 # 查找特定主题的记忆
-grep -rl "关键词" .harness/memory/ services/*/.harness/memory/
+grep -rl "关键词" .harness/knowledge/memory/ services/*/.harness/knowledge/memory/
 
 # 查看记忆状态统计
-grep -r "status:" .harness/memory/ | sort | uniq -c
+grep -r "status:" .harness/knowledge/memory/ | sort | uniq -c
 
 # 列出 superseded 记忆
-grep -rl "status: superseded" .harness/memory/
+grep -rl "status: superseded" .harness/knowledge/memory/
 ```

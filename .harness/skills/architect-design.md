@@ -21,7 +21,7 @@
 2. 受影响服务的 `docs/design.md` — 现有数据模型和接口
 3. 根 `CLAUDE.md` + `.harness/rules/工程结构.md` — 全局架构约束
 4. `api-proto/api/` — 现有 Proto 定义，避免重复或冲突
-5. `.harness/memory/MEMORY.md` — 精读相关架构决策记忆
+5. `.harness/knowledge/memory/MEMORY.md` — 精读相关架构决策记忆
 
 ### Step 2: 服务归属决策
 

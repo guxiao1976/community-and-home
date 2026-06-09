@@ -33,7 +33,7 @@
 - **实际流程**: 我直接 Edit → build → 写入 memory
 - **偏差**: 无 ✅
 - **踩坑**: `temp0`=嵌套<text>+内联赋值; `rpc Unavailable`=AES_KEY 格式+RSA 路径; `手机号解密失败`=公钥字段名 publicKey vs public_key
-- **结论**: Bug 修复流程执行准确。踩坑已全部写入各服务 .harness/memory/
+- **结论**: Bug 修复流程执行准确。踩坑已全部写入各服务 .harness/knowledge/memory/
 
 ---
 
@@ -67,7 +67,7 @@
 | 骨架正确但缺文档 | 1 (community-hub) |
 | 越界（全局写服务代码） | 1 (join-community) |
 | Agent 正确执行 | 1 (首页重设计) |
-| 踩坑总数 | 6，已全部记录到 .harness/memory/ |
+| 踩坑总数 | 6，已全部记录到 .harness/knowledge/memory/ |
 
 **改进项**：
 1. 中功能及以上必须写 OpenSpec（至少 proposal+tasks），不直接开工

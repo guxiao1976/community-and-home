@@ -27,6 +27,6 @@
 
 ## 关联
 
-- 规则体系：`.harness/memory/MEMORY.md`
+- 规则体系：`.harness/knowledge/memory/MEMORY.md`
 - 需求模板：`docs/requirements/TEMPLATE.md`
 - Harness 管线：`.harness/workflows/harness-pipeline.js`

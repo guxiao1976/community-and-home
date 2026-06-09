@@ -16,9 +16,9 @@
 
 ```
 新建：
-  .harness/memory/MEMORY.md                        ← 全局经验索引
-  .harness/memory/proto-jstype.md                   ← 初始经验：Snowflake ID 序列化
-  .harness/memory/grpc-only-comms.md                ← 初始经验：gRPC 通信约束
+  .harness/knowledge/memory/MEMORY.md                        ← 全局经验索引
+  .harness/knowledge/memory/proto-jstype.md                   ← 初始经验：Snowflake ID 序列化
+  .harness/knowledge/memory/grpc-only-comms.md                ← 初始经验：gRPC 通信约束
   docs/agents/REQUIREMENT_AGENT.md                 ← 需求分析师 prompt
   docs/agents/ARCHITECT_AGENT.md                   ← 架构设计师 prompt
   .harness/skills/openspec-to-ralph.md              ← OpenSpec → Ralph 桥接 Skill
@@ -36,20 +36,20 @@
 
 ## 阶段一：记忆系统底座
 
-### Task 1: 创建 .harness/memory/ 目录和 MEMORY.md 索引
+### Task 1: 创建 .harness/knowledge/memory/ 目录和 MEMORY.md 索引
 
 **Files:**
-- Create: `.harness/memory/MEMORY.md`
+- Create: `.harness/knowledge/memory/MEMORY.md`
 
 - [ ] **Step 1: 创建 memory 目录**
 
 ```bash
-mkdir -p .harness/memory
+mkdir -p .harness/knowledge/memory
 ```
 
 - [ ] **Step 2: 创建 MEMORY.md 索引文件**
 
-写入 `.harness/memory/MEMORY.md`：
+写入 `.harness/knowledge/memory/MEMORY.md`：
 
 ```markdown
 # 全局经验索引
@@ -72,7 +72,7 @@ mkdir -p .harness/memory
 - [ ] **Step 3: 提交**
 
 ```bash
-git add .harness/memory/MEMORY.md
+git add .harness/knowledge/memory/MEMORY.md
 git commit -m "feat: create global memory index for AI dev team"
 ```
 
@@ -81,12 +81,12 @@ git commit -m "feat: create global memory index for AI dev team"
 ### Task 2: 从现有规范提取初始经验
 
 **Files:**
-- Create: `.harness/memory/proto-jstype.md`
-- Create: `.harness/memory/grpc-only-comms.md`
+- Create: `.harness/knowledge/memory/proto-jstype.md`
+- Create: `.harness/knowledge/memory/grpc-only-comms.md`
 
 - [ ] **Step 1: 创建 proto-jstype.md**
 
-写入 `.harness/memory/proto-jstype.md`：
+写入 `.harness/knowledge/memory/proto-jstype.md`：
 
 ```markdown
 ---
@@ -120,7 +120,7 @@ Snowflake 生成 19 位 ID，超过 JavaScript `Number.MAX_SAFE_INTEGER`（约 1
 
 - [ ] **Step 2: 创建 grpc-only-comms.md**
 
-写入 `.harness/memory/grpc-only-comms.md`：
+写入 `.harness/knowledge/memory/grpc-only-comms.md`：
 
 ```markdown
 ---
@@ -155,12 +155,12 @@ moderation-service 曾直接读取 masterdata_db 数据库，绕过 master-data-
 
 - [ ] **Step 3: 更新 MEMORY.md 索引**
 
-更新 `.harness/memory/MEMORY.md`，确保两条经验在"必须遵守"列表中有条目。
+更新 `.harness/knowledge/memory/MEMORY.md`，确保两条经验在"必须遵守"列表中有条目。
 
 - [ ] **Step 4: 提交**
 
 ```bash
-git add .harness/memory/
+git add .harness/knowledge/memory/
 git commit -m "feat: extract initial memories from CLAUDE.md rules"
 ```
 
@@ -197,7 +197,7 @@ git commit -m "feat: extract initial memories from CLAUDE.md rules"
 1. 根 `CLAUDE.md` — 了解项目架构、服务划分、全局约束
 2. `openspec/specs/` — 现有规格文档，了解已有功能
 3. 相关服务的 `docs/design.md` — 了解现有数据模型和业务流程
-4. `.harness/memory/MEMORY.md` — **读取经验索引**，精读相关记忆文件，避免提出已知不可行的方案
+4. `.harness/knowledge/memory/MEMORY.md` — **读取经验索引**，精读相关记忆文件，避免提出已知不可行的方案
 
 ## 输入
 
@@ -319,7 +319,7 @@ git commit -m "feat: add requirement analyst agent prompt"
 2. 受影响服务的 `docs/design.md` — 了解现有数据模型和接口
 3. 根 `CLAUDE.md` — 了解全局架构约束
 4. `api-proto/api/` — 现有 Proto 定义，避免重复或冲突
-5. `.harness/memory/MEMORY.md` — **读取经验索引**，精读相关记忆，利用已有决策
+5. `.harness/knowledge/memory/MEMORY.md` — **读取经验索引**，精读相关记忆，利用已有决策
 
 ## 输入
 
@@ -435,8 +435,8 @@ git commit -m "feat: add architect agent prompt"
 
 ### 启动时加载经验
 在开始任何开发工作前，按顺序执行：
-1. 读取 `.harness/memory/MEMORY.md`（全局经验索引）
-2. 读取 `services/<本服务>/.harness/memory/MEMORY.md`（服务特有经验，如果存在）
+1. 读取 `.harness/knowledge/memory/MEMORY.md`（全局经验索引）
+2. 读取 `services/<本服务>/.harness/knowledge/memory/MEMORY.md`（服务特有经验，如果存在）
 3. 根据当前任务的上下文关键词，精读匹配的记忆文件
 4. **在开发过程中主动应用这些经验，避免重复已知错误**
 
@@ -446,7 +446,7 @@ git commit -m "feat: add architect agent prompt"
 2. `go test` 失败且根因不是测试逻辑错误（环境/依赖/配置问题）
 3. 你自己发现了一个非显而易见的技术约束
 
-记忆文件格式见 `.harness/memory/MEMORY.md` 中的说明。写入后更新对应的 MEMORY.md 索引。
+记忆文件格式见 `.harness/knowledge/memory/MEMORY.md` 中的说明。写入后更新对应的 MEMORY.md 索引。
 ```
 
 - [ ] **Step 2: 在"开发阶段"步骤中增加记忆加载步骤**
@@ -483,15 +483,15 @@ git commit -m "feat: add memory system and model spec to dev agent"
 ## 记忆系统
 
 ### 启动时加载经验
-1. 读取 `.harness/memory/MEMORY.md`（全局经验索引）
-2. 读取 `services/<目标服务>/.harness/memory/MEMORY.md`（服务特有经验）
+1. 读取 `.harness/knowledge/memory/MEMORY.md`（全局经验索引）
+2. 读取 `services/<目标服务>/.harness/knowledge/memory/MEMORY.md`（服务特有经验）
 3. 根据测试目标，精读相关记忆文件中的"怎么验证"章节
 4. 在测试报告中引用相关经验
 
 ### 测试失败时记录经验
 当 QA 返回 FAIL 时，分析根本原因并创建记忆文件：
 1. 确定根因（不是表面错误，是为什么产生这个错误）
-2. 写入 `.harness/memory/<slug>.md`（全局）或 `services/<svc>/.harness/memory/<slug>.md`（服务特有）
+2. 写入 `.harness/knowledge/memory/<slug>.md`（全局）或 `services/<svc>/.harness/knowledge/memory/<slug>.md`（服务特有）
 3. 记忆文件必须包含：原因、复现步骤、修复方案、验证方法
 4. 更新对应的 MEMORY.md 索引
 
@@ -548,7 +548,7 @@ git commit -m "feat: add memory system and model spec to test agent"
 ## 记忆系统
 
 ### 启动时加载
-在开始任何工作前，读取 `.harness/memory/MEMORY.md` 了解历史经验。
+在开始任何工作前，读取 `.harness/knowledge/memory/MEMORY.md` 了解历史经验。
 
 ### 运行时记录
 当遇到以下情况，创建或更新记忆文件：
@@ -579,7 +579,7 @@ git commit -m "feat: add requirement/architect phases and memory to main agent"
 
 ```javascript
 // 在 generatorPrompt 函数中，文件读取列表末尾添加：
-`5. **读取 .harness/memory/MEMORY.md（服务：${serviceDir}/.harness/memory/MEMORY.md）** — 加载历史经验，避免重复已知错误
+`5. **读取 .harness/knowledge/memory/MEMORY.md（服务：${serviceDir}/.harness/knowledge/memory/MEMORY.md）** — 加载历史经验，避免重复已知错误
 6. 根据任务关键词，精读匹配的记忆文件内容`
 ```
 
@@ -593,11 +593,11 @@ git commit -m "feat: add requirement/architect phases and memory to main agent"
 ## 记忆记录
 如果 QA 判定为 FAIL，你必须：
 1. 分析根本原因（不是表面错误信息）
-2. 检查 .harness/memory/MEMORY.md 是否已有相关经验
+2. 检查 .harness/knowledge/memory/MEMORY.md 是否已有相关经验
 3. 如果有 → 更新该记忆文件（增加新的复现场景）
-4. 如果没有 → 创建新的记忆文件到 .harness/memory/<slug>.md
+4. 如果没有 → 创建新的记忆文件到 .harness/knowledge/memory/<slug>.md
 5. 更新 MEMORY.md 索引
-记忆文件格式：参见 .harness/memory/MEMORY.md 中的说明
+记忆文件格式：参见 .harness/knowledge/memory/MEMORY.md 中的说明
 `
 ```
 
@@ -614,7 +614,7 @@ git commit -m "feat: add requirement/architect phases and memory to main agent"
 ## 记忆记录
 如果 Review 发现 CRITICAL 问题，你必须：
 1. 判断这是否是一个新的规范/踩坑（而非一次性的代码错误）
-2. 如果是新经验 → 创建记忆文件到 .harness/memory/<slug>.md
+2. 如果是新经验 → 创建记忆文件到 .harness/knowledge/memory/<slug>.md
 3. 如果已有相关记忆 → 更新它
 4. 更新 MEMORY.md 索引
 `
@@ -639,8 +639,8 @@ git commit -m "feat: integrate memory system and unify dimensions in harness pip
 在 dispatch.md 的"启动上下文"部分（读取 CLAUDE.md、docs/design.md、CHANGELOG.md 之后），增加：
 
 ```markdown
-4. **读取 .harness/memory/MEMORY.md**（全局经验索引），根据任务关键词精读相关记忆文件
-5. 读取 `services/<service>/.harness/memory/MEMORY.md`（服务特有经验，如果存在）
+4. **读取 .harness/knowledge/memory/MEMORY.md**（全局经验索引），根据任务关键词精读相关记忆文件
+5. 读取 `services/<service>/.harness/knowledge/memory/MEMORY.md`（服务特有经验，如果存在）
 ```
 
 - [ ] **Step 2: 提交**
@@ -725,7 +725,7 @@ openspec/changes/<change-name>/
 1. 服务 CLAUDE.md
 2. docs/design.md
 3. CHANGELOG.md
-4. .harness/memory/MEMORY.md ← 加载经验
+4. .harness/knowledge/memory/MEMORY.md ← 加载经验
 
 ## 任务清单
 
@@ -809,18 +809,18 @@ git commit -m "feat: add openspec-to-ralph bridge skill"
 ### Task 13: 建立记忆维护机制
 
 **Files:**
-- Create: `.harness/memory/MAINTENANCE.md`
+- Create: `.harness/knowledge/memory/MAINTENANCE.md`
 
 - [ ] **Step 1: 创建维护指南**
 
-写入 `.harness/memory/MAINTENANCE.md`：
+写入 `.harness/knowledge/memory/MAINTENANCE.md`：
 
 ```markdown
 # 记忆系统维护指南
 
 ## 日常
 
-- 每次 Agent 执行完毕后，检查是否有新记忆被创建（`git status .harness/memory/`）
+- 每次 Agent 执行完毕后，检查是否有新记忆被创建（`git status .harness/knowledge/memory/`）
 - 新记忆 status: draft → 快速浏览，确认内容合理 → 改为 status: active
 
 ## 每周
@@ -840,23 +840,23 @@ git commit -m "feat: add openspec-to-ralph bridge skill"
 
 ```bash
 # 查看所有记忆
-ls -la .harness/memory/ services/*/.harness/memory/
+ls -la .harness/knowledge/memory/ services/*/.harness/knowledge/memory/
 
 # 查找特定主题的记忆
-grep -rl "关键词" .harness/memory/ services/*/.harness/memory/
+grep -rl "关键词" .harness/knowledge/memory/ services/*/.harness/knowledge/memory/
 
 # 查看记忆状态统计
-grep -r "status:" .harness/memory/ | sort | uniq -c
+grep -r "status:" .harness/knowledge/memory/ | sort | uniq -c
 
 # 列出 superseded 记忆
-grep -rl "status: superseded" .harness/memory/
+grep -rl "status: superseded" .harness/knowledge/memory/
 ```
 ```
 
 - [ ] **Step 2: 提交**
 
 ```bash
-git add .harness/memory/MAINTENANCE.md
+git add .harness/knowledge/memory/MAINTENANCE.md
 git commit -m "docs: add memory system maintenance guide"
 ```
 

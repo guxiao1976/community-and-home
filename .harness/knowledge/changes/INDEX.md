@@ -9,7 +9,7 @@
 | 日期 | 变更 | 产出 | 状态 |
 |------|------|------|:---:|
 | 2026-06-09 | Harness Pipeline Dry Run | [报告](dry-run-2026-06-09.md) | ✅ 完成 |
-| 2026-06-09 | Memory frontmatter 统一 + type 字段 | `.harness/memory/` (7 文件统一) | ✅ 完成 |
+| 2026-06-09 | Memory frontmatter 统一 + type 字段 | `.harness/knowledge/memory/` (7 文件统一) | ✅ 完成 |
 | 2026-06-09 | changes/ 索引目录建立 | [INDEX.md](INDEX.md) + [README.md](README.md) | ✅ 完成 |
 
 ## 有完整追溯链的变更

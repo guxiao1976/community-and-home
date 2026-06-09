@@ -68,8 +68,8 @@ QA 阶段默认只扫描本次 git diff 变更的文件。用户说以下词时�
 1. 阅读 services/<service-name>/CLAUDE.md — 理解角色定位、关键规则、全局公约、常用命令
 2. 阅读 services/<service-name>/docs/design.md — 理解数据模型、业务流程、接口设计（如存在）
 3. 阅读 services/<service-name>/CHANGELOG.md — 了解近期变更历史和已知待办
-4. 读取 `.harness/memory/MEMORY.md`（全局经验索引），根据任务关键词精读相关记忆文件
-5. 读取 `services/<service-name>/.harness/memory/MEMORY.md`（服务特有经验，如果存在）
+4. 读取 `.harness/knowledge/memory/MEMORY.md`（全局经验索引），根据任务关键词精读相关记忆文件
+5. 读取 `services/<service-name>/.harness/knowledge/memory/MEMORY.md`（服务特有经验，如果存在）
 6. 如果存在 services/<service-name>/_review.md — 阅读审查报告，修复其中的问题（修复任务时）
 
 ## 全局公约提醒
@@ -130,8 +130,8 @@ QA 阶段默认只扫描本次 git diff 变更的文件。用户说以下词时�
 1. 阅读 services/ai-model-service/CLAUDE.md
 2. 阅读 services/ai-model-service/docs/design.md
 3. 阅读 services/ai-model-service/CHANGELOG.md
-4. 读取 `.harness/memory/MEMORY.md`（全局经验索引），根据任务关键词精读相关记忆文件
-5. 读取 `services/ai-model-service/.harness/memory/MEMORY.md`（服务特有经验，如果存在）
+4. 读取 `.harness/knowledge/memory/MEMORY.md`（全局经验索引），根据任务关键词精读相关记忆文件
+5. 读取 `services/ai-model-service/.harness/knowledge/memory/MEMORY.md`（服务特有经验，如果存在）
 6. 阅读 services/ai-model-service/_review.md — 这是审查报告，修复其中的 CRITICAL
 
 ## 全局公约提醒

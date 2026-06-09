@@ -16,7 +16,7 @@
 1. 根 `CLAUDE.md` — 项目架构、服务划分、全局约束
 2. `.harness/rules/项目编码规范.md` — 编码硬性约束（在分析阶段了解边界）
 3. 相关服务的 `docs/design.md` — 现有数据模型和业务流程
-4. `.harness/memory/MEMORY.md` — 精读相关记忆，避免提出已知不可行的方案
+4. `.harness/knowledge/memory/MEMORY.md` — 精读相关记忆，避免提出已知不可行的方案
 
 ### Step 2: 理解需求
 
@@ -113,5 +113,5 @@ openspec/changes/<change-name>/
 ## 关联
 
 - 架构设计：`.harness/skills/architect-design.md`
-- 经验记忆：`.harness/memory/MEMORY.md`
+- 经验记忆：`.harness/knowledge/memory/MEMORY.md`
 - 需求模板：`docs/requirements/TEMPLATE.md`

@@ -12,8 +12,8 @@
 
 ### 启动时加载经验
 在开始任何开发工作前，按顺序执行：
-1. 读取 `.harness/memory/MEMORY.md`（全局经验索引）
-2. 读取 `services/<本服务>/.harness/memory/MEMORY.md`（服务特有经验，如果存在）
+1. 读取 `.harness/knowledge/memory/MEMORY.md`（全局经验索引）
+2. 读取 `services/<本服务>/.harness/knowledge/memory/MEMORY.md`（服务特有经验，如果存在）
 3. 根据当前任务的上下文关键词，精读匹配的记忆文件
 4. **在开发过程中主动应用这些经验，避免重复已知错误**
 
@@ -23,7 +23,7 @@
 2. `go test` 失败且根因不是测试逻辑错误（环境/依赖/配置问题）
 3. 你自己发现了一个非显而易见的技术约束
 
-记忆文件格式见 `.harness/memory/MEMORY.md` 中的说明。写入后更新对应的 MEMORY.md 索引。
+记忆文件格式见 `.harness/knowledge/memory/MEMORY.md` 中的说明。写入后更新对应的 MEMORY.md 索引。
 
 ## 核心职责
 

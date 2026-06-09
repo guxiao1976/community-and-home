@@ -26,7 +26,7 @@ function generatorPrompt(iteration, fixContext) {
 3. 阅读 ${SVC_DIR}/CLAUDE.md — 角色定位、关键规则、全局公约、常用命令
 4. 阅读 ${SVC_DIR}/docs/design.md — 数据模型、业务流程（如存在）
 5. 阅读 ${SVC_DIR}/CHANGELOG.md — 变更历史
-6. **读取 .harness/memory/MEMORY.md** — 加载全局历史经验，避免重复已知错误
+6. **读取 .harness/knowledge/memory/MEMORY.md** — 加载全局历史经验，避免重复已知错误
 7. 根据任务关键词，精读匹配的记忆文件内容
 
 ## 记忆驱动编码（编码前必须执行）
@@ -36,7 +36,7 @@ function generatorPrompt(iteration, fixContext) {
 ### Step A: 搜索相关记忆（两级匹配）
 1. 从任务描述中提取关键技术关键词（如 gRPC、Proto、数据库、JWT、Snowflake 等）
 2. **第一级：triggers 精确匹配（优先）**
-   - 读取 .harness/memory/MEMORY.md 索引，获取所有记忆的 triggers 列表（格式：\`记忆标题, type, severity, keyword1 keyword2...\`）
+   - 读取 .harness/knowledge/memory/MEMORY.md 索引，获取所有记忆的 triggers 列表（格式：\`记忆标题, type, severity, keyword1 keyword2...\`）
    - 用任务关键词精确匹配索引中的 triggers 关键词
    - 命中 triggers 的记忆 → **高置信度**，直接列入候选
 3. **第二级：正文关键词匹配（降权，需人工判断）**
@@ -144,11 +144,11 @@ function qaPrompt() {
 ## 记忆记录
 如果 QA 判定为 FAIL，你必须：
 1. 分析根本原因（不是表面错误信息）
-2. 检查 .harness/memory/MEMORY.md 是否已有相关经验
+2. 检查 .harness/knowledge/memory/MEMORY.md 是否已有相关经验
 3. 如果有 → 更新该记忆文件（增加新的复现场景）
-4. 如果没有 → 创建新的记忆文件到 .harness/memory/<slug>.md
+4. 如果没有 → 创建新的记忆文件到 .harness/knowledge/memory/<slug>.md
 5. 更新 MEMORY.md 索引
-记忆文件格式：参见 .harness/memory/MEMORY.md 中的说明
+记忆文件格式：参见 .harness/knowledge/memory/MEMORY.md 中的说明
 `
 }
 
@@ -181,7 +181,7 @@ function reviewPrompt() {
 
 ### M2: 验证引用准确性
 对每个 \`// SEE: [[memory-slug]]\` 注释：
-- 读取对应的 \`.harness/memory/<slug>.md\` 或 \`${SVC_DIR}/.harness/memory/<slug>.md\`
+- 读取对应的 \`.harness/knowledge/memory/<slug>.md\` 或 \`${SVC_DIR}/.harness/knowledge/memory/<slug>.md\`
 - slug 文件不存在 → 🔴 CRITICAL
 - 代码未遵守记忆指导 → 🔴 CRITICAL
 - 虚假匹配（记忆不适用于此上下文）→ 🟡 WARNING
@@ -213,7 +213,7 @@ function reviewPrompt() {
 ## 记忆记录
 如果 Review 发现 CRITICAL 问题，你必须：
 1. 判断这是否是一个新的规范/踩坑（而非一次性的代码错误）
-2. 如果是新经验 → 创建记忆文件到 .harness/memory/<slug>.md
+2. 如果是新经验 → 创建记忆文件到 .harness/knowledge/memory/<slug>.md
 3. 如果已有相关记忆 → 更新它
 4. 更新 MEMORY.md 索引
 `
