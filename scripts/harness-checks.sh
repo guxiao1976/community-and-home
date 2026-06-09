@@ -16,8 +16,8 @@
 #   1. go build ./...          — compilation
 #   2. go vet ./...            — static analysis
 #   3. go test ./...           — unit tests (with 0/0 false-pass detection)
-#   4. Proto int64 jstype      — every int64 field must have [jstype = JS_STRING]
-#   5. Go json:",string"       — every int64 API field must use json:"...,string"
+#   4. Proto int64 jstype      — every int64 ID field must have [jstype = JS_STRING]
+#   5. Go json:",string"       — every int64 ID field must use json:"...,string"
 #   6. Cross-service DB import — no importing another service's model/ package
 #   7. Error code format       — use errx constants, not magic numbers
 #   8. Hardcoded secrets       — no password/token/secret literals in Go code
@@ -273,7 +273,8 @@ check_proto_jstype() {
       [[ "$line" =~ ^[[:space:]]*// ]] && continue
       [[ "$line" =~ ^[[:space:]]*\* ]] && continue
 
-      if echo "$line" | grep -qP 'int64\s+\w+\s*=' && ! echo "$line" | grep -q 'jstype'; then
+      # Only check ID fields (named 'id' or ending with '_id'), not timestamps/counts
+      if echo "$line" | grep -qP 'int64\s+(\w*_id|id)\s*=' && ! echo "$line" | grep -q 'jstype'; then
         local field
         field=$(echo "$line" | grep -oP 'int64\s+\K\w+')
         local rel="${proto_file#$proto_dir/}"
@@ -333,8 +334,8 @@ check_json_string() {
       [[ $in_struct -eq 1 ]] && echo "$line" | grep -q '^\s*\}' && { in_struct=0; continue; }
       [[ $in_struct -eq 0 ]] && continue
 
-      # Match: field line with int64 and json:"..." tag
-      if echo "$line" | grep -qP 'int64.*json:"' && ! echo "$line" | grep -qP 'json:"[^"]*string'; then
+      # Match: ID fields (ending with 'Id') with int64 and json:"..." tag, missing string option
+      if echo "$line" | grep -qP '\w+Id\s+int64.*json:"' && ! echo "$line" | grep -qP 'json:"[^"]*string'; then
         # Skip path:"" / form:"" / header:"" / db:"" tags (not JSON API fields)
         if echo "$line" | grep -qP '(path|form|header|db):"'; then
           continue
