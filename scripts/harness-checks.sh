@@ -22,6 +22,7 @@
 #   7. Error code format       — use errx constants, not magic numbers
 #   8. Hardcoded secrets       — no password/token/secret literals in Go code
 #   9. Knowledge graph freshness — graph should be synced after latest commit
+#  10. CLAUDE.md structural data — warn if structural data (RPC/routes/DB tables) duplicated in CLAUDE.md
 
 set -euo pipefail
 
@@ -133,7 +134,7 @@ fi
 # ─── Check 1: go build ───────────────────────────────────────────────
 
 check_go_build() {
-  echo "[1/9] go build ./..." >&2
+  echo "[1/10] go build ./..." >&2
   local out err rc
   cd "$TARGET_DIR"
   set +e
@@ -156,7 +157,7 @@ check_go_build() {
 # ─── Check 2: go vet ─────────────────────────────────────────────────
 
 check_go_vet() {
-  echo "[2/9] go vet ./..." >&2
+  echo "[2/10] go vet ./..." >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -179,7 +180,7 @@ check_go_vet() {
 # ─── Check 3: go test (with 0/0 detection) ───────────────────────────
 
 check_go_test() {
-  echo "[3/9] go test ./... (with 0/0 detection)" >&2
+  echo "[3/10] go test ./... (with 0/0 detection)" >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -241,7 +242,7 @@ check_go_test() {
 # ─── Check 4: Proto int64 jstype ─────────────────────────────────────
 
 check_proto_jstype() {
-  echo "[4/9] Proto int64 jstype" >&2
+  echo "[4/10] Proto int64 jstype" >&2
   local proto_dir="$PROJECT_ROOT/api-proto/api"
   local violations=()
 
@@ -297,7 +298,7 @@ check_proto_jstype() {
 # ─── Check 5: Go json:",string" ──────────────────────────────────────
 
 check_json_string() {
-  echo "[5/9] Go json:\",string\"" >&2
+  echo "[5/10] Go json:\",string\"" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -362,7 +363,7 @@ check_json_string() {
 # ─── Check 6: Cross-service DB import ────────────────────────────────
 
 check_cross_service_import() {
-  echo "[6/9] Cross-service DB import" >&2
+  echo "[6/10] Cross-service DB import" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -426,7 +427,7 @@ check_cross_service_import() {
 # ─── Check 7: Error code format ──────────────────────────────────────
 
 check_error_codes() {
-  echo "[7/9] Error code format" >&2
+  echo "[7/10] Error code format" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -468,7 +469,7 @@ check_error_codes() {
 # ─── Check 8: Hardcoded secrets ──────────────────────────────────────
 
 check_hardcoded_secrets() {
-  echo "[8/9] Hardcoded secrets" >&2
+  echo "[8/10] Hardcoded secrets" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -522,11 +523,11 @@ check_hardcoded_secrets() {
 # ─── Check 9: Knowledge graph freshness ───────────────────────────────
 
 check_graph_freshness() {
-  echo "[9/9] Knowledge graph freshness" >&2
+  echo "[9/10] Knowledge graph freshness" >&2
   local stamp_file="$PROJECT_ROOT/.claude/.graph_last_sync"
 
   if [[ ! -f "$stamp_file" ]]; then
-    log_warn "graph_freshness" "graph never synced — run: bash scripts/graph-sync.sh --full"
+    log_fail "graph_freshness" "graph never synced — run: bash scripts/graph-sync.sh --full"
     return
   fi
 
@@ -549,9 +550,86 @@ check_graph_freshness() {
   done
 
   if [[ $latest_commit -gt $stamp ]]; then
-    log_warn "graph_freshness" "graph is stale (last sync: ${age}h ago, latest commit is newer) — run: bash scripts/graph-sync.sh"
+    log_fail "graph_freshness" "graph is stale (last sync: ${age}h ago, latest commit is newer) — run: bash scripts/graph-sync.sh"
   else
     log_pass "graph_freshness" "graph up-to-date (synced ${age}h ago)"
+  fi
+}
+
+# ─── Check 10: CLAUDE.md structural data ──────────────────────────
+
+check_claude_structural_data() {
+  echo "[10/10] CLAUDE.md structural data check" >&2
+  local violations=()
+
+  # Determine which CLAUDE.md files to scan
+  local claude_files=()
+  if [[ -n "$SERVICE_NAME" ]]; then
+    local target="$PROJECT_ROOT/services/$SERVICE_NAME/CLAUDE.md"
+    if [[ -f "$target" ]]; then
+      claude_files+=("$target")
+    fi
+  else
+    for svc_dir in "$PROJECT_ROOT"/services/*/; do
+      local cf="${svc_dir}CLAUDE.md"
+      [[ -f "$cf" ]] && claude_files+=("$cf")
+    done
+  fi
+
+  for cf in "${claude_files[@]}"; do
+    [[ ! -f "$cf" ]] && continue
+    local rel="${cf#$PROJECT_ROOT/}"
+
+    # Check for RPC tables
+    if grep -q '|.*RPC.*|' "$cf" 2>/dev/null; then
+      violations+=("$rel: contains RPC table (should be in graph-context.md)")
+      continue
+    fi
+
+    # Check for REST route tables
+    if grep -qP '^\| (GET|POST|PUT|DELETE|PATCH) ' "$cf" 2>/dev/null; then
+      violations+=("$rel: contains REST route table (should be in graph-context.md)")
+      continue
+    fi
+
+    # Check for database table listing section
+    if grep -q '^## .*数据库表' "$cf" 2>/dev/null; then
+      violations+=("$rel: contains database table listing (should be in graph-context.md)")
+      continue
+    fi
+
+    # Check for model/table file listing section
+    if grep -q '^## .*[Mm]odel.*目录' "$cf" 2>/dev/null; then
+      violations+=("$rel: contains model/table file listing (should be in graph-context.md)")
+      continue
+    fi
+
+    # Check for Go dependency list (## 依赖 section with module bullet items)
+    local in_deps=0
+    while IFS= read -r line; do
+      if echo "$line" | grep -q '^## 依赖'; then
+        in_deps=1
+        continue
+      fi
+      if [[ $in_deps -eq 1 ]] && echo "$line" | grep -q '^## '; then
+        in_deps=0
+        continue
+      fi
+      if [[ $in_deps -eq 1 ]] && echo "$line" | grep -q '^- `github'; then
+        violations+=("$rel: contains Go dependency list (should be in graph-context.md)")
+        in_deps=0
+        continue
+      fi
+    done < "$cf" || true
+  done
+
+  if [[ ${#violations[@]} -eq 0 ]]; then
+    log_pass "claude_structural_data" "no structural data duplication in CLAUDE.md"
+  else
+    local detail
+    detail="$(printf '%s; ' "${violations[@]}" | head -c 2000)"
+    detail="$(json_escape "$detail")"
+    log_warn "claude_structural_data" "${#violations[@]} warnings: $detail"
   fi
 }
 
@@ -574,6 +652,7 @@ main() {
   check_error_codes
   check_hardcoded_secrets
   check_graph_freshness
+  check_claude_structural_data
 
   # Count results
   local pass=0 fail=0 warn=0
@@ -605,7 +684,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness")
+    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data")
     for result in "${RESULTS[@]}"; do
       local status label detail
       status=$(echo "$result" | grep -oP '"status":"\K\w+')
