@@ -158,11 +158,16 @@ OpenSpec 完整流水线的 7 个阶段：
 
 ### 流程摘要维护
 
-每个阶段完成后，更新 `openspec/changes/<change>/summary.md`，记录：
+创建变更时，复制 `.harness/changes/TEMPLATE.md` → `openspec/changes/<change>/summary.md`。
+
+每个阶段完成后立即更新，记录：
 - 执行状态（done / blocked / skipped）
 - 评审轮次和结论
-- CI 测试用例数和通过率
+- 测试数量和覆盖率
 - 例外情况和人工决策
+- 关键决策及原因
+
+summary.md 是整个变更的 **Single Source of Truth**——从 proposal 到 deploy 的完整追溯链，一页纸可读。
 
 ## 5. 沟通原则
 

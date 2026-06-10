@@ -1,54 +1,133 @@
 # 变更索引
 
-> 最后更新：2026-06-09
+> 最后更新：2026-06-10
 >
-> 格式：`| 日期 | 变更 | Plan | Spec | CHANGELOG | Review | 状态 |`
+> 变更模板见 [TEMPLATE.md](TEMPLATE.md) — 每个新需求复制此模板到 `openspec/changes/<name>/summary.md`。
+>
+> 下表每条记录是一个"迷你 summary"，链接到分布在各处的产物。
 
-## 基础设施变更
+## 基础设施变更（Harness 自身建设）
 
-| 日期 | 变更 | 产出 | 状态 |
-|------|------|------|:---:|
-| 2026-06-09 | Harness Pipeline Dry Run | [报告](dry-run-2026-06-09.md) | ✅ 完成 |
-| 2026-06-09 | Memory frontmatter 统一 + type 字段 | `.harness/knowledge/memory/` (7 文件统一) | ✅ 完成 |
-| 2026-06-09 | changes/ 索引目录建立 | [INDEX.md](INDEX.md) + [README.md](README.md) | ✅ 完成 |
+### 🟢 Harness 体系搭建
 
-## 有完整追溯链的变更
+| 属性 | 值 |
+|------|-----|
+| 日期 | 2026-06-09 ~ 2026-06-10 |
+| 状态 | ✅ 已完成 |
+| 摘要 | 四支柱 Harness 体系从零搭建 |
 
-| 日期 | 变更 | Plan | Spec | CHANGELOG | 状态 |
-|------|------|:---:|:---:|:---:|:---:|
-| 2026-06-09 | 系统配置 Redis 化 | [plan](../docs/superpowers/plans/2026-06-09-system-config-redis.md) | [spec](../docs/superpowers/specs/2026-06-09-system-config-redis-design.md) | *(进行中)* | 🟡 进行中 |
-| 2026-06-07 | 我的页面 & 加入小区流程 | [plan](../docs/superpowers/plans/2026-06-07-my-page-and-join-flow.md) | [spec](../docs/superpowers/specs/2026-06-07-my-page-and-join-flow-design.md) | [api-proto](../api-proto/CHANGELOG.md) | ✅ 已完成 |
-| 2026-06-06 | 公告信息页重设计 | [plan](../docs/superpowers/plans/2026-06-06-notice-page-redesign.md) | [spec](../docs/superpowers/specs/2026-06-06-notice-page-redesign.md) | [web/mobile](../web/mobile/CHANGELOG.md) | ✅ 已完成 |
-| 2026-06-06 | 移动端社区功能 | [plan](../docs/superpowers/plans/2026-06-06-mobile-community-feature.md) | — | [web/mobile](../web/mobile/CHANGELOG.md) | ✅ 已完成 |
-| 2026-06-06 | Uni-app 移动端框架 | [plan](../docs/superpowers/plans/2026-06-06-uni-app-mobile-framework.md) | — | [web/mobile](../web/mobile/CHANGELOG.md) | ✅ 已完成 |
-| 2026-06-05 | AI 开发团队建设 | [plan](../docs/superpowers/plans/2026-06-05-ai-dev-team-implementation.md) | — | 多服务（见下） | ✅ 已完成 |
-| 2026-06-05 | 监控模块 | [plan](../docs/superpowers/plans/2026-06-05-monitoring-module.md) | — | [monitoring-service](../services/monitoring-service/CHANGELOG.md) | ✅ 已完成 |
-| 2026-06-02 | 用户服务重构 | [plan](../docs/superpowers/plans/2026-06-02-user-service-refactor.md) | — | [user-service](../services/user-service/CHANGELOG.md) | ✅ 已完成 |
+**产物索引**:
+| 类型 | 路径 |
+|------|------|
+| 规则体系 | `.harness/rules/工程结构.md`, `Proto管理规范.md`, `项目编码规范.md` |
+| 技能体系 | `.harness/skills/` (9 个 Skill) |
+| 经验记忆 | `.harness/knowledge/memory/` (7 条统一格式) |
+| 变更追溯 | `.harness/changes/INDEX.md` |
+| 编排流水线 | `.harness/workflows/harness-pipeline.js` |
+| Owner Agent | `.harness/agents/owner-agent.md` |
+| Dry Run | [dry-run-2026-06-09.md](dry-run-2026-06-09.md) |
+| 架构审计 | [`.ralph/docs/generated/review-findings.md`](../.ralph/docs/generated/review-findings.md) |
 
-## 仅有 CHANGELOG 的变更（缺 Plan/Spec）
+---
 
-这些变更是 Harness 体系建立前或快速修复产生的，缺少需求分析和设计阶段文档。
+## 业务需求变更
 
-| 日期 | 变更 | CHANGELOG | 服务 | 备注 |
-|------|------|-----------|------|------|
-| 2026-06-06 | community-hub-service 初始化 | [CHANGELOG](../services/community-hub-service/CHANGELOG.md) | community-hub-service | 新服务创建 |
-| 2026-06-04 | C1/C2 架构债务修复（HTTP→gRPC） | [CHANGELOG](../services/moderation-service/CHANGELOG.md) | moderation-service | gRPC 合规改造 |
-| 2026-06-04 | C8 SMS 验证码绕过修复 | [CHANGELOG](../services/auth-service/CHANGELOG.md) | auth-service | 安全修复 |
-| 2026-06-04 | W8 conf.MustLoad → configx.MustLoad | [CHANGELOG](../services/permission-service/CHANGELOG.md) | 多服务 | 全局公约迁移 |
-| 2026-06-04 | 错误码 6位→5位统一 | [common](../common/CHANGELOG.md) / [user-service](../services/user-service/CHANGELOG.md) | common, user-service | Breaking change |
+### 🟡 系统配置 Redis 化
 
-## 全局架构变更（Proto / Common）
+| 属性 | 值 |
+|------|-----|
+| 日期 | 2026-06-09 |
+| 状态 | 🟡 进行中 |
+| 范围 | 全局（sysconfig fallback 机制） |
 
-| 日期 | 变更 | CHANGELOG | 影响范围 |
-|------|------|-----------|---------|
-| 2026-06-07 | JoinCommunityRequest 增加地址字段 | [api-proto](../api-proto/CHANGELOG.md) | user-service, web/mobile |
-| 2026-06-04 | 错误码 v2.1.0（6位→5位） | [common](../common/CHANGELOG.md) | 所有服务 |
+**产物索引**:
+| 类型 | 路径 |
+|------|------|
+| Plan | `docs/superpowers/plans/2026-06-09-system-config-redis.md` |
+| Spec | `docs/superpowers/specs/2026-06-09-system-config-redis-design.md` |
+| CHANGELOG | *(进行中)* |
+| QA | — |
+| Review | — |
 
-## 状态说明
+### ✅ 我的页面 & 加入小区流程
+
+| 属性 | 值 |
+|------|-----|
+| 日期 | 2026-06-07 |
+| 状态 | ✅ 已完成 |
+| 范围 | user-service, api-proto, web/mobile |
+
+**产物索引**:
+| 类型 | 路径 |
+|------|------|
+| Plan | `docs/superpowers/plans/2026-06-07-my-page-and-join-flow.md` |
+| Spec | `docs/superpowers/specs/2026-06-07-my-page-and-join-flow-design.md` |
+| Proto CHANGELOG | `api-proto/CHANGELOG.md`（JoinCommunityRequest 增加地址字段） |
+| QA | — |
+| Review | — |
+
+### ✅ 公告页重设计
+
+| 属性 | 值 |
+|------|-----|
+| 日期 | 2026-06-06 |
+| 状态 | ✅ 已完成 |
+| 范围 | web/mobile |
+
+**产物索引**:
+| 类型 | 路径 |
+|------|------|
+| Plan | `docs/superpowers/plans/2026-06-06-notice-page-redesign.md` |
+| Spec | `docs/superpowers/specs/2026-06-06-notice-page-redesign.md` |
+| 前端 CHANGELOG | `web/mobile/CHANGELOG.md` |
+
+### ✅ 移动端社区功能 + Uni-app 框架
+
+| 属性 | 值 |
+|------|-----|
+| 日期 | 2026-06-06 |
+| 状态 | ✅ 已完成 |
+| 范围 | web/mobile |
+
+**产物索引**:
+| 类型 | 路径 |
+|------|------|
+| Plan | `docs/superpowers/plans/2026-06-06-mobile-community-feature.md` |
+| Plan | `docs/superpowers/plans/2026-06-06-uni-app-mobile-framework.md` |
+| 前端 CHANGELOG | `web/mobile/CHANGELOG.md`（SMS 登录 + RSA 加密） |
+
+### ✅ AI 开发团队实施
+
+| 属性 | 值 |
+|------|-----|
+| 日期 | 2026-06-05 |
+| 状态 | ✅ 已完成 |
+| 范围 | 全局基础设施 |
+
+**产物索引**:
+| 类型 | 路径 |
+|------|------|
+| Plan | `docs/superpowers/plans/2026-06-05-ai-dev-team-implementation.md` |
+| 设计文档 | `docs/specs/ai-dev-team-design.md` |
+| 多服务 CHANGELOG | W8 conf.MustLoad 迁移（全服务） |
+
+---
+
+## 快速修复（无完整 OpenSpec）
+
+| 日期 | 变更 | 服务 | 备注 |
+|------|------|------|------|
+| 2026-06-06 | community-hub-service 初始化 | community-hub-service | 新服务（通知/联络/寻失） |
+| 2026-06-04 | C1/C2 架构债务修复 | moderation-service | HTTP→gRPC, 直读DB→gRPC |
+| 2026-06-04 | C8 SMS 验证码绕过修复 | auth-service | 安全修复 |
+| 2026-06-04 | W8 conf.MustLoad 迁移 | 多服务 | 全局公约对齐 |
+| 2026-06-04 | common v2.1.0 错误码 6→5位 | common, user-service | Breaking change |
+
+## 状态图例
 
 | 标记 | 含义 |
 |:---:|------|
 | 🟡 进行中 | 有 plan/spec，尚未全部完成 |
-| ✅ 已完成 | CHANGELOG 已记录，功能已交付 |
+| ✅ 已完成 | 已交付，CHANGELOG 已记录 |
 | ⚠️ 缺 Review | 已完成但无评审记录 |
-| ❌ 已废弃 | 计划取消或方案变更 |
+| ❌ 已废弃 | 方案取消或变更 |
