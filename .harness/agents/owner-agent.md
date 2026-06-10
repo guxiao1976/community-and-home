@@ -107,8 +107,26 @@ OpenSpec 完整流水线的 7 个阶段：
 | 2 | **需求评审** | 阶段 1 完成 | `.harness/skills/review.md`（计划评审模式） | `review/spec_review_v1.md` + `review/tasks_review_v1.md` | APPROVED → 进入阶段 3 | REVISION → 回阶段 1，最多 3 轮 |
 | 3 | **架构设计** | 需求评审通过 | `.harness/skills/architect-design.md` | `design.md` + `tasks.md` | Proto 变更归我、任务粒度 1-4h、按服务分组 | 设计不合理 → 回阶段 1 |
 | 4 | **Proto 变更** | design 含 Proto 变更 | （我自己执行） | `api-proto/` 修改 + `make generate` + `make ci` | lint + breaking-check 全通过 | 失败 → 修复后重试 |
-| 5 | **编码实现** | 设计确认 | `.harness/skills/dispatch.md` / `.harness/workflows/harness-pipeline.js` | 代码 + CHANGELOG + `_qa.md` + `_review.md`（版本递增 v1/v2） | 每服务 QA PASS + Review PASS | QA/Review FAIL → 回编码，最多 2 轮 |
-| 6 | **集成验证 + 归档** | 编码全部通过 | — | 更新 `.harness/changes/INDEX.md` + `summary.md` 终稿 | 全链路 build+test 通过，CHANGELOG 完整 | 失败 → 回阶段 5 修复 |
+| 5 | **编码 + 测试** | 设计确认 | `.harness/skills/dispatch.md` / `.harness/workflows/harness-pipeline.js` | 代码 + 测试 + CHANGELOG + `_qa.md` + `_review.md`（版本递增 v1/v2） | 每服务 QA PASS（含测试覆盖率）+ Review PASS | 见下方失败路由表，最多 2 轮 |
+| 6 | **集成验证 + 归档** | 编码全部通过 | — | 更新 `.harness/changes/INDEX.md` + `summary.md` 终稿 | 全链路 build+test 通过，CHANGELOG 完整 | 见下方路由表 |
+
+阶段 5 内部分两步：编码实现 → QA（含单元测试），QA 通过后才进入 Review。测试不单独成阶段但作为 QA 的硬门禁。
+
+### 失败路由表（精确回退）
+
+避免"出了问题从头来"，按失败类型路由到正确的阶段：
+
+| 失败类型 | 回退目标 | 说明 |
+|---------|---------|------|
+| 需求理解偏差 / 功能不符合 spec | 阶段 1（需求分析） | 重新澄清需求 |
+| 设计决策错误（归属错服务/模型不合理） | 阶段 3（架构设计） | 修正设计 |
+| 编译失败（go build） | 阶段 5 编码步骤 | 修复编译错误 |
+| 测试 0/0（有包无测试函数） | 阶段 5 测试步骤 | 只为新增代码补测试 |
+| 测试失败（go test） | 阶段 5 编码步骤 | 修复代码或测试 |
+| 规范违反（proto jstype/json string/跨服务导入） | 阶段 5 编码步骤 | 按 QA 报告逐项修复 |
+| Review CRITICAL（架构/安全/记忆遗漏） | 阶段 5 编码步骤 | 修复后重新 QA+Review |
+| CI lint / breaking-check 失败 | 阶段 4（Proto 变更） | 修复 Proto 定义 |
+| 集成验证失败（跨服务联调） | 阶段 5 编码步骤 | 修复集成问题 |
 
 ### Human-in-the-Loop 确认点（5 个）
 
