@@ -17,7 +17,20 @@
 
 收到任何需求后，按阶段加载对应资源，**不需要全局扫描**。
 
-### 规则（任何时候都适用）
+上下文按三层加载，让 Agent 在任何时刻拥有"刚好够用"的上下文（Just-enough Context），避免信息过载：
+
+```
+L1 会话常驻 (~370行)  ← CLAUDE.md(94) + owner-agent(152) + 项目编码规范(123)
+    始终在线，提供全局视野和基本约束，总量控制在 Anthropic 建议的 40% 填充率以下
+
+L2 阶段触发           ← §4 阶段表每行指定加载哪个 Skill
+    进入该阶段才加载，不提前。如：阶段1加载 requirement-analysis，阶段5加载 qa+review
+
+L3 按需查询           ← knowledge/INDEX.md → design.md / graph-context.md / business-flows.md
+    Agent 根据任务关键词自主查阅，不会主动塞进上下文窗口
+```
+
+### 规则（L1 — 始终在线）
 
 | 文件 | 何时读 | 更新频率 |
 |------|--------|:---:|
@@ -25,7 +38,7 @@
 | `.harness/rules/Proto管理规范.md` | 涉及 Proto 变更时 | 很少变 |
 | `.harness/rules/工程结构.md` | 涉及架构决策时 | 很少变 |
 
-### 技能（按阶段加载）
+### 技能（L2 — 阶段触发）
 
 | 阶段 | Skill | 做什么 | 更新频率 |
 |------|-------|--------|:---:|
@@ -37,7 +50,7 @@
 | QA 后 | `.harness/skills/review.md` | 9 维度代码审查 | 稳定 |
 | OpenSpec→Ralph | `.harness/skills/openspec-to-ralph.md` | 任务导出为 Ralph fix_plan | 稳定 |
 
-### 知识（按需查询）
+### 知识（L3 — 按需查询）
 
 | 目录 | 何时查 | 更新频率 |
 |------|--------|:---:|
