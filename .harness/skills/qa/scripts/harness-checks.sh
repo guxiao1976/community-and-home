@@ -3,7 +3,7 @@
 # harness-checks.sh — Mechanized QA checks for the Community-Home Harness pipeline.
 #
 # Usage:
-#   ./.harness/scripts/harness-checks.sh [--service <service-name>] [--json]
+#   ./.harness/skills/qa/scripts/harness-checks.sh [--service <service-name>] [--json]
 #
 # Options:
 #   --service <name>   Scope checks to a single service directory under services/
@@ -32,7 +32,7 @@ set -eu
 
 # ─── Config ───────────────────────────────────────────────────────────
 
-PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 SERVICE_NAME=""
 OUTPUT_JSON=false
 FULL_SCAN=false
@@ -641,7 +641,7 @@ check_claude_structural_data() {
 
 check_proto_ts_align() {
   echo "[11/11] Proto→TypeScript alignment" >&2
-  local check_script="$PROJECT_ROOT/.harness/scripts/check-proto-ts-align.sh"
+  local check_script="$PROJECT_ROOT/.harness/skills/qa/scripts/check-proto-ts-align.sh"
 
   if [[ ! -f "$check_script" ]]; then
     log_pass "proto_ts_align" "check script not found (skipped)"

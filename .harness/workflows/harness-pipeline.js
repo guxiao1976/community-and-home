@@ -109,7 +109,7 @@ function qaPrompt() {
 ## 验证步骤
 1. 阅读 ${SVC_DIR}/CLAUDE.md — 服务规则
 2. 阅读 ${SVC_DIR}/CHANGELOG.md — 变更历史
-3. **运行机械化检查**: \`bash .harness/scripts/harness-checks.sh --service ${args.serviceName} --json\`
+3. **运行机械化检查**: \`bash .harness/skills/qa/scripts/harness-checks.sh --service ${args.serviceName} --json\`
    - 解析 JSON 输出，将各项检查结果整合到 QA 报告的「机械化检查结果」章节
    - FAIL 项在报告中标注具体违规（文件名:行号:字段名）
    - WARN 项作为 WARNING 级别记录
@@ -138,7 +138,7 @@ function qaPrompt() {
 \`\`\`
 
 ## 约束
-- 只读权限：Read、Grep、Glob、Bash（go build、go vet、go test、bash .harness/scripts/harness-checks.sh）
+- 只读权限：Read、Grep、Glob、Bash（go build、go vet、go test、bash .harness/skills/qa/scripts/harness-checks.sh）
 - 严禁 Write、Edit
 
 ## 记忆记录

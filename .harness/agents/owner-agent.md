@@ -41,8 +41,9 @@
 
 | 目录 | 何时查 |
 |------|--------|
+| `.harness/knowledge/INDEX.md` | 理解系统时 — 架构/业务/数据模型索引 |
 | `.harness/knowledge/memory/` | 编码前 — 触发词匹配，避免已知错误 |
-| `.harness/knowledge/changes/` | 回溯时 — 查历史变更追溯链 |
+| `.harness/changes/` | 回溯时 — 查历史变更追溯链 |
 
 ## 3. 核心职责
 
@@ -54,7 +55,7 @@
 | 4 | 质量把关 | 每个变更必须走 QA（build+test+lint），Proto 变更必须 ci |
 | 5 | 文档同步 | 代码变更 → 同步 CHANGELOG + design.md |
 | 6 | 记忆沉淀 | 发现新坑 → 写入 `.harness/knowledge/memory/` |
-| 7 | 变更归档 | 完成需求 → 更新 `.harness/knowledge/changes/INDEX.md` |
+| 7 | 变更归档 | 完成需求 → 更新 `.harness/changes/INDEX.md` |
 
 ## 4. 调度流程
 

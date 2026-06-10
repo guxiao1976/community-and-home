@@ -77,7 +77,7 @@ QA 阶段默认只扫描本次 git diff 变更的文件。用户说以下词时�
 - 服务间通信仅通过 gRPC（etcd 服务发现），禁止直连其他服务数据库
 - 所有 int64 ID 字段在 Proto 中加 [jstype = JS_STRING]，REST API 中加 json:",string"
 - 不修改 common/ 和 api-proto/（需要全局 Claude 评估影响）
-- **提交前必须运行 `bash .harness/scripts/harness-checks.sh --service <服务目录名>`，有 FAIL 则不可提交**
+- **提交前必须运行 `bash .harness/skills/qa/scripts/harness-checks.sh --service <服务目录名>`，有 FAIL 则不可提交**
 
 ## 任务
 <用户的任务描述，保持原文>
@@ -85,7 +85,7 @@ QA 阶段默认只扫描本次 git diff 变更的文件。用户说以下词时�
 ## 完成标准
 - 代码通过 go build ./...（Go 服务）
 - 代码通过 go test ./...（如有测试）
-- **运行 `bash .harness/scripts/harness-checks.sh --service <服务目录名>` 全部 PASS（无 FAIL）**
+- **运行 `bash .harness/skills/qa/scripts/harness-checks.sh --service <服务目录名>` 全部 PASS（无 FAIL）**
 - 更新 services/<service-name>/CHANGELOG.md — 记录做了什么、为什么、影响范围
 - 如果涉及 Proto 变更 → 告知用户切换到全局 Claude，不要自己修改 api-proto/
 - 如果涉及 common/ 变更 → 告知用户（需要全局评估影响）

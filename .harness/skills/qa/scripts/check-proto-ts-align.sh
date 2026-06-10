@@ -2,7 +2,7 @@
 # check-proto-ts-align.sh — Verify proto message fields have matching TS interface fields
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 PROTO_DIR="$PROJECT_ROOT/api-proto/api"
 TS_DIR="$PROJECT_ROOT/web/common/types"
 

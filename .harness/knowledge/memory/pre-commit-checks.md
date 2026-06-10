@@ -20,7 +20,7 @@ apply_count: 0
 
 1. 任何 `services/<name>/` 下的 Go 代码变更，提交前必须运行：
    ```bash
-   bash .harness/scripts/harness-checks.sh --service <name>
+   bash .harness/skills/qa/scripts/harness-checks.sh --service <name>
    ```
 2. 8 项检查全部 PASS 或仅有已知 WARN → 可以提交
 3. 有任何 FAIL → **不能提交**，必须先修复
@@ -30,7 +30,7 @@ apply_count: 0
 
 ```bash
 # 单服务检查
-bash .harness/scripts/harness-checks.sh --service user-service
+bash .harness/skills/qa/scripts/harness-checks.sh --service user-service
 
 # 检查退出码（非 0 表示有 FAIL）
 echo $?   # 0 = 全部通过，可提交

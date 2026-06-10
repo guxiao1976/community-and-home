@@ -70,7 +70,7 @@ api-proto/api/
 - **服务间通信仅通过 gRPC**：调用其他服务必须走 gRPC（etcd 服务发现），禁止直连数据库
 - **设计文档在 docs/design.md**：数据库、业务流程、接口设计见 [docs/design.md](docs/design.md)
 - **变更记录在 CHANGELOG.md**：每次变更必须更新 [CHANGELOG.md](CHANGELOG.md)
-- **提交前运行机械化检查**：代码变更提交前必须运行 `bash .harness/scripts/harness-checks.sh --service <服务目录名>`，有 FAIL 则不可提交
+- **提交前运行机械化检查**：代码变更提交前必须运行 `bash .harness/skills/qa/scripts/harness-checks.sh --service <服务目录名>`，有 FAIL 则不可提交
 ```
 
 ## 5. 相关记忆

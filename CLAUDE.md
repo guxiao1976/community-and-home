@@ -22,8 +22,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 工程结构 / 服务分层 / 中间件 | [`.harness/rules/工程结构.md`](.harness/rules/工程结构.md) |
 | Proto 管理规则 / 变更流程 | [`.harness/rules/Proto管理规范.md`](.harness/rules/Proto管理规范.md) |
 | 编码规范 / 硬性约束 / 提交前检查 | [`.harness/rules/项目编码规范.md`](.harness/rules/项目编码规范.md) |
+| 项目知识（架构/业务/数据） | [`.harness/knowledge/INDEX.md`](.harness/knowledge/INDEX.md) |
 | 踩过的坑 / 经验记忆 | [`.harness/knowledge/memory/MEMORY.md`](.harness/knowledge/memory/MEMORY.md) |
-| 历史变更追溯 | [`.harness/knowledge/changes/INDEX.md`](.harness/knowledge/changes/INDEX.md) |
+| 历史变更追溯 | [`.harness/changes/INDEX.md`](.harness/changes/INDEX.md) |
 | AI 团队工作流程 / 工具选择 | [`docs/specs/ai-dev-team-design.md`](docs/specs/ai-dev-team-design.md) |
 | 执行日志 / 流程遵守 | [`docs/specs/execution-log.md`](docs/specs/execution-log.md) |
 
@@ -59,7 +60,7 @@ bash .harness/scripts/graph-query.sh <service-name>   # 查询图谱
 | 1 | Proto 定义统一在 `api-proto/`，服务间通信仅 gRPC | [Proto管理规范](.harness/rules/Proto管理规范.md) |
 | 2 | Proto 变更仅全局 Claude 执行，子 Claude 禁止修改 api-proto/ | [Proto管理规范](.harness/rules/Proto管理规范.md) |
 | 3 | Snowflake ID → Proto `[jstype=JS_STRING]` + Go `json:",string"` + TS `string` | [项目编码规范 §5](.harness/rules/项目编码规范.md) |
-| 4 | 提交前必须 `bash .harness/scripts/harness-checks.sh --service <name>`，FAIL 不可提交 | [项目编码规范 §6](.harness/rules/项目编码规范.md) |
+| 4 | 提交前必须 `bash .harness/skills/qa/scripts/harness-checks.sh --service <name>`，FAIL 不可提交 | [项目编码规范 §6](.harness/rules/项目编码规范.md) |
 | 5 | 密钥在 `.env`，服务入口用 `configx.MustLoad` | [项目编码规范 §7](.harness/rules/项目编码规范.md) |
 | 6 | 修改 `common/` 需全局评估影响 | [项目编码规范 §3](.harness/rules/项目编码规范.md) |
 
@@ -85,7 +86,7 @@ cd api-proto && make ci          # lint + breaking-check + generate
 ```bash
 cd services/<name> && go build ./...
 cd services/<name> && go test ./...
-bash .harness/scripts/harness-checks.sh --service <name>   # 11 项机械化检查
+bash .harness/skills/qa/scripts/harness-checks.sh --service <name>   # 11 项机械化检查
 ```
 
 ### 前端
