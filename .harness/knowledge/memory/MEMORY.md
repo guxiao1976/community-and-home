@@ -17,6 +17,7 @@
 ## 应该遵守 (should-follow)
 
 - [前端可视化开发流程](frontend-visual-development-workflow.md) — web/mobile, should-follow, `process`, `UI 页面 设计 样式 视觉`
+- [Harness 架构决策记录](harness-architecture-decisions.md) — all, should-follow, `decision`, `harness .harness 驾驭工程 目录结构 架构决策 四支柱`
 
 ## 参考信息 (info)
 

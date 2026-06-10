@@ -19,14 +19,17 @@
 **产物索引**:
 | 类型 | 路径 |
 |------|------|
-| 规则体系 | `.harness/rules/工程结构.md`, `Proto管理规范.md`, `项目编码规范.md` |
-| 技能体系 | `.harness/skills/` (9 个 Skill) |
-| 经验记忆 | `.harness/knowledge/memory/` (7 条统一格式) |
-| 变更追溯 | `.harness/changes/INDEX.md` |
+| Owner Agent | `.harness/agents/owner-agent.md` (~165 行，五模块对齐) |
+| 规则体系 | `.harness/rules/` (工程结构, Proto管理, 项目编码) |
+| 技能体系 | `.harness/skills/` (9 个 Skill + qa/ 目录含脚本) |
+| 经验记忆 | `.harness/knowledge/memory/` (8 条，统一 frontmatter + type 分类) |
+| 业务知识 | `.harness/knowledge/business-flows.md` (7 条端到端流程) |
+| 知识索引 | `.harness/knowledge/INDEX.md` (架构/业务/数据/图谱) |
+| 变更追溯 | `.harness/changes/INDEX.md` + `TEMPLATE.md` |
 | 编排流水线 | `.harness/workflows/harness-pipeline.js` |
-| Owner Agent | `.harness/agents/owner-agent.md` |
+| 服务映射 | 6 服务 CLAUDE.md 统一引用 `.harness/` |
+| 决策记录 | `.harness/knowledge/memory/harness-architecture-decisions.md` |
 | Dry Run | [dry-run-2026-06-09.md](dry-run-2026-06-09.md) |
-| 架构审计 | [`.ralph/docs/generated/review-findings.md`](../.ralph/docs/generated/review-findings.md) |
 
 ---
 
