@@ -38,6 +38,10 @@
 | `docs/specs/monitoring-module-design.md` | 监控模块 |
 | `docs/specs/notify.md` | 通知系统 |
 
+### 业务流程
+
+见 [`.harness/knowledge/business-flows.md`](business-flows.md) — 7 条端到端业务流程（用户入驻、Token 生命周期、内容审核、审批工作流、RBAC、文件上下传、社区枢纽），含状态机和已知空白。
+
 ### 数据模型
 
 各服务 `docs/design.md` 中包含完整的 DDL 和 ER 关系。`services/*/docs/graph-context.md`（Neo4j 自动生成）包含数据表结构和实体血缘。
