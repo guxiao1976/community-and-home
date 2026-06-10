@@ -41,9 +41,12 @@
 
 | 目录 | 何时查 |
 |------|--------|
-| `.harness/knowledge/INDEX.md` | 理解系统时 — 架构/业务/数据模型索引 |
+| `.harness/knowledge/INDEX.md` | 理解系统时 — 架构/业务/数据模型 + 知识图谱 |
+| `services/<name>/docs/graph-context.md` | 编码前 — Neo4j 自动生成的服务上下文（依赖/路由/表/血缘） |
 | `.harness/knowledge/memory/` | 编码前 — 触发词匹配，避免已知错误 |
 | `.harness/changes/` | 回溯时 — 查历史变更追溯链 |
+
+> 图谱过期时运行 `bash .harness/scripts/graph-sync.sh`。QA 检查第 9 项会自动检测新鲜度。
 
 ## 3. 核心职责
 

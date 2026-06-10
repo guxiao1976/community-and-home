@@ -46,9 +46,22 @@
 
 见本目录下 `memory/MEMORY.md` — 踩过的坑和编码约束。
 
+## 知识图谱
+
+各服务的 `docs/graph-context.md` 由 **Neo4j 知识图谱自动生成**，包含服务依赖、REST 路由、gRPC 接口、数据库表、前端消费方、实体血缘（Proto→Go→DB）。每次 `graph-sync.sh` 后自动刷新，请勿手动编辑。
+
+| 脚本 | 作用 | 位置 |
+|------|------|------|
+| `graph-sync.sh` | 同步项目源码到 Neo4j，生成所有 graph-context.md | `.harness/scripts/` |
+| `graph-query.sh` | 按需查询单个服务的知识图谱 | `.harness/scripts/` |
+| `graph-populator/` | Go 源码解析器（Proto/Go/TypeScript） | `.harness/scripts/graph-populator/` |
+
+QA 机械化检查第 9 项会验证图谱新鲜度（`graph_freshness`），确保 graph-context.md 与代码同步。
+
 ## 使用方式
 
-- **编码前**: 读目标服务的 `design.md` + `graph-context.md`
+- **编码前**: 读目标服务的 `design.md` + `graph-context.md`（图谱自动生成）
 - **架构决策前**: 读 `rules/工程结构.md` + `docs/specs/architecture-audit.md`
 - **理解业务前**: 读对应领域的 `docs/specs/` 设计文档
 - **避免踩坑**: 读 `memory/MEMORY.md`，按触发词匹配
+- **图谱过期**: 运行 `bash .harness/scripts/graph-sync.sh`
