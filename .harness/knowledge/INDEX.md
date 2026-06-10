@@ -27,6 +27,12 @@
 | `docs/specs/ai-dev-team-design.md` | AI 五层架构、完整流水线设计 |
 | `docs/specs/architecture-audit.md` | 90+ 发现的全量架构审查报告 |
 
+### Harness 方法论
+
+| 文档 | 说明 |
+|------|------|
+| `docs/specs/harness-construction-guide.md` | Harness 构建说明书——可复用到其他项目的通用方法论 |
+
 ### 业务知识
 
 | 文档 | 领域 |
