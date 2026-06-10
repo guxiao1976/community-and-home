@@ -13,6 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **本实例不负责单个服务的具体实现**。当需要开发具体功能时，切换到对应服务的子 Claude 实例。
 
+**启动后首先阅读** [`.harness/agents/owner-agent.md`](.harness/agents/owner-agent.md) — 它告诉你收到需求后的完整调度流程、何时加载哪个 Skill、各阶段的门禁条件。
+
 ## 快速索引
 
 | 我需要了解... | 去这里 |
