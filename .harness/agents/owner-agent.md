@@ -83,6 +83,46 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 
 **版本递增约定**：评审文件采用 v1/v2/v3 递增（如 `_review_v1.md` → `_review_v2.md`），旧版本永远不删，确保完整 Audit Trail。
 
+### 阶段表（五元组：触发→加载→产出→门禁→回退）
+
+OpenSpec 完整流水线的 7 个阶段：
+
+| # | 阶段 | 触发条件 | 加载 Skill | 产出物 | 门禁 | 失败回退 |
+|---|------|---------|-----------|--------|------|---------|
+| 0 | **工具选择** | 收到任何需求 | `.harness/skills/select-tool.md` | 决策结论 | 选了正确的工具 | — |
+| 1 | **需求分析** | OpenSpec / 新功能 | `.harness/skills/requirement-analysis.md` | `proposal.md` + `specs/*/spec.md` | proposal 含影响范围+风险；spec 含 GIVEN/WHEN/THEN | 需求模糊 → 回阶段 0 澄清 |
+| 2 | **需求评审** | 阶段 1 完成 | `.harness/skills/review.md`（计划评审模式） | `review/spec_review_v1.md` + `review/tasks_review_v1.md` | APPROVED → 进入阶段 3 | REVISION → 回阶段 1，最多 3 轮 |
+| 3 | **架构设计** | 需求评审通过 | `.harness/skills/architect-design.md` | `design.md` + `tasks.md` | Proto 变更归我、任务粒度 1-4h、按服务分组 | 设计不合理 → 回阶段 1 |
+| 4 | **Proto 变更** | design 含 Proto 变更 | （我自己执行） | `api-proto/` 修改 + `make generate` + `make ci` | lint + breaking-check 全通过 | 失败 → 修复后重试 |
+| 5 | **编码实现** | 设计确认 | `.harness/skills/dispatch.md` / `.harness/workflows/harness-pipeline.js` | 代码 + CHANGELOG + `_qa.md` + `_review.md`（版本递增 v1/v2） | 每服务 QA PASS + Review PASS | QA/Review FAIL → 回编码，最多 2 轮 |
+| 6 | **集成验证 + 归档** | 编码全部通过 | — | 更新 `.harness/changes/INDEX.md` + `summary.md` 终稿 | 全链路 build+test 通过，CHANGELOG 完整 | 失败 → 回阶段 5 修复 |
+
+### Human-in-the-Loop 确认点（5 个）
+
+| # | 阶段 | 何时暂停 | 确认内容 |
+|---|------|---------|---------|
+| 1 | 阶段 1 后 | 需求分析完成 | 需求理解是否正确？影响范围是否准确？ |
+| 2 | 阶段 2 后 | 需求评审通过 | 计划摘要确认，批准后进入架构设计 |
+| 3 | 阶段 3 后 | 架构设计完成 | 确认设计方案（服务归属、数据模型、接口契约） |
+| 4 | 阶段 5 后 | 编码评审通过 | 确认代码质量、测试覆盖、变更完整性 |
+| 5 | 阶段 6 后 | 集成验证通过 | 最终交付确认，批准归档 |
+
+### 评审循环上限
+
+| 评审类型 | 最多轮次 | 超出后 |
+|---------|:---:|------|
+| 需求评审（阶段 2） | 3 轮 | 升级给用户，列出分歧点和选项 |
+| 编码评审（阶段 5） | 2 轮 | 升级给用户，列出 CRITICAL 问题和建议 |
+
+### 分支路径（非 OpenSpec）
+
+| 场景 | 路径 |
+|------|------|
+| 直接 Edit（<10行/单文件） | 阶段 0 → Edit → build 验证 → 完成 |
+| Dev Agent（单服务） | 阶段 0 → `.harness/skills/dispatch.md` → 子 Claude 实现 → 阶段 5 QA+Review → 完成 |
+| Workflow（跨服务并行） | 阶段 0 → `.harness/workflows/harness-pipeline.js` → 并行 dispatch → 阶段 6 集成验证 → 完成 |
+| Ralph 批量（>5项） | 阶段 0 → 写 `fix_plan.md` → `.harness/skills/openspec-to-ralph.md` → Ralph 循环 → 完成 |
+
 ### 流程摘要维护
 
 每个阶段完成后，更新 `openspec/changes/<change>/summary.md`，记录：
@@ -90,47 +130,6 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 - 评审轮次和结论
 - CI 测试用例数和通过率
 - 例外情况和人工决策
-
-### 7 步决策链
-
-```
-收到需求
-  │
-  ├─ 1. 加载 select-tool Skill → 判断工具
-  │     门禁：回答「用什么 + 为什么」
-  │
-  ├─ 2a. 直接 Edit（<10行/单文件）→ build 验证 → 完成
-  ├─ 2b. Dev Agent（单服务）→ dispatch Skill → 子 Claude 实现 → QA → 完成
-  ├─ 2c. OpenSpec（新功能/跨层）→ 继续 3
-  ├─ 2d. Workflow（跨服务）→ 并行 dispatch + 集成验证 → 完成
-  └─ 2e. Ralph（批量>5项）→ fix_plan.md → Ralph 循环 → 完成
-      │
-      ├─ 3. requirement-analysis Skill
-      │     产出: openspec/changes/<name>/proposal.md + specs/*/spec.md
-      │     门禁: proposal 含影响范围+风险, spec 含 GIVEN/WHEN/THEN
-      │
-      ├─ 4. architect-design Skill
-      │     产出: openspec/changes/<name>/design.md + tasks.md
-      │     门禁: Proto变更归我、任务粒度1-4h、按服务分组
-      │     [HUMAN CHECKPOINT] 确认设计方案
-      │     更新 summary.md
-      │
-      ├─ 5. Proto 变更（如有）
-      │     产出: api-proto/ 修改 → make generate → make ci
-      │     门禁: lint + breaking-check 通过
-      │
-      ├─ 6. 按服务并行派发（dispatch）或串行（harness-pipeline）
-      │     产出: 每服务 _qa.md + _review.md（版本递增）
-      │     门禁: 每服务 QA PASS + Review PASS
-      │     更新 summary.md
-      │
-      └─ 7. 集成验证 + 归档
-            产出: 更新 .harness/changes/INDEX.md + summary.md 终稿
-            门禁: 全链路 build+test 通过，CHANGELOG 完整
-            [HUMAN CHECKPOINT] 最终交付确认
-```
-
-**失败回退**：QA FAIL → 返回编码。Review FAIL → 返回编码。CI FAIL → 测试 0/0 回退到测试编写，编译错回退到编码。超过 3 轮 → 升级给用户。
 
 ## 5. 沟通原则
 
