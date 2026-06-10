@@ -44,10 +44,12 @@ L3 按需查询           ← knowledge/INDEX.md → design.md / graph-context.m
 |------|-------|--------|:---:|
 | 入口 | `.harness/skills/select-tool.md` | 判断需求用哪种工具 | 稳定 |
 | 需求分析 | `.harness/skills/requirement-analysis.md` | 模糊需求 → proposal + specs | 稳定 |
+| 需求评审 | `.harness/skills/review.md`（计划评审模式） | 审查 spec + tasks 合理性 | 稳定 |
 | 架构设计 | `.harness/skills/architect-design.md` | specs → design + tasks | 稳定 |
 | 派发 | `.harness/skills/dispatch.md` | 单服务任务派发给子 Claude | 稳定 |
+| 编码 | `.harness/skills/unit-test-write.md` | 改动驱动测试（table-driven） | 稳定 |
 | 编码后 | `.harness/skills/qa.md` | 机械化检查（编译/测试/规范） | 稳定 |
-| QA 后 | `.harness/skills/review.md` | 9 维度代码审查 | 稳定 |
+| QA 后 | `.harness/skills/review.md`（执行评审模式） | 9 维度代码审查 + 记忆遵守 | 稳定 |
 | OpenSpec→Ralph | `.harness/skills/openspec-to-ralph.md` | 任务导出为 Ralph fix_plan | 稳定 |
 
 ### 知识（L3 — 按需查询）
@@ -107,7 +109,7 @@ OpenSpec 完整流水线的 7 个阶段：
 | 2 | **需求评审** | 阶段 1 完成 | `.harness/skills/review.md`（计划评审模式） | `review/spec_review_v1.md` + `review/tasks_review_v1.md` | APPROVED → 进入阶段 3 | REVISION → 回阶段 1，最多 3 轮 |
 | 3 | **架构设计** | 需求评审通过 | `.harness/skills/architect-design.md` | `design.md` + `tasks.md` | Proto 变更归我、任务粒度 1-4h、按服务分组 | 设计不合理 → 回阶段 1 |
 | 4 | **Proto 变更** | design 含 Proto 变更 | （我自己执行） | `api-proto/` 修改 + `make generate` + `make ci` | lint + breaking-check 全通过 | 失败 → 修复后重试 |
-| 5 | **编码 + 测试** | 设计确认 | `.harness/skills/dispatch.md` / `.harness/workflows/harness-pipeline.js` | 代码 + 测试 + CHANGELOG + `_qa.md` + `_review.md`（版本递增 v1/v2） | 每服务 QA PASS（含测试覆盖率）+ Review PASS | 见下方失败路由表，最多 2 轮 |
+| 5 | **编码 + 测试** | 设计确认 | `.harness/skills/dispatch.md` → `.harness/skills/unit-test-write.md` → `.harness/skills/qa.md` → `.harness/skills/review.md`（执行评审模式） | 代码 + 测试 + CHANGELOG + `_qa.md` + `_review.md`（版本递增 v1/v2） | 每服务 QA PASS（含测试覆盖率）+ Review PASS | 见下方失败路由表，最多 2 轮 |
 | 6 | **集成验证 + 归档** | 编码全部通过 | — | 更新 `.harness/changes/INDEX.md` + `summary.md` 终稿 | 全链路 build+test 通过，CHANGELOG 完整 | 见下方路由表 |
 
 阶段 5 内部分两步：编码实现 → QA（含单元测试），QA 通过后才进入 Review。测试不单独成阶段但作为 QA 的硬门禁。
