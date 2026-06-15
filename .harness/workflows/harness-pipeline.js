@@ -10,6 +10,93 @@ export const meta = {
 
 // args: { serviceName: "审核服务", serviceDir: "services/moderation-service", task: "实现 gRPC 层" }
 
+// SEE: [[harness-pipeline-undefined-guard]] — 防止 args.serviceDir 未传时字符串化为 "undefined"
+const VALID_SERVICES = [
+  'ai-model-service', 'auth-service', 'community-hub-service',
+  'file-service', 'master-data-service', 'moderation-service',
+  'monitoring-service', 'permission-service', 'user-service',
+]
+const VALID_WEB = ['pc', 'mobile', 'common']
+const ALL_VALID = [...VALID_SERVICES, ...VALID_WEB]
+
+const isMissing = (v) => !v || v === 'undefined' || typeof v !== 'string'
+
+// ── Auto-detect: try to resolve serviceName/serviceDir from task text ──
+function resolveService(taskText) {
+  if (!taskText || typeof taskText !== 'string') return null
+  const lower = taskText.toLowerCase()
+  for (const svc of VALID_SERVICES) {
+    // Match hyphenated name (moderation-service) or space-separated (moderation service)
+    const bare = svc.toLowerCase()
+    if (lower.includes(bare) || lower.includes(bare.replace(/-/g, ' '))) {
+      return { name: svc, dir: `services/${svc}` }
+    }
+  }
+  for (const web of VALID_WEB) {
+    if (lower.includes(`web/${web}`) || lower.includes(`前端 ${web}`) || lower.includes(`${web} 端`)) {
+      return { name: `web-${web}`, dir: `web/${web}` }
+    }
+  }
+  return null
+}
+
+// ── Service name → Chinese label ──
+function serviceLabel(name) {
+  const m = {
+    'ai-model-service': 'AI模型服务', 'auth-service': '认证服务',
+    'community-hub-service': '社区枢纽服务', 'file-service': '文件服务',
+    'master-data-service': '主数据服务', 'moderation-service': '内容审核服务',
+    'monitoring-service': '监控服务', 'permission-service': '权限服务',
+    'user-service': '用户服务',
+  }
+  return m[name] || name
+}
+
+// ── Step A: auto-detect from task text ──
+if (isMissing(args.serviceName) || isMissing(args.serviceDir)) {
+  const detected = resolveService(args.task || '')
+  if (detected) {
+    if (isMissing(args.serviceName)) {
+      log(`args.serviceName 缺失，从 task 自动解析 → "${serviceLabel(detected.name)}"`)
+      args.serviceName = serviceLabel(detected.name)
+    }
+    if (isMissing(args.serviceDir)) {
+      log(`args.serviceDir 缺失，从 task 自动解析 → "${detected.dir}"`)
+      args.serviceDir = detected.dir
+    }
+  }
+}
+
+// ── Step B: explicit validation if still missing ──
+if (isMissing(args.serviceName)) {
+  throw new Error(
+    `harness-pipeline: 缺少 args.serviceName（如 "内容审核服务"）。\n` +
+    `请在 task 描述中包含服务名称，或显式传入 serviceName。\n` +
+    `可用服务: ${VALID_SERVICES.join(', ')}`
+  )
+}
+if (isMissing(args.serviceDir)) {
+  throw new Error(
+    `harness-pipeline: 缺少 args.serviceDir（如 "services/moderation-service"）。\n` +
+    `请在 task 描述中包含服务路径，或显式传入 serviceDir。\n` +
+    `可用: services/* 或 web/*`
+  )
+}
+if (isMissing(args.task)) {
+  throw new Error(
+    `harness-pipeline: 缺少 args.task。请提供任务描述。`
+  )
+}
+
+// ── Step C: validate the resolved dir maps to a known service ──
+const bareName = args.serviceDir.split('/').pop()
+if (!ALL_VALID.includes(bareName)) {
+  throw new Error(
+    `harness-pipeline: 无法识别的服务 "${bareName}"（路径 "${args.serviceDir}"）。\n` +
+    `可用: ${ALL_VALID.join(', ')}`
+  )
+}
+
 const ROOT_CLAUDE = '/home/jiaoxh/my-project/community-home/CLAUDE.md'
 const SVC_DIR = `/home/jiaoxh/my-project/community-home/${args.serviceDir}`
 
