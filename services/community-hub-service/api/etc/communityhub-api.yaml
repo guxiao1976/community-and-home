@@ -1,0 +1,11 @@
+Name: community-hub-api
+Host: 0.0.0.0
+Port: 8887
+Timeout: 30000
+
+# community-hub-service gRPC 客户端（etcd 发现）
+CommunityHubRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: community-hub.rpc
