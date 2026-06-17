@@ -2,8 +2,10 @@ package svc
 
 import (
 	"context"
+	"fmt"
 
 	masterdatav1 "github.com/guxiao1976/api-proto/gen/go/masterdata/v1"
+	moderationv1 "github.com/guxiao1976/api-proto/gen/go/moderation/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	sysconfig "github.com/guxiao1976/community-common/v2/pkg/sysconfig"
 	"github.com/guxiao1976/community-user/model"
@@ -25,6 +27,9 @@ type ServiceContext struct {
 	UserMembershipRoleModel      model.UserMembershipRoleModel
 	UserCertificationModel       model.UserCertificationModel
 	UserResidenceModel           model.UserResidenceModel
+
+	ModerationClient moderationv1.ModerationServiceClient
+	RedisClient      *redis.Redis
 }
 
 // NewServiceContext 创建服务上下文，初始化所有数据库模型、Redis 和加密组件
@@ -64,6 +69,18 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		}, nil
 	})
 
+	// Initialize moderation gRPC client
+	modConn, err := zrpc.NewClient(c.ModerationRpc)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create moderation client: %v", err))
+	}
+	modClient := moderationv1.NewModerationServiceClient(modConn.Conn())
+
+	// Initialize Redis client for moderation task queue
+	redisClient := redis.New(c.ModerationRedis.Host, func(r *redis.Redis) {
+		r.Pass = c.ModerationRedis.Pass
+	})
+
 	return &ServiceContext{
 		Config:                     c,
 		Redis:                      rds,
@@ -73,5 +90,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		UserMembershipRoleModel:    model.NewUserMembershipRoleModel(conn),
 		UserCertificationModel:     model.NewUserCertificationModel(conn),
 		UserResidenceModel:         model.NewUserResidenceModel(conn),
+		ModerationClient:           modClient,
+		RedisClient:                redisClient,
 	}
 }

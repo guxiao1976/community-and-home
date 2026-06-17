@@ -1,0 +1,28 @@
+Name: user-api
+Host: 0.0.0.0
+Port: 8882
+Timeout: 30000
+
+DataSource: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(localhost:3306)/user?charset=utf8mb4&parseTime=true&loc=Local
+
+Auth:
+  AccessSecret: ${JWT_ACCESS_SECRET}
+  AccessExpire: 86400
+
+# user-service gRPC 客户端（etcd 发现）
+UserRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: user.rpc
+
+# permission-service gRPC 客户端（etcd 发现）
+PermissionRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: permission.rpc
+
+# 系统参数配置 Redis（与 Cache 共用同一个 Redis 实例）
+SysConfigRedis:
+  Host: localhost:6379

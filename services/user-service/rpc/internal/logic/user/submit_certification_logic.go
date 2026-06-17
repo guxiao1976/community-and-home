@@ -4,15 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
+	moderationv1 "github.com/guxiao1976/api-proto/gen/go/moderation/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
 	"github.com/guxiao1976/community-user/model"
 	"github.com/guxiao1976/community-user/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 )
 
 // certMetadata 认证材料元数据，存储在 document_urls 字段中
@@ -104,6 +106,44 @@ func (l *SubmitCertificationLogic) SubmitCertification(in *userv1.SubmitCertific
 	if err != nil {
 		l.Errorf("update role verf_status error: %v", err)
 		return nil, err
+	}
+
+	// 7. Submit real name for moderation
+	if in.RealName != "" {
+		contentSummary := in.RealName
+		if len([]rune(contentSummary)) > 100 {
+			contentSummary = string([]rune(contentSummary)[:100])
+		}
+		auditResp, err := l.svcCtx.ModerationClient.CreateAuditLog(l.ctx, &moderationv1.CreateAuditLogRequest{
+			ContentType:    "text",
+			ContentSummary: contentSummary,
+			RiskLevel:      "low",
+			Pass:           false,
+			SourceType:     "certification",
+			SourceId:       certId,
+			UserId:         in.UserId,
+		})
+		if err != nil {
+			l.Errorf("CreateAuditLog for certification failed: %v", err)
+		} else {
+			items := []map[string]string{
+				{"type": "text", "content": in.RealName, "field": "real_name"},
+			}
+			// Document URLs as image attachments (reserved)
+			for _, docUrl := range in.DocumentUrls {
+				items = append(items, map[string]string{"type": "image", "content": docUrl, "field": "document"})
+			}
+			taskMsg := map[string]interface{}{
+				"task_id":      fmt.Sprintf("cert_%d_%d", certId, time.Now().UnixNano()),
+				"audit_log_id": auditResp.Id,
+				"source_type":  "certification",
+				"source_id":    certId,
+				"action":       "create",
+				"items":        items,
+			}
+			body, _ := json.Marshal(taskMsg)
+			l.svcCtx.RedisClient.LpushCtx(l.ctx, "moderation:task:queue", string(body))
+		}
 	}
 
 	l.Infof("SubmitCertification success, userId=%d, roleId=%d, certId=%d", in.UserId, in.RoleId, certId)

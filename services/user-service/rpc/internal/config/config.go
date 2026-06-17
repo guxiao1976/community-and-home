@@ -12,5 +12,7 @@ type Config struct {
 	Cache          redis.RedisConf // Redis 缓存配置
 	SysConfigRedis redis.RedisConf // 系统参数配置 Redis（用于 sysconfig 客户端）
 	AesKey         string          // AES 密钥（用于手机号加密存储）
-	MasterDataRpc  zrpc.RpcClientConf // Master Data Service gRPC 客户端配置（用于 sysconfig fallback）
+	MasterDataRpc    zrpc.RpcClientConf // Master Data Service gRPC 客户端配置（用于 sysconfig fallback）
+	ModerationRpc    zrpc.RpcClientConf // moderation-service gRPC client
+	ModerationRedis  redis.RedisConf    // Redis for task queue
 }
