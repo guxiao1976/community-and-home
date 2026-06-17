@@ -31,6 +31,7 @@ type UserCertificationModel interface {
 	FindByUserId(ctx context.Context, userId int64) ([]*UserCertification, error)
 	FindPage(ctx context.Context, status *int64, userId *int64, page, pageSize int32) ([]*UserCertification, int64, error)
 	Update(ctx context.Context, data *UserCertification) error
+	UpdateModerationStatus(ctx context.Context, id int64, status int64) error
 }
 
 type defaultUserCertificationModel struct {
@@ -117,5 +118,11 @@ func (m *defaultUserCertificationModel) FindPage(ctx context.Context, status *in
 func (m *defaultUserCertificationModel) Update(ctx context.Context, data *UserCertification) error {
 	query := fmt.Sprintf(`UPDATE %s SET status=?, reviewer_id=?, review_notes=?, review_time=? WHERE id=?`, m.table)
 	_, err := m.conn.ExecCtx(ctx, query, data.Status, data.ReviewerId, data.ReviewNotes, data.ReviewTime, data.Id)
+	return err
+}
+
+func (m *defaultUserCertificationModel) UpdateModerationStatus(ctx context.Context, id int64, status int64) error {
+	query := fmt.Sprintf(`UPDATE %s SET moderation_status=?, moderation_time=NOW() WHERE id=?`, m.table)
+	_, err := m.conn.ExecCtx(ctx, query, status, id)
 	return err
 }

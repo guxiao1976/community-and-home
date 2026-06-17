@@ -142,7 +142,9 @@ func (l *SubmitCertificationLogic) SubmitCertification(in *userv1.SubmitCertific
 				"items":        items,
 			}
 			body, _ := json.Marshal(taskMsg)
-			l.svcCtx.RedisClient.LpushCtx(l.ctx, "moderation:task:queue", string(body))
+			if _, err := l.svcCtx.RedisClient.LpushCtx(l.ctx, "moderation:task:queue", string(body)); err != nil {
+				l.Errorf("enqueue moderation task failed: %v", err)
+			}
 		}
 	}
 

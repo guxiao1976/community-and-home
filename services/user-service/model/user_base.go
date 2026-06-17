@@ -39,6 +39,7 @@ type UserBaseModel interface {
 	SoftDelete(ctx context.Context, id int64) error
 	UpdateStatus(ctx context.Context, id int64, status int64) error
 	UpdateRealNameAndIdCard(ctx context.Context, id int64, realName, idCardNumber string) error
+	UpdateNicknameModerationStatus(ctx context.Context, id int64, status int64) error
 }
 
 type defaultUserBaseModel struct {
@@ -150,6 +151,12 @@ func (m *defaultUserBaseModel) SoftDelete(ctx context.Context, id int64) error {
 
 func (m *defaultUserBaseModel) UpdateStatus(ctx context.Context, id int64, status int64) error {
 	query := fmt.Sprintf(`UPDATE %s SET status=?, updated_time=? WHERE id=? AND delete_time IS NULL`, m.table)
+	_, err := m.conn.ExecCtx(ctx, query, status, time.Now(), id)
+	return err
+}
+
+func (m *defaultUserBaseModel) UpdateNicknameModerationStatus(ctx context.Context, id int64, status int64) error {
+	query := fmt.Sprintf(`UPDATE %s SET nickname_moderation_status=?, updated_time=? WHERE id=? AND delete_time IS NULL`, m.table)
 	_, err := m.conn.ExecCtx(ctx, query, status, time.Now(), id)
 	return err
 }

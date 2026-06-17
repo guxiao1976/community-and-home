@@ -111,7 +111,9 @@ func (l *CreateUserLogic) CreateUser(in *userv1.CreateUserRequest) (*userv1.Crea
 				},
 			}
 			body, _ := json.Marshal(taskMsg)
-			l.svcCtx.RedisClient.LpushCtx(l.ctx, "moderation:task:queue", string(body))
+			if _, err := l.svcCtx.RedisClient.LpushCtx(l.ctx, "moderation:task:queue", string(body)); err != nil {
+				l.Errorf("enqueue moderation task failed: %v", err)
+			}
 		}
 	}
 

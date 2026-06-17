@@ -102,3 +102,7 @@ func (s *UserServiceServer) BindResidence(ctx context.Context, in *userv1.BindRe
 func (s *UserServiceServer) GetResidences(ctx context.Context, in *userv1.GetResidencesRequest) (*userv1.GetResidencesResponse, error) {
 	return user.NewGetResidencesLogic(ctx, s.svcCtx).GetResidences(in)
 }
+
+func (s *UserServiceServer) UpdateUserModerationStatus(ctx context.Context, in *userv1.UpdateModerationStatusRequest) (*userv1.UpdateModerationStatusResponse, error) {
+	return user.NewUpdateUserModerationStatusLogic(ctx, s.svcCtx).UpdateUserModerationStatus(in)
+}
