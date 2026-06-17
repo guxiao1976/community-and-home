@@ -8,10 +8,12 @@
       @change="fetchList"
     />
 
-    <ReviewTable
-      :list="list"
-      @detail="openDetail"
-    />
+    <div v-loading="loading">
+      <ReviewTable
+        :list="list"
+        @detail="openDetail"
+      />
+    </div>
 
     <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
       <el-pagination
@@ -48,11 +50,13 @@ const page = ref(1);
 const pageSize = ref(20);
 const total = ref(0);
 const list = ref<ReviewListItem[]>([]);
+const loading = ref(false);
 
 const drawerVisible = ref(false);
 const currentDetail = ref<ReviewDetail | null>(null);
 
 async function fetchList() {
+  loading.value = true;
   try {
     const res = await listReview({
       source_type: sourceType.value || undefined,
@@ -65,6 +69,8 @@ async function fetchList() {
   } catch (e) {
     console.error('fetchList failed:', e);
     ElMessage.error('加载审核列表失败');
+  } finally {
+    loading.value = false;
   }
 }
 

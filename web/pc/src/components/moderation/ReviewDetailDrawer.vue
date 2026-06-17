@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import type { ReviewDetail } from '@common/types/moderation';
 import { SOURCE_TYPE_LABELS } from '@common/constants/moderation';
 
@@ -61,6 +61,10 @@ const visible = computed({
 
 const reviewNotes = ref('');
 const loading = ref(false);
+
+watch(() => props.modelValue, (v) => {
+  if (!v) { loading.value = false; reviewNotes.value = ''; }
+});
 
 const matchedItems = computed(() => {
   if (!props.detail?.matched_items) return [];

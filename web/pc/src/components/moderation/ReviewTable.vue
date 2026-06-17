@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import type { ReviewListItem } from '@common/types/moderation';
-import { SOURCE_TYPE_LABELS } from '@common/constants/moderation';
+import { SOURCE_TYPE_LABELS, MODERATION_STATUS_MAP } from '@common/constants/moderation';
 
 defineProps<{ list: ReviewListItem[] }>();
 defineEmits<{ (e: 'detail', row: ReviewListItem): void }>();
@@ -49,11 +49,9 @@ function riskTagType(r: string): TagType {
   return m[r] || 'info';
 }
 function reviewStatusTagType(s: number): TagType {
-  const m: Record<number, TagType> = { 0: 'warning', 1: 'success', 2: 'danger' };
-  return m[s] || 'info';
+  return (MODERATION_STATUS_MAP[s]?.type || 'info') as TagType;
 }
 function reviewStatusLabel(s: number) {
-  const m: Record<number, string> = { 0: '待审核', 1: '已通过', 2: '已不通过' };
-  return m[s] || '未知';
+  return MODERATION_STATUS_MAP[s]?.label || '未知';
 }
 </script>
