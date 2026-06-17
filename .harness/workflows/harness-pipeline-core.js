@@ -108,6 +108,75 @@ const ROOT_CLAUDE = 'CLAUDE.md'  // Agent 在 repo 根目录运行，用相对�
 const SVC_DIR = args.serviceDir   // 如 "services/moderation-service"，agent 在 repo 根目录
 const SVC_NAME = bareName         // "moderation-service" — QA 脚本等需要裸目录名
 
+// ── Task type routing — automatic inference ──
+// Priority: explicit arg > embedded type: marker > keyword heuristics > source-based > default
+function resolveTaskType() {
+  // 0. Explicit override (backward compatible)
+  if (args.taskType) return args.taskType
+
+  const t = (args.task || '').toLowerCase()
+
+  // 0.5. Embedded type: marker (from loop dispatch or human annotation)
+  if (t.includes('type: chore') || t.includes('type:chore')) return 'chore'
+  if (t.includes('type: debt') || t.includes('type:debt')) return 'debt'
+  if (t.includes('type: bug') || t.includes('type:bug')) return 'bug'
+  if (t.includes('type: feature') || t.includes('type:feature')) return 'feature'
+
+  // 1. Source-based inference
+  // review/qa findings are overwhelmingly debt (standards violations, mechanical fixes)
+  if (t.includes('source: review') || t.includes('source: qa') || t.includes('source:qa')) {
+    // Unless the description clearly indicates a bug
+    if (/\b(bug|broken|crash|panic|竞态|race|nil pointer|空指针|死锁)\b/.test(t)) return 'bug'
+    return 'debt'
+  }
+  // GitHub PR changes-requested → bug (something is broken)
+  if (t.includes('source: github') && (t.includes('changes requested') || t.includes('修复 pr'))) {
+    return 'bug'
+  }
+  // Sensor: graph freshness → chore, others → debt
+  if (t.includes('source: sensor')) {
+    if (t.includes('graph') || t.includes('图谱') || t.includes('sync') || t.includes('同步')) return 'chore'
+    return 'debt'
+  }
+
+  // 3. Keyword heuristics (Chinese + English) — order matters: most specific first
+
+  // chore: maintenance, ops, no code logic
+  if (/\b(同步|sync|图谱|graph|清理|脚本|脚本|配置|config|docker|deploy|ci|文档|doc|readme|changelog|\.md|\.yml|\.yaml|\.env|依赖|dependency|更新依赖|升级|upgrade)\b/.test(t)) return 'chore'
+
+  // bug: broken behavior, crash, data corruption
+  if (/\b(bug|fix|修复|broken|crash|panic|竞态|race|nil pointer|空指针|死锁|deadlock|goroutine leak|泄漏|内存|溢出|overflow|数组越界|index out|类型错误|type error|panic|fatal|崩溃|报错|不工作|无效|invalid|丢失|丢失数据|错[误乱]|异常)\b/.test(t)) return 'bug'
+
+  // debt: standards, style, naming, format, technical debt
+  if (/\b(debt|规范|格式|format|命名|rename|tag|jstype|json|string|响应格式|style|lint|warning|重构|refactor|统一|标准化|对齐|align|补测试|补文档|代码质量|复用|重复|duplicate|硬编码|hardcode|命名|魔法数字|magic number|TODO|stub)\b/.test(t)) return 'debt'
+
+  // feature: new capability — catch-all for anything mentioning new things
+  if (/\b(feature|新增|添加|实现|创建|新建|开发|add|implement|create|build|支持|功能|页面|组件|接口|api|endpoint|handler|migration)\b/.test(t)) return 'feature'
+
+  // 4. Default: unknown → feature (safest, full pipeline)
+  return 'feature'
+}
+const TASK_TYPE = resolveTaskType()
+log(`任务类型: ${TASK_TYPE} (auto-inferred)`)
+
+// ── Type-based constants ──
+const MAX_ITERATIONS = TASK_TYPE === 'chore' ? 1 : TASK_TYPE === 'debt' ? 2 : 3
+const REVIEW_LENS_COUNT = TASK_TYPE === 'chore' ? 0 : TASK_TYPE === 'debt' ? 1 : 3
+const REVIEW_PASS_THRESHOLD = TASK_TYPE === 'debt' ? 1 : 2  // chore skips review entirely
+const TDD_STRICT = TASK_TYPE === 'feature' || TASK_TYPE === 'bug'
+const NEED_CHANGELOG = TASK_TYPE !== 'chore'
+let qaFirstPass = true  // track whether QA passed on first try
+
+// ── Confidence scoring (for HITL adaptive review depth) ──
+function computeConfidence(iterations, passCount, totalReviews, memoryMatchCount, qaFirstPass) {
+  let score = 0
+  score += (1 - (iterations - 1) / MAX_ITERATIONS) * 0.30    // fewer iterations = higher confidence
+  score += (totalReviews > 0 ? passCount / totalReviews : 1) * 0.30  // review consensus
+  score += Math.min(memoryMatchCount / 2, 1) * 0.20           // memory coverage (max at 2+ matches)
+  score += (qaFirstPass ? 1 : 0) * 0.20                       // QA first-pass bonus
+  return Math.round(score * 100) / 100
+}
+
 
 // ============================================================
 // Pipeline orchestration loop
@@ -117,7 +186,6 @@ const SVC_NAME = bareName         // "moderation-service" — QA 脚本等需要
 // Pipeline loop
 // ============================================================
 
-const MAX_ITERATIONS = 3
 let iteration = 1
 let fixContext = ''
 
@@ -126,7 +194,7 @@ while (iteration <= MAX_ITERATIONS) {
 
   // Phase 1: Generator (隔离 worktree，避免并行管线互踩文件)
   phase('Develop')
-  await agent(generatorPrompt(iteration, fixContext), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
+  await agent(generatorPrompt(iteration, fixContext, TASK_TYPE), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
   log(`Generator 完成 (轮次 ${iteration})`)
 
   // Phase 2: QA
@@ -140,32 +208,61 @@ while (iteration <= MAX_ITERATIONS) {
   log(`QA VERDICT: ${qaResult.verdict} — ${qaResult.summary}`)
 
   if (qaResult.verdict === 'FAIL') {
-    // Phase 2.5: Debug — 根因分析（systematic-debugging），仅 QA FAIL 时触发
-    phase('Debug')
-    const debugResult = await agent(debuggingPrompt(qaResult), {
-      label: `Debug: ${args.serviceName}`,
-      schema: DEBUG_SCHEMA,
-    })
+    qaFirstPass = false
 
-    if (debugResult) {
-      log(`Debug 根因: ${debugResult.rootCause} (置信度: ${debugResult.confidence || 'N/A'})`)
-      const evidence = (debugResult.evidence || []).map(e => `- ${e}`).join('\n')
-      const suggestions = (debugResult.fixSuggestions || []).map(s => `- ${s}`).join('\n')
-      fixContext = `### QA 测试失败（已通过 systematic-debugging 分析根因）\n${qaResult.summary}\n\n### 根因分析\n**根因**: ${debugResult.rootCause}\n**置信度**: ${debugResult.confidence || 'N/A'}\n\n**证据链**:\n${evidence}\n\n**修复建议**:\n${suggestions}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+    if (TASK_TYPE === 'feature' || TASK_TYPE === 'bug') {
+      // Phase 2.5: Debug — 完整根因分析
+      phase('Debug')
+      const debugResult = await agent(debuggingPrompt(qaResult), {
+        label: `Debug: ${args.serviceName}`,
+        schema: DEBUG_SCHEMA,
+      })
+
+      if (debugResult) {
+        log(`Debug 根因: ${debugResult.rootCause} (置信度: ${debugResult.confidence || 'N/A'})`)
+        const evidence = (debugResult.evidence || []).map(e => `- ${e}`).join('\n')
+        const suggestions = (debugResult.fixSuggestions || []).map(s => `- ${s}`).join('\n')
+        fixContext = `### QA 测试失败（已通过 systematic-debugging 分析根因）\n${qaResult.summary}\n\n### 根因分析\n**根因**: ${debugResult.rootCause}\n**置信度**: ${debugResult.confidence || 'N/A'}\n\n**证据链**:\n${evidence}\n\n**修复建议**:\n${suggestions}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+      } else {
+        log('Debug Agent 被跳过，使用原始错误信息')
+        fixContext = `### QA 测试失败\n${qaResult.summary}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+      }
     } else {
-      log('Debug Agent 被跳过，使用原始错误信息')
-      fixContext = `### QA 测试失败\n${qaResult.summary}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+      // debt/chore: skip Debug, build simple fixContext from QA results
+      log(`Debug 跳过（${TASK_TYPE} 任务 — 已知修复模式）`)
+      fixContext = `### QA 失败（${TASK_TYPE} 任务）\n${qaResult.summary}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
     }
     iteration++
     continue
   }
 
   // Phase 3: Multi-Perspective Review (并行，仅 QA PASS 后)
+  if (REVIEW_LENS_COUNT === 0) {
+    // chore: skip review entirely
+    log(`⏭️ Review 跳过（${TASK_TYPE} 任务）`)
+    const confidence = computeConfidence(iteration, 3, 3, 0, qaFirstPass)
+    log(`✅ Harness 管线完成！${args.serviceName} (${iteration} 轮, confidence: ${confidence})`)
+    return {
+      status: 'pass',
+      iterations: iteration,
+      serviceName: args.serviceName,
+      qaSummary: qaResult.summary,
+      reviewSummary: 'skipped (chore)',
+      memorySuggestions: [],
+      confidence,
+      notifications: [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过 (${TASK_TYPE}), QA: ${qaResult.summary}` }],
+    }
+  }
+
   phase('Review')
 
-  // 启动三个视角的 Reviewer，并行执行
+  // Select lenses based on task type
+  const activeLenses = TASK_TYPE === 'debt'
+    ? [REVIEW_LENSES[1]]  // standards-eng only
+    : REVIEW_LENSES        // all 3 for feature/bug
+
   const reviewResults = await parallel(
-    REVIEW_LENSES.map(lens => () =>
+    activeLenses.map(lens => () =>
       agent(reviewLensPrompt(lens), { label: `Review:${lens.key}`, schema: REVIEW_SCHEMA })
         .then(r => r ? { ...r, lens: lens.key, label: lens.label } : null)
     )
@@ -181,14 +278,13 @@ while (iteration <= MAX_ITERATIONS) {
   const passCount = validReviews.filter(r => r.verdict === 'PASS').length
   const failCount = validReviews.filter(r => r.verdict === 'FAIL').length
 
-  log(`多视角审查完成: ${passCount}/${validReviews.length} PASS`)
+  log(`多视角审查完成: ${passCount}/${validReviews.length} PASS (threshold: ${REVIEW_PASS_THRESHOLD}/${validReviews.length})`)
   for (const r of validReviews) {
     log(`  ${r.lens} (${r.label}): ${r.verdict} — ${r.summary}`)
   }
 
-  // 投票判定
-  if (passCount >= 2) {
-    // 2/3 或 3/3 PASS → 管线通过
+  // 投票判定 — type-aware threshold
+  if (passCount >= REVIEW_PASS_THRESHOLD) {
     if (failCount > 0) {
       const failingLenses = validReviews.filter(r => r.verdict === 'FAIL').map(r => r.label).join('、')
       log(`⚠️ ${failingLenses}视角有异议，但多数通过 (${passCount}/${validReviews.length})，管线继续`)
@@ -199,9 +295,23 @@ while (iteration <= MAX_ITERATIONS) {
     const allWarnings = validReviews.reduce((sum, r) => sum + (r.warningCount || 0), 0)
     const reviewSummary = validReviews.map(r => `${r.label}: ${r.verdict}`).join(', ')
 
+    // 收集并去重 memory suggestions（Review → Memory 反馈闭环）
+    const allSuggestions = validReviews.flatMap(r => r.memorySuggestions || [])
+    const seenSlugs = new Set()
+    const uniqueSuggestions = allSuggestions.filter(s => {
+      if (!s || !s.slug || seenSlugs.has(s.slug)) return false
+      seenSlugs.add(s.slug)
+      return true
+    })
+    if (uniqueSuggestions.length > 0) {
+      log(`💡 ${uniqueSuggestions.length} 条 Memory 建议: ${uniqueSuggestions.map(s => s.slug).join(', ')}`)
+    }
+
     // PASS — 管线完成！
-    log(`✅ Harness 管线完成！${args.serviceName} 通过全部检查 (${iteration} 轮)`)
-    const passNotifications = [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过, QA: ${qaResult.summary}` }]
+    const memoryMatchCount = validReviews.reduce((sum, r) => sum + (r.memorySuggestions || []).length, 0)
+    const confidence = computeConfidence(iteration, passCount, validReviews.length, memoryMatchCount, qaFirstPass)
+    log(`✅ Harness 管线完成！${args.serviceName} 通过全部检查 (${iteration} 轮, confidence: ${confidence})`)
+    const passNotifications = [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过, QA: ${qaResult.summary}, confidence: ${confidence}` }]
     if (failCount > 0) {
       passNotifications.push({ event: 'need_human', service: args.serviceName, detail: `多数 PASS (${passCount}/${validReviews.length}) 但 ${failingLenses} 有异议` })
     }
@@ -211,10 +321,12 @@ while (iteration <= MAX_ITERATIONS) {
       serviceName: args.serviceName,
       qaSummary: qaResult.summary,
       reviewSummary: `${reviewSummary} (${passCount}/${validReviews.length} PASS, ${allWarnings} WARNINGs)`,
+      memorySuggestions: uniqueSuggestions,
+      confidence,
       notifications: passNotifications,
     }
   } else {
-    // 0/3 或 1/3 PASS → 管线失败
+    // below threshold → 管线失败
     const allCriticals = validReviews
       .filter(r => r.verdict === 'FAIL')
       .flatMap(r => (r.criticalIssues || []).map(i => ({ ...i, lens: r.lens })))
@@ -230,11 +342,13 @@ while (iteration <= MAX_ITERATIONS) {
 }
 
 // Max iterations exceeded
-log(`❌ 超过最大轮次 (${MAX_ITERATIONS})，管线终止`)
+log(`❌ 超过最大轮次 (${MAX_ITERATIONS}/${TASK_TYPE})，管线终止`)
 return {
   status: 'max_iterations_exceeded',
   iterations: iteration,
   serviceName: args.serviceName,
+  taskType: TASK_TYPE,
+  confidence: Math.round((1 - 0.9) * 100) / 100,  // minimum confidence
   lastFixContext: fixContext,
-  notifications: [{ event: 'pipeline_fail', service: args.serviceName, detail: `超过最大轮次 (${MAX_ITERATIONS}), 最后错误: ${fixContext.substring(0, 200)}` }],
+  notifications: [{ event: 'pipeline_fail', service: args.serviceName, detail: `超过最大轮次 (${MAX_ITERATIONS}/${TASK_TYPE}), 最后错误: ${fixContext.substring(0, 200)}` }],
 }

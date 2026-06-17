@@ -11,13 +11,23 @@
 // Generator Prompt — Development Agent (TDD + Memory-Driven)
 // ============================================================
 
-function generatorPrompt(iteration, fixContext) {
-  const base = `你是 ${args.serviceName} 的开发 Agent。
+function generatorPrompt(iteration, fixContext, taskType) {
+  taskType = taskType || 'feature'
+  const isChore = taskType === 'chore'
+  const isDebt = taskType === 'debt'
+  const strictTdd = !isChore && !isDebt  // full TDD only for feature/bug
+  const isFrontend = (SVC_DIR || '').startsWith('web/')
+  const langTool = isFrontend ? 'TypeScript' : 'Go'
+  const buildCmd = isFrontend ? 'npm run build' : 'go build ./...'
+  const testCmd = isFrontend ? 'npm run test:unit' : 'go test ./...'
+  const typeCmd = isFrontend ? 'npm run type-check' : 'go vet ./...'
+
+  const base = `你是 ${args.serviceName} 的${isFrontend ? '前端' : ''}开发 Agent。
 
 ## 启动上下文（服务专属，只加载你需要的）
 
-你是 ${args.serviceName} 的专属开发 Agent。你只需要理解**这个服务**的数据模型和业务规则。
-全局编码规范（Snowflake/gRPC/错误码）由 QA 机械化检查保证，你不需要背诵。
+你是 ${args.serviceName} 的专属${isFrontend ? '前端' : ''}开发 Agent。你只需要理解**这个服务**的数据模型和业务规则。
+全局编码规范${isFrontend ? '（Snowflake ID string 类型、API 契约）' : '（Snowflake/gRPC/错误码）'}由 QA 机械化检查保证，你不需要背诵。
 
 **按顺序加载：**
 
@@ -82,67 +92,89 @@ function generatorPrompt(iteration, fixContext) {
   - [[memory-slug-3]] — <不适用的原因>
 \`\`\`
 
-## TDD 编码纪律（强制执行 — superpowers:test-driven-development）
+## 编码纪律（任务类型: ${taskType}）
+
+${strictTdd ? `
+### TDD 编码纪律（强制执行 — superpowers:test-driven-development）
 
 **铁律：NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST**
 先写实现代码再补测试 → 删掉代码，从测试重新开始。
 
 ### RED — 先写失败的测试
-1. 对于每个新增/修改的函数，**先写 table-driven tests**（用例：正常路径、空值/零值、错误路径）
-2. 运行 \`go test ./... -count=1 -run <TestName>\` → **必须看到测试失败**（因功能尚未实现）
-3. **记录 RED 证据** — 截取 FAIL 输出的关键行，格式：
-   \`\`\`
-   RED 证据 — TestXxx:
-   --- FAIL: TestXxx (0.00s)
-       xxx_test.go:15: <具体错误信息，如 undefined: FuncName 或 got: X want: Y>
-   \`\`\`
-   仅"看到失败"不够，必须留下可被 QA 验证的输出摘录
+1. 对于每个新增/修改的${isFrontend ? '组件/函数' : '函数'}，**先写 ${isFrontend ? 'vitest' : 'table-driven'} tests**（用例：正常路径、空值/零值、错误路径）
+2. 运行 \`${testCmd}\` → **必须看到测试失败**（因功能尚未实现）
+3. **记录 RED 证据** — 截取 FAIL 输出的关键行
 4. 测试直接通过 → 说明测试没测到东西，修正测试重来
-5. 不写 mock（除非依赖外部服务）——用真实结构和业务数据
+5. ${isFrontend ? '用 @vue/test-utils mount 组件，用真实 props 和 store' : '不写 mock（除非依赖外部服务）——用真实结构和业务数据'}
 
 ### GREEN — 最小实现
 1. 写**刚好够通过测试**的代码，不添加测试未覆盖的功能（YAGNI）
 2. 运行测试 → 确认通过 + 全部已有测试不破
-3. 测试失败 → 修代码，不改测试。其他测试破 → 立即修复
 
 ### REFACTOR — 清理
-1. 消除重复、改善命名、抽取辅助函数
+1. 消除重复、改善命名、抽取辅助${isFrontend ? '组件/composable' : '函数'}
 2. 运行测试 → 保持全绿
-3. 不在此阶段添加新行为
 
 ### 禁止行为
 - ❌ 先写实现再补测试 → **删掉代码，从 RED 开始**
-- ❌ "调用不报错"的测试 → 必须 assert 具体返回值
-- ❌ 一次写多个测试 → 一次一个，逐步推进
+- ❌ "调用不报错"的测试 → 必须 assert 具体${isFrontend ? '值/行为' : '返回值'}
 - ❌ "太简单不需要测试" → 简单代码也会出错
+` : isDebt ? `
+### 简化编码纪律（债务修复 — 允许先修后测）
+1. 优先修复问题，然后补回归测试
+2. 为修复的代码添加至少一个测试用例验证正确行为
+3. 运行 \`${testCmd}\` 确保全部通过
+4. 不要求严格 RED→GREEN→REFACTOR 顺序
+` : `
+### 运维任务（无需 TDD）
+直接执行操作，验证结果即可。不需要编写测试代码。
+`}
+
+### Memory 引用格式（用于自动追踪）
+在代码中使用 \`// SEE: [[memory-slug]]\` 格式标记记忆引用。
+Pipeline 会自动解析这些引用并更新记忆的 apply_count。
+在编码总结中按以下格式输出记忆应用报告：
+\`\`\`
+### 记忆应用报告
+- 搜索关键词: <关键词>
+- 已应用:
+  - [[memory-slug]] — <文件名:行号>
+\`\`\`
 
 ## 硬边界（防止浪费时间）
+${isFrontend ? `
+- 不修改 web/common/ — 那是共享层，变更需评估影响
+- API 接口必须与 api-proto 一致 — 字段名和类型对齐后端 Proto 定义
+- 所有 ID 字段使用 \`string\` 类型（Snowflake 精度）
+- 其他规范（TypeScript 类型安全/构建/hardcoded secrets）由 QA 机械化检查保证，信任它
+` : `
 - 不修改 common/ 和 api-proto/ — 那是全局 Owner 的职责
 - 服务间通信仅通过 gRPC — 不直连其他服务数据库
 - 其他规范（Snowflake ID/json_string/错误码格式）由 QA 机械化检查保证，信任它
+`}
 
 ## 任务`
+
+  const changelogReq = !isChore ? `\n- 更新 ${SVC_DIR}/CHANGELOG.md` : ''
+  const tddReq = strictTdd ? `\n- 每个新增${isFrontend ? '组件/函数' : '函数'}遵循 RED→GREEN→REFACTOR 循环，输出 TDD 证据（测试名 + **RED FAIL 输出摘录** + GREEN PASS 确认）。无 RED 摘录 = TDD 不合格` : ''
+  const testReq = !isChore ? `\n- ${testCmd} 通过（含新增测试）` : ''
 
   if (iteration === 1) {
     return base + `\n${args.task}
 
 ## 完成标准
-- go build ./... 通过
-- go test ./... 通过（含新增测试，每个新增函数有对应测试）
-- 每个新增函数遵循 RED→GREEN→REFACTOR 循环，输出 TDD 证据（测试名 + **RED FAIL 输出摘录** + GREEN PASS 确认）。无 RED 摘录 = TDD 不合格
-- 更新 ${SVC_DIR}/CHANGELOG.md
+- ${buildCmd} 通过${testReq}${tddReq}${changelogReq}
 - 输出记忆应用报告`
   } else {
+    const regressReq = !isChore ? `\n- 为修复的问题补写回归测试（先看测试 FAIL 再现修复）` : ''
     return base + `\n修复上一阶段发现的问题。请阅读以下报告中的失败项并逐一修复：
 
 ${fixContext}
 
 ## 完成标准
-- 所有失败项修复完成
-- 为修复的问题补写回归测试（先看测试 FAIL 再现修复）
-- go build ./... 通过
-- go test ./... 通过
-- 更新 ${SVC_DIR}/CHANGELOG.md`
+- 所有失败项修复完成${regressReq}
+- ${buildCmd} 通过
+- ${testCmd} 通过${changelogReq}`
   }
 }
 // ============================================================
@@ -171,7 +203,16 @@ const QA_SCHEMA = {
 
 
 function qaPrompt() {
-  return `你是 QA Engineer Agent。
+  const isFrontend = (SVC_DIR || '').startsWith('web/')
+  const buildCmd = isFrontend ? 'npm run build' : 'go build ./...'
+  const vetCmd = isFrontend ? 'npm run type-check' : 'go vet ./...'
+  const testCmd = isFrontend ? 'npm run test:unit' : 'go test ./... -count=1'
+  const checkScript = isFrontend
+    ? `bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service ${SVC_NAME} --json`
+    : `bash .harness/skills/qa/scripts/harness-checks.sh --service ${SVC_NAME} --json`
+  const checkCount = isFrontend ? '6' : '14'
+
+  return `你是 QA Engineer Agent（${isFrontend ? '前端' : 'Go'}服务）。
 
 ## 角色定义（必须先读）
 阅读 .harness/skills/qa.md — 你的角色定义、验证步骤和产出格式。
@@ -192,22 +233,22 @@ function qaPrompt() {
 - ❌ "should pass" / "probably works" → 跑命令
 - ❌ 依赖上一次运行结果 → 每次 fresh 运行
 - ❌ "linter 过了所以 build 应该也没问题" → linter ≠ 编译器
-- ❌ 部分验证当完整验证 → 全部 13 项检查必须逐一跑完
+- ❌ 部分验证当完整验证 → 全部 ${checkCount} 项检查必须逐一跑完
 
 ## 验证目标
-验证 ${SVC_DIR}/ 的代码质量。
+验证 ${SVC_DIR}/ 的${isFrontend ? '前端' : ''}代码质量。
 
 ## 验证步骤
 1. 阅读 ${SVC_DIR}/CLAUDE.md — 服务规则
 2. 阅读 ${SVC_DIR}/CHANGELOG.md — 变更历史
-3. **运行机械化检查（FRESH）**: \`bash .harness/skills/qa/scripts/harness-checks.sh --service ${SVC_NAME} --json\`
+3. **运行机械化检查（FRESH）**: \`${checkScript}\`
    - 解析 JSON 输出，将各项检查结果整合到 QA 报告的「机械化检查结果」章节
    - FAIL 项在报告中标注具体违规（文件名:行号:字段名）
    - WARN 项作为 WARNING 级别记录
-4. 运行 go build ./... — 编译检查（FRESH，必须看到 exit 0）
-5. 运行 go vet ./... — 静态分析（FRESH，必须看到 clean output）
-6. 运行 go test ./... -count=1 — 单元测试（FRESH，禁用缓存；输出测试包数和测试函数数）
-7. **TDD 证据检查** — 新增函数是否有对应测试？是否有 RED→GREEN 证据？
+4. 运行 \`${buildCmd}\` — ${isFrontend ? '构建检查' : '编译检查'}（FRESH，必须看到 exit 0）
+5. 运行 \`${vetCmd}\` — 静态分析（FRESH，必须看到 clean output）
+6. 运行 \`${testCmd}\` — 单元测试（FRESH${isFrontend ? '' : '，禁用缓存'}；输出${isFrontend ? '测试文件数' : '测试包数'}和测试函数数）
+7. **TDD 证据检查** — 新增${isFrontend ? '组件/函数' : '函数'}是否有对应测试？是否有 RED→GREEN 证据？
 8. 检查新增代码的测试覆盖
 9. 写入 ${SVC_DIR}/_qa.md（每次 FRESH 覆盖，不追加旧报告）
 10. 输出 VERDICT（附 every-fresh-run 证据）
@@ -267,6 +308,22 @@ const REVIEW_SCHEMA = {
       type: 'array',
       items: { type: 'object', properties: { file: { type: 'string' }, issue: { type: 'string' } } },
     },
+    memorySuggestions: {
+      type: 'array',
+      description: '可跨服务复用的模式性问题，建议沉淀为记忆',
+      items: {
+        type: 'object',
+        properties: {
+          slug: { type: 'string', description: 'kebab-case slug, 如 json-tag-path-vs-body' },
+          title: { type: 'string' },
+          category: { type: 'string', enum: ['pitfall', 'guideline', 'process'] },
+          severity: { type: 'string', enum: ['must-follow', 'should-follow'] },
+          triggers: { type: 'string', description: '空格分隔的触发关键词' },
+          content: { type: 'string', description: '记忆正文 (markdown)' },
+        },
+        required: ['slug', 'title', 'category', 'severity', 'triggers', 'content'],
+      },
+    },
   },
   required: ['verdict', 'summary'],
 }
@@ -274,24 +331,32 @@ const REVIEW_SCHEMA = {
 
 // ── 多视角审查：三个 Lens，并行执行 ──
 
+const isFrontend = (SVC_DIR || '').startsWith('web/')
+
 const REVIEW_LENSES = [
   {
     key: 'security-arch',
     label: '安全架构',
     dimensions: '架构一致性(#1)、安全性(#5)、变更完整性(#8)',
-    focus: '你关注架构决策的正确性和安全风险。检查 Proto/gRPC 规范、服务边界、跨服务 DB 访问、硬编码密钥、SQL 注入、输入校验、CHANGELOG 完整性。',
+    focus: isFrontend
+      ? '你关注前端架构的正确性和安全风险。检查组件分层合理性、API 调用权限校验、Token 存储安全（localStorage/cookie）、XSS 防护（v-html）、CORS 配置、硬编码密钥、敏感信息泄露到前端、CHANGELOG 完整性。'
+      : '你关注架构决策的正确性和安全风险。检查 Proto/gRPC 规范、服务边界、跨服务 DB 访问、硬编码密钥、SQL 注入、输入校验、CHANGELOG 完整性。',
   },
   {
     key: 'standards-eng',
     label: '规范工程',
     dimensions: '规范遵循(#3)、复用性(#6)、测试覆盖(#7)、记忆遵守(#9)',
-    focus: '你关注编码规范和工程质量。检查 Snowflake ID 序列化(jstype/json:\",string\")、错误码格式(5位)、API 响应格式、代码复用、测试覆盖(新增函数是否有测试)、记忆遵守(M1-M4)。',
+    focus: isFrontend
+      ? '你关注前端编码规范和工程质量。检查 Snowflake ID string 类型、no `as any`（type-safety）、no console.log/debugger、hardcoded secrets、web/common/ 复用（勿重复定义类型）、API 响应直接使用（勿 res.data 双解包）、Vue 模板勿嵌套 {{ }}、测试覆盖(新增组件/函数)、记忆遵守(M1-M4)。'
+      : '你关注编码规范和工程质量。检查 Snowflake ID 序列化(jstype/json:\\",string\\")、错误码格式(5位)、API 响应格式、代码复用、测试覆盖(新增函数是否有测试)、记忆遵守(M1-M4)。',
   },
   {
     key: 'design-biz',
     label: '设计业务',
     dimensions: '设计一致性(#2)、代码质量(#4)、Migration(#8部分)',
-    focus: '你关注业务逻辑的正确性和设计一致性。检查与 design.md 一致性、数据模型正确性、业务流程正确性、边界条件处理(null/零值/错误路径)、错误处理完善性、资源泄露、Migration 安全性(回滚方案/锁表/影响现有数据)。',
+    focus: isFrontend
+      ? '你关注前端业务逻辑的正确性和设计一致性。检查与 design.md 一致性、API 字段名与 api-proto 对齐、组件状态管理合理性、边界条件处理(loading/empty/error 状态)、错误处理完善性(ElMessage 用户提示)、表单验证完整性、性能(大列表虚拟滚动/懒加载)。'
+      : '你关注业务逻辑的正确性和设计一致性。检查与 design.md 一致性、数据模型正确性、业务流程正确性、边界条件处理(null/零值/错误路径)、错误处理完善性、资源泄露、Migration 安全性(回滚方案/锁表/影响现有数据)。',
   },
 ]
 
@@ -336,6 +401,15 @@ ${lens.key === 'standards-eng' ? `
 - 用关键词精确匹配 MEMORY.md 索引中的 triggers
 - must-follow 记忆遗漏 → 🔴 CRITICAL，should-follow → 🟡 WARNING
 ` : '本视角不负责记忆遵守检查（由规范工程视角负责）。'}
+
+## 记忆建议（M4，所有视角都做）
+
+如果审查中发现的问题符合以下条件，在 VERDICT 的 memorySuggestions 字段中建议创建 Memory：
+- **模式性**：该问题在其他服务/代码区域也可能存在（非孤立个案）
+- **可复用**：不是一次性配置错误或命名拼写错误（有教学价值）
+- **未覆盖**：查阅 .harness/knowledge/memory/MEMORY.md 索引，该场景尚未被记忆覆盖
+
+每个 memorySuggestion 需提供完整的记忆内容（包含 slug/title/category/severity/triggers/content）。无符合条件的发现时返回空数组。
 
 ## 与其他 Reviewer 的分工
 
@@ -570,6 +644,75 @@ const ROOT_CLAUDE = 'CLAUDE.md'  // Agent 在 repo 根目录运行，用相对�
 const SVC_DIR = args.serviceDir   // 如 "services/moderation-service"，agent 在 repo 根目录
 const SVC_NAME = bareName         // "moderation-service" — QA 脚本等需要裸目录名
 
+// ── Task type routing — automatic inference ──
+// Priority: explicit arg > embedded type: marker > keyword heuristics > source-based > default
+function resolveTaskType() {
+  // 0. Explicit override (backward compatible)
+  if (args.taskType) return args.taskType
+
+  const t = (args.task || '').toLowerCase()
+
+  // 0.5. Embedded type: marker (from loop dispatch or human annotation)
+  if (t.includes('type: chore') || t.includes('type:chore')) return 'chore'
+  if (t.includes('type: debt') || t.includes('type:debt')) return 'debt'
+  if (t.includes('type: bug') || t.includes('type:bug')) return 'bug'
+  if (t.includes('type: feature') || t.includes('type:feature')) return 'feature'
+
+  // 1. Source-based inference
+  // review/qa findings are overwhelmingly debt (standards violations, mechanical fixes)
+  if (t.includes('source: review') || t.includes('source: qa') || t.includes('source:qa')) {
+    // Unless the description clearly indicates a bug
+    if (/\b(bug|broken|crash|panic|竞态|race|nil pointer|空指针|死锁)\b/.test(t)) return 'bug'
+    return 'debt'
+  }
+  // GitHub PR changes-requested → bug (something is broken)
+  if (t.includes('source: github') && (t.includes('changes requested') || t.includes('修复 pr'))) {
+    return 'bug'
+  }
+  // Sensor: graph freshness → chore, others → debt
+  if (t.includes('source: sensor')) {
+    if (t.includes('graph') || t.includes('图谱') || t.includes('sync') || t.includes('同步')) return 'chore'
+    return 'debt'
+  }
+
+  // 3. Keyword heuristics (Chinese + English) — order matters: most specific first
+
+  // chore: maintenance, ops, no code logic
+  if (/\b(同步|sync|图谱|graph|清理|脚本|脚本|配置|config|docker|deploy|ci|文档|doc|readme|changelog|\.md|\.yml|\.yaml|\.env|依赖|dependency|更新依赖|升级|upgrade)\b/.test(t)) return 'chore'
+
+  // bug: broken behavior, crash, data corruption
+  if (/\b(bug|fix|修复|broken|crash|panic|竞态|race|nil pointer|空指针|死锁|deadlock|goroutine leak|泄漏|内存|溢出|overflow|数组越界|index out|类型错误|type error|panic|fatal|崩溃|报错|不工作|无效|invalid|丢失|丢失数据|错[误乱]|异常)\b/.test(t)) return 'bug'
+
+  // debt: standards, style, naming, format, technical debt
+  if (/\b(debt|规范|格式|format|命名|rename|tag|jstype|json|string|响应格式|style|lint|warning|重构|refactor|统一|标准化|对齐|align|补测试|补文档|代码质量|复用|重复|duplicate|硬编码|hardcode|命名|魔法数字|magic number|TODO|stub)\b/.test(t)) return 'debt'
+
+  // feature: new capability — catch-all for anything mentioning new things
+  if (/\b(feature|新增|添加|实现|创建|新建|开发|add|implement|create|build|支持|功能|页面|组件|接口|api|endpoint|handler|migration)\b/.test(t)) return 'feature'
+
+  // 4. Default: unknown → feature (safest, full pipeline)
+  return 'feature'
+}
+const TASK_TYPE = resolveTaskType()
+log(`任务类型: ${TASK_TYPE} (auto-inferred)`)
+
+// ── Type-based constants ──
+const MAX_ITERATIONS = TASK_TYPE === 'chore' ? 1 : TASK_TYPE === 'debt' ? 2 : 3
+const REVIEW_LENS_COUNT = TASK_TYPE === 'chore' ? 0 : TASK_TYPE === 'debt' ? 1 : 3
+const REVIEW_PASS_THRESHOLD = TASK_TYPE === 'debt' ? 1 : 2  // chore skips review entirely
+const TDD_STRICT = TASK_TYPE === 'feature' || TASK_TYPE === 'bug'
+const NEED_CHANGELOG = TASK_TYPE !== 'chore'
+let qaFirstPass = true  // track whether QA passed on first try
+
+// ── Confidence scoring (for HITL adaptive review depth) ──
+function computeConfidence(iterations, passCount, totalReviews, memoryMatchCount, qaFirstPass) {
+  let score = 0
+  score += (1 - (iterations - 1) / MAX_ITERATIONS) * 0.30    // fewer iterations = higher confidence
+  score += (totalReviews > 0 ? passCount / totalReviews : 1) * 0.30  // review consensus
+  score += Math.min(memoryMatchCount / 2, 1) * 0.20           // memory coverage (max at 2+ matches)
+  score += (qaFirstPass ? 1 : 0) * 0.20                       // QA first-pass bonus
+  return Math.round(score * 100) / 100
+}
+
 
 // ============================================================
 // Pipeline orchestration loop
@@ -579,7 +722,6 @@ const SVC_NAME = bareName         // "moderation-service" — QA 脚本等需要
 // Pipeline loop
 // ============================================================
 
-const MAX_ITERATIONS = 3
 let iteration = 1
 let fixContext = ''
 
@@ -588,7 +730,7 @@ while (iteration <= MAX_ITERATIONS) {
 
   // Phase 1: Generator (隔离 worktree，避免并行管线互踩文件)
   phase('Develop')
-  await agent(generatorPrompt(iteration, fixContext), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
+  await agent(generatorPrompt(iteration, fixContext, TASK_TYPE), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
   log(`Generator 完成 (轮次 ${iteration})`)
 
   // Phase 2: QA
@@ -602,32 +744,61 @@ while (iteration <= MAX_ITERATIONS) {
   log(`QA VERDICT: ${qaResult.verdict} — ${qaResult.summary}`)
 
   if (qaResult.verdict === 'FAIL') {
-    // Phase 2.5: Debug — 根因分析（systematic-debugging），仅 QA FAIL 时触发
-    phase('Debug')
-    const debugResult = await agent(debuggingPrompt(qaResult), {
-      label: `Debug: ${args.serviceName}`,
-      schema: DEBUG_SCHEMA,
-    })
+    qaFirstPass = false
 
-    if (debugResult) {
-      log(`Debug 根因: ${debugResult.rootCause} (置信度: ${debugResult.confidence || 'N/A'})`)
-      const evidence = (debugResult.evidence || []).map(e => `- ${e}`).join('\n')
-      const suggestions = (debugResult.fixSuggestions || []).map(s => `- ${s}`).join('\n')
-      fixContext = `### QA 测试失败（已通过 systematic-debugging 分析根因）\n${qaResult.summary}\n\n### 根因分析\n**根因**: ${debugResult.rootCause}\n**置信度**: ${debugResult.confidence || 'N/A'}\n\n**证据链**:\n${evidence}\n\n**修复建议**:\n${suggestions}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+    if (TASK_TYPE === 'feature' || TASK_TYPE === 'bug') {
+      // Phase 2.5: Debug — 完整根因分析
+      phase('Debug')
+      const debugResult = await agent(debuggingPrompt(qaResult), {
+        label: `Debug: ${args.serviceName}`,
+        schema: DEBUG_SCHEMA,
+      })
+
+      if (debugResult) {
+        log(`Debug 根因: ${debugResult.rootCause} (置信度: ${debugResult.confidence || 'N/A'})`)
+        const evidence = (debugResult.evidence || []).map(e => `- ${e}`).join('\n')
+        const suggestions = (debugResult.fixSuggestions || []).map(s => `- ${s}`).join('\n')
+        fixContext = `### QA 测试失败（已通过 systematic-debugging 分析根因）\n${qaResult.summary}\n\n### 根因分析\n**根因**: ${debugResult.rootCause}\n**置信度**: ${debugResult.confidence || 'N/A'}\n\n**证据链**:\n${evidence}\n\n**修复建议**:\n${suggestions}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+      } else {
+        log('Debug Agent 被跳过，使用原始错误信息')
+        fixContext = `### QA 测试失败\n${qaResult.summary}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+      }
     } else {
-      log('Debug Agent 被跳过，使用原始错误信息')
-      fixContext = `### QA 测试失败\n${qaResult.summary}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+      // debt/chore: skip Debug, build simple fixContext from QA results
+      log(`Debug 跳过（${TASK_TYPE} 任务 — 已知修复模式）`)
+      fixContext = `### QA 失败（${TASK_TYPE} 任务）\n${qaResult.summary}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
     }
     iteration++
     continue
   }
 
   // Phase 3: Multi-Perspective Review (并行，仅 QA PASS 后)
+  if (REVIEW_LENS_COUNT === 0) {
+    // chore: skip review entirely
+    log(`⏭️ Review 跳过（${TASK_TYPE} 任务）`)
+    const confidence = computeConfidence(iteration, 3, 3, 0, qaFirstPass)
+    log(`✅ Harness 管线完成！${args.serviceName} (${iteration} 轮, confidence: ${confidence})`)
+    return {
+      status: 'pass',
+      iterations: iteration,
+      serviceName: args.serviceName,
+      qaSummary: qaResult.summary,
+      reviewSummary: 'skipped (chore)',
+      memorySuggestions: [],
+      confidence,
+      notifications: [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过 (${TASK_TYPE}), QA: ${qaResult.summary}` }],
+    }
+  }
+
   phase('Review')
 
-  // 启动三个视角的 Reviewer，并行执行
+  // Select lenses based on task type
+  const activeLenses = TASK_TYPE === 'debt'
+    ? [REVIEW_LENSES[1]]  // standards-eng only
+    : REVIEW_LENSES        // all 3 for feature/bug
+
   const reviewResults = await parallel(
-    REVIEW_LENSES.map(lens => () =>
+    activeLenses.map(lens => () =>
       agent(reviewLensPrompt(lens), { label: `Review:${lens.key}`, schema: REVIEW_SCHEMA })
         .then(r => r ? { ...r, lens: lens.key, label: lens.label } : null)
     )
@@ -643,14 +814,13 @@ while (iteration <= MAX_ITERATIONS) {
   const passCount = validReviews.filter(r => r.verdict === 'PASS').length
   const failCount = validReviews.filter(r => r.verdict === 'FAIL').length
 
-  log(`多视角审查完成: ${passCount}/${validReviews.length} PASS`)
+  log(`多视角审查完成: ${passCount}/${validReviews.length} PASS (threshold: ${REVIEW_PASS_THRESHOLD}/${validReviews.length})`)
   for (const r of validReviews) {
     log(`  ${r.lens} (${r.label}): ${r.verdict} — ${r.summary}`)
   }
 
-  // 投票判定
-  if (passCount >= 2) {
-    // 2/3 或 3/3 PASS → 管线通过
+  // 投票判定 — type-aware threshold
+  if (passCount >= REVIEW_PASS_THRESHOLD) {
     if (failCount > 0) {
       const failingLenses = validReviews.filter(r => r.verdict === 'FAIL').map(r => r.label).join('、')
       log(`⚠️ ${failingLenses}视角有异议，但多数通过 (${passCount}/${validReviews.length})，管线继续`)
@@ -661,9 +831,23 @@ while (iteration <= MAX_ITERATIONS) {
     const allWarnings = validReviews.reduce((sum, r) => sum + (r.warningCount || 0), 0)
     const reviewSummary = validReviews.map(r => `${r.label}: ${r.verdict}`).join(', ')
 
+    // 收集并去重 memory suggestions（Review → Memory 反馈闭环）
+    const allSuggestions = validReviews.flatMap(r => r.memorySuggestions || [])
+    const seenSlugs = new Set()
+    const uniqueSuggestions = allSuggestions.filter(s => {
+      if (!s || !s.slug || seenSlugs.has(s.slug)) return false
+      seenSlugs.add(s.slug)
+      return true
+    })
+    if (uniqueSuggestions.length > 0) {
+      log(`💡 ${uniqueSuggestions.length} 条 Memory 建议: ${uniqueSuggestions.map(s => s.slug).join(', ')}`)
+    }
+
     // PASS — 管线完成！
-    log(`✅ Harness 管线完成！${args.serviceName} 通过全部检查 (${iteration} 轮)`)
-    const passNotifications = [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过, QA: ${qaResult.summary}` }]
+    const memoryMatchCount = validReviews.reduce((sum, r) => sum + (r.memorySuggestions || []).length, 0)
+    const confidence = computeConfidence(iteration, passCount, validReviews.length, memoryMatchCount, qaFirstPass)
+    log(`✅ Harness 管线完成！${args.serviceName} 通过全部检查 (${iteration} 轮, confidence: ${confidence})`)
+    const passNotifications = [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过, QA: ${qaResult.summary}, confidence: ${confidence}` }]
     if (failCount > 0) {
       passNotifications.push({ event: 'need_human', service: args.serviceName, detail: `多数 PASS (${passCount}/${validReviews.length}) 但 ${failingLenses} 有异议` })
     }
@@ -673,10 +857,12 @@ while (iteration <= MAX_ITERATIONS) {
       serviceName: args.serviceName,
       qaSummary: qaResult.summary,
       reviewSummary: `${reviewSummary} (${passCount}/${validReviews.length} PASS, ${allWarnings} WARNINGs)`,
+      memorySuggestions: uniqueSuggestions,
+      confidence,
       notifications: passNotifications,
     }
   } else {
-    // 0/3 或 1/3 PASS → 管线失败
+    // below threshold → 管线失败
     const allCriticals = validReviews
       .filter(r => r.verdict === 'FAIL')
       .flatMap(r => (r.criticalIssues || []).map(i => ({ ...i, lens: r.lens })))
@@ -692,11 +878,13 @@ while (iteration <= MAX_ITERATIONS) {
 }
 
 // Max iterations exceeded
-log(`❌ 超过最大轮次 (${MAX_ITERATIONS})，管线终止`)
+log(`❌ 超过最大轮次 (${MAX_ITERATIONS}/${TASK_TYPE})，管线终止`)
 return {
   status: 'max_iterations_exceeded',
   iterations: iteration,
   serviceName: args.serviceName,
+  taskType: TASK_TYPE,
+  confidence: Math.round((1 - 0.9) * 100) / 100,  // minimum confidence
   lastFixContext: fixContext,
-  notifications: [{ event: 'pipeline_fail', service: args.serviceName, detail: `超过最大轮次 (${MAX_ITERATIONS}), 最后错误: ${fixContext.substring(0, 200)}` }],
+  notifications: [{ event: 'pipeline_fail', service: args.serviceName, detail: `超过最大轮次 (${MAX_ITERATIONS}/${TASK_TYPE}), 最后错误: ${fixContext.substring(0, 200)}` }],
 }

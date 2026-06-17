@@ -39,7 +39,7 @@
 ```bash
 go build ./...        # 构建
 go test ./...         # 测试
-cd rpc && go run communityhub.go -f etc/communityhub.yaml   # 运行 RPC (8087)
+cd rpc && go run communityhub.go -f etc/communityhub.yaml   # 运行 RPC (8088)
 cd api && go run communityhub.go -f etc/communityhub-api.yaml # 运行 API (8887)
 ```
 

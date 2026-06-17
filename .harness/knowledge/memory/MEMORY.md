@@ -26,9 +26,18 @@
 - [编辑回显数据完整性——表单字段 8 层全链路检查](edit-form-data-integrity.md) — all, must-follow, `pitfall`, `编辑 回显 表单 下拉框 combobox model_type 数据丢失 proto types.go TS`
 - [Submodule 缺少 .gitmodules 导致 worktree 不可用](moderation-submodule-broken.md) — all, should-follow, `pitfall`, `submodule worktree .gitmodules moderation-service master-data-service`
 - [服务 API 层启动需要 JWT_ACCESS_SECRET 环境变量](service-api-jwt-env.md) — all, should-follow, `pitfall`, `JWT_ACCESS_SECRET env 启动 API layer panic secret`
+- [CheckText RPC 已接入管线配置](moderation-checktext-pipeline.md) — moderation-service, must-follow, `decision`, `CheckText 管线 pipeline 审核接口 RPC 生产管线 is_production`
+- [qwen2.5:3b 不适合内容审核初筛](qwen-3b-unsuitable-for-moderation.md) — all, must-follow, `pitfall`, `qwen 小模型 本地模型 审核模型选型`
+- [模板变量名必须用 {{content}}](ai-model-template-variable-content.md) — ai-model-service, must-follow, `pitfall`, `模板 变量 {{input}} {{content}} prompt ModerateText`
+- [gRPC 4MB 上限 vs 5万+ 敏感词](grpc-max-msg-size-sensitive-words.md) — moderation-service, must-follow, `pitfall`, `gRPC ResourceExhausted 敏感词 MaxCallRecvMsgSize`
+- [每次代码变更必须执行验证清单](change-verification-checklist.md) — all, must-follow, `process`, `验证 交付 编译 部署 前后端 遗漏 忘了 改了 修改 变更 build deploy`
 - [Harness Pipeline 需要参数校验防止 undefined 字符串化](harness-pipeline-undefined-guard.md) — all, should-follow, `pitfall`, `harness pipeline undefined 参数 args serviceName serviceDir task 校验`
+- [管线数据可信度：模拟数据 ≠ 真实数据严重性](pipeline-data-trust-simulated-vs-real.md) — all, must-follow, `pitfall`, `模拟数据 测试数据 管线 数据可信度 63次 时间戳 数据质量`
+- [Monorepo 端口冲突检测与启动顺序](monorepo-port-management.md) — all, must-follow, `pitfall`, `端口 冲突 port monorepo 8087 8088 start.sh stop.sh smoketest`
 
 ## 应该遵守 (should-follow)
+
+- [前端管线接入模式：条件分支而非独立文件](frontend-pipeline-integration-pattern.md) — all, should-follow, `guideline`, `前端 管线 pipeline Vue TypeScript isFrontend vitest npm`
 
 - [前端可视化开发流程](frontend-visual-development-workflow.md) — web/mobile, should-follow, `process`, `UI 页面 设计 样式 视觉`
 - [Harness 架构决策记录](harness-architecture-decisions.md) — all, should-follow, `decision`, `harness .harness 驾驭工程 目录结构 架构决策 四支柱`

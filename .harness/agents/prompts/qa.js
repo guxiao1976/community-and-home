@@ -24,7 +24,16 @@ const QA_SCHEMA = {
 
 
 function qaPrompt() {
-  return `你是 QA Engineer Agent。
+  const isFrontend = (SVC_DIR || '').startsWith('web/')
+  const buildCmd = isFrontend ? 'npm run build' : 'go build ./...'
+  const vetCmd = isFrontend ? 'npm run type-check' : 'go vet ./...'
+  const testCmd = isFrontend ? 'npm run test:unit' : 'go test ./... -count=1'
+  const checkScript = isFrontend
+    ? `bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service ${SVC_NAME} --json`
+    : `bash .harness/skills/qa/scripts/harness-checks.sh --service ${SVC_NAME} --json`
+  const checkCount = isFrontend ? '6' : '14'
+
+  return `你是 QA Engineer Agent（${isFrontend ? '前端' : 'Go'}服务）。
 
 ## 角色定义（必须先读）
 阅读 .harness/skills/qa.md — 你的角色定义、验证步骤和产出格式。
@@ -45,22 +54,22 @@ function qaPrompt() {
 - ❌ "should pass" / "probably works" → 跑命令
 - ❌ 依赖上一次运行结果 → 每次 fresh 运行
 - ❌ "linter 过了所以 build 应该也没问题" → linter ≠ 编译器
-- ❌ 部分验证当完整验证 → 全部 13 项检查必须逐一跑完
+- ❌ 部分验证当完整验证 → 全部 ${checkCount} 项检查必须逐一跑完
 
 ## 验证目标
-验证 ${SVC_DIR}/ 的代码质量。
+验证 ${SVC_DIR}/ 的${isFrontend ? '前端' : ''}代码质量。
 
 ## 验证步骤
 1. 阅读 ${SVC_DIR}/CLAUDE.md — 服务规则
 2. 阅读 ${SVC_DIR}/CHANGELOG.md — 变更历史
-3. **运行机械化检查（FRESH）**: \`bash .harness/skills/qa/scripts/harness-checks.sh --service ${SVC_NAME} --json\`
+3. **运行机械化检查（FRESH）**: \`${checkScript}\`
    - 解析 JSON 输出，将各项检查结果整合到 QA 报告的「机械化检查结果」章节
    - FAIL 项在报告中标注具体违规（文件名:行号:字段名）
    - WARN 项作为 WARNING 级别记录
-4. 运行 go build ./... — 编译检查（FRESH，必须看到 exit 0）
-5. 运行 go vet ./... — 静态分析（FRESH，必须看到 clean output）
-6. 运行 go test ./... -count=1 — 单元测试（FRESH，禁用缓存；输出测试包数和测试函数数）
-7. **TDD 证据检查** — 新增函数是否有对应测试？是否有 RED→GREEN 证据？
+4. 运行 \`${buildCmd}\` — ${isFrontend ? '构建检查' : '编译检查'}（FRESH，必须看到 exit 0）
+5. 运行 \`${vetCmd}\` — 静态分析（FRESH，必须看到 clean output）
+6. 运行 \`${testCmd}\` — 单元测试（FRESH${isFrontend ? '' : '，禁用缓存'}；输出${isFrontend ? '测试文件数' : '测试包数'}和测试函数数）
+7. **TDD 证据检查** — 新增${isFrontend ? '组件/函数' : '函数'}是否有对应测试？是否有 RED→GREEN 证据？
 8. 检查新增代码的测试覆盖
 9. 写入 ${SVC_DIR}/_qa.md（每次 FRESH 覆盖，不追加旧报告）
 10. 输出 VERDICT（附 every-fresh-run 证据）

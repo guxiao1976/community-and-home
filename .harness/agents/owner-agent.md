@@ -148,14 +148,28 @@ Owner Agent 上下文 (~200 lines)
 **阶段 6 详细步骤**（Owner 执行）：
 
 ```bash
-# 1. 全链路验证
-go build ./... && go test ./...
+# 1. 全链路编译验证（go.work workspace 级别 — 10 模块联合编译）
+cd $PROJECT_ROOT && go build ./...
+# go.work 联合解析所有模块的依赖。如果服务 A 的 Proto 变更破坏了服务 B 的
+# gRPC 客户端类型，workspace 级编译会暴露。比各服务独立 go build 更严格。
+go vet ./...
 
 # 2. 归档 QA/Review 到变更目录
 for svc in community-hub-service moderation-service web-pc web-mobile; do
   mkdir -p .harness/changes/<change>/impl/$svc/
   mv services/$svc/_qa.md          .harness/changes/<change>/impl/$svc/
   mv services/$svc/_review_*.md    .harness/changes/<change>/impl/$svc/
+done
+
+# 2.5. 运行时冒烟测试（L1 端口 + L2 gRPC 连通 + L3 依赖链）
+bash .harness/scripts/harness-smoke.sh
+# 非阻塞 — FAIL 仅记录到 summary.md 的「例外 & 未解决问题」
+# 需要服务正在运行（docker compose up -d && bash scripts/start.sh）
+
+# 2.6. 处理 Memory Suggestions（Review → Memory 反馈闭环）
+for svc_dir in services/*/; do
+  # Pipeline return value 中的 memorySuggestions 由 Owner 写入
+  # 对每条 unique suggestion：检查 slug 是否已存在 → 不存在则创建 status: draft 的记忆文件
 done
 
 # 3. 产出终稿
@@ -189,8 +203,27 @@ done
 | 1 | 阶段 1 后 | 子Agent 产出 proposal+spec | 影响范围准确？追溯表⚠️项是否合理？批准进入评审 |
 | 2 | 阶段 2 后 | 子Agent 产出评审报告 | 评审结论 APPROVED？批准进入架构设计 |
 | 3 | 阶段 3 后 | 子Agent 产出 design+tasks | 服务归属正确？Proto 变更清单完整？批准进入编码 |
-| 4 | 阶段 5 后 | Workflow 产出 QA+Review | 代码质量/测试覆盖/变更完整性确认 |
+| 4 | 阶段 5 后 | Workflow 产出 QA+Review | **按置信度审查**：≥0.80→摘要审查，0.50-0.79→抽查1-2文件，<0.50→全文审查+人工确认 |
 | 5 | 阶段 6 后 | 集成验证通过 | 最终交付确认，批准归档 |
+
+### HITL 置信度自适应审查（阶段 5）
+
+Pipeline 返回的 `confidence` 评分（0.0-1.0）基于：迭代次数、Review 一致性、Memory 匹配数、QA 一次性通过率。
+
+Owner 在阶段 5 确认时必须：
+1. 读取每个服务 Workflow 返回的 `confidence`
+2. 按以下规则决定审查深度：
+
+| 置信度 | 审查深度 | 操作 |
+|:---:|---|------|
+| ≥ 0.80 | 摘要审查 | 读 QA summary + review summary，确认无异常即可 |
+| 0.50–0.79 | 抽查 | 随机抽取 max(2, totalFiles×30%) 个变更文件，全文阅读做深度审查 |
+| < 0.50 | 全文审查 | 阅读全部变更文件，建议暂停并要求人工确认 |
+
+抽查发现的问题 → 记录到 summary.md「人工抽查」章节。
+全文审查发现的任何 CRITICAL → 强制回退到阶段 5 编码步骤。
+
+**严禁**：无论置信度多高，都不能仅凭"3 个 Reviewer 都 PASS"就跳过人工验收——Agent 的 PASS 是声明，不是证明。
 
 ### 评审循环上限
 

@@ -1,5 +1,5 @@
 Name: community-hub.rpc
-ListenOn: 0.0.0.0:8087
+ListenOn: 0.0.0.0:8088
 Timeout: 30000
 
 Etcd:

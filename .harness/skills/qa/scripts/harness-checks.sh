@@ -26,6 +26,7 @@
 #  11. Proto→TypeScript alignment — every proto message field has a matching TS interface field
 #  12. API Logic TODO stubs — no api/internal/logic/*.go should contain todo stubs
 #  13. Response single-wrap — detect Logic functions returning types with embedded BaseResponse
+#  14. Benchmark regression — compare go test -bench against stored baselines
 
 set -eu
 # NOTE: pipefail intentionally disabled — grep returning 1 (no match) in
@@ -706,7 +707,7 @@ check_api_stubs() {
 # (goctl Response types embed BaseResponse). These should return raw data instead.
 
 check_response_wrap() {
-  echo "[13/13] Response single-wrap" >&2
+  echo "[13/14] Response single-wrap" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -728,6 +729,78 @@ check_response_wrap() {
     detail=$(echo "$violations" | sed "s|$PROJECT_ROOT/||g" | tr '\n' '; ')
     detail="$(json_escape "$detail")"
     log_warn "response_wrap" "${count} Logic funcs return Response types (potential double-wrap): $detail"
+  fi
+}
+
+# Check 14: Benchmark regression — compare against stored baselines (non-blocking)
+check_bench_regression() {
+  echo "[14/14] Benchmark regression" >&2
+  local target="$PROJECT_ROOT/services"
+  [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
+
+  if [[ ! -d "$target" ]]; then
+    log_pass "bench_regression" "no Go service directory (skipped)"
+    return
+  fi
+
+  local baseline="$target/_bench_baseline.txt"
+  local has_bench=false
+
+  # Check if any benchmark functions exist
+  if grep -rq 'func Benchmark' "$target" 2>/dev/null; then
+    has_bench=true
+  fi
+
+  if ! $has_bench; then
+    log_pass "bench_regression" "no benchmark functions — SKIP (tip: add benchmarks for hot paths)"
+    return
+  fi
+
+  # Run benchmarks
+  local bench_output
+  bench_output=$(cd "$target" && go test ./... -bench=. -benchmem -benchtime=1s 2>/dev/null || true)
+
+  if [[ ! -f "$baseline" ]]; then
+    # No baseline yet — store current as baseline
+    echo "$bench_output" | grep '^Benchmark' > "$baseline" 2>/dev/null || true
+    log_pass "bench_regression" "baseline created ($(wc -l < "$baseline" 2>/dev/null || echo 0) benchmarks)"
+    return
+  fi
+
+  # Compare: extract benchmark name and ns/op from current run
+  local regressed_20=0 regressed_50=0 details=""
+  while IFS= read -r bline; do
+    [[ -z "$bline" ]] && continue
+    local bname=$(echo "$bline" | awk '{print $1}')
+    local bns=$(echo "$bline" | awk '{print $3}')  # ns/op
+    [[ -z "$bname" || -z "$bns" ]] && continue
+
+    local cns
+    cns=$(echo "$bench_output" | grep "^${bname}[[:space:]]" | awk '{print $3}' | head -1)
+    [[ -z "$cns" ]] && continue  # benchmark removed or renamed
+
+    # Calculate % change
+    if [[ $bns -gt 0 ]]; then
+      local change=$(( (cns - bns) * 100 / bns ))
+      if [[ $change -gt 50 ]]; then
+        regressed_50=$((regressed_50 + 1))
+        details="${details}${bname}: ${bns}→${cns} ns/op (+${change}%); "
+      elif [[ $change -gt 20 ]]; then
+        regressed_20=$((regressed_20 + 1))
+        details="${details}${bname}: ${bns}→${cns} ns/op (+${change}%); "
+      fi
+    fi
+  done < "$baseline"
+
+  local detail_escaped
+  detail_escaped="$(json_escape "$details")"
+
+  if [[ $regressed_50 -gt 0 ]]; then
+    log_fail "bench_regression" "${regressed_50} benchmarks >50% slower; ${regressed_20} >20% slower: $detail_escaped"
+  elif [[ $regressed_20 -gt 0 ]]; then
+    log_warn "bench_regression" "${regressed_20} benchmarks >20% slower: $detail_escaped"
+  else
+    log_pass "bench_regression" "all benchmarks within 20% of baseline"
   fi
 }
 
@@ -754,6 +827,7 @@ main() {
   check_proto_ts_align
   check_api_stubs
   check_response_wrap
+  check_bench_regression
 
   # Count results
   local pass=0 fail=0 warn=0
@@ -785,7 +859,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap")
+    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression")
     for result in "${RESULTS[@]}"; do
       local status label detail
       status=$(echo "$result" | grep -oP '"status":"\K\w+')
