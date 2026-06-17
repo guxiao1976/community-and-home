@@ -46,7 +46,7 @@ Owner Agent 是**纯编排器**。分析/设计阶段启动独立子 Agent，上
 |------|:---:|------|------|
 | 0 — 工具选择 | 内联 | `.harness/skills/select-tool.md` | 自己判断，快速决策 |
 | 1 — 需求分析 | **子 Agent** | `Agent({subagent_type:"general-purpose", prompt: 读 .harness/agents/subagents/requirement-analyst.md})` | 派发 + 读产出文件验收 |
-| 2 — 需求评审 | **子 Agent** | `Agent({subagent_type:"general-purpose", prompt: 读 .harness/skills/review.md 计划评审模式})` | 派发 + 读评审报告裁决 APPROVED/REVISION |
+| 2 — 需求评审 | **3 子 Agent 并行** | 同时启动 3 个 Reviewer (coverage / structure / clarity)，各读 `.harness/skills/review.md` 计划评审模式对应视角 | 派发 + 投票裁决(2/3 APPROVED→通过) |
 | 3 — 架构设计 | **子 Agent** | `Agent({subagent_type:"general-purpose", prompt: 读 .harness/agents/subagents/architecture-designer.md})` | 派发 + 读产出文件验收 |
 | 4 — Proto 变更 | 内联 | 全局 Claude 自己执行 | 修改 api-proto/ + make ci |
 | 5 — 编码管线 | **Workflow** | `Workflow({scriptPath:".harness/workflows/harness-pipeline.js"})` | 派发 + 等待 PASS/FAIL |
@@ -120,7 +120,7 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 |---|------|------|:---:|------|------|------|------|
 | 0 | **工具选择** | 收到需求 | Owner 内联 | 路径结论 | 选对工具 | — | — |
 | 1 | **需求分析** | OpenSpec | **子 Agent** `requirement-analyst` | `proposal.md` + `specs/*/spec.md` | 追溯表全✅ + Self-Review PASS | 读 proposal 摘要，确认影响范围 | 方案不可行→阶段0 |
-| 2 | **需求评审** | 阶段1完成 | **子 Agent** `review` 计划模式 | `review/spec_review_v1.md` | APPROVED | 读评审结论，裁决 | REVISION→阶段1(≤3轮) |
+| 2 | **需求评审** | 阶段1完成 | **3 子 Agent 并行** (coverage/structure/clarity) | `review/spec_review_{lens}_v1.md` ×3 | 2/3 APPROVED | 读 3 份评审摘要，投票裁决 | REVISION→阶段1(≤3轮) |
 | 3 | **架构设计** | 评审通过 | **子 Agent** `architecture-designer` | `design.md` + `tasks.md` | 记忆注入+零占位符+TDD步骤 | 读 design 摘要，确认服务归属 | 设计不合理→阶段1 |
 | 4 | **Proto 变更** | 含Proto变更 | Owner 内联 | api-proto/ + make ci | lint+breaking全过 | — | 修复重试 |
 | 5 | **编码+测试** | 设计确认 | **Workflow** `harness-pipeline.js` | 代码+`_qa.md`+`_review.md` | QA PASS + Review 2/3 PASS | 读 _qa 摘要 + Review 结论 | Debug→修复(≤3轮) |
