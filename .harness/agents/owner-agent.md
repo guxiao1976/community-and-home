@@ -103,6 +103,7 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 
 | 阶段 | 产出 | 路径 |
 |------|------|------|
+| 工具选择 | request.md（用户原话+路径结论） | `.harness/changes/<change>/request.md` |
 | 需求分析 | proposal + specs（子Agent产出） | `.harness/changes/<change>/proposal.md`, `specs/*/spec.md` |
 | 架构设计 | design + tasks | `.harness/changes/<change>/design.md`, `tasks.md` |
 | 编码 | 代码 + CHANGELOG | `services/<name>/` 对应文件 |
@@ -118,7 +119,7 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 
 | # | 阶段 | 触发 | 执行方式 | 产出（落盘文件） | 门禁 | Owner 验证 | 回退 |
 |---|------|------|:---:|------|------|------|------|
-| 0 | **工具选择** | 收到需求 | Owner 内联 | 路径结论 | 选对工具 | — | — |
+| 0 | **工具选择** | 收到需求 | Owner 内联 | `.harness/changes/<change>/request.md`（用户原话+路径结论） | 选对工具 | — | — |
 | 1 | **需求分析** | OpenSpec | **子 Agent** `requirement-analyst` | `proposal.md` + `specs/*/spec.md` | 追溯表全✅ + Self-Review PASS | 读 proposal 摘要，确认影响范围 | 方案不可行→阶段0 |
 | 2 | **需求评审** | 阶段1完成 | **3 子 Agent 并行** (coverage/structure/clarity) | `review/spec_review_{lens}_v1.md` ×3 | 2/3 APPROVED | 读 3 份评审摘要，投票裁决 | REVISION→阶段1(≤3轮) |
 | 3 | **架构设计** | 评审通过 | **子 Agent** `architecture-designer` | `design.md` + `tasks.md` | 记忆注入+零占位符+TDD步骤 | 读 design 摘要，确认服务归属 | 设计不合理→阶段1 |
@@ -194,7 +195,7 @@ Owner Agent 上下文 (~200 lines)
 
 #### 路径选择输出格式（必须显式输出）
 
-每次收到需求，第一条响应中必须包含：
+每次收到需求，第一条响应中必须包含路径结论，并立即写入 `request.md`：
 
 ```
 ## 路径选择
@@ -202,6 +203,18 @@ Owner Agent 上下文 (~200 lines)
 - 理由: [触发了哪条判定条件]
 - 涉及服务: [service-a, service-b]
 - 跳过阶段: [列出跳过的阶段及理由]
+```
+
+**OpenSpec 路径必须写入 `.harness/changes/<change>/request.md`**：
+
+```markdown
+# Request: <变更名>
+
+**用户原话**: <用户输入原文>
+**路径**: OpenSpec
+**理由**: <判定条件>
+**涉及服务**: <列表>
+**创建时间**: YYYY-MM-DD HH:MM
 ```
 
 ### 分支路径（非 OpenSpec）

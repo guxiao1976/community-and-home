@@ -22,7 +22,8 @@
 
 ### 输入
 
-`.harness/changes/<name>/proposal.md` + `specs/*/spec.md` + `tasks.md`
+`.harness/changes/<name>/request.md` + `proposal.md` + `specs/*/spec.md` + `tasks.md`
+(request.md 用于对照原始需求，检查评审是否有偏离用户初衷)
 
 ### 产出（每视角独立）
 

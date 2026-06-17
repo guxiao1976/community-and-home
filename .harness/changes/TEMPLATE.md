@@ -49,11 +49,12 @@
 
 | 类型 | 路径 |
 |------|------|
+| request | `.harness/changes/<name>/request.md` |
 | proposal | `.harness/changes/<name>/proposal.md` |
 | specs | `.harness/changes/<name>/specs/*/spec.md` |
 | design | `.harness/changes/<name>/design.md` |
 | tasks | `.harness/changes/<name>/tasks.md` |
 | 需求评审 | `.harness/changes/<name>/review/spec_review_v*.md` |
-| QA | `services/<name>/_qa.md` |
-| Review | `services/<name>/_review.md` (v1/v2/...) |
+| QA | `.harness/changes/<name>/impl/<service>/_qa.md` |
+| Review | `.harness/changes/<name>/impl/<service>/_review_*.md` (v1/v2/...) |
 | CHANGELOG | 各服务 `CHANGELOG.md` |

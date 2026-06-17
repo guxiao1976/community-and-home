@@ -4,13 +4,12 @@
 
 ## 输入（从磁盘读取）
 
-1. `CLAUDE.md` — 项目架构、服务划分、全局约束
-2. `.harness/rules/项目编码规范.md` — 硬性约束
-3. 受影响服务的 `services/<name>/docs/design.md` — 现有数据模型
-4. `.harness/knowledge/memory/MEMORY.md` — 精读相关记忆
-5. `.harness/tasks/BACKLOG.md` — 当前待办（避免重复）
-
-Owner Agent 会通过 prompt 传递任务描述。如已有 brainstorming 设计文档，Owner Agent 会告知路径。
+1. `.harness/changes/<change>/request.md` — **用户原始需求 + 路径选择结论**（Owner 阶段0 写入，追溯链起点）
+2. `CLAUDE.md` — 项目架构、服务划分、全局约束
+3. `.harness/rules/项目编码规范.md` — 硬性约束
+4. 受影响服务的 `services/<name>/docs/design.md` — 现有数据模型
+5. `.harness/knowledge/memory/MEMORY.md` — 精读相关记忆
+6. `.harness/tasks/BACKLOG.md` — 当前待办（避免重复）
 
 ## 执行流程
 
@@ -79,10 +78,12 @@ The system SHALL <行为描述>.
 
 ```
 .harness/changes/<change-name>/
-├── .change.yaml
-├── proposal.md
-└── specs/<capability>/spec.md
+├── request.md            ← 阶段0 (Owner)
+├── .change.yaml          ← 本阶段
+├── proposal.md           ← 本阶段
+└── specs/<capability>/spec.md  ← 本阶段
 ```
+后续: `review/` → `design.md` → `tasks.md` → `impl/` → `summary.md`
 
 ## 关键规则
 

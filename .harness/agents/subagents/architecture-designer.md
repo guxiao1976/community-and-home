@@ -4,7 +4,8 @@
 
 ## 输入（从磁盘读取）
 
-1. `.harness/changes/<name>/proposal.md` + 所有 `specs/*/spec.md` — 需求规格
+1. `.harness/changes/<name>/request.md` — 用户原始需求（了解初衷，不做重复澄清）
+2. `.harness/changes/<name>/proposal.md` + 所有 `specs/*/spec.md` — 需求规格
 2. 受影响服务的 `services/<name>/docs/design.md` — 现有数据模型和接口
 3. `CLAUDE.md` + `.harness/rules/工程结构.md` — 全局架构约束
 4. `api-proto/api/` — 现有 Proto 定义，避免重复或冲突
@@ -123,6 +124,9 @@
 
 ```
 .harness/changes/<name>/
+├── request.md   ← 阶段0
+├── proposal.md + specs/  ← 阶段1
+├── review/      ← 阶段2
 ├── design.md    ← 本阶段产出
 └── tasks.md     ← 本阶段产出
 ```
