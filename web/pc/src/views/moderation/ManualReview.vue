@@ -1,0 +1,99 @@
+<template>
+  <div class="manual-review-page">
+    <h3 style="margin-bottom: 16px;">人工审核</h3>
+
+    <ReviewFilter
+      v-model:source-type="sourceType"
+      v-model:review-status="reviewStatus"
+      @change="fetchList"
+    />
+
+    <ReviewTable
+      :list="list"
+      @detail="openDetail"
+    />
+
+    <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        @change="fetchList"
+      />
+    </div>
+
+    <ReviewDetailDrawer
+      v-model="drawerVisible"
+      :detail="currentDetail"
+      @approve="onSubmitReview(1, $event)"
+      @reject="onSubmitReview(2, $event)"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { ElMessage } from 'element-plus';
+import ReviewFilter from '@/components/moderation/ReviewFilter.vue';
+import ReviewTable from '@/components/moderation/ReviewTable.vue';
+import ReviewDetailDrawer from '@/components/moderation/ReviewDetailDrawer.vue';
+import { listReview, getReviewDetail, submitReview } from '@/api/moderation';
+import type { ReviewListItem, ReviewDetail } from '@common/types/moderation';
+
+const sourceType = ref('');
+const reviewStatus = ref(0);
+const page = ref(1);
+const pageSize = ref(20);
+const total = ref(0);
+const list = ref<ReviewListItem[]>([]);
+
+const drawerVisible = ref(false);
+const currentDetail = ref<ReviewDetail | null>(null);
+
+async function fetchList() {
+  try {
+    const res = await listReview({
+      source_type: sourceType.value || undefined,
+      review_status: reviewStatus.value,
+      page: page.value,
+      page_size: pageSize.value,
+    });
+    list.value = res.list;
+    total.value = res.total;
+  } catch (e) {
+    console.error('fetchList failed:', e);
+    ElMessage.error('加载审核列表失败');
+  }
+}
+
+async function openDetail(row: ReviewListItem) {
+  try {
+    currentDetail.value = await getReviewDetail(row.id);
+    drawerVisible.value = true;
+  } catch (e) {
+    console.error('getReviewDetail failed:', e);
+    ElMessage.error('加载审核详情失败');
+  }
+}
+
+async function onSubmitReview(status: number, notes: string) {
+  if (!currentDetail.value) return;
+  try {
+    await submitReview({
+      audit_log_id: currentDetail.value.id,
+      review_status: status,
+      review_notes: notes,
+    });
+    ElMessage.success(status === 1 ? '审核通过' : '已驳回');
+    drawerVisible.value = false;
+    fetchList();
+  } catch (e) {
+    console.error('submitReview failed:', e);
+    ElMessage.error('提交审核失败');
+  }
+}
+
+fetchList();
+</script>
