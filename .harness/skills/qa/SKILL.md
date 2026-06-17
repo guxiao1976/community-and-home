@@ -19,7 +19,7 @@
 | `services/<name>/` (Go 服务) | `bash .harness/skills/qa/scripts/harness-checks.sh --service <name> --json` |
 | `web/<name>/` (前端服务) | `bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service <name> --json` |
 
-**Go 服务检查项**：go_build / go_vet / go_test / proto_jstype / json_string / cross_service_import / error_codes / hardcoded_secrets / graph_freshness / claude_structural_data / proto_ts_align / api_stubs / response_wrap / bench_regression（共 14 项）
+**Go 服务检查项**：go_build / go_vet / go_test / proto_jstype / json_string / cross_service_import / error_codes / hardcoded_secrets / graph_freshness / claude_structural_data / proto_ts_align / api_stubs / response_wrap / bench_regression / api_smoke（共 15 项）
 
 **前端服务检查项**：type_check / unit_test / build / hardcoded_secrets / debug_artifacts / type_safety（共 6 项）
 

@@ -27,6 +27,7 @@
 #  12. API Logic TODO stubs — no api/internal/logic/*.go should contain todo stubs
 #  13. Response single-wrap — detect Logic functions returning types with embedded BaseResponse
 #  14. Benchmark regression — compare go test -bench against stored baselines
+#  15. API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
 
 set -eu
 # NOTE: pipefail intentionally disabled — grep returning 1 (no match) in
@@ -707,7 +708,7 @@ check_api_stubs() {
 # (goctl Response types embed BaseResponse). These should return raw data instead.
 
 check_response_wrap() {
-  echo "[13/14] Response single-wrap" >&2
+  echo "[13/15] Response single-wrap" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -734,7 +735,7 @@ check_response_wrap() {
 
 # Check 14: Benchmark regression — compare against stored baselines (non-blocking)
 check_bench_regression() {
-  echo "[14/14] Benchmark regression" >&2
+  echo "[14/15] Benchmark regression" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -804,6 +805,72 @@ check_bench_regression() {
   fi
 }
 
+# Check 15: API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
+check_api_smoke() {
+  echo "[15/15] API smoke test" >&2
+  local target="$PROJECT_ROOT/services"
+  [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
+
+  if [[ ! -d "$target" ]]; then
+    log_pass "api_smoke" "no service directory (skipped)"
+    return
+  fi
+
+  # Only run for services with an API layer (routes.go)
+  local routes_file="$target/api/internal/handler/routes.go"
+  if [[ ! -f "$routes_file" ]]; then
+    log_pass "api_smoke" "no API routes file (skipped)"
+    return
+  fi
+
+  # Find newly added route paths in the diff (relative to HEAD~1)
+  local new_routes
+  new_routes=$(cd "$target" && git diff HEAD~1 -- api/internal/handler/routes.go 2>/dev/null \
+    | grep '^\+.*Path:' \
+    | grep -oP '"/\K[^"]+' || true)
+
+  if [[ -z "$new_routes" ]]; then
+    log_pass "api_smoke" "no new routes detected in diff"
+    return
+  fi
+
+  # Read the service port from config
+  local port=0
+  if [[ -f "$target/api/etc/"*.yaml ]]; then
+    port=$(grep -oP 'Port:\s*\K\d+' "$target/api/etc/"*.yaml 2>/dev/null | head -1)
+  fi
+  if [[ "$port" -eq 0 ]]; then
+    log_warn "api_smoke" "cannot determine API port — SKIP"
+    return
+  fi
+
+  # Test each new route
+  local failed=0 total=0 details=""
+  while IFS= read -r route; do
+    [[ -z "$route" ]] && continue
+    total=$((total + 1))
+    local url="http://127.0.0.1:${port}/api/moderation/${route}"
+    local http_code
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "$url" 2>/dev/null || echo "000")
+    # 401/403 = route exists (auth required), 200 = success. 404 = route missing.
+    if [[ "$http_code" == "404" || "$http_code" == "000" ]]; then
+      failed=$((failed + 1))
+      details="${details}${url}=${http_code}; "
+    fi
+  done <<< "$new_routes"
+
+  local detail_escaped
+  detail_escaped="$(json_escape "$details")"
+
+  if [[ $total -eq 0 ]]; then
+    log_pass "api_smoke" "no routes to test"
+  elif [[ $failed -gt 0 ]]; then
+    log_warn "api_smoke" "${failed}/${total} new routes returned 404 — service may need restart: $detail_escaped"
+  else
+    log_pass "api_smoke" "${total} new routes verified (non-404)"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -828,6 +895,7 @@ main() {
   check_api_stubs
   check_response_wrap
   check_bench_regression
+  check_api_smoke
 
   # Count results
   local pass=0 fail=0 warn=0
@@ -859,7 +927,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression")
+    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test")
     for result in "${RESULTS[@]}"; do
       local status label detail
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

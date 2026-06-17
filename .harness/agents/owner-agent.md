@@ -125,6 +125,26 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 | 3 | **架构设计** | 评审通过 | **子 Agent** `architecture-designer` | `design.md` + `tasks.md` | 记忆注入+零占位符+TDD步骤 | 读 design 摘要，确认服务归属 | 设计不合理→阶段1 |
 | 4 | **Proto 变更** | 含Proto变更 | Owner 内联 | api-proto/ + make ci | lint+breaking全过 | — | 修复重试 |
 | 5 | **编码+测试** | 设计确认 | **N×Workflow 并行** `harness-pipeline.js`（每服务1个，无依赖并行） | 代码+`_qa.md`+`_review.md`（每服务独立） | 每服务 QA PASS + Review 2/3 PASS | 跟踪各 Workflow 摘要，全部 PASS → 下一阶段 | Debug→修复(≤3轮) |
+
+**⚠️ 阶段 5 硬性禁令**：
+
+- ❌ **禁止使用 superpowers `subagent-driven-development` / `executing-plans` / 任何外部技能替代 `harness-pipeline.js`**
+- ❌ **禁止跳过 QA 机械化检查（15 项，含 API 冒烟测试）**
+- ❌ **禁止跳过 Review 门禁（3 视角并行，2/3 PASS）**
+- ❌ **禁止在无 Workflow 隔离的情况下直接 dispatch implementer subagent**
+
+**原因**：外部技能不了解项目 Memory 注入、QA 自动化检查、Review 视角定义、服务边界约束。直接 dispatch implementer = 无 QA + 无 Review = 低级问题直达用户。
+
+**正确做法**：
+```javascript
+// 每服务一个 Workflow，无依赖的并行启动
+Workflow({scriptPath: ".harness/workflows/harness-pipeline.js", args: {
+  serviceName: "审核服务",
+  serviceDir: "services/moderation-service",
+  task: "Task 1: ...\nTask 2: ..."
+}})
+```
+Workflow 内部自动执行：Generator → QA(15项) → QA FAIL? Debug → Reviewer(3视角并行) → 最多 3 轮。
 | 6 | **集成归档** | 编码通过 | Owner 内联 | 移动 QA/Review → `.harness/changes/<change>/impl/` + 更新 INDEX + summary | 全链路通过 | — | 修复重试 |
 
 **上下文隔离设计**：

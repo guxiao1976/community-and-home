@@ -32,7 +32,7 @@ const testCmd  = isFrontend ? 'npm run test:unit' : 'go test ./... -count=1'
 - 前端: vitest TDD → `npm run test:unit`，用 `@vue/test-utils mount`
 
 **QA**：`qa.js`
-- Go: `harness-checks.sh` 14 项（go build/vet/test/proto/...）
+- Go: `harness-checks.sh` 15 项（go build/vet/test/proto/api smoke/...）
 - 前端: `harness-checks-frontend.sh` 6 项（type-check/unit-test/build/secrets/debug-artifacts/type-safety）
 
 **Review**：`review.js`

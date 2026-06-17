@@ -24,6 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 编码规范 / 硬性约束 / 提交前检查 | [`.harness/rules/项目编码规范.md`](.harness/rules/项目编码规范.md) |
 | 项目知识（架构/业务/数据） | [`.harness/knowledge/INDEX.md`](.harness/knowledge/INDEX.md) |
 | 踩过的坑 / 经验记忆 | [`.harness/knowledge/memory/MEMORY.md`](.harness/knowledge/memory/MEMORY.md) |
+| 当前待办 / 任务队列 | [`.harness/tasks/BACKLOG.md`](.harness/tasks/BACKLOG.md) |
 | 历史变更追溯 | [`.harness/changes/INDEX.md`](.harness/changes/INDEX.md) |
 | AI 团队工作流程 / 工具选择 | [`docs/specs/ai-dev-team-design.md`](docs/specs/ai-dev-team-design.md) |
 | 执行日志 / 流程遵守 | [`docs/specs/execution-log.md`](docs/specs/execution-log.md) |
@@ -53,7 +54,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 bash .harness/scripts/graph-query.sh <service-name>   # 查询图谱
 ```
 
-## 6 条硬性约束
+## 7 条硬性约束
 
 | # | 规则 | 详见 |
 |---|------|------|
@@ -63,6 +64,7 @@ bash .harness/scripts/graph-query.sh <service-name>   # 查询图谱
 | 4 | 提交前必须 `bash .harness/skills/qa/scripts/harness-checks.sh --service <name>`，FAIL 不可提交 | [项目编码规范 §6](.harness/rules/项目编码规范.md) |
 | 5 | 密钥在 `.env`，服务入口用 `configx.MustLoad` | [项目编码规范 §7](.harness/rules/项目编码规范.md) |
 | 6 | 修改 `common/` 需全局评估影响 | [项目编码规范 §3](.harness/rules/项目编码规范.md) |
+| 7 | 收到需求后首条响应必须输出路径选择（路径+理由+涉及服务），跨服务需求走 OpenSpec → `harness-pipeline.js`，禁止用外部技能替代 | [owner-agent.md §路径选择](.harness/agents/owner-agent.md) |
 
 ## 常用命令
 
@@ -86,7 +88,15 @@ cd api-proto && make ci          # lint + breaking-check + generate
 ```bash
 cd services/<name> && go build ./...
 cd services/<name> && go test ./...
-bash .harness/skills/qa/scripts/harness-checks.sh --service <name>   # 11 项机械化检查
+bash .harness/skills/qa/scripts/harness-checks.sh --service <name>   # 15 项机械化检查
+```
+
+### 任务管理
+```bash
+bash .harness/scripts/harness-tasks.sh list                  # 列出所有待办
+bash .harness/scripts/harness-tasks.sh list --priority P0    # 只看 P0
+bash .harness/scripts/harness-tasks.sh scan --auto-create    # 传感器扫描+自动建任务
+bash .harness/scripts/harness-tasks.sh stats                 # 统计概览
 ```
 
 ### 前端
