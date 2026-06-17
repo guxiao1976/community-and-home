@@ -17,9 +17,11 @@ type UserCertification struct {
 	DocumentUrls sql.NullString `db:"document_urls"`
 	Status       int64          `db:"status"`
 	ReviewerId   sql.NullInt64  `db:"reviewer_id"`
-	ReviewTime   sql.NullTime   `db:"review_time"`
-	ReviewNotes  sql.NullString `db:"review_notes"`
-	SubmitTime   time.Time      `db:"submit_time"`
+	ReviewTime       sql.NullTime   `db:"review_time"`
+	ReviewNotes      sql.NullString `db:"review_notes"`
+	ModerationStatus int64          `db:"moderation_status"`
+	ModerationTime   sql.NullTime   `db:"moderation_time"`
+	SubmitTime       time.Time      `db:"submit_time"`
 }
 
 type UserCertificationModel interface {
@@ -44,12 +46,12 @@ func NewUserCertificationModel(conn sqlx.SqlConn) UserCertificationModel {
 }
 
 func (m *defaultUserCertificationModel) Insert(ctx context.Context, data *UserCertification) (sql.Result, error) {
-	query := fmt.Sprintf(`INSERT INTO %s (id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, submit_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
-	return m.conn.ExecCtx(ctx, query, data.Id, data.RoleId, data.UserId, data.DocumentUrls, data.Status, data.ReviewerId, data.ReviewTime, data.ReviewNotes, data.SubmitTime)
+	query := fmt.Sprintf(`INSERT INTO %s (id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, moderation_status, moderation_time, submit_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
+	return m.conn.ExecCtx(ctx, query, data.Id, data.RoleId, data.UserId, data.DocumentUrls, data.Status, data.ReviewerId, data.ReviewTime, data.ReviewNotes, data.ModerationStatus, data.ModerationTime, data.SubmitTime)
 }
 
 func (m *defaultUserCertificationModel) FindOne(ctx context.Context, id int64) (*UserCertification, error) {
-	query := fmt.Sprintf(`SELECT id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, submit_time FROM %s WHERE id = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, moderation_status, moderation_time, submit_time FROM %s WHERE id = ?`, m.table)
 	var resp UserCertification
 	err := m.conn.QueryRowCtx(ctx, &resp, query, id)
 	if err != nil {
@@ -62,7 +64,7 @@ func (m *defaultUserCertificationModel) FindOne(ctx context.Context, id int64) (
 }
 
 func (m *defaultUserCertificationModel) FindByRoleId(ctx context.Context, roleId int64) ([]*UserCertification, error) {
-	query := fmt.Sprintf(`SELECT id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, submit_time FROM %s WHERE role_id = ? ORDER BY submit_time DESC`, m.table)
+	query := fmt.Sprintf(`SELECT id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, moderation_status, moderation_time, submit_time FROM %s WHERE role_id = ? ORDER BY submit_time DESC`, m.table)
 	var resp []*UserCertification
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, roleId)
 	if err != nil {
@@ -72,7 +74,7 @@ func (m *defaultUserCertificationModel) FindByRoleId(ctx context.Context, roleId
 }
 
 func (m *defaultUserCertificationModel) FindByUserId(ctx context.Context, userId int64) ([]*UserCertification, error) {
-	query := fmt.Sprintf(`SELECT id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, submit_time FROM %s WHERE user_id = ? ORDER BY submit_time DESC`, m.table)
+	query := fmt.Sprintf(`SELECT id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, moderation_status, moderation_time, submit_time FROM %s WHERE user_id = ? ORDER BY submit_time DESC`, m.table)
 	var resp []*UserCertification
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, userId)
 	if err != nil {
@@ -102,7 +104,7 @@ func (m *defaultUserCertificationModel) FindPage(ctx context.Context, status *in
 	}
 
 	offset := (page - 1) * pageSize
-	query := fmt.Sprintf("SELECT id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, submit_time FROM %s %s ORDER BY id DESC LIMIT ? OFFSET ?", m.table, where)
+	query := fmt.Sprintf("SELECT id, role_id, user_id, document_urls, status, reviewer_id, review_time, review_notes, moderation_status, moderation_time, submit_time FROM %s %s ORDER BY id DESC LIMIT ? OFFSET ?", m.table, where)
 	queryArgs := append(args, pageSize, offset)
 	var resp []*UserCertification
 	err = m.conn.QueryRowsCtx(ctx, &resp, query, queryArgs...)

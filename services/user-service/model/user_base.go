@@ -12,20 +12,21 @@ import (
 
 // UserBase 用户基础表（5 表设计）
 type UserBase struct {
-	Id           int64          `db:"id"`
-	Phone        string         `db:"phone"`
-	Nickname     sql.NullString `db:"nickname"`
-	AvatarUrl    sql.NullString `db:"avatar_url"`
-	RealName     sql.NullString `db:"real_name"`
-	IdCardNumber sql.NullString `db:"id_card_number"`
-	Gender       sql.NullInt64  `db:"gender"`
-	BirthDate    sql.NullTime   `db:"birth_date"`
-	Status       int64          `db:"status"`
-	CreditScore  int64          `db:"credit_score"`
-	Preferences  sql.NullString `db:"preferences"`
-	CreatedTime  time.Time      `db:"created_time"`
-	UpdatedTime  time.Time      `db:"updated_time"`
-	DeleteTime   sql.NullTime   `db:"delete_time"`
+	Id                       int64          `db:"id"`
+	Phone                    string         `db:"phone"`
+	Nickname                 sql.NullString `db:"nickname"`
+	AvatarUrl                sql.NullString `db:"avatar_url"`
+	RealName                 sql.NullString `db:"real_name"`
+	IdCardNumber             sql.NullString `db:"id_card_number"`
+	Gender                   sql.NullInt64  `db:"gender"`
+	BirthDate                sql.NullTime   `db:"birth_date"`
+	Status                   int64          `db:"status"`
+	CreditScore              int64          `db:"credit_score"`
+	NicknameModerationStatus int64          `db:"nickname_moderation_status"`
+	Preferences              sql.NullString `db:"preferences"`
+	CreatedTime              time.Time      `db:"created_time"`
+	UpdatedTime              time.Time      `db:"updated_time"`
+	DeleteTime               sql.NullTime   `db:"delete_time"`
 }
 
 type UserBaseModel interface {
@@ -53,12 +54,12 @@ func NewUserBaseModel(conn sqlx.SqlConn) UserBaseModel {
 }
 
 func (m *defaultUserBaseModel) Insert(ctx context.Context, data *UserBase) (sql.Result, error) {
-	query := fmt.Sprintf(`INSERT INTO %s (id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, preferences, created_time, updated_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
-	return m.conn.ExecCtx(ctx, query, data.Id, data.Phone, data.Nickname, data.AvatarUrl, data.RealName, data.IdCardNumber, data.Gender, data.BirthDate, data.Status, data.CreditScore, data.Preferences, data.CreatedTime, data.UpdatedTime)
+	query := fmt.Sprintf(`INSERT INTO %s (id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, nickname_moderation_status, preferences, created_time, updated_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
+	return m.conn.ExecCtx(ctx, query, data.Id, data.Phone, data.Nickname, data.AvatarUrl, data.RealName, data.IdCardNumber, data.Gender, data.BirthDate, data.Status, data.CreditScore, data.NicknameModerationStatus, data.Preferences, data.CreatedTime, data.UpdatedTime)
 }
 
 func (m *defaultUserBaseModel) FindOne(ctx context.Context, id int64) (*UserBase, error) {
-	query := fmt.Sprintf(`SELECT id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, preferences, created_time, updated_time, delete_time FROM %s WHERE id = ? AND delete_time IS NULL`, m.table)
+	query := fmt.Sprintf(`SELECT id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, nickname_moderation_status, preferences, created_time, updated_time, delete_time FROM %s WHERE id = ? AND delete_time IS NULL`, m.table)
 	var resp UserBase
 	err := m.conn.QueryRowCtx(ctx, &resp, query, id)
 	if err != nil {
@@ -72,7 +73,7 @@ func (m *defaultUserBaseModel) FindOne(ctx context.Context, id int64) (*UserBase
 
 // FindOneByPhone 根据加密后的手机号查询用户
 func (m *defaultUserBaseModel) FindOneByPhone(ctx context.Context, encryptedPhone string) (*UserBase, error) {
-	query := fmt.Sprintf(`SELECT id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, preferences, created_time, updated_time, delete_time FROM %s WHERE phone = ? AND delete_time IS NULL`, m.table)
+	query := fmt.Sprintf(`SELECT id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, nickname_moderation_status, preferences, created_time, updated_time, delete_time FROM %s WHERE phone = ? AND delete_time IS NULL`, m.table)
 	var resp UserBase
 	err := m.conn.QueryRowCtx(ctx, &resp, query, encryptedPhone)
 	if err != nil {
@@ -94,7 +95,7 @@ func (m *defaultUserBaseModel) FindByIds(ctx context.Context, ids []int64) ([]*U
 		placeholders[i] = "?"
 		args[i] = id
 	}
-	query := fmt.Sprintf(`SELECT id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, preferences, created_time, updated_time, delete_time FROM %s WHERE id IN (%s) AND delete_time IS NULL`, m.table, strings.Join(placeholders, ","))
+	query := fmt.Sprintf(`SELECT id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, nickname_moderation_status, preferences, created_time, updated_time, delete_time FROM %s WHERE id IN (%s) AND delete_time IS NULL`, m.table, strings.Join(placeholders, ","))
 	var resp []*UserBase
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, args...)
 	if err != nil {
@@ -125,7 +126,7 @@ func (m *defaultUserBaseModel) FindPage(ctx context.Context, keyword string, sta
 	}
 
 	offset := (page - 1) * pageSize
-	query := fmt.Sprintf("SELECT id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, preferences, created_time, updated_time, delete_time FROM %s %s ORDER BY id DESC LIMIT ? OFFSET ?", m.table, where)
+	query := fmt.Sprintf("SELECT id, phone, nickname, avatar_url, real_name, id_card_number, gender, birth_date, status, credit_score, nickname_moderation_status, preferences, created_time, updated_time, delete_time FROM %s %s ORDER BY id DESC LIMIT ? OFFSET ?", m.table, where)
 	queryArgs := append(args, pageSize, offset)
 	var resp []*UserBase
 	err = m.conn.QueryRowsCtx(ctx, &resp, query, queryArgs...)
