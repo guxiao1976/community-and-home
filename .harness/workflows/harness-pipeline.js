@@ -1,10 +1,11 @@
 export const meta = {
   name: 'harness-pipeline',
-  description: 'Harness 开发管线：Generator → QA → Reviewer，失败自动回到 Generator 修复，直到 PASS',
+  description: 'Harness 开发管线：Generator → QA → (Debug) → Reviewer，QA FAIL 时触发根因分析，失败自动回到 Generator 修复直到 PASS',
   phases: [
     { title: 'Develop', detail: 'Generator 实现/修复代码' },
     { title: 'QA', detail: 'QA Agent 编译+测试验证' },
-    { title: 'Review', detail: 'Code Reviewer 8 维度审查' },
+    { title: 'Debug', detail: '根因分析 — QA FAIL 时触发（systematic-debugging）' },
+    { title: 'Review', detail: '3 视角并行审查（安全架构/规范工程/设计业务）' },
   ],
 }
 
@@ -97,8 +98,9 @@ if (!ALL_VALID.includes(bareName)) {
   )
 }
 
-const ROOT_CLAUDE = '/home/jiaoxh/my-project/community-home/CLAUDE.md'
-const SVC_DIR = `/home/jiaoxh/my-project/community-home/${args.serviceDir}`
+const ROOT_CLAUDE = 'CLAUDE.md'  // Agent 在 repo 根目录运行，用相对路径
+const SVC_DIR = args.serviceDir   // 如 "services/moderation-service"，agent 在 repo 根目录
+const SVC_NAME = bareName         // "moderation-service" — QA 脚本等需要裸目录名
 
 // ============================================================
 // Agent prompts
@@ -108,7 +110,7 @@ function generatorPrompt(iteration, fixContext) {
   const base = `你是 ${args.serviceName} 的开发 Agent。
 
 ## 启动上下文（必须先读，顺序重要）
-1. 阅读 /home/jiaoxh/my-project/community-home/CLAUDE.md — 全局索引/地图，了解 rules/ memory/ changes/ 位置
+1. 阅读 ${ROOT_CLAUDE} — 全局索引/地图，了解 rules/ memory/ changes/ 位置
 2. 阅读 .harness/rules/项目编码规范.md — 编码规范、硬性约束（Snowflake、gRPC、提交前检查等）
 3. 阅读 ${SVC_DIR}/CLAUDE.md — 角色定位、关键规则、全局公约、常用命令
 4. 阅读 ${SVC_DIR}/docs/design.md — 数据模型、业务流程（如存在）
@@ -156,6 +158,40 @@ function generatorPrompt(iteration, fixContext) {
   - [[memory-slug-3]] — <不适用的原因>
 \`\`\`
 
+## TDD 编码纪律（强制执行 — superpowers:test-driven-development）
+
+**铁律：NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST**
+先写实现代码再补测试 → 删掉代码，从测试重新开始。
+
+### RED — 先写失败的测试
+1. 对于每个新增/修改的函数，**先写 table-driven tests**（用例：正常路径、空值/零值、错误路径）
+2. 运行 \`go test ./... -count=1 -run <TestName>\` → **必须看到测试失败**（因功能尚未实现）
+3. **记录 RED 证据** — 截取 FAIL 输出的关键行，格式：
+   \`\`\`
+   RED 证据 — TestXxx:
+   --- FAIL: TestXxx (0.00s)
+       xxx_test.go:15: <具体错误信息，如 undefined: FuncName 或 got: X want: Y>
+   \`\`\`
+   仅"看到失败"不够，必须留下可被 QA 验证的输出摘录
+4. 测试直接通过 → 说明测试没测到东西，修正测试重来
+5. 不写 mock（除非依赖外部服务）——用真实结构和业务数据
+
+### GREEN — 最小实现
+1. 写**刚好够通过测试**的代码，不添加测试未覆盖的功能（YAGNI）
+2. 运行测试 → 确认通过 + 全部已有测试不破
+3. 测试失败 → 修代码，不改测试。其他测试破 → 立即修复
+
+### REFACTOR — 清理
+1. 消除重复、改善命名、抽取辅助函数
+2. 运行测试 → 保持全绿
+3. 不在此阶段添加新行为
+
+### 禁止行为
+- ❌ 先写实现再补测试 → **删掉代码，从 RED 开始**
+- ❌ "调用不报错"的测试 → 必须 assert 具体返回值
+- ❌ 一次写多个测试 → 一次一个，逐步推进
+- ❌ "太简单不需要测试" → 简单代码也会出错
+
 ## 全局公约提醒
 - Proto 变更必须在 api-proto/ 中操作，告知用户切换到全局 Claude 执行 make generate
 - 服务间通信仅通过 gRPC，禁止直连其他服务数据库
@@ -168,7 +204,8 @@ function generatorPrompt(iteration, fixContext) {
 
 ## 完成标准
 - go build ./... 通过
-- go test ./... 通过
+- go test ./... 通过（含新增测试，每个新增函数有对应测试）
+- 每个新增函数遵循 RED→GREEN→REFACTOR 循环，输出 TDD 证据（测试名 + **RED FAIL 输出摘录** + GREEN PASS 确认）。无 RED 摘录 = TDD 不合格
 - 更新 ${SVC_DIR}/CHANGELOG.md
 - 输出记忆应用报告`
   } else {
@@ -178,6 +215,7 @@ ${fixContext}
 
 ## 完成标准
 - 所有失败项修复完成
+- 为修复的问题补写回归测试（先看测试 FAIL 再现修复）
 - go build ./... 通过
 - go test ./... 通过
 - 更新 ${SVC_DIR}/CHANGELOG.md`
@@ -190,38 +228,66 @@ function qaPrompt() {
 ## 角色定义（必须先读）
 阅读 .harness/skills/qa.md — 你的角色定义、验证步骤和产出格式。
 
+## Verification-Before-Completion 纪律（superpowers:verification-before-completion）
+
+**铁律：NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE**
+
+声称任何状态前，必须：
+1. **IDENTIFY**：哪条命令能证明这个声称？
+2. **RUN**：执行完整命令（fresh，非缓存结果）
+3. **READ**：读完整输出、检查 exit code、数失败数
+4. **VERIFY**：输出是否确认了声称？
+   - 不匹配 → 报告实际状态+证据
+   - 匹配 → 声称状态+附证据
+
+### 禁止行为
+- ❌ "should pass" / "probably works" → 跑命令
+- ❌ 依赖上一次运行结果 → 每次 fresh 运行
+- ❌ "linter 过了所以 build 应该也没问题" → linter ≠ 编译器
+- ❌ 部分验证当完整验证 → 全部 13 项检查必须逐一跑完
+
 ## 验证目标
 验证 ${SVC_DIR}/ 的代码质量。
 
 ## 验证步骤
 1. 阅读 ${SVC_DIR}/CLAUDE.md — 服务规则
 2. 阅读 ${SVC_DIR}/CHANGELOG.md — 变更历史
-3. **运行机械化检查**: \`bash .harness/skills/qa/scripts/harness-checks.sh --service ${args.serviceName} --json\`
+3. **运行机械化检查（FRESH）**: \`bash .harness/skills/qa/scripts/harness-checks.sh --service ${SVC_NAME} --json\`
    - 解析 JSON 输出，将各项检查结果整合到 QA 报告的「机械化检查结果」章节
    - FAIL 项在报告中标注具体违规（文件名:行号:字段名）
    - WARN 项作为 WARNING 级别记录
-4. 运行 go build ./... — 编译检查（机械化检查已覆盖，确认结果）
-5. 运行 go vet ./... — 静态分析（机械化检查已覆盖，确认结果）
-6. 运行 go test ./... -count=1 — 单元测试（机械化检查已覆盖，确认结果）
-7. 检查新增代码的测试覆盖
-8. 写入 ${SVC_DIR}/_qa.md
-9. 输出 VERDICT
+4. 运行 go build ./... — 编译检查（FRESH，必须看到 exit 0）
+5. 运行 go vet ./... — 静态分析（FRESH，必须看到 clean output）
+6. 运行 go test ./... -count=1 — 单元测试（FRESH，禁用缓存；输出测试包数和测试函数数）
+7. **TDD 证据检查** — 新增函数是否有对应测试？是否有 RED→GREEN 证据？
+8. 检查新增代码的测试覆盖
+9. 写入 ${SVC_DIR}/_qa.md（每次 FRESH 覆盖，不追加旧报告）
+10. 输出 VERDICT（附 every-fresh-run 证据）
 
-## QA 报告必须包含机械化检查结果
-在 _qa.md 中新建「机械化检查结果」章节，格式：
+## QA 报告必须包含机械化检查结果 + TDD 证据
+在 _qa.md 中新建以下章节：
+
 \`\`\`markdown
-## 机械化检查结果 (harness-checks.sh)
+## 机械化检查结果 (harness-checks.sh — FRESH run)
 
 | # | 检查项 | 结果 | 详情 |
 |---|--------|------|------|
-| 1 | go build | ✅/❌ | <详情> |
-| 2 | go vet | ✅/❌ | <详情> |
-| 3 | go test | ✅/❌ | <详情，含测试数量> |
+| 1 | go build | ✅/❌ | exit code + 详情 |
+| 2 | go vet | ✅/❌ | exit code + 详情 |
+| 3 | go test | ✅/❌ | <N 包, M 测试函数，fail 数> |
 | 4 | Proto int64 jstype | ✅/❌ | <违规数量> violations |
 | 5 | json:",string" | ✅/❌ | <违规数量> violations |
 | 6 | 跨服务DB导入 | ✅/❌ | <详情> |
 | 7 | 错误码格式 | ✅/⚠️ | <详情> |
 | 8 | 硬编码密钥 | ✅/❌ | <详情> |
+
+## TDD 证据检查
+| 新增/修改函数 | 是否有测试 | RED 确认（含 FAIL 输出摘录） | GREEN 确认 | 状态 |
+|-------------|:---:|:---:|:---:|:---:|
+| FuncName | ✅/❌ | 看到 FAIL: "undefined: FuncName" ✅/❌ | 看到 PASS ✅/❌ | PASS/FAIL |
+
+- RED 列缺少具体 FAIL 输出摘录（仅写"看到失败"无实际 error）→ 视为 ❌
+- 若有 FAIL → 判定 QA FAIL（TDD 证据不足）
 \`\`\`
 
 ## 约束
@@ -239,72 +305,127 @@ function qaPrompt() {
 `
 }
 
-function reviewPrompt() {
-  return `你是 Code Reviewer Agent。
+// ── 多视角审查：三个 Lens，并行执行 ──
+
+const REVIEW_LENSES = [
+  {
+    key: 'security-arch',
+    label: '安全架构',
+    dimensions: '架构一致性(#1)、安全性(#5)、变更完整性(#8)',
+    focus: '你关注架构决策的正确性和安全风险。检查 Proto/gRPC 规范、服务边界、跨服务 DB 访问、硬编码密钥、SQL 注入、输入校验、CHANGELOG 完整性。',
+  },
+  {
+    key: 'standards-eng',
+    label: '规范工程',
+    dimensions: '规范遵循(#3)、复用性(#6)、测试覆盖(#7)、记忆遵守(#9)',
+    focus: '你关注编码规范和工程质量。检查 Snowflake ID 序列化(jstype/json:\",string\")、错误码格式(5位)、API 响应格式、代码复用、测试覆盖(新增函数是否有测试)、记忆遵守(M1-M4)。',
+  },
+  {
+    key: 'design-biz',
+    label: '设计业务',
+    dimensions: '设计一致性(#2)、代码质量(#4)、Migration(#8部分)',
+    focus: '你关注业务逻辑的正确性和设计一致性。检查与 design.md 一致性、数据模型正确性、业务流程正确性、边界条件处理(null/零值/错误路径)、错误处理完善性、资源泄露、Migration 安全性(回滚方案/锁表/影响现有数据)。',
+  },
+]
+
+function reviewLensPrompt(lens) {
+  return `你是 Code Reviewer Agent — ${lens.label}视角。
 
 ## 角色定义（必须先读）
-阅读 .harness/skills/review.md — 你的角色定义、9维度审查规则和产出格式。
+阅读 .harness/skills/review.md — 了解完整的 9 维度审查规则。但你只需要聚焦在 ${lens.dimensions} 维度。
 
 ## 审查目标
-审查 ${SVC_DIR}/ 的代码变更（QA 已通过，_qa.md 可供参考）。
+从 **${lens.label}** 视角审查 ${SVC_DIR}/ 的代码变更（QA 已通过，_qa.md 可供参考）。
+
+## 你的审查焦点
+${lens.focus}
 
 ## 审查步骤
 1. 阅读 ${ROOT_CLAUDE} — 全局规则
 2. 阅读 ${SVC_DIR}/CLAUDE.md — 服务规则
-3. 阅读 ${SVC_DIR}/docs/design.md — 设计文档
+3. 阅读 ${SVC_DIR}/docs/design.md — 设计文档（如存在）
 4. 阅读 ${SVC_DIR}/CHANGELOG.md — 变更历史
-5. 阅读 ${SVC_DIR}/_qa.md — QA 报告（了解测试结果）
+5. 阅读 ${SVC_DIR}/_qa.md — QA 报告
 6. 获取变更内容（git diff 或审查变更文件）
-7. 按 9 个维度审查（含记忆遵守）
-8. 写入 ${SVC_DIR}/_review.md
+7. **仅审查你负责的维度**，不越界审查其他视角的维度
+8. 写入 ${SVC_DIR}/_review_${lens.key}.md
 9. 输出 VERDICT
 
-## 第 9 维度：记忆遵守（Memory Compliance）
-
+## 记忆遵守检查（仅 standards-eng 视角需要做）
+${lens.key === 'standards-eng' ? `
 审查时必须验证代码是否遵守项目记忆系统中的经验：
 
 ### M1: 收集代码中的记忆引用
 - Grep 变更文件中的 \`// SEE: [[\` 注释，提取所有被引用的 memory-slug
 
 ### M2: 验证引用准确性
-对每个 \`// SEE: [[memory-slug]]\` 注释：
-- 读取对应的 \`.harness/knowledge/memory/<slug>.md\` 或 \`${SVC_DIR}/.harness/knowledge/memory/<slug>.md\`
+对每个引用：
 - slug 文件不存在 → 🔴 CRITICAL
 - 代码未遵守记忆指导 → 🔴 CRITICAL
-- 虚假匹配（记忆不适用于此上下文）→ 🟡 WARNING
+- 虚假匹配 → 🟡 WARNING
 
-### M3: 检查遗漏的记忆（两级匹配）
+### M3: 检查遗漏的记忆
 - 从变更描述和 git diff 提取技术关键词
-- **第一级**：用关键词精确匹配 MEMORY.md 索引中的 triggers 列表
-- **第二级**：仅当第一级匹配结果 < 2 个时，才 Grep 正文
-- 关键词命中 triggers 但代码未引用且应适用 → 🔴 CRITICAL
-- should-follow 记忆遗漏 → 🟡 WARNING
-- 注意：使用记忆的 \`type\` 字段过滤（pitfall 类仅当技术栈匹配时才告警）
+- 用关键词精确匹配 MEMORY.md 索引中的 triggers
+- must-follow 记忆遗漏 → 🔴 CRITICAL，should-follow → 🟡 WARNING
+` : '本视角不负责记忆遵守检查（由规范工程视角负责）。'}
 
-### M4: 更新记忆元数据
-对于被正确应用的记忆，在 _review.md 报告中标注需要更新 last_applied / apply_count。
+## 与其他 Reviewer 的分工
+
+| 视角 | 你（${lens.label}） | 其他 Reviewer |
+|------|:---:|:---:|
+| 架构一致性 (#1) | ${lens.key === 'security-arch' ? '✅ 审查' : '—'} | ${lens.key !== 'security-arch' ? '✅' : '—'} |
+| 设计一致性 (#2) | ${lens.key === 'design-biz' ? '✅ 审查' : '—'} | ${lens.key !== 'design-biz' ? '✅' : '—'} |
+| 规范遵循 (#3) | ${lens.key === 'standards-eng' ? '✅ 审查' : '—'} | ${lens.key !== 'standards-eng' ? '✅' : '—'} |
+| 代码质量 (#4) | ${lens.key === 'design-biz' ? '✅ 审查' : '—'} | ${lens.key !== 'design-biz' ? '✅' : '—'} |
+| 安全性 (#5) | ${lens.key === 'security-arch' ? '✅ 审查' : '—'} | ${lens.key !== 'security-arch' ? '✅' : '—'} |
+| 复用性 (#6) | ${lens.key === 'standards-eng' ? '✅ 审查' : '—'} | ${lens.key !== 'standards-eng' ? '✅' : '—'} |
+| 测试覆盖 (#7) | ${lens.key === 'standards-eng' ? '✅ 审查' : '—'} | ${lens.key !== 'standards-eng' ? '✅' : '—'} |
+| 变更完整性 (#8) | ${lens.key === 'security-arch' || lens.key === 'design-biz' ? '✅ 审查' : '—'} | ${lens.key !== 'security-arch' && lens.key !== 'design-biz' ? '✅' : '—'} |
+| 记忆遵守 (#9) | ${lens.key === 'standards-eng' ? '✅ 审查' : '—'} | ${lens.key !== 'standards-eng' ? '✅' : '—'} |
+
+## 审查报告格式
+
+写入 ${SVC_DIR}/_review_${lens.key}.md：
+
+\`\`\`markdown
+# Code Review — ${args.serviceName}（${lens.label}视角）
+
+**审查时间**: <时间>
+**审查维度**: ${lens.dimensions}
+
+## 摘要
+- 🔴 CRITICAL: N / 🟡 WARNING: N / 🔵 NOTE: N
+
+## 发现
+
+### 🔴 CRITICAL
+| # | 文件:行号 | 维度 | 问题 | 修复建议 |
+|---|----------|------|------|---------|
+
+### 🟡 WARNING
+| # | 文件:行号 | 维度 | 问题 | 建议 |
+|---|----------|------|------|------|
+
+### 🔵 NOTE
+| # | 文件:行号 | 建议 |
+|---|----------|------|
+
+---
+VERDICT: PASS / FAIL
+---
+\`\`\`
+
+## VERDICT 规则
+- PASS — 你负责的维度中无 CRITICAL 问题
+- FAIL — 存在 ≥1 个 CRITICAL（列出具体问题和修复建议）
 
 ## 约束
-- 只读权限：Read、Grep、Glob、Bash（go build、go vet、go test、git diff 等）
+- 只读权限：Read、Grep、Glob、Bash
 - 严禁 Write、Edit
-
-## QA VERDICT 解析
-- QA PASS — 继续到 Review
-- QA FAIL — 回到 Generator 修复
-
-## 审查 VERDICT 解析
-- Review PASS — 管线完成！
-- Review FAIL — 回到 Generator 修复
-- 如果 QA 通过但 Review 发现有测试相关问题，Generator 修复后需重新走 QA
-
-## 记忆记录
-如果 Review 发现 CRITICAL 问题，你必须：
-1. 判断这是否是一个新的规范/踩坑（而非一次性的代码错误）
-2. 如果是新经验 → 创建记忆文件到 .harness/knowledge/memory/<slug>.md
-3. 如果已有相关记忆 → 更新它
-4. 更新 MEMORY.md 索引
+- 只审查你负责的维度，不要越界
+- 对于不负责的维度，如果偶然注意到问题，可以写在「🔵 NOTE」中供其他 Reviewer 参考
 `
-
 }
 
 // ============================================================
@@ -345,6 +466,69 @@ const REVIEW_SCHEMA = {
   required: ['verdict', 'summary'],
 }
 
+const DEBUG_SCHEMA = {
+  type: 'object',
+  properties: {
+    rootCause: { type: 'string', description: '一句话根因描述' },
+    confidence: { type: 'string', enum: ['high', 'medium', 'low'], description: '根因置信度' },
+    evidence: { type: 'array', items: { type: 'string' }, description: '从症状到根因的证据链' },
+    fixSuggestions: { type: 'array', items: { type: 'string' }, description: '精确到文件:行号的修复建议' },
+  },
+  required: ['rootCause', 'evidence', 'fixSuggestions'],
+}
+
+// ── Debugging Agent prompt (systematic-debugging) ──
+
+function debuggingPrompt(qaResult) {
+  return `你是 Debugging Agent，遵循 **systematic-debugging** 流程。
+
+## 角色定义
+根因分析师 — 只分析、不修改代码。权限：Read / Grep / Glob / Bash（只读+执行）。**严禁 Write / Edit**。
+
+## 核心原则
+\`\`\`
+NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
+\`\`\`
+症状修复 = 失败。必须找到根因才能建议修复。
+
+## 执行流程（4 Phase）
+
+### Phase 1: Root Cause Investigation
+1. **仔细阅读错误信息** — 逐条分析 QA 失败项，不跳过任何 warning
+2. **复现问题** — 运行失败的编译/测试命令验证问题确实存在
+3. **检查最近变更** — 用 git diff 分析哪些改动可能导致此问题
+4. **追踪数据流** — 从错误发生点反向追踪，找到根本原因（不要停在症状层）
+5. 如果涉及多组件（编译→链接→运行），在每一层边界收集证据
+
+### Phase 2: Pattern Analysis
+1. **找正常工作的对照** — 同代码库中类似的正确实现
+2. **对比差异** — 列出正常与失败的每一项区别，不论多小
+3. **理解依赖** — 检查环境变量、配置、上下游依赖是否满足
+
+### Phase 3: Hypothesis
+1. **形成单一假设** — "我认为 X 是根因，因为 Y"（必须写下来）
+2. **最小验证** — 用 grep/read 验证假设，不改代码
+3. 如果假设被推翻 → 形成新假设，不要堆叠修复
+4. 如果无法确定根因 → 明确说 "I don't understand X"，建议需要收集的额外信息
+
+### Phase 4: 产出修复建议
+提供**精确到文件:行号**的修复建议，供 Generator 执行。
+
+## QA 失败信息
+- **摘要**: ${qaResult.summary}
+- **失败详情**: ${JSON.stringify(qaResult.failures, null, 2)}
+
+## 约束
+- 只读权限，不修改任何代码
+- 必须找到根因，不能只描述症状
+- 修复建议必须精确到文件和行号
+- 不要建议 "可能是 X" 的模糊修复 — 不确定就说不知道
+- 如果已经 ≥3 次修复失败 → 质疑架构而非继续修补
+
+## 产出格式
+以 JSON Schema 输出结构化根因分析报告。`
+}
+
 // ============================================================
 // Pipeline loop
 // ============================================================
@@ -356,9 +540,9 @@ let fixContext = ''
 while (iteration <= MAX_ITERATIONS) {
   log(`第 ${iteration} 轮`)
 
-  // Phase 1: Generator
+  // Phase 1: Generator (隔离 worktree，避免并行管线互踩文件)
   phase('Develop')
-  await agent(generatorPrompt(iteration, fixContext), { label: `${args.serviceName}: 开发/修复` })
+  await agent(generatorPrompt(iteration, fixContext), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
   log(`Generator 完成 (轮次 ${iteration})`)
 
   // Phase 2: QA
@@ -372,36 +556,92 @@ while (iteration <= MAX_ITERATIONS) {
   log(`QA VERDICT: ${qaResult.verdict} — ${qaResult.summary}`)
 
   if (qaResult.verdict === 'FAIL') {
-    fixContext = `### QA 测试失败\n${qaResult.summary}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+    // Phase 2.5: Debug — 根因分析（systematic-debugging），仅 QA FAIL 时触发
+    phase('Debug')
+    const debugResult = await agent(debuggingPrompt(qaResult), {
+      label: `Debug: ${args.serviceName}`,
+      schema: DEBUG_SCHEMA,
+    })
+
+    if (debugResult) {
+      log(`Debug 根因: ${debugResult.rootCause} (置信度: ${debugResult.confidence || 'N/A'})`)
+      const evidence = (debugResult.evidence || []).map(e => `- ${e}`).join('\n')
+      const suggestions = (debugResult.fixSuggestions || []).map(s => `- ${s}`).join('\n')
+      fixContext = `### QA 测试失败（已通过 systematic-debugging 分析根因）\n${qaResult.summary}\n\n### 根因分析\n**根因**: ${debugResult.rootCause}\n**置信度**: ${debugResult.confidence || 'N/A'}\n\n**证据链**:\n${evidence}\n\n**修复建议**:\n${suggestions}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+    } else {
+      log('Debug Agent 被跳过，使用原始错误信息')
+      fixContext = `### QA 测试失败\n${qaResult.summary}\n\n失败详情：\n${JSON.stringify(qaResult.failures, null, 2)}`
+    }
     iteration++
     continue
   }
 
-  // Phase 3: Review (only if QA passed)
+  // Phase 3: Multi-Perspective Review (并行，仅 QA PASS 后)
   phase('Review')
-  const reviewResult = await agent(reviewPrompt(), { label: `Review: ${args.serviceName}`, schema: REVIEW_SCHEMA })
-  if (!reviewResult) {
-    log('Review Agent 被跳过，终止管线')
-    return { status: 'aborted', reason: 'Review agent skipped' }
+
+  // 启动三个视角的 Reviewer，并行执行
+  const reviewResults = await parallel(
+    REVIEW_LENSES.map(lens => () =>
+      agent(reviewLensPrompt(lens), { label: `Review:${lens.key}`, schema: REVIEW_SCHEMA })
+        .then(r => r ? { ...r, lens: lens.key, label: lens.label } : null)
+    )
+  )
+
+  const validReviews = reviewResults.filter(Boolean)
+  if (validReviews.length === 0) {
+    log('所有 Review Agent 被跳过，终止管线')
+    return { status: 'aborted', reason: 'All review agents skipped' }
   }
 
-  log(`Review VERDICT: ${reviewResult.verdict} — ${reviewResult.summary}`)
+  // 统计各视角结果
+  const passCount = validReviews.filter(r => r.verdict === 'PASS').length
+  const failCount = validReviews.filter(r => r.verdict === 'FAIL').length
 
-  if (reviewResult.verdict === 'FAIL') {
-    const issues = (reviewResult.criticalIssues || []).map(i => `- ${i.file}: ${i.issue}`).join('\n')
-    fixContext = `### 审查未通过 (${reviewResult.criticalCount} CRITICAL, ${reviewResult.warningCount} WARNING)\n${reviewResult.summary}\n\n需要修复的 CRITICAL:\n${issues}`
+  log(`多视角审查完成: ${passCount}/${validReviews.length} PASS`)
+  for (const r of validReviews) {
+    log(`  ${r.lens} (${r.label}): ${r.verdict} — ${r.summary}`)
+  }
+
+  // 投票判定
+  if (passCount >= 2) {
+    // 2/3 或 3/3 PASS → 管线通过
+    if (failCount > 0) {
+      const failingLenses = validReviews.filter(r => r.verdict === 'FAIL').map(r => r.label).join('、')
+      log(`⚠️ ${failingLenses}视角有异议，但多数通过 (${passCount}/${validReviews.length})，管线继续`)
+    }
+    log(`✅ 多视角 Review PASS (${passCount}/${validReviews.length})`)
+
+    // 汇总所有 WARNING/NOTE 供参考
+    const allWarnings = validReviews.reduce((sum, r) => sum + (r.warningCount || 0), 0)
+    const reviewSummary = validReviews.map(r => `${r.label}: ${r.verdict}`).join(', ')
+
+    // PASS — 管线完成！
+    log(`✅ Harness 管线完成！${args.serviceName} 通过全部检查 (${iteration} 轮)`)
+    const passNotifications = [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过, QA: ${qaResult.summary}` }]
+    if (failCount > 0) {
+      passNotifications.push({ event: 'need_human', service: args.serviceName, detail: `多数 PASS (${passCount}/${validReviews.length}) 但 ${failingLenses} 有异议` })
+    }
+    return {
+      status: 'pass',
+      iterations: iteration,
+      serviceName: args.serviceName,
+      qaSummary: qaResult.summary,
+      reviewSummary: `${reviewSummary} (${passCount}/${validReviews.length} PASS, ${allWarnings} WARNINGs)`,
+      notifications: passNotifications,
+    }
+  } else {
+    // 0/3 或 1/3 PASS → 管线失败
+    const allCriticals = validReviews
+      .filter(r => r.verdict === 'FAIL')
+      .flatMap(r => (r.criticalIssues || []).map(i => ({ ...i, lens: r.lens })))
+
+    const criticalLines = allCriticals.map(c => `- [${c.lens}] ${c.file}: ${c.issue}`).join('\n')
+    const failSummary = validReviews.map(r => `${r.label}: ${r.verdict} (${r.criticalCount || 0} CRITICAL)`).join('\n')
+
+    fixContext = `### 多视角审查未通过 (${passCount}/${validReviews.length} PASS)\n${failSummary}\n\n需要修复的 CRITICAL:\n${criticalLines}`
+    log(`❌ 多视角 Review FAIL (${passCount}/${validReviews.length})`)
     iteration++
     continue
-  }
-
-  // PASS!
-  log(`✅ Harness 管线完成！${args.serviceName} 通过全部检查 (${iteration} 轮)`)
-  return {
-    status: 'pass',
-    iterations: iteration,
-    serviceName: args.serviceName,
-    qaSummary: qaResult.summary,
-    reviewSummary: reviewResult.summary,
   }
 }
 
@@ -412,4 +652,5 @@ return {
   iterations: iteration,
   serviceName: args.serviceName,
   lastFixContext: fixContext,
+  notifications: [{ event: 'pipeline_fail', service: args.serviceName, detail: `超过最大轮次 (${MAX_ITERATIONS}), 最后错误: ${fixContext.substring(0, 200)}` }],
 }
