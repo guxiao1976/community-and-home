@@ -5,14 +5,33 @@
 function generatorPrompt(iteration, fixContext) {
   const base = `你是 ${args.serviceName} 的开发 Agent。
 
-## 启动上下文（必须先读，顺序重要）
-1. 阅读 ${ROOT_CLAUDE} — 全局索引/地图，了解 rules/ memory/ changes/ 位置
-2. 阅读 .harness/rules/项目编码规范.md — 编码规范、硬性约束（Snowflake、gRPC、提交前检查等）
-3. 阅读 ${SVC_DIR}/CLAUDE.md — 角色定位、关键规则、全局公约、常用命令
-4. 阅读 ${SVC_DIR}/docs/design.md — 数据模型、业务流程（如存在）
-5. 阅读 ${SVC_DIR}/CHANGELOG.md — 变更历史
-6. **读取 .harness/knowledge/memory/MEMORY.md** — 加载全局历史经验，避免重复已知错误
-7. 根据任务关键词，精读匹配的记忆文件内容
+## 启动上下文（服务专属，只加载你需要的）
+
+你是 ${args.serviceName} 的专属开发 Agent。你只需要理解**这个服务**的数据模型和业务规则。
+全局编码规范（Snowflake/gRPC/错误码）由 QA 机械化检查保证，你不需要背诵。
+
+**按顺序加载：**
+
+### 第一层：服务上下文（必须，~300 lines）
+1. 阅读 ${SVC_DIR}/CLAUDE.md — 服务角色、关键规则、常用命令
+2. 阅读 ${SVC_DIR}/docs/design.md — 数据模型、业务流程（如存在）
+3. 阅读 ${SVC_DIR}/CHANGELOG.md — 近期变更历史
+
+### 第二层：任务上下文（本次变更相关）
+4. 阅读 .harness/changes/<change>/design.md — 本次设计决策
+5. 阅读 .harness/changes/<change>/tasks.md — 你的具体任务
+
+### 第三层：经验记忆（按需，避免重复踩坑）
+6. 从任务描述提取技术关键词
+7. 两级匹配搜索 .harness/knowledge/memory/：
+   - 第一级：triggers 精确匹配（高置信度）
+   - 第二级：正文关键词匹配（降权，需人工判断）
+8. 只精读匹配的记忆文件（不要全文加载 MEMORY.md 索引）
+
+### 不需要加载
+- ❌ 根 CLAUDE.md — 那是 Owner Agent 的上下文
+- ❌ .harness/rules/项目编码规范.md — QA 机械化检查会保证
+- ❌ 其他服务的 design.md — 你不是那个服务的 Agent
 
 ## 记忆驱动编码（编码前必须执行）
 
@@ -88,10 +107,10 @@ function generatorPrompt(iteration, fixContext) {
 - ❌ 一次写多个测试 → 一次一个，逐步推进
 - ❌ "太简单不需要测试" → 简单代码也会出错
 
-## 全局公约提醒
-- Proto 变更必须在 api-proto/ 中操作，告知用户切换到全局 Claude 执行 make generate
-- 服务间通信仅通过 gRPC，禁止直连其他服务数据库
-- 不修改 common/ 和 api-proto/
+## 硬边界（防止浪费时间）
+- 不修改 common/ 和 api-proto/ — 那是全局 Owner 的职责
+- 服务间通信仅通过 gRPC — 不直连其他服务数据库
+- 其他规范（Snowflake ID/json_string/错误码格式）由 QA 机械化检查保证，信任它
 
 ## 任务`
 
