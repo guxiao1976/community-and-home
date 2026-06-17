@@ -24,6 +24,8 @@
 #   9. Knowledge graph freshness — graph should be synced after latest commit
 #  10. CLAUDE.md structural data — warn if structural data (RPC/routes/DB tables) duplicated in CLAUDE.md
 #  11. Proto→TypeScript alignment — every proto message field has a matching TS interface field
+#  12. API Logic TODO stubs — no api/internal/logic/*.go should contain todo stubs
+#  13. Response single-wrap — detect Logic functions returning types with embedded BaseResponse
 
 set -eu
 # NOTE: pipefail intentionally disabled — grep returning 1 (no match) in
@@ -664,6 +666,71 @@ check_proto_ts_align() {
   fi
 }
 
+# ─── Check 12: API Logic TODO stubs ──────────────────────────────────
+# Detects goctl-generated TODO stubs that were never implemented.
+# Pattern: "// todo: add your logic here and delete this line"
+# These stubs return (nil, nil) causing the Handler to respond
+# {code:0, data:null} — a "silent success" that masks missing functionality.
+
+check_api_stubs() {
+  echo "[12/13] API logic TODO stubs" >&2
+  local target="$PROJECT_ROOT/services"
+  [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
+
+  if [[ ! -d "$target" ]]; then
+    log_pass "api_stubs" "no service directory (skipped)"
+    return
+  fi
+
+  local stubs
+  stubs=$(grep -rl "todo: add your logic here" "$target/api/internal/logic/" 2>/dev/null || true)
+
+  if [[ -z "$stubs" ]]; then
+    log_pass "api_stubs" "no TODO stubs found in API logic"
+  else
+    local count
+    count=$(echo "$stubs" | wc -l)
+    local detail
+    detail=$(echo "$stubs" | sed "s|$PROJECT_ROOT/||g" | tr '\n' '; ')
+    detail="$(json_escape "$detail")"
+    log_fail "api_stubs" "${count} TODO stubs: $detail"
+  fi
+}
+
+# ─── Check 13: Response single-wrap ──────────────────────────────────
+# Detects Logic functions that return goctl-generated Response types
+# (with embedded BaseResponse) when the Handler also wraps via response.Success().
+# This causes double-nesting: {code:0, data:{code:0, data:{actual}}}
+#
+# Detection: find Logic functions whose return type is *types.XxxResponse
+# (goctl Response types embed BaseResponse). These should return raw data instead.
+
+check_response_wrap() {
+  echo "[13/13] Response single-wrap" >&2
+  local target="$PROJECT_ROOT/services"
+  [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
+
+  if [[ ! -d "$target" ]]; then
+    log_pass "response_wrap" "no service directory (skipped)"
+    return
+  fi
+
+  # Find Logic files whose function signature returns *types.XxxResponse
+  local violations
+  violations=$(grep -rn 'func (l \*.*Logic) .* \*types\.\w*Response' "$target/api/internal/logic/" 2>/dev/null | grep -v test || true)
+
+  if [[ -z "$violations" ]]; then
+    log_pass "response_wrap" "no double-wrap risk detected"
+  else
+    local count
+    count=$(echo "$violations" | wc -l)
+    local detail
+    detail=$(echo "$violations" | sed "s|$PROJECT_ROOT/||g" | tr '\n' '; ')
+    detail="$(json_escape "$detail")"
+    log_warn "response_wrap" "${count} Logic funcs return Response types (potential double-wrap): $detail"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -685,6 +752,8 @@ main() {
   check_graph_freshness
   check_claude_structural_data
   check_proto_ts_align
+  check_api_stubs
+  check_response_wrap
 
   # Count results
   local pass=0 fail=0 warn=0
@@ -716,7 +785,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment")
+    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap")
     for result in "${RESULTS[@]}"; do
       local status label detail
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

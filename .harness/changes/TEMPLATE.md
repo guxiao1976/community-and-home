@@ -1,6 +1,6 @@
 # summary.md 模板
 
-> 每个变更的 Single Source of Truth。创建变更时复制此模板到 `openspec/changes/<change-name>/summary.md`。
+> 每个变更的 Single Source of Truth。创建变更时复制此模板到 `.harness/changes/<change-name>/summary.md`。
 > 每个阶段完成后立即更新，确保全流程可追溯。
 
 ---
@@ -49,11 +49,11 @@
 
 | 类型 | 路径 |
 |------|------|
-| proposal | `openspec/changes/<name>/proposal.md` |
-| specs | `openspec/changes/<name>/specs/*/spec.md` |
-| design | `openspec/changes/<name>/design.md` |
-| tasks | `openspec/changes/<name>/tasks.md` |
-| 需求评审 | `openspec/changes/<name>/review/spec_review_v*.md` |
+| proposal | `.harness/changes/<name>/proposal.md` |
+| specs | `.harness/changes/<name>/specs/*/spec.md` |
+| design | `.harness/changes/<name>/design.md` |
+| tasks | `.harness/changes/<name>/tasks.md` |
+| 需求评审 | `.harness/changes/<name>/review/spec_review_v*.md` |
 | QA | `services/<name>/_qa.md` |
 | Review | `services/<name>/_review.md` (v1/v2/...) |
 | CHANGELOG | 各服务 `CHANGELOG.md` |

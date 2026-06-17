@@ -17,7 +17,7 @@
 ### Step 1: 加载上下文
 
 按顺序：
-1. 阶段 1 产出 — `openspec/changes/<name>/proposal.md` + 所有 `specs/*/spec.md`
+1. 阶段 1 产出 — `.harness/changes/<name>/proposal.md` + 所有 `specs/*/spec.md`
 2. 受影响服务的 `docs/design.md` — 现有数据模型和接口
 3. 根 `CLAUDE.md` + `.harness/rules/工程结构.md` — 全局架构约束
 4. `api-proto/api/` — 现有 Proto 定义，避免重复或冲突
@@ -61,7 +61,7 @@
 
 ### Step 3: 产出 design.md
 
-写入 `openspec/changes/<name>/design.md`：
+写入 `.harness/changes/<name>/design.md`：
 
 ```markdown
 # Design: <功能名称>
@@ -107,7 +107,7 @@ CREATE TABLE <table_name> (
 
 ### Step 4: 产出 tasks.md
 
-写入 `openspec/changes/<name>/tasks.md`，按服务分组：
+写入 `.harness/changes/<name>/tasks.md`，按服务分组：
 
 **参考 writing-plans 原则**（`superpowers:writing-plans`）：独立子任务、精确文件路径、TDD 步骤、零占位符。
 
@@ -209,7 +209,7 @@ CREATE TABLE <table_name> (
 ## 产出物
 
 ```
-openspec/changes/<name>/
+.harness/changes/<name>/
 ├── proposal.md          ← 阶段1产出
 ├── specs/*/spec.md      ← 阶段1产出
 ├── design.md            ← 本阶段产出

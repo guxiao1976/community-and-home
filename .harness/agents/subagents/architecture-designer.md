@@ -4,7 +4,7 @@
 
 ## 输入（从磁盘读取）
 
-1. `openspec/changes/<name>/proposal.md` + 所有 `specs/*/spec.md` — 需求规格
+1. `.harness/changes/<name>/proposal.md` + 所有 `specs/*/spec.md` — 需求规格
 2. 受影响服务的 `services/<name>/docs/design.md` — 现有数据模型和接口
 3. `CLAUDE.md` + `.harness/rules/工程结构.md` — 全局架构约束
 4. `api-proto/api/` — 现有 Proto 定义，避免重复或冲突
@@ -37,7 +37,7 @@
 
 ### Step 3: 产出 design.md
 
-写入 `openspec/changes/<name>/design.md`：
+写入 `.harness/changes/<name>/design.md`：
 
 ```markdown
 # Design: <功能名称>
@@ -61,7 +61,7 @@
 
 ### Step 4: 产出 tasks.md
 
-写入 `openspec/changes/<name>/tasks.md`。遵循 `superpowers:writing-plans` bite-sized 原则：
+写入 `.harness/changes/<name>/tasks.md`。遵循 `superpowers:writing-plans` bite-sized 原则：
 
 ```markdown
 # Tasks: <功能名称>
@@ -122,7 +122,7 @@
 ## 产出物
 
 ```
-openspec/changes/<name>/
+.harness/changes/<name>/
 ├── design.md    ← 本阶段产出
 └── tasks.md     ← 本阶段产出
 ```

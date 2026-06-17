@@ -103,13 +103,12 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 
 | 阶段 | 产出 | 路径 |
 |------|------|------|
-| 需求分析 | proposal + specs（子Agent产出） | `openspec/changes/<change>/proposal.md`, `specs/*/spec.md` |
-| 架构设计 | design + tasks | `openspec/changes/<change>/design.md`, `tasks.md` |
+| 需求分析 | proposal + specs（子Agent产出） | `.harness/changes/<change>/proposal.md`, `specs/*/spec.md` |
+| 架构设计 | design + tasks | `.harness/changes/<change>/design.md`, `tasks.md` |
 | 编码 | 代码 + CHANGELOG | `services/<name>/` 对应文件 |
-| QA | QA 报告 | `services/<name>/_qa.md` |
-| Review | Review 报告 | `services/<name>/_review.md` |
-| CI | CI 结果 | 归档到 `.harness/changes/` 对应条目 |
-| 部署 | 部署报告 | 归档到 `.harness/changes/` 对应条目 |
+| QA | QA 报告 | `.harness/changes/<change>/impl/<service>/_qa.md`（阶段6从 services/ 移入） |
+| Review | Review 报告 | `.harness/changes/<change>/impl/<service>/_review.md`（版本递增） |
+| 归档 | summary 终稿 | `.harness/changes/<change>/summary.md` |
 
 **版本递增约定**：评审文件采用 v1/v2/v3 递增（如 `_review_v1.md` → `_review_v2.md`），旧版本永远不删，确保完整 Audit Trail。
 
@@ -125,7 +124,7 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 | 3 | **架构设计** | 评审通过 | **子 Agent** `architecture-designer` | `design.md` + `tasks.md` | 记忆注入+零占位符+TDD步骤 | 读 design 摘要，确认服务归属 | 设计不合理→阶段1 |
 | 4 | **Proto 变更** | 含Proto变更 | Owner 内联 | api-proto/ + make ci | lint+breaking全过 | — | 修复重试 |
 | 5 | **编码+测试** | 设计确认 | **Workflow** `harness-pipeline.js` | 代码+`_qa.md`+`_review.md` | QA PASS + Review 2/3 PASS | 读 _qa 摘要 + Review 结论 | Debug→修复(≤3轮) |
-| 6 | **集成归档** | 编码通过 | Owner 内联 | CHANGES INDEX + summary | 全链路通过 | — | 修复重试 |
+| 6 | **集成归档** | 编码通过 | Owner 内联 | 移动 QA/Review → `.harness/changes/<change>/impl/` + 更新 INDEX + summary | 全链路通过 | — | 修复重试 |
 
 **上下文隔离设计**：
 
@@ -233,7 +232,7 @@ Owner Agent 上下文 (~200 lines)
 
 ### 流程摘要维护
 
-创建变更时，复制 `.harness/changes/TEMPLATE.md` → `openspec/changes/<change>/summary.md`。
+创建变更时，复制 `.harness/changes/TEMPLATE.md` → `.harness/changes/<change>/summary.md`。
 
 每个阶段完成后立即更新，记录：
 - 执行状态（done / blocked / skipped）

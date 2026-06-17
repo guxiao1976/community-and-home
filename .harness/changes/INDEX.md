@@ -2,7 +2,7 @@
 
 > 最后更新：2026-06-10
 >
-> 变更模板见 [TEMPLATE.md](TEMPLATE.md) — 每个新需求复制此模板到 `openspec/changes/<name>/summary.md`。
+> 变更模板见 [TEMPLATE.md](TEMPLATE.md) — 每个新需求复制此模板到 `.harness/changes/<name>/summary.md`。
 >
 > 下表每条记录是一个"迷你 summary"，链接到分布在各处的产物。
 

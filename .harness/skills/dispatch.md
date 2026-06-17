@@ -149,3 +149,26 @@ QA 阶段默认只扫描本次 git diff 变更的文件。用户说以下词时�
 - go test ./... 通过
 - CHANGELOG.md 已更新
 ```
+
+## 自动派发指令格式
+
+当 Harness Loop 以 `--auto-dispatch` 模式运行时，会输出 `[DISPATCH]` 指令行：
+
+```
+[DISPATCH] id=<task-id> service=<english-name> label=<chinese-label> dir=services/<dir> task=<title>
+```
+
+SessionStart agent 应解析每条 `[DISPATCH]` 指令并启动对应的 Pipeline：
+
+```
+Workflow({ scriptPath: ".harness/workflows/harness-pipeline.js",
+           args: { serviceName: "<label>", serviceDir: "<dir>", task: "<title>" } })
+```
+
+派发完成后，更新任务状态：
+```bash
+bash .harness/scripts/harness-tasks.sh status --id <task-id> --status review
+```
+
+自动派发仅适用于 P0 + source: qa|review|sensor|github + triage: auto-fixable 的任务。
+source: human 或 triage: needs-human 的任务不自动派发，需等待人工确认。

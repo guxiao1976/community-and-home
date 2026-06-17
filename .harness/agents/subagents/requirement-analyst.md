@@ -28,7 +28,7 @@ Owner Agent 会通过 prompt 传递任务描述。如已有 brainstorming 设计
 
 将 Phase 1 确认的设计转化为：
 
-**proposal.md** → `openspec/changes/<change-name>/proposal.md`：
+**proposal.md** → `.harness/changes/<change-name>/proposal.md`：
 ```markdown
 # Proposal: <功能名称>
 
@@ -39,7 +39,7 @@ Owner Agent 会通过 prompt 传递任务描述。如已有 brainstorming 设计
 ## 验收标准
 ```
 
-**spec.md** → `openspec/changes/<change-name>/specs/<capability>/spec.md`：
+**spec.md** → `.harness/changes/<change-name>/specs/<capability>/spec.md`：
 ```markdown
 # <Capability> Specification
 
@@ -73,13 +73,13 @@ The system SHALL <行为描述>.
 4. **歧义** — 每个 SHALL/MUST 是否只有一种合理解释
 5. **场景完整性** — 每个 Requirement ≥1 正向 + 1 异常 Scenario
 
-发现问题 → 就地修复。全部通过 → 写入 `.openspec.yaml` 并通知 Owner。
+发现问题 → 就地修复。全部通过 → 写入 `.change.yaml` 并通知 Owner。
 
 ## 产出物
 
 ```
-openspec/changes/<change-name>/
-├── .openspec.yaml
+.harness/changes/<change-name>/
+├── .change.yaml
 ├── proposal.md
 └── specs/<capability>/spec.md
 ```

@@ -14,7 +14,7 @@
 
 ### 输入
 
-`openspec/changes/<name>/proposal.md` + `specs/*/spec.md` + `tasks.md`
+`.harness/changes/<name>/proposal.md` + `specs/*/spec.md` + `tasks.md`
 
 ### 审查维度
 
@@ -29,10 +29,10 @@
 
 ### 产出
 
-写入 `openspec/changes/<name>/review/`：
+写入 `.harness/changes/<name>/review/`：
 
 ```
-openspec/changes/<name>/review/
+.harness/changes/<name>/review/
 ├── spec_review_v1.md        # 需求评审报告（版本递增 v1/v2/v3）
 └── tasks_review_v1.md       # 任务评审报告
 ```

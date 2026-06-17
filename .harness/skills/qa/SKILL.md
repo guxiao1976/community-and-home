@@ -12,11 +12,16 @@
 
 ### Step 0: 机械化检查（必须先执行）
 
-```bash
-bash .harness/skills/qa/scripts/harness-checks.sh --service <service-name> --json
-```
+**服务类型判定**：根据服务名选择脚本。
 
-解析 JSON 输出。8 项检查：go_build / go_vet / go_test / proto_jstype / json_string / cross_service_import / error_codes / hardcoded_secrets。
+| 服务位置 | 脚本 |
+|---------|------|
+| `services/<name>/` (Go 服务) | `bash .harness/skills/qa/scripts/harness-checks.sh --service <name> --json` |
+| `web/<name>/` (前端服务) | `bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service <name> --json` |
+
+**Go 服务检查项**：go_build / go_vet / go_test / proto_jstype / json_string / cross_service_import / error_codes / hardcoded_secrets / graph_freshness / claude_structural_data / proto_ts_align / api_stubs / response_wrap（共 13 项）
+
+**前端服务检查项**：type_check / unit_test / build / hardcoded_secrets / debug_artifacts / type_safety（共 6 项）
 
 - PASS → 对应项打 ✅
 - FAIL → 记录违规详情（文件名:行号:字段名）
@@ -42,6 +47,17 @@ cd services/<name> && go test ./... -cover
 - 是否有对应测试用例
 - 测试是否真正验证行为（有 assert，而非仅 "调用不报错"）
 - 边界覆盖：空值、零值、错误路径
+
+### Step 6: 数据库一致性检查（可选，需 MCP mysql 可用）
+
+当 QA 涉及数据变更（Migration 执行、API 写入验证）时：
+- 使用 MCP mysql 工具查询相关表，验证数据写入正确性
+- 检查字段值是否符合预期格式和约束（如 Snowflake ID 格式、手机号加密、状态码枚举）
+- 验证数据无重复记录（唯一索引冲突）、无孤儿记录（外键完整性）
+- 对比 Migration 前后的 schema（确认列已添加/修改）
+- 不查询敏感字段的明文值（密码、token 等），仅验证结构
+
+此步骤不阻塞 QA（MCP 可能未配置），但发现问题时记录为 WARNING。
 
 ## 产出
 
@@ -112,6 +128,7 @@ FAIL 时必须列出具体失败信息，让开发者能直接定位。
 
 ## 关联
 
-- 机械化检查：`.harness/skills/qa/scripts/harness-checks.sh`
+- Go 机械化检查：`.harness/skills/qa/scripts/harness-checks.sh`
+- 前端机械化检查：`.harness/skills/qa/scripts/harness-checks-frontend.sh`
 - 代码审查：`.harness/skills/review.md`
 - Harness Pipeline：`.harness/workflows/harness-pipeline.js`

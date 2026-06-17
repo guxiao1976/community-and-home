@@ -50,7 +50,7 @@
 
 ### Step 3: 产出 proposal.md
 
-写入 `openspec/changes/<change-name>/proposal.md`：
+写入 `.harness/changes/<change-name>/proposal.md`：
 
 ```markdown
 # Proposal: <功能名称>
@@ -75,7 +75,7 @@
 
 ### Step 4: 产出 spec.md（每个功能一个）
 
-写入 `openspec/changes/<change-name>/specs/<capability>/spec.md`：
+写入 `.harness/changes/<change-name>/specs/<capability>/spec.md`：
 
 ```markdown
 # <Capability Name> Specification
@@ -94,7 +94,7 @@ The system SHALL <行为描述，含 SHALL 或 MUST>.
 - **THEN** <预期结果>
 ```
 
-### Step 5: 创建 `.openspec.yaml`
+### Step 5: 创建 `.change.yaml`
 
 ```yaml
 schema: spec-driven
@@ -137,8 +137,8 @@ created: YYYY-MM-DD
 ## 产出物
 
 ```
-openspec/changes/<change-name>/
-├── .openspec.yaml
+.harness/changes/<change-name>/
+├── .change.yaml
 ├── proposal.md
 └── specs/
     └── <capability>/

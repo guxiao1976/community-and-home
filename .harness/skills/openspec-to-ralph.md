@@ -14,7 +14,7 @@
 
 从用户输入或上下文中确定 change 名称，读取：
 ```
-openspec/changes/<change-name>/
+.harness/changes/<change-name>/
   tasks.md       ← 任务清单
   design.md      ← 技术设计（了解服务归属）
 ```
@@ -33,9 +33,9 @@ openspec/changes/<change-name>/
 ```markdown
 # Fix Plan: <change-name> — <service-name>
 
-> 来源：openspec/changes/<change-name>/tasks.md
+> 来源：.harness/changes/<change-name>/tasks.md
 > 生成时间：YYYY-MM-DD HH:MM
-> 关联设计：openspec/changes/<change-name>/design.md
+> 关联设计：.harness/changes/<change-name>/design.md
 
 ## 前置阅读
 1. 服务 CLAUDE.md
