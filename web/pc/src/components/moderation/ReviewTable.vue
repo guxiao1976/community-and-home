@@ -24,7 +24,7 @@
     <el-table-column prop="created_time" label="提交时间" width="170" />
     <el-table-column label="操作" width="100" fixed="right">
       <template #default="{ row }">
-        <el-button type="primary" size="small" @click="$emit('detail', row as ReviewListItem)">详情</el-button>
+        <el-button type="primary" size="small" @click="$emit('detail', row)">详情</el-button>
       </template>
     </el-table-column>
   </el-table>
