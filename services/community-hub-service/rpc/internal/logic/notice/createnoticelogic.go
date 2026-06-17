@@ -88,7 +88,7 @@ func (l *CreateNoticeLogic) CreateNotice(in *communityv1.CreateNoticeRequest) (*
 			},
 		}
 		body, _ := json.Marshal(taskMsg)
-		if _, err := l.svcCtx.RedisClient.Lpush("moderation:task:queue", string(body)); err != nil {
+		if _, err := l.svcCtx.RedisClient.LpushCtx(l.ctx, "moderation:task:queue", string(body)); err != nil {
 			l.Errorf("enqueue moderation task failed: %v", err)
 		}
 	}

@@ -40,6 +40,10 @@ func (s *NoticeServiceServer) DeleteNotice(ctx context.Context, in *communityv1.
 	return notice.NewDeleteNoticeLogic(ctx, s.svcCtx).DeleteNotice(in)
 }
 
+func (s *NoticeServiceServer) UpdateNoticeModerationStatus(ctx context.Context, in *communityv1.UpdateModerationStatusRequest) (*communityv1.UpdateModerationStatusResponse, error) {
+	return notice.NewUpdateNoticeModerationStatusLogic(ctx, s.svcCtx).UpdateNoticeModerationStatus(in)
+}
+
 // ContactServiceServer 便民联络 gRPC Server
 type ContactServiceServer struct {
 	svcCtx *svc.ServiceContext
@@ -82,4 +86,8 @@ func (s *LostFoundServiceServer) GetLostFound(ctx context.Context, in *community
 
 func (s *LostFoundServiceServer) ResolveLostFound(ctx context.Context, in *communityv1.ResolveLostFoundRequest) (*communityv1.ResolveLostFoundResponse, error) {
 	return lostfound.NewResolveLostFoundLogic(ctx, s.svcCtx).ResolveLostFound(in)
+}
+
+func (s *LostFoundServiceServer) UpdateLostFoundModerationStatus(ctx context.Context, in *communityv1.UpdateModerationStatusRequest) (*communityv1.UpdateModerationStatusResponse, error) {
+	return lostfound.NewUpdateLostFoundModerationStatusLogic(ctx, s.svcCtx).UpdateLostFoundModerationStatus(in)
 }

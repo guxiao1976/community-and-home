@@ -33,6 +33,7 @@ type NoticeModel interface {
 	FindList(ctx context.Context, communityId int64, role string, offset, limit int64) ([]*Notice, int64, error)
 	Update(ctx context.Context, id int64, title, content string, isPinned int32) error
 	SoftDelete(ctx context.Context, id int64) error
+	UpdateModerationStatus(ctx context.Context, id int64, status int64) error
 }
 
 type defaultNoticeModel struct {
@@ -97,8 +98,14 @@ func (m *defaultNoticeModel) FindList(ctx context.Context, communityId int64, ro
 }
 
 func (m *defaultNoticeModel) Update(ctx context.Context, id int64, title, content string, isPinned int32) error {
-	query := `update ` + m.table + ` set title = ?, content = ?, is_pinned = ? where id = ? and deleted_at is null`
+	query := `update ` + m.table + ` set title = ?, content = ?, is_pinned = ?, moderation_status = 0 where id = ? and deleted_at is null`
 	_, err := m.conn.ExecCtx(ctx, query, title, content, isPinned, id)
+	return err
+}
+
+func (m *defaultNoticeModel) UpdateModerationStatus(ctx context.Context, id int64, status int64) error {
+	query := `update ` + m.table + ` set moderation_status = ?, moderation_time = NOW() where id = ? and deleted_at is null`
+	_, err := m.conn.ExecCtx(ctx, query, status, id)
 	return err
 }
 

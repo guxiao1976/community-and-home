@@ -32,6 +32,7 @@ type LostFoundItemModel interface {
 	FindOne(ctx context.Context, id int64) (*LostFoundItem, error)
 	FindList(ctx context.Context, communityId int64, typ string, offset, limit int64) ([]*LostFoundItem, int64, error)
 	UpdateStatus(ctx context.Context, id int64, status string) error
+	UpdateModerationStatus(ctx context.Context, id int64, status int64) error
 }
 
 type defaultLostFoundItemModel struct {
@@ -98,6 +99,12 @@ func (m *defaultLostFoundItemModel) FindList(ctx context.Context, communityId in
 
 func (m *defaultLostFoundItemModel) UpdateStatus(ctx context.Context, id int64, status string) error {
 	query := `update ` + m.table + ` set status = ? where id = ? and deleted_at is null`
+	_, err := m.conn.ExecCtx(ctx, query, status, id)
+	return err
+}
+
+func (m *defaultLostFoundItemModel) UpdateModerationStatus(ctx context.Context, id int64, status int64) error {
+	query := `update ` + m.table + ` set moderation_status = ?, moderation_time = NOW() where id = ? and deleted_at is null`
 	_, err := m.conn.ExecCtx(ctx, query, status, id)
 	return err
 }
