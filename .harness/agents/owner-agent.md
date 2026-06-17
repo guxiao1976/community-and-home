@@ -145,6 +145,26 @@ Owner Agent 上下文 (~200 lines)
 
 阶段 5 内部流程不变：TDD RED→GREEN→REFACTOR → QA(FRESH run) → QA FAIL → Debug(根因分析) → Generator修复 → Review(3视角并行)，最多 3 轮。
 
+**阶段 6 详细步骤**（Owner 执行）：
+
+```bash
+# 1. 全链路验证
+go build ./... && go test ./...
+
+# 2. 归档 QA/Review 到变更目录
+for svc in community-hub-service moderation-service web-pc web-mobile; do
+  mkdir -p .harness/changes/<change>/impl/$svc/
+  mv services/$svc/_qa.md          .harness/changes/<change>/impl/$svc/
+  mv services/$svc/_review_*.md    .harness/changes/<change>/impl/$svc/
+done
+
+# 3. 产出终稿
+# 基于各 impl/*/ 的摘要生成 summary.md
+
+# 4. 更新索引
+# 追加到 .harness/changes/INDEX.md
+```
+
 ### 失败路由表（精确回退）
 
 避免"出了问题从头来"，按失败类型路由到正确的阶段：
@@ -248,34 +268,57 @@ Proto 变更 (Owner, 先做)
 
 **Owner 调度规则**：
 
-1. **识别依赖** — 从 tasks.md 和 design.md 判断服务间依赖
-2. **分组并行** — 无依赖的服务放入同一并行组，同时启动
-3. **等待组完成** — 每个 Workflow 独立返回 PASS/FAIL，Owner 跟踪状态
-4. **回退传播** — 如果上游服务 FAIL → 依赖它的下游服务等待修复后重试
-5. **全部 PASS** — 进入阶段 6 集成验证
+1. **提取任务子集** — 从 tasks.md 按服务分组，每个 Workflow 只传属于自己的 task 描述
+2. **识别依赖** — 从 design.md 判断服务间依赖
+3. **分组并行** — 无依赖的服务放入同一并行组，同时启动
+4. **等待组完成** — 每个 Workflow 返回 `{status, iterations, serviceName}`，Owner 收集
+5. **回退传播** — 如果上游服务 FAIL → 依赖它的下游服务等待修复后重试
+6. **全部 PASS** → 进入阶段 6
 
 **并行组内互不干扰**：
 - 每个 Workflow 有独立的 worktree 隔离
 - QA/Review 报告写入各自 `services/<name>/` 目录
-- 阶段 6 统一归档到 `.harness/changes/<change>/impl/<service>/`
+- 阶段 6 先 `mkdir -p .harness/changes/<change>/impl/<service>/`，再 mv
+
+**任务提取示例**（tasks.md 全量 12 tasks → 分服务传入）：
+
+```
+Workflow({serviceName:"社区枢纽服务", serviceDir:"services/community-hub-service",
+  task: "Task 1.1: 活动 Model + Migration\n
+         Task 1.2: 发布活动 Logic (TDD: RED→GREEN)\n
+         Task 1.3: 报名 Logic (含并发控制)\n
+         Task 1.4: 签到 Logic\n
+         Task 1.5: Handler 注册"})
+
+Workflow({serviceName:"审核服务", serviceDir:"services/moderation-service",
+  task: "Task 2.1: OnEventCreated 审核回调 Logic\n
+         Task 2.2: Handler"})
+
+Workflow({serviceName:"PC前端", serviceDir:"web/pc",
+  task: "Task 3.1: 活动管理页面\n
+         Task 3.2: 报名统计页面"})
+```
 
 **跨服务 Scheduling 示例**（紧急联络人功能）：
 
 ```
 tasks.md:
-  0.1-0.2  Proto 变更           → Owner 先做 (阶段4)
-  1.1-1.4  community-hub-service → 组1
-  2.1      user-service (RPC)    → 组1 (无依赖，可并行)
-  3.1-3.2  web/pc                → 组1 (前端无依赖)
-  
+  0.1-0.2  Proto 变更              → Owner 先做 (阶段4)
+  1.1-1.4  community-hub-service    → 组1 (提取 4 tasks 传入)
+  2.1      user-service (RPC)       → 组1 (提取 1 task 传入)
+  3.1-3.2  web/pc                   → 组1 (提取 2 tasks 传入)
+
 调度:
   Owner → Proto → 
-    parallel(
-      Workflow(community-hub-service),
-      Workflow(user-service),
-      Workflow(web/pc)
-    )
-  → 全部 PASS → 集成验证 → 归档
+    同时启动:
+      Workflow({serviceDir:"services/community-hub-service",
+                task:"Task 1.1: ...\nTask 1.2: ..."})
+      Workflow({serviceDir:"services/user-service",
+                task:"Task 2.1: ..."})
+      Workflow({serviceDir:"web/pc",
+                task:"Task 3.1: ...\nTask 3.2: ..."})
+  → 收集 3 个 PASS → mkdir -p impl/{community-hub,user,web-pc}/
+  → mv _qa/_review 入 impl/ → 集成验证 → 归档
 ```
 
 ### 分支路径（非 OpenSpec）
