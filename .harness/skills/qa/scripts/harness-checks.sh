@@ -188,7 +188,7 @@ check_go_vet() {
 # ─── Check 3: go test (with 0/0 detection) ───────────────────────────
 
 check_go_test() {
-  echo "[3/11] go test ./... (with 0/0 detection)" >&2
+  echo "[3/15] go test ./... (with 0/0 + new-package detection)" >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -232,6 +232,31 @@ check_go_test() {
     return
   fi
 
+  # Recent-package test gap: find packages added in last 7 days that lack tests
+  local new_pkgs_no_test=()
+  if [[ -n "$SERVICE_NAME" ]] && git -C "$TARGET_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    local new_go_files
+    new_go_files=$(git -C "$TARGET_DIR" log --diff-filter=A --name-only --since="7 days ago" --pretty=format: 2>/dev/null | grep '\.go$' | grep -v '_test\.go$' | sort -u || true)
+    if [[ -n "$new_go_files" ]]; then
+      local new_dirs
+      new_dirs=$(echo "$new_go_files" | while read -r f; do [[ -n "$f" ]] && dirname "$f"; done | sort -u || true)
+      for dir in $new_dirs; do
+        [[ -z "$dir" || "$dir" == "." ]] && continue
+        local base
+        base=$(basename "$dir")
+        # Skip packages where tests are not expected (handler/ subdirs, model, config, etc.)
+        [[ "$base" =~ ^(model|config|types|handler|server|svc|middleware|vars)$ ]] && continue
+        # Also skip handler subdirectories (e.g. api/internal/handler/review)
+        [[ "$dir" =~ /handler/ ]] && continue
+        local test_files
+        test_files=$(find "$TARGET_DIR/$dir" -maxdepth 1 -name '*_test.go' 2>/dev/null || true)
+        if [[ -z "$test_files" ]]; then
+          new_pkgs_no_test+=("$dir")
+        fi
+      done
+    fi
+  fi
+
   # Count actual test functions as a cross-check
   local test_funcs=0
   if [[ -n "$SERVICE_NAME" ]]; then
@@ -240,7 +265,13 @@ check_go_test() {
     test_funcs=$(grep -r '^func Test' "$PROJECT_ROOT/services" --include="*_test.go" 2>/dev/null | wc -l || echo 0)
   fi
 
-  if [[ $test_funcs -eq 0 ]]; then
+  if [[ ${#new_pkgs_no_test[@]} -gt 0 ]]; then
+    local pkg_list
+    pkg_list=$(IFS=,; echo "${new_pkgs_no_test[*]}")
+    local pkg_list_escaped
+    pkg_list_escaped="$(json_escape "$pkg_list")"
+    log_warn "go_test" "${passed_packages}P/${failed_packages}F/${no_test_packages}N, ~${test_funcs} tests — NEW packages missing tests: $pkg_list_escaped"
+  elif [[ $test_funcs -eq 0 ]]; then
     log_warn "go_test" "${passed_packages} packages passed but 0 TestXxx functions found — verify tests exist"
   else
     log_pass "go_test" "${passed_packages} packages passed, ~${test_funcs} test functions"
