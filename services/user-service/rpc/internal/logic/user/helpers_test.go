@@ -98,6 +98,15 @@ func (m *mockUserBaseModel) UpdateRealNameAndIdCard(ctx context.Context, id int6
 	return nil
 }
 
+func (m *mockUserBaseModel) UpdateNicknameModerationStatus(ctx context.Context, id int64, status int64) error {
+	u, ok := m.data[id]
+	if !ok {
+		return fmt.Errorf("user not found")
+	}
+	u.NicknameModerationStatus = status
+	return nil
+}
+
 var _ model.UserBaseModel = (*mockUserBaseModel)(nil)
 
 // =============================================================================
@@ -344,6 +353,15 @@ func (m *mockCertModel) FindPage(ctx context.Context, status, uid *int64, page, 
 }
 func (m *mockCertModel) Update(ctx context.Context, d *model.UserCertification) error {
 	m.data[d.Id] = d
+	return nil
+}
+
+func (m *mockCertModel) UpdateModerationStatus(ctx context.Context, id int64, status int64) error {
+	d, ok := m.data[id]
+	if !ok {
+		return model.ErrNotFound
+	}
+	d.ModerationStatus = status
 	return nil
 }
 

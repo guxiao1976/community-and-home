@@ -82,8 +82,8 @@ func (l *CreateUserLogic) CreateUser(in *userv1.CreateUserRequest) (*userv1.Crea
 
 	l.Infof("CreateUser success, userId=%d, phone=%s", userId, in.Phone)
 
-	// 6. Submit nickname to moderation (if provided)
-	if in.Nickname != "" {
+	// 6. Submit nickname to moderation (if provided and moderation client configured)
+	if in.Nickname != "" && l.svcCtx.ModerationClient != nil {
 		contentSummary := in.Nickname
 		if len([]rune(contentSummary)) > 100 {
 			contentSummary = string([]rune(contentSummary)[:100])

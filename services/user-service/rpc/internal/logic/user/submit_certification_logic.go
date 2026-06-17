@@ -108,8 +108,8 @@ func (l *SubmitCertificationLogic) SubmitCertification(in *userv1.SubmitCertific
 		return nil, err
 	}
 
-	// 7. Submit real name for moderation
-	if in.RealName != "" {
+	// 7. Submit real name for moderation (skip if moderation client not configured)
+	if in.RealName != "" && l.svcCtx.ModerationClient != nil {
 		contentSummary := in.RealName
 		if len([]rune(contentSummary)) > 100 {
 			contentSummary = string([]rune(contentSummary)[:100])
