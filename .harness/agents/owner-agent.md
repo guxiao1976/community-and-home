@@ -124,7 +124,7 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 | 2 | **需求评审** | 阶段1完成 | **3 子 Agent 并行** (coverage/structure/clarity) | `review/spec_review_{lens}_v1.md` ×3 | 2/3 APPROVED | 读 3 份评审摘要，投票裁决 | REVISION→阶段1(≤3轮) |
 | 3 | **架构设计** | 评审通过 | **子 Agent** `architecture-designer` | `design.md` + `tasks.md` | 记忆注入+零占位符+TDD步骤 | 读 design 摘要，确认服务归属 | 设计不合理→阶段1 |
 | 4 | **Proto 变更** | 含Proto变更 | Owner 内联 | api-proto/ + make ci | lint+breaking全过 | — | 修复重试 |
-| 5 | **编码+测试** | 设计确认 | **Workflow** `harness-pipeline.js` | 代码+`_qa.md`+`_review.md` | QA PASS + Review 2/3 PASS | 读 _qa 摘要 + Review 结论 | Debug→修复(≤3轮) |
+| 5 | **编码+测试** | 设计确认 | **N×Workflow 并行** `harness-pipeline.js`（每服务1个，无依赖并行） | 代码+`_qa.md`+`_review.md`（每服务独立） | 每服务 QA PASS + Review 2/3 PASS | 跟踪各 Workflow 摘要，全部 PASS → 下一阶段 | Debug→修复(≤3轮) |
 | 6 | **集成归档** | 编码通过 | Owner 内联 | 移动 QA/Review → `.harness/changes/<change>/impl/` + 更新 INDEX + summary | 全链路通过 | — | 修复重试 |
 
 **上下文隔离设计**：
@@ -225,6 +225,60 @@ Owner Agent 上下文 (~200 lines)
 | Dev Agent（单服务） | 路径选择 → `.harness/skills/dispatch.md` → 子 Claude 实现 → 阶段 5 QA+Review → 完成 |
 | Workflow（跨服务并行） | 路径选择 → `.harness/workflows/harness-pipeline.js` → 并行 dispatch → 阶段 6 集成验证 → 完成 |
 | Ralph 批量（>5项） | 路径选择 → 写 `fix_plan.md` → `.harness/skills/openspec-to-ralph.md` → Ralph 循环 → 完成 |
+
+### 跨服务并行调度（OpenSpec 路径，阶段 5 关键）
+
+当 tasks.md 涵盖多个服务时，Owner 负责编排并行执行：
+
+```
+Proto 变更 (Owner, 先做)
+  │
+  ├─ 并行组 1: 无依赖的微服务 (同时启动)
+  │   Workflow({serviceDir: "services/moderation-service", ...})
+  │   Workflow({serviceDir: "services/community-hub-service", ...})
+  │
+  ├─ 并行组 2: 前端 (与后端无依赖，可与组1同时)
+  │   Workflow({serviceDir: "web/pc", ...})
+  │   Workflow({serviceDir: "web/mobile", ...})
+  │
+  └─ 依赖服务 (等上游完成后)
+      Workflow({serviceDir: "services/user-service", ...})
+         ↑ 等待 moderation-service 的新 API 就绪
+```
+
+**Owner 调度规则**：
+
+1. **识别依赖** — 从 tasks.md 和 design.md 判断服务间依赖
+2. **分组并行** — 无依赖的服务放入同一并行组，同时启动
+3. **等待组完成** — 每个 Workflow 独立返回 PASS/FAIL，Owner 跟踪状态
+4. **回退传播** — 如果上游服务 FAIL → 依赖它的下游服务等待修复后重试
+5. **全部 PASS** — 进入阶段 6 集成验证
+
+**并行组内互不干扰**：
+- 每个 Workflow 有独立的 worktree 隔离
+- QA/Review 报告写入各自 `services/<name>/` 目录
+- 阶段 6 统一归档到 `.harness/changes/<change>/impl/<service>/`
+
+**跨服务 Scheduling 示例**（紧急联络人功能）：
+
+```
+tasks.md:
+  0.1-0.2  Proto 变更           → Owner 先做 (阶段4)
+  1.1-1.4  community-hub-service → 组1
+  2.1      user-service (RPC)    → 组1 (无依赖，可并行)
+  3.1-3.2  web/pc                → 组1 (前端无依赖)
+  
+调度:
+  Owner → Proto → 
+    parallel(
+      Workflow(community-hub-service),
+      Workflow(user-service),
+      Workflow(web/pc)
+    )
+  → 全部 PASS → 集成验证 → 归档
+```
+
+### 分支路径（非 OpenSpec）
 | **Backlog 驱动**（定时/手动） | `harness-tasks.sh scan` → 发现新问题 → 写入 BACKLOG → 按优先级 dispatch → QA+Review → 更新任务状态 |
 
 ### 主动任务发现（Backlog 驱动）
