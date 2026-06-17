@@ -1,5 +1,5 @@
 import type { ModuleConfig } from '../types';
-import { Warning, Monitor } from '@element-plus/icons-vue';
+import { Warning, Monitor, View } from '@element-plus/icons-vue';
 
 export const moderationModule: ModuleConfig = {
   name: 'moderation',
@@ -13,6 +13,11 @@ export const moderationModule: ModuleConfig = {
         path: '/moderation/config-test',
         title: '配置测试',
         icon: Monitor
+      },
+      {
+        path: '/moderation/review',
+        title: '人工审核',
+        icon: View
       }
     ]
   },
@@ -23,6 +28,12 @@ export const moderationModule: ModuleConfig = {
       name: 'ModerationConfigTest',
       component: () => import('@/views/moderation/ModerationConfigTest.vue'),
       meta: { title: '配置测试', requiresAuth: true }
+    },
+    {
+      path: '/moderation/review',
+      name: 'ManualReview',
+      component: () => import('@/views/moderation/ManualReview.vue'),
+      meta: { title: '人工审核', requiresAuth: true }
     }
   ]
 };
