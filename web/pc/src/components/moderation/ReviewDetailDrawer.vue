@@ -41,7 +41,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { ReviewDetail } from '@common/types/moderation';
-import { SOURCE_TYPE_LABELS } from '@common/types/moderation';
+import { SOURCE_TYPE_LABELS } from '@common/constants/moderation';
 
 const props = defineProps<{
   modelValue: boolean;

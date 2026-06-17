@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import type { ReviewListItem } from '@common/types/moderation';
-import { SOURCE_TYPE_LABELS } from '@common/types/moderation';
+import { SOURCE_TYPE_LABELS } from '@common/constants/moderation';
 
 defineProps<{ list: ReviewListItem[] }>();
 defineEmits<{ (e: 'detail', row: ReviewListItem): void }>();
