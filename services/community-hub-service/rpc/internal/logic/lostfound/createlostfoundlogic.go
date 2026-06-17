@@ -3,8 +3,11 @@ package lostfound
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	communityv1 "github.com/guxiao1976/api-proto/gen/go/community/v1"
+	moderationv1 "github.com/guxiao1976/api-proto/gen/go/moderation/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
 	"github.com/guxiao1976/community-hub/model"
@@ -55,6 +58,49 @@ func (l *CreateLostFoundLogic) CreateLostFound(in *communityv1.CreateLostFoundRe
 	if _, err := l.svcCtx.LostFoundItemModel.Insert(l.ctx, item); err != nil {
 		l.Errorf("CreateLostFound: insert failed: %v", err)
 		return nil, err
+	}
+
+	// Build text content for moderation
+	textContent := in.Title
+	if in.Description != "" {
+		textContent += "\n" + in.Description
+	}
+	contentSummary := in.Title
+	if len([]rune(contentSummary)) > 100 {
+		contentSummary = string([]rune(contentSummary)[:100])
+	}
+
+	auditResp, err := l.svcCtx.ModerationClient.CreateAuditLog(l.ctx, &moderationv1.CreateAuditLogRequest{
+		ContentType:    "text",
+		ContentSummary: contentSummary,
+		RiskLevel:      "low",
+		Pass:           false,
+		SourceType:     "lost_found",
+		SourceId:       id,
+		UserId:         in.PublisherId,
+	})
+	if err != nil {
+		l.Errorf("CreateAuditLog failed: %v", err)
+	} else {
+		items := []map[string]string{
+			{"type": "text", "content": textContent, "field": "content"},
+		}
+		// Image audit reservation
+		for _, imgUrl := range in.ImageUrls {
+			items = append(items, map[string]string{"type": "image", "content": imgUrl, "field": "image"})
+		}
+		taskMsg := map[string]interface{}{
+			"task_id":      fmt.Sprintf("lost_found_%d_%d", id, time.Now().UnixNano()),
+			"audit_log_id": auditResp.Id,
+			"source_type":  "lost_found",
+			"source_id":    id,
+			"action":       "create",
+			"items":        items,
+		}
+		body, _ := json.Marshal(taskMsg)
+		if _, err := l.svcCtx.RedisClient.Lpush("moderation:task:queue", string(body)); err != nil {
+			l.Errorf("enqueue moderation task failed: %v", err)
+		}
 	}
 
 	l.Infof("CreateLostFound success: id=%d, communityId=%d", id, in.CommunityId)

@@ -2,9 +2,12 @@ package notice
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	communityv1 "github.com/guxiao1976/api-proto/gen/go/community/v1"
+	moderationv1 "github.com/guxiao1976/api-proto/gen/go/moderation/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
 	"github.com/guxiao1976/community-hub/model"
@@ -51,6 +54,43 @@ func (l *CreateNoticeLogic) CreateNotice(in *communityv1.CreateNoticeRequest) (*
 	if _, err := l.svcCtx.NoticeModel.Insert(l.ctx, n); err != nil {
 		l.Errorf("CreateNotice: insert failed: %v", err)
 		return nil, err
+	}
+
+	// 5. Submit to moderation pipeline (async via Redis)
+	contentSummary := in.Title
+	if len([]rune(contentSummary)) > 100 {
+		contentSummary = string([]rune(contentSummary)[:100])
+	}
+
+	auditResp, err := l.svcCtx.ModerationClient.CreateAuditLog(l.ctx, &moderationv1.CreateAuditLogRequest{
+		ContentType:    "text",
+		ContentSummary: contentSummary,
+		RiskLevel:      "low",
+		Pass:           false,
+		SourceType:     "notice",
+		SourceId:       id,
+		UserId:         in.PublisherId,
+	})
+	if err != nil {
+		l.Errorf("CreateAuditLog failed: %v", err)
+		// Don't block the publish — audit failure means human fallback later
+	} else {
+		// Build task message with full content
+		textContent := in.Title + "\n" + in.Content
+		taskMsg := map[string]interface{}{
+			"task_id":      fmt.Sprintf("notice_%d_%d", id, time.Now().UnixNano()),
+			"audit_log_id": auditResp.Id,
+			"source_type":  "notice",
+			"source_id":    id,
+			"action":       "create",
+			"items": []map[string]string{
+				{"type": "text", "content": textContent, "field": "content"},
+			},
+		}
+		body, _ := json.Marshal(taskMsg)
+		if _, err := l.svcCtx.RedisClient.Lpush("moderation:task:queue", string(body)); err != nil {
+			l.Errorf("enqueue moderation task failed: %v", err)
+		}
 	}
 
 	l.Infof("CreateNotice success: id=%d, communityId=%d", id, in.CommunityId)
