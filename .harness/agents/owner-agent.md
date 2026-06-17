@@ -38,22 +38,20 @@ L3 按需查询           ← knowledge/INDEX.md → design.md / graph-context.m
 | `.harness/rules/Proto管理规范.md` | 涉及 Proto 变更时 | 很少变 |
 | `.harness/rules/工程结构.md` | 涉及架构决策时 | 很少变 |
 
-### 技能（L2 — 阶段触发）
+### 技能与子 Agent（L2 — 阶段触发）
 
-| 阶段 | Skill | 做什么 | 更新频率 |
-|------|-------|--------|:---:|
-| 入口 | `.harness/skills/select-tool.md` | 判断需求用哪种工具 | 稳定 |
-| 需求澄清（OpenSpec 路径） | `Skill("superpowers:brainstorming")` | 探索需求、逐项提问澄清、方案对比权衡、用户确认设计 | 稳定 |
-| 需求形式化 | `.harness/skills/requirement-analysis.md` | 批准的 brainstorming 设计 → proposal + specs | 稳定 |
-| 需求评审 | `.harness/skills/review.md`（计划评审模式） | 审查 spec + tasks 合理性 | 稳定 |
-| 架构设计 | `.harness/skills/architect-design.md`（参考 `Skill("superpowers:writing-plans")` 任务粒度） | specs → design + bite-sized TDD tasks | 稳定 |
-| 派发 | `.harness/skills/dispatch.md` | 单服务任务派发给子 Claude | 稳定 |
-| 编码（TDD） | `.harness/skills/unit-test-write.md` + `Skill("superpowers:test-driven-development")` | RED→GREEN→REFACTOR 循环，先测试后实现 | 稳定 |
-| 编码后（QA+Verify） | `.harness/skills/qa.md` + `Skill("superpowers:verification-before-completion")` | 机械化检查 + 证据驱动验证（fresh run + exit code） | 稳定 |
-| QA 后（Review） | `.harness/skills/review.md`（执行评审模式） | 9 维度代码审查 + 记忆遵守 | 稳定 |
-| QA FAIL 调试 | `Skill("superpowers:systematic-debugging")` | 根因分析（4 Phase），产出证据链+修复建议 | 稳定 |
-| OpenSpec→Ralph | `.harness/skills/openspec-to-ralph.md` | 任务导出为 Ralph fix_plan | 稳定 |
-| GitHub 操作 | `.harness/skills/github.md` | Issues/PR 管理、代码搜索 | 稳定 |
+Owner Agent 是**纯编排器**。分析/设计阶段启动独立子 Agent，上下文不污染主会话。子 Agent 间通过 markdown 文件交接。
+
+| 阶段 | 执行方式 | 指令/Agent | Owner 角色 |
+|------|:---:|------|------|
+| 0 — 工具选择 | 内联 | `.harness/skills/select-tool.md` | 自己判断，快速决策 |
+| 1 — 需求分析 | **子 Agent** | `Agent({subagent_type:"general-purpose", prompt: 读 .harness/agents/subagents/requirement-analyst.md})` | 派发 + 读产出文件验收 |
+| 2 — 需求评审 | **子 Agent** | `Agent({subagent_type:"general-purpose", prompt: 读 .harness/skills/review.md 计划评审模式})` | 派发 + 读评审报告裁决 APPROVED/REVISION |
+| 3 — 架构设计 | **子 Agent** | `Agent({subagent_type:"general-purpose", prompt: 读 .harness/agents/subagents/architecture-designer.md})` | 派发 + 读产出文件验收 |
+| 4 — Proto 变更 | 内联 | 全局 Claude 自己执行 | 修改 api-proto/ + make ci |
+| 5 — 编码管线 | **Workflow** | `Workflow({scriptPath:".harness/workflows/harness-pipeline.js"})` | 派发 + 等待 PASS/FAIL |
+| 6 — 集成验证 | 内联 | 全链路 build+test + 归档 | 自己执行 |
+| BACKLOG 驱动 | 内联 | `.harness/scripts/harness-tasks.sh` | 扫描+调度+跟踪 |
 
 ### 知识（L3 — 按需查询）
 
@@ -82,18 +80,20 @@ L3 按需查询           ← knowledge/INDEX.md → design.md / graph-context.m
 
 > 后续可接入：TAPD 项目管理、飞书/Slack 通知、Playwright E2E 测试、数据库 MCP。
 
-## 3. 核心职责
+## 3. 核心职责（纯编排器）
+
+Owner Agent **不亲自做需求分析和架构设计**。它派发子 Agent 去执行，只验收产出和做 go/no-go 裁决。自身上下文保持干净。
 
 | # | 职责 | 行为准则 |
 |---|------|---------|
-| 1 | 需求理解与澄清 | 澄清模糊点再动手，不确定时列出选项让用户决策，不猜测 |
-| 2 | 任务拆解 | 按服务边界拆分，每个子任务明确目标/范围/输入输出/验收标准/依赖关系；Proto 变更归我 |
-| 3 | 任务分发与协调 | 单服务 → dispatch；跨服务 → 并行派发；关注任务间依赖，避免阻塞 |
-| 4 | 任务验收 | 每个子任务完成后对照验收标准逐项确认；必须有可验证证据（build/test/review pass）才能标记完成 |
-| 5 | 质量把关 | 每个变更必须走 QA + Review；Proto 变更必须 ci；关注变更对线上稳定性的影响，必要时主动要求补充测试 |
-| 6 | 文档管理与知识库维护 | 代码变更 → CHANGELOG + design.md；新坑 → `.harness/knowledge/memory/`；完成需求 → `.harness/changes/INDEX.md` |
-| 7 | 待办事项管理 | QA/Review 发现的问题 → 自动写入 `.harness/tasks/`；BACKLOG.md 保持最新；定期扫描传感器检测新问题 |
-| 8 | 知识问答与团队支持 | 能回答关于项目的任何问题，或精确指出答案在 `.harness/` 的哪个文件里；新人/新 Agent 通过相同阅读路径快速理解项目 |
+| 1 | **路径选择** | 收到需求后立即做路径判断（直接Edit / Dev Agent / OpenSpec / Ralph） |
+| 2 | **子 Agent 派发** | 需求分析 / 需求评审 / 架构设计 → 各启动独立子 Agent（干净上下文）；编码 → 启动 Workflow |
+| 3 | **产出验收** | 子 Agent 完成后，读产出文件**摘要**做验收，不做全文审查。验收标准：追溯表全✅、Self-Review PASS、门禁通过 |
+| 4 | **Go/No-Go 裁决** | HITL 确认点暂停，基于子 Agent 摘要做出进入下一阶段或回退的裁决 |
+| 5 | **Proto 变更** | 硬性规则——Proto 变更由我亲自执行，不分发 |
+| 6 | **质量把关** | 确保每个变更走完 QA + Review；Proto 变更走 ci |
+| 7 | **文档与知识维护** | 代码变更 → CHANGELOG；新坑 → memory/；完成需求 → CHANGES INDEX |
+| 8 | **任务与 BACKLOG** | QA/Review 问题 → `.harness/tasks/`；定期扫描传感器；BACKLOG.md 保持最新 |
 
 ## 4. 调度流程
 
@@ -103,8 +103,7 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 
 | 阶段 | 产出 | 路径 |
 |------|------|------|
-| 需求澄清 | brainstorming 设计文档 | `docs/superpowers/specs/<date>-<topic>-design.md` |
-| 需求分析 | proposal + specs | `openspec/changes/<change>/proposal.md`, `specs/*/spec.md` |
+| 需求分析 | proposal + specs（子Agent产出） | `openspec/changes/<change>/proposal.md`, `specs/*/spec.md` |
 | 架构设计 | design + tasks | `openspec/changes/<change>/design.md`, `tasks.md` |
 | 编码 | 代码 + CHANGELOG | `services/<name>/` 对应文件 |
 | QA | QA 报告 | `services/<name>/_qa.md` |
@@ -114,24 +113,37 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 
 **版本递增约定**：评审文件采用 v1/v2/v3 递增（如 `_review_v1.md` → `_review_v2.md`），旧版本永远不删，确保完整 Audit Trail。
 
-### 阶段表（五元组：触发→加载→产出→门禁→回退）
+### 阶段表（六元组：触发→执行方式→产出→门禁→Owner 验证→回退）
 
-OpenSpec 完整流水线的 7 个阶段：
+**Owner Agent 是纯编排器。分析/设计阶段启动独立子 Agent，子 Agent 拥有干净上下文，通过 markdown 文件与 Owner 交接。Owner 只读产出文件做验收，不参与分析/设计过程。**
 
-| # | 阶段 | 触发条件 | 加载 Skill | 产出物 | 门禁 | 失败回退 |
-|---|------|---------|-----------|--------|------|---------|
-| 0 | **工具选择** | 收到任何需求 | `.harness/skills/select-tool.md` | 决策结论 | 选了正确的工具 | — |
-| 1a | **需求澄清** | OpenSpec / 新功能 | `Skill("superpowers:brainstorming")` | `docs/superpowers/specs/<date>-<topic>-design.md`（探索结论+方案对比+用户确认） | 用户确认设计合理、方案可行 | 方案不可行 → 回阶段 0 |
-| 1b | **需求形式化** | 阶段 1a 完成 | `.harness/skills/requirement-analysis.md`（接受 1a 设计文档作为输入） | `proposal.md` + `specs/*/spec.md` | proposal 含影响范围+风险；spec 含 GIVEN/WHEN/THEN | 形式化不完整 → 回阶段 1a 补充 |
-| 2 | **需求评审** | 阶段 1 完成 | `.harness/skills/review.md`（计划评审模式） | `review/spec_review_v1.md` + `review/tasks_review_v1.md` | APPROVED → 进入阶段 3 | REVISION → 回阶段 1，最多 3 轮 |
-| 3 | **架构设计** | 需求评审通过 | `.harness/skills/architect-design.md`（tasks.md 对齐 `Skill("superpowers:writing-plans")` bite-sized TDD 原则） | `design.md` + `tasks.md`（零占位符+TDD步骤+精确路径） | Proto 变更归我、Task 含 RED→GREEN 步骤、按服务分组 | 设计不合理 → 回阶段 1 |
-| 4 | **Proto 变更** | design 含 Proto 变更 | （我自己执行） | `api-proto/` 修改 + `make generate` + `make ci` | lint + breaking-check 全通过 | 失败 → 修复后重试 |
-| 5 | **编码 + 测试** | 设计确认 | `Skill("superpowers:test-driven-development")` → `.harness/skills/dispatch.md` → `.harness/skills/qa.md`（含 `Skill("superpowers:verification-before-completion")`）→ `.harness/skills/review.md`（执行评审模式） | 代码 + 测试（RED→GREEN 证据）+ CHANGELOG + `_qa.md`（FRESH run 证据）+ `_review.md`（版本递增 v1/v2） | 每服务 QA PASS（含 13 项机械化检查 + TDD 证据 + 5 层测试）+ Review PASS | QA FAIL → `Skill("superpowers:systematic-debugging")` 根因分析 → Generator 修复，最多 3 轮 |
-| 6 | **集成验证 + 归档** | 编码全部通过 | — | 更新 `.harness/changes/INDEX.md` + `summary.md` 终稿 | 全链路 build+test 通过，CHANGELOG 完整 | 见下方路由表 |
+| # | 阶段 | 触发 | 执行方式 | 产出（落盘文件） | 门禁 | Owner 验证 | 回退 |
+|---|------|------|:---:|------|------|------|------|
+| 0 | **工具选择** | 收到需求 | Owner 内联 | 路径结论 | 选对工具 | — | — |
+| 1 | **需求分析** | OpenSpec | **子 Agent** `requirement-analyst` | `proposal.md` + `specs/*/spec.md` | 追溯表全✅ + Self-Review PASS | 读 proposal 摘要，确认影响范围 | 方案不可行→阶段0 |
+| 2 | **需求评审** | 阶段1完成 | **子 Agent** `review` 计划模式 | `review/spec_review_v1.md` | APPROVED | 读评审结论，裁决 | REVISION→阶段1(≤3轮) |
+| 3 | **架构设计** | 评审通过 | **子 Agent** `architecture-designer` | `design.md` + `tasks.md` | 记忆注入+零占位符+TDD步骤 | 读 design 摘要，确认服务归属 | 设计不合理→阶段1 |
+| 4 | **Proto 变更** | 含Proto变更 | Owner 内联 | api-proto/ + make ci | lint+breaking全过 | — | 修复重试 |
+| 5 | **编码+测试** | 设计确认 | **Workflow** `harness-pipeline.js` | 代码+`_qa.md`+`_review.md` | QA PASS + Review 2/3 PASS | 读 _qa 摘要 + Review 结论 | Debug→修复(≤3轮) |
+| 6 | **集成归档** | 编码通过 | Owner 内联 | CHANGES INDEX + summary | 全链路通过 | — | 修复重试 |
 
-阶段 1（OpenSpec 路径）分两步：1a brainstorming 需求澄清（逐项提问、2-3 方案对比、用户确认设计）→ 1b requirement-analysis 形式化（产出 proposal.md + spec.md）。brainstorming 自带用户确认流程，与 Harness HITL #1 对齐。
+**上下文隔离设计**：
 
-阶段 5 内部流程：**TDD RED（先写失败测试）→ GREEN（最小实现）→ REFACTOR（清理）** → QA（13 项机械化检查 FRESH run + TDD 证据验证 + verification-before-completion）→ QA FAIL 时触发根因分析（systematic-debugging）→ Generator 修复重试，QA 通过后才进入 3 视角并行 Review。最多 3 轮。
+```
+Owner Agent 上下文 (~200 lines)
+  ├─ 编排指令 + 路径选择逻辑
+  ├─ 各子Agent 完成通知摘要（非全文）
+  └─ pending 决策点
+
+子 Agent 上下文 (各自独立, ~500-1000 lines)
+  ├─ requirement-analyst:  任务描述 + CLAUDE.md + design.md + MEMORY.md
+  ├─ architecture-designer: proposal.md + specs + design.md + api-proto/
+  └─ harness-pipeline:      design.md + tasks.md + 服务代码
+```
+
+子 Agent 间**不通过 Owner 上下文交接**——前一个子 Agent 的产出写入 disk，后一个子 Agent 从 disk 读取。Owner Agent 只读取产出文件的**摘要**来做验收决策，不加载全文。
+
+阶段 5 内部流程不变：TDD RED→GREEN→REFACTOR → QA(FRESH run) → QA FAIL → Debug(根因分析) → Generator修复 → Review(3视角并行)，最多 3 轮。
 
 ### 失败路由表（精确回退）
 
@@ -139,8 +151,8 @@ OpenSpec 完整流水线的 7 个阶段：
 
 | 失败类型 | 回退目标 | 说明 |
 |---------|---------|------|
-| 方案不可行 / 用户否决设计方案 | 阶段 1a（需求澄清） | 重新 brainstorming 探索替代方案 |
-| 需求理解偏差 / 功能不符合 spec | 阶段 1b（需求形式化），如需深度澄清则回 1a | 修正 proposal/spec |
+| 方案不可行 / 用户否决设计方案 | 阶段 1（需求分析子Agent） | 重新派发需求分析子Agent |
+| 需求理解偏差 / 功能不符合 spec | 阶段 1（需求分析子Agent） | 修正 proposal/spec |
 | 设计决策错误（归属错服务/模型不合理） | 阶段 3（架构设计） | 修正设计 |
 | 编译失败（go build） | 阶段 5 编码步骤 | 修复编译错误 |
 | 测试 0/0（有包无测试函数） | 阶段 5 测试步骤 | 只为新增代码补测试 |
@@ -152,12 +164,12 @@ OpenSpec 完整流水线的 7 个阶段：
 
 ### Human-in-the-Loop 确认点（5 个）
 
-| # | 阶段 | 何时暂停 | 确认内容 |
+| # | 阶段 | 何时暂停 | Owner 确认内容（基于子Agent产出摘要，非全文） |
 |---|------|---------|---------|
-| 1 | 阶段 1b 后 | 需求形式化完成 | proposal + spec 是否准确反映了 brainstorming 中确认的设计？影响范围是否准确？（brainstorming 内已完成用户设计确认） |
-| 2 | 阶段 2 后 | 需求评审通过 | 计划摘要确认，批准后进入架构设计 |
-| 3 | 阶段 3 后 | 架构设计完成 | 确认设计方案（服务归属、数据模型、接口契约） |
-| 4 | 阶段 5 后 | 编码评审通过 | 确认代码质量、测试覆盖、变更完整性 |
+| 1 | 阶段 1 后 | 子Agent 产出 proposal+spec | 影响范围准确？追溯表⚠️项是否合理？批准进入评审 |
+| 2 | 阶段 2 后 | 子Agent 产出评审报告 | 评审结论 APPROVED？批准进入架构设计 |
+| 3 | 阶段 3 后 | 子Agent 产出 design+tasks | 服务归属正确？Proto 变更清单完整？批准进入编码 |
+| 4 | 阶段 5 后 | Workflow 产出 QA+Review | 代码质量/测试覆盖/变更完整性确认 |
 | 5 | 阶段 6 后 | 集成验证通过 | 最终交付确认，批准归档 |
 
 ### 评审循环上限
@@ -177,7 +189,7 @@ OpenSpec 完整流水线的 7 个阶段：
 |------|---------------------|------|
 | **直接 Edit** | ① 单文件 ≤10 行改动<br>② 只改注释/文案/配置值<br>③ 修复明确的 typo/bug（有 stack trace 或 error message 佐证） | Statement:"走轻量路径"→ Edit → build → 完成 |
 | **Dev Agent** | ① 改动局限在 1 个服务内<br>② 不涉及 Proto 变更<br>③ 不涉及 common/ 变更<br>④ 用户已给出足够详细的需求 | 阶段 0 → dispatch → 阶段 5 QA+Review |
-| **OpenSpec** | ① 跨 2+ 服务<br>② 涉及 Proto 变更<br>③ 涉及 common/ 或架构决策<br>④ 需求模糊需要澄清<br>⑤ 新功能开发 | 阶段 0 → 1a brainstorming → 1b 需求形式化 → 阶段 2~6 |
+| **OpenSpec** | ① 跨 2+ 服务<br>② 涉及 Proto 变更<br>③ 涉及 common/ 或架构决策<br>④ 需求模糊需要澄清<br>⑤ 新功能开发 | 阶段 0 → 派发需求分析子Agent → 派发评审子Agent → 派发设计子Agent → 阶段 4~6 |
 
 > **常见误判纠正**：前端改组件+后端改 API = 跨服务 → OpenSpec。UI 重构 = 可能跨多个组件但仍属单服务 → Dev Agent。
 

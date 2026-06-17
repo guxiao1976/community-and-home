@@ -27,14 +27,12 @@
   │     → 验证：build 通过
   │
   ├─ 单服务、新功能或大改动（>3 文件或需理解业务）？
-  │     → 先使用 `Skill("superpowers:brainstorming")` 探索需求+方案对比
-  │     → 再使用 requirement-analysis Skill 产出 proposal.md
-  │     → 再使用 architect-design Skill 产出 design.md + tasks.md（如涉及设计决策）
+  │     → 派发需求分析子 Agent → 派发架构设计子 Agent
   │     → 派发 Dev Agent → QA Agent → Reviewer
   │     → 验证：build + test + review
   │
   ├─ 跨服务（后端+前端、多个微服务）？
-  │     → 先使用 `Skill("superpowers:brainstorming")` 探索需求+方案对比
+  │     → 派发需求分析子 Agent → 派发架构设计子 Agent
   │     → OpenSpec: proposal → design → tasks
   │     → Proto 变更由全局 Claude 处理（修改 api-proto/ → make generate）
   │     → 并行派发 Dev Agent 到各服务
@@ -73,14 +71,14 @@
 决策完成后，根据选择的结果：
 - **直接 Edit** → 开始修改，build 验证
 - **Dev Agent** → 调用 `dispatch` Skill
-- **OpenSpec** → 调用 `Skill("superpowers:brainstorming")` → `requirement-analysis` Skill → `architect-design` Skill
+- **OpenSpec** → 派发需求分析子 Agent (`.harness/agents/subagents/requirement-analyst.md`) → 派发架构设计子 Agent (`.harness/agents/subagents/architecture-designer.md`)
 - **Workflow** → 编写并行 Workflow 脚本
 - **Ralph** → 写 fix_plan.md → 启动 Ralph 循环
 
 ## 关联资源
 
 - 派发 Skill：`.harness/skills/dispatch.md`
-- 需求分析 Skill：`.harness/skills/requirement-analysis.md`
-- 架构设计 Skill：`.harness/skills/architect-design.md`
+- 需求分析子 Agent：`.harness/agents/subagents/requirement-analyst.md`
+- 架构设计子 Agent：`.harness/agents/subagents/architecture-designer.md`
 - Harness Pipeline：`.harness/workflows/harness-pipeline.js`
 - Ralph 配置：`.ralphrc`
