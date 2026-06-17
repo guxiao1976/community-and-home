@@ -10,6 +10,10 @@ import type {
   UpdatePipelineRequest,
   PipelineTestRequest,
   PipelineTestResponse,
+  ReviewListParams,
+  ReviewListResponse,
+  ReviewDetail,
+  SubmitReviewRequest,
 } from '@common/types/moderation';
 import type { PaginationParams } from '@common/types/common';
 
@@ -144,5 +148,29 @@ export function testPipeline(data: PipelineTestRequest) {
     '/api/moderation/pipeline/test',
     data,
     { timeout: 60000 }
+  );
+}
+
+// ========== Human Review ==========
+
+/** Get human review list with filtering */
+export function listReview(params: ReviewListParams) {
+  return request.get<ReviewListResponse>('/api/moderation/review/list', {
+    params,
+  });
+}
+
+/** Get review detail by audit_log_id */
+export function getReviewDetail(id: string) {
+  return request.get<ReviewDetail>('/api/moderation/review/detail', {
+    params: { id },
+  });
+}
+
+/** Submit human review decision */
+export function submitReview(data: SubmitReviewRequest) {
+  return request.post<{ message: string }>(
+    '/api/moderation/review/submit',
+    data,
   );
 }
