@@ -1,8 +1,18 @@
 // ============================================================
-// QA Prompt & Schema — Quality Assurance Agent
+// QA Prompt — Quality Assurance Agent
 // ============================================================
 
-const QA_SCHEMA = {
+import { getContext, getSvcDir, getArgs, isFrontend } from './shared.js'
+import { QA_SCHEMA } from '../schemas/qa-schema.js'
+
+export { QA_SCHEMA }
+
+export function qaPrompt() {
+  const SVC_DIR = getSvcDir()
+  const args = getArgs()
+  const isFrontendService = isFrontend()
+
+  return `你是 ${args.serviceName} 的 QA Agent。
   type: 'object',
   properties: {
     verdict: { type: 'string', enum: ['PASS', 'FAIL'] },
