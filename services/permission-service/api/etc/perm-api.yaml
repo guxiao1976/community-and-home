@@ -1,0 +1,15 @@
+Name: perm-api
+Host: 0.0.0.0
+Port: 8883
+
+# JWT 认证配置
+Auth:
+  AccessSecret: ${JWT_ACCESS_SECRET}
+  AccessExpire: 7200
+
+# 权限中心 gRPC 客户端（通过 etcd 发现）
+PermissionRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: permission.rpc

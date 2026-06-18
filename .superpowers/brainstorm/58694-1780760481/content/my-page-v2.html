@@ -1,0 +1,86 @@
+<h2>"我的" 页面 — V2</h2>
+<p class="subtitle">Logo左 + 手机号右 | 小区管理标题 | 两个方形图标按钮</p>
+
+<div class="mockup" style="max-width: 390px; margin: 0 auto;">
+  <div class="mockup-header">我的 — V2</div>
+  <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF; min-height: 500px;">
+
+    <!-- 头部：Logo + 手机号 -->
+    <div style="background: linear-gradient(160deg, #D4B896 0%, #E8DCCF 25%, #FAF8F5 50%, #FFFFFF 75%); padding: 40rpx 32rpx 28rpx; display: flex; align-items: center; gap: 20rpx;">
+      <!-- Logo 占位 -->
+      <div style="width: 96rpx; height: 96rpx; border-radius: 50%; background: rgba(255,255,255,0.7); border: 3rpx solid rgba(184,149,106,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <span style="font-size: 52rpx;">👤</span>
+      </div>
+      <!-- 用户信息 -->
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 22rpx; color: #A6988A; margin-bottom: 4rpx;">当前用户</div>
+        <div style="font-size: 30rpx; font-weight: 600; color: #3D3226;">185****1501</div>
+      </div>
+    </div>
+
+    <!-- 小区管理 -->
+    <div style="padding: 0 32rpx; margin-top: 8rpx;">
+      <div style="display: flex; align-items: center; gap: 8rpx; margin-bottom: 24rpx;">
+        <span style="font-size: 34rpx;">🏘️</span>
+        <span style="font-size: 34rpx; font-weight: 600; color: #3D3226;">小区管理</span>
+      </div>
+
+      <!-- 两个方形图标按钮 -->
+      <div style="display: flex; gap: 24rpx; justify-content: center;">
+        <!-- 加入小区 -->
+        <div style="width: 240rpx; height: 200rpx; background: #FAF8F5; border-radius: 16rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.04);" onclick="console.log('join')">
+          <div style="width: 88rpx; height: 88rpx; border-radius: 20rpx; background: linear-gradient(135deg, #B8956A, #D4B896); display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx;">
+            <span style="font-size: 44rpx; color: #fff;">➕</span>
+          </div>
+          <span style="font-size: 28rpx; font-weight: 500; color: #3D3226;">加入小区</span>
+        </div>
+
+        <!-- 退出小区 -->
+        <div style="width: 240rpx; height: 200rpx; background: #FAF8F5; border-radius: 16rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.04);" onclick="console.log('leave')">
+          <div style="width: 88rpx; height: 88rpx; border-radius: 20rpx; background: linear-gradient(135deg, #D4958A, #E0ADA5); display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx;">
+            <span style="font-size: 44rpx; color: #fff;">🚪</span>
+          </div>
+          <span style="font-size: 28rpx; font-weight: 500; color: #3D3226;">退出小区</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设置（占位） -->
+    <div style="padding: 0 32rpx; margin-top: 40rpx;">
+      <div style="display: flex; align-items: center; gap: 8rpx; margin-bottom: 24rpx;">
+        <span style="font-size: 34rpx;">⚙️</span>
+        <span style="font-size: 34rpx; font-weight: 600; color: #3D3226;">设置</span>
+      </div>
+      <div style="background: #FAF8F5; border-radius: 16rpx; overflow: hidden;">
+        <div style="padding: 24rpx; border-bottom: 1px solid #E8E0D5; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 28rpx; color: #3D3226;">个人信息</span>
+          <span style="font-size: 24rpx; color: #CCC4BA;">→</span>
+        </div>
+        <div style="padding: 24rpx; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 28rpx; color: #3D3226;">关于我们</span>
+          <span style="font-size: 24rpx; color: #CCC4BA;">→</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <h3>布局结构</h3>
+  <div style="background: #FAF8F5; border-radius: 12px; padding: 20px; font-size: 14px; line-height: 2.2;">
+    🎨 渐变头部<br>
+    ├ 👤 Logo (圆形占位) &nbsp; 当前用户<br>
+    │&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;185****1501<br>
+    ─────────────────<br>
+    🏘️ 小区管理<br>
+    ├ ┌──────┐ &nbsp; ┌──────┐<br>
+    │ │ ➕  │ &nbsp; │ 🚪  │<br>
+    │ │加入小区│ &nbsp; │退出小区│<br>
+    │ └──────┘ &nbsp; └──────┘<br>
+    ─────────────────<br>
+    ⚙️ 设置<br>
+    ├ 个人信息 →<br>
+    └ 关于我们 →
+  </div>
+</div>

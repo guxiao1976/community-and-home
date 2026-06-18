@@ -1,0 +1,242 @@
+<h2>最终设计总览 — "我的" 页面 + 加入小区流程</h2>
+<p class="subtitle">两个核心页面的最终设计定稿。确认后写 Spec 文档。</p>
+
+<div class="section">
+  <h3>一、"我的" 页面（V9）</h3>
+  <p class="subtitle">头像区 + 两个卡片（加入/退出） + 设置。点击卡片进入对应子页面。</p>
+</div>
+
+<div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+
+  <!-- 我的页面 -->
+  <div class="mockup" style="max-width: 350px;">
+    <div class="mockup-header">主页 — 默认状态</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF; font-size: 11px;">
+      <div style="background: linear-gradient(160deg, #D4B896 0%, #E8DCCF 30%, #FAF8F5 55%, #FFFFFF 80%); padding: 40px 0 25px; text-align: center;">
+        <div style="width: 70px; height: 70px; border-radius: 50%; background: rgba(255,255,255,0.8); border: 2px solid rgba(184,149,106,0.25); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.06);">
+          <span style="font-size: 36px;">👤</span>
+        </div>
+        <div style="font-size: 12px; color: #A6988A;">当前用户</div>
+        <div style="font-size: 16px; font-weight: 600; color: #3D3226;">185****1501</div>
+      </div>
+
+      <div style="padding: 0 20px; margin-top: 16px;">
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 14px;">
+          <span>🏘️</span><span style="font-weight: 600; color: #3D3226;">小区管理</span>
+          <span style="margin-left: auto; font-size: 11px; color: #B8956A; background: rgba(184,149,106,0.08); padding: 2px 8px; border-radius: 10px;">已加入 2/3</span>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <div style="flex: 1; height: 130px; background: #FAF8F5; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="width: 80px; height: 80px;border-radius: 18px;background: linear-gradient(135deg, #B8956A, #D4B896);display: flex;align-items: center;justify-content: center;margin-bottom: 8px;">
+              <span style="font-size: 42px; color: #fff;">➕</span>
+            </div>
+            <span style="font-weight: 500; color: #3D3226;">加入小区</span>
+          </div>
+          <div style="flex: 1; height: 130px; background: #FAF8F5; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="width: 80px; height: 80px;border-radius: 18px;background: linear-gradient(135deg, #D4958A, #E0ADA5);display: flex;align-items: center;justify-content: center;margin-bottom: 8px;">
+              <span style="font-size: 42px; color: #fff;">🚪</span>
+            </div>
+            <span style="font-weight: 500; color: #3D3226;">退出小区</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 0 20px; margin-top: 20px;">
+        <div style="background: #FAF8F5; border-radius: 12px; padding: 16px;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 14px;"><span>⚙️</span><span style="font-weight: 600; color: #3D3226;">设置</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(184,149,106,0.1);"><span>个人信息</span><span style="color:#CCC4BA;">→</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(184,149,106,0.1);"><span>账号安全</span><span style="color:#CCC4BA;">→</span></div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0;"><span>关于我们</span><span style="color:#CCC4BA;">→</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 退出小区 -->
+  <div class="mockup" style="max-width: 350px;">
+    <div class="mockup-header">退出小区子页面</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF; font-size: 11px;">
+      <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #F0EBE3;">
+        <span style="font-size: 20px; color: #D4958A;">← 返回</span>
+        <span style="font-size: 20px; font-weight: 600; color: #3D3226; margin-left: 10px;">退出小区</span>
+      </div>
+      <div style="padding: 12px 20px 0;">
+        <div style="background: #FFF5F3; border-radius: 8px; padding: 12px 16px; font-size: 11px; color: #D4958A;">
+          ⚠️ 退出后将不再接收该小区的通知和公告。退出后可重新申请加入。
+        </div>
+      </div>
+      <div style="padding: 12px 20px;">
+        <div style="font-size: 11px; color: #A6988A; margin-bottom: 10px;">已加入的小区（2个）</div>
+        <div style="background: #FAF8F5; border-radius: 12px; padding: 16px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 4px;"><span style="font-weight: 600;">🏘️ 阳光花园小区</span><span style="font-size:9px;color:#B8956A;background:rgba(184,149,106,0.1);padding:1px 6px;border-radius:4px;">当前</span></div>
+              <div style="font-size: 10px; color: #A6988A;">广东省深圳市南山区 · 加入于 2025-03-15</div>
+            </div>
+            <div style="padding: 6px 18px;border-radius: 16px;border: 1.5px solid #D4958A;color: #D4958A;font-weight: 600;">退出</div>
+          </div>
+        </div>
+        <div style="background: #FAF8F5; border-radius: 12px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600;">🏘️ 翠竹苑小区</div>
+              <div style="font-size: 10px; color: #A6988A;">广东省深圳市罗湖区 · 加入于 2025-06-02</div>
+            </div>
+            <div style="padding: 6px 18px;border-radius: 16px;border: 1.5px solid #D4958A;color: #D4958A;font-weight: 600;">退出</div>
+          </div>
+        </div>
+        <!-- 弹窗 -->
+        <div style="margin-top: 8px; background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border: 1px dashed #D4958A; text-align: center;">
+          <div style="font-size: 28px;">⚠️</div>
+          <div style="font-weight: 600; margin: 6px 0;">确认退出？</div>
+          <div style="font-size: 10px; color: #A6988A;">退出「阳光花园小区」后将不再接收通知</div>
+          <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <div style="flex:1;padding:10px;border-radius:20px;background:#F0EBE3;color:#8C7B6B;">取消</div>
+            <div style="flex:1;padding:10px;border-radius:20px;background:linear-gradient(135deg,#D4958A,#C1786E);color:#fff;font-weight:600;">确认退出</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top: 30px;">
+  <h3>二、加入小区流程（V4 最终版）</h3>
+  <p class="subtitle">省→市→区→搜索小区→输入楼号-单元-房号。提交时校验。</p>
+</div>
+
+<div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+
+  <!-- Step 5: 输入地址 -->
+  <div class="mockup" style="max-width: 350px;">
+    <div class="mockup-header">输入地址 — 正常态</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF; font-size: 11px;">
+      <div style="display: flex;align-items:center;padding:16px 20px;border-bottom:1px solid #F0EBE3;">
+        <span style="font-size:20px;color:#B8956A;">← 返回</span>
+        <span style="font-size:20px;font-weight:600;color:#3D3226;margin-left:10px;">加入小区</span>
+      </div>
+      <div style="padding: 14px 20px 0;">
+        <div style="background:#F5F1EB;border-radius:10px;padding:16px;">
+          <div style="font-weight:600;">🏘️ 阳光花园小区</div>
+          <div style="font-size:10px;color:#A6988A;">广东省深圳市南山区</div>
+        </div>
+      </div>
+      <div style="padding: 18px 20px 0;">
+        <div style="background:#FFFBF5;border:1px solid rgba(184,149,106,0.2);border-radius:10px;padding:14px 18px;">
+          <div style="font-size:10px;color:#B8956A;margin-bottom:4px;">示例</div>
+          <div style="font-size:14px;color:#3D3226;">5号楼 2单元 301房间：<b style="color:#B8956A;">5-2-301</b></div>
+        </div>
+      </div>
+      <div style="padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="flex:1;"><div style="font-size:10px;color:#A6988A;margin-bottom:4px;">楼号</div><input placeholder="如 5" style="width:100%;height:40px;border:1px solid #E8DCCF;border-radius:8px;text-align:center;font-size:20px;font-weight:600;background:#FAF8F5;box-sizing:border-box;"></div>
+          <div style="font-size:22px;color:#CCC4BA;padding-top:10px;">-</div>
+          <div style="flex:0 0 70px;"><div style="font-size:10px;color:#A6988A;margin-bottom:4px;">单元号</div><input placeholder="2" style="width:100%;height:40px;border:1px solid #E8DCCF;border-radius:8px;text-align:center;font-size:20px;font-weight:600;background:#FAF8F5;box-sizing:border-box;"></div>
+          <div style="font-size:22px;color:#CCC4BA;padding-top:10px;">-</div>
+          <div style="flex:1;"><div style="font-size:10px;color:#A6988A;margin-bottom:4px;">房号</div><input placeholder="301" style="width:100%;height:40px;border:1px solid #E8DCCF;border-radius:8px;text-align:center;font-size:20px;font-weight:600;background:#FAF8F5;box-sizing:border-box;"></div>
+        </div>
+      </div>
+      <div style="padding: 0 20px 16px;">
+        <div style="height:44px;border-radius:22px;background:linear-gradient(135deg,#B8956A,#D4B896);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;">确认加入</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 校验失败 -->
+  <div class="mockup" style="max-width: 350px;">
+    <div class="mockup-header">输入地址 — 校验失败态</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF; font-size: 11px;">
+      <div style="display: flex;align-items:center;padding:16px 20px;border-bottom:1px solid #F0EBE3;">
+        <span style="font-size:20px;color:#B8956A;">← 返回</span>
+        <span style="font-size:20px;font-weight:600;color:#3D3226;margin-left:10px;">加入小区</span>
+      </div>
+      <div style="padding: 14px 20px 0;">
+        <div style="background:#F5F1EB;border-radius:10px;padding:16px;">
+          <div style="font-weight:600;">🏘️ 阳光花园小区</div>
+          <div style="font-size:10px;color:#A6988A;">广东省深圳市南山区</div>
+        </div>
+      </div>
+      <div style="padding: 18px 20px 0;">
+        <div style="background:#FFFBF5;border:1px solid rgba(184,149,106,0.2);border-radius:10px;padding:14px 18px;">
+          <div style="font-size:10px;color:#B8956A;margin-bottom:4px;">示例</div>
+          <div style="font-size:14px;color:#3D3226;">5号楼 2单元 301房间：<b style="color:#B8956A;">5-2-301</b></div>
+        </div>
+      </div>
+      <div style="padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="flex:1;"><div style="font-size:10px;color:#A6988A;margin-bottom:4px;">楼号</div><input value="abc" style="width:100%;height:40px;border:2px solid #D4958A;border-radius:8px;text-align:center;font-size:20px;font-weight:600;color:#D4958A;background:#FFF5F3;box-sizing:border-box;"></div>
+          <div style="font-size:22px;color:#CCC4BA;padding-top:10px;">-</div>
+          <div style="flex:0 0 70px;"><div style="font-size:10px;color:#A6988A;margin-bottom:4px;">单元号</div><input value="2" style="width:100%;height:40px;border:1px solid #E8DCCF;border-radius:8px;text-align:center;font-size:20px;font-weight:600;background:#FAF8F5;box-sizing:border-box;"></div>
+          <div style="font-size:22px;color:#CCC4BA;padding-top:10px;">-</div>
+          <div style="flex:1;"><div style="font-size:10px;color:#A6988A;margin-bottom:4px;">房号</div><input value="301" style="width:100%;height:40px;border:1px solid #E8DCCF;border-radius:8px;text-align:center;font-size:20px;font-weight:600;background:#FAF8F5;box-sizing:border-box;"></div>
+        </div>
+      </div>
+      <!-- Toast -->
+      <div style="padding: 0 40px;">
+        <div style="background:#3D3226;border-radius:8px;padding:12px 16px;text-align:center;color:#fff;font-size:12px;">楼号必须为数字，且不大于150</div>
+      </div>
+      <div style="padding: 12px 20px 16px;">
+        <div style="height:44px;border-radius:22px;background:linear-gradient(135deg,#B8956A,#D4B896);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;">确认加入</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top: 30px;">
+  <h3>三、完整变更清单</h3>
+  <table style="width:100%; border-collapse: collapse; font-size: 13px;">
+    <tr style="border-bottom: 2px solid #B8956A;">
+      <th style="text-align:left;padding:8px;">层</th>
+      <th style="text-align:left;padding:8px;">变更内容</th>
+      <th style="text-align:left;padding:8px;">影响范围</th>
+    </tr>
+    <tr style="border-bottom: 1px solid #E8DCCF;">
+      <td style="padding:6px;">Proto</td>
+      <td style="padding:6px;"><code>JoinCommunityRequest</code> 加 <code>int32 building/unit/room</code></td>
+      <td style="padding:6px;font-size:12px;color:#A6988A;">api-proto/ → make generate → 通知 user-service</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #E8DCCF;">
+      <td style="padding:6px;">DB</td>
+      <td style="padding:6px;"><code>user_community_membership</code> 加 building/unit/room 列</td>
+      <td style="padding:6px;font-size:12px;color:#A6988A;">migration + model</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #E8DCCF;">
+      <td style="padding:6px;">RPC logic</td>
+      <td style="padding:6px;">join_community_logic 加唯一性校验（community_id+building+unit+room）</td>
+      <td style="padding:6px;font-size:12px;color:#A6988A;">user-service/rpc/</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #E8DCCF;">
+      <td style="padding:6px;">REST types</td>
+      <td style="padding:6px;"><code>JoinCommunityReq</code> 加 Building/Unit/Room 字段</td>
+      <td style="padding:6px;font-size:12px;color:#A6988A;">user-service/api/</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #E8DCCF;">
+      <td style="padding:6px;">前端 - 加入</td>
+      <td style="padding:6px;"><code>join-community.vue</code> 搜索后加输入步骤（3输入框+示例+校验）</td>
+      <td style="padding:6px;font-size:12px;color:#A6988A;">web/mobile/</td>
+    </tr>
+    <tr>
+      <td style="padding:6px;">前端 - 我的</td>
+      <td style="padding:6px;">重新设计 <code>my.vue</code>（V9 卡片式 + 退出子页面）</td>
+      <td style="padding:6px;font-size:12px;color:#A6988A;">web/mobile/</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>四、校验规则（提交时）</h3>
+  <table style="width:100%; border-collapse: collapse; font-size: 13px;">
+    <tr style="border-bottom: 1px solid #E8DCCF;">
+      <th style="text-align:left;padding:6px;">字段</th>
+      <th style="text-align:left;padding:6px;">规则</th>
+      <th style="text-align:left;padding:6px;">错误 toast</th>
+    </tr>
+    <tr><td style="padding:4px;">楼号</td><td style="padding:4px;">必填 · 纯数字 · 1 ≤ n ≤ 150</td><td style="padding:4px;font-size:12px;color:#D4958A;">"楼号必须为数字，且不大于150"</td></tr>
+    <tr><td style="padding:4px;">单元号</td><td style="padding:4px;">必填 · 纯数字 · 1 ≤ n ≤ 5</td><td style="padding:4px;font-size:12px;color:#D4958A;">"单元号必须为数字，且不大于5"</td></tr>
+    <tr><td style="padding:4px;">房号</td><td style="padding:4px;">必填 · 恰好 3 位数字</td><td style="padding:4px;font-size:12px;color:#D4958A;">"房号必须为3位数字"</td></tr>
+    <tr><td style="padding:4px;">唯一性</td><td style="padding:4px;">同地址不可重复加入</td><td style="padding:4px;font-size:12px;color:#D4958A;">"该地址已有人加入"（后端返回）</td></tr>
+  </table>
+</div>

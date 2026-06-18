@@ -1,0 +1,147 @@
+name: middleware-stack
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
+
+# ============================================================
+# 共享环境变量（定义一次，所有服务引用）
+# 值来自项目根目录 .env 文件
+# 注意：RSA 密钥保留在服务 YAML 配置中（PEM 多行文本）
+# ============================================================
+x-common-env: &common-env
+  AES_KEY: ${AES_KEY}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+
+services:
+  # ==================== MySQL 8.0 ====================
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    networks: 
+      app-network:
+        ipv4_address: 172.19.0.2
+    ports: ["3306:3306"]
+    # 本地目录挂载：当前目录 mysql-data → 容器数据目录
+    volumes:
+      - ./data/mysql-data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: default_db
+      TZ: Asia/Shanghai
+    command: --lower_case_table_names=1 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --init-connect='SET NAMES utf8mb4' --skip-character-set-client-handshake
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== etcd ====================
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.12
+    container_name: etcd
+    restart: always
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    volumes:
+      - ./data/etcd-data:/etcd-data
+    networks:
+      app-network:
+        ipv4_address: 172.19.0.3
+    command: [
+      "/usr/local/bin/etcd",
+      "--name=etcd-node-1",
+      "--data-dir=/etcd-data",
+      "--advertise-client-urls=http://0.0.0.0:2379",
+      "--listen-client-urls=http://0.0.0.0:2379",
+      "--listen-peer-urls=http://0.0.0.0:2380",
+      "--initial-advertise-peer-urls=http://0.0.0.0:2380",
+      "--initial-cluster=etcd-node-1=http://0.0.0.0:2380",
+      "--initial-cluster-token=etcd-cluster-1",
+      "--initial-cluster-state=new"
+    ]
+  # ==================== Redis 7.0 ====================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    networks: 
+      app-network:
+        ipv4_address: 172.19.0.4
+    ports: ["6379:6379"]
+    volumes:
+      - ./data/redis-data-new:/data
+    command: redis-server --appendonly yes
+    environment:
+      TZ: Asia/Shanghai
+
+  # ==================== APISIX ====================
+  apisix:
+    image: apache/apisix:latest
+    container_name: apisix
+    restart: always
+    networks:
+      app-network:
+        ipv4_address: 172.19.0.5
+    ports: ["9080:9080", "9090:9090", "9180:9180", "9443:9443"]
+    depends_on:
+      etcd:
+        condition: service_started
+    volumes:
+      - ./api-proto/gen/descriptor:/opt/proto-descriptor:ro
+    environment:
+      TZ: Asia/Shanghai
+      APISIX_DEPLOYMENT_ETCD_HOST: "[\"http://etcd:2379\"]"
+
+  # ==================== MinIO ====================
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: always
+    networks: 
+      app-network:
+        ipv4_address: 172.19.0.6
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./data/minio-data:/data
+    environment:
+      TZ: Asia/Shanghai
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minio123456
+    command: server /data --console-address ":9001"
+
+  # ==================== Neo4j 5 ====================
+  neo4j:
+    image: neo4j:5-community
+    container_name: neo4j
+    restart: always
+    networks:
+      app-network:
+        ipv4_address: 172.19.0.7
+    ports:
+      - "7474:7474"   # HTTP / Neo4j Browser
+      - "7687:7687"   # Bolt protocol（应用程序连接）
+    volumes:
+      - ./data/neo4j-data:/data                                    # 数据持久化
+      - ./data/neo4j-logs:/logs                                    # 日志
+      - ./data/neo4j-import:/var/lib/neo4j/import                  # 批量导入
+    environment:
+      TZ: Asia/Shanghai
+      NEO4J_AUTH: "neo4j/${NEO4J_PASSWORD:-neo4j123456}"          # 从 .env 读取，本地开发有默认值
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+      NEO4J_server_memory_pagecache_size: 256m
+      # 允许 APOC 过程（后续批量导入可能用到）
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5

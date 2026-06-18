@@ -1,0 +1,192 @@
+package model
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"time"
+
+	"strings"
+
+	"github.com/zeromicro/go-zero/core/stores/cache"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
+)
+
+// ==================== SysRole ====================
+
+// SysRole 角色定义表（spec/permission.md 数据模型）
+type SysRole struct {
+	Id          int64          `db:"id"`
+	RoleCode    string         `db:"role_code"`    // owner/property_admin/community_admin/grid_worker
+	RoleName    string         `db:"role_name"`
+	Description sql.NullString `db:"description"`
+	IsSystem    int64          `db:"is_system"`     // 1=系统角色，不可删除
+	SortOrder   int64          `db:"sort_order"`
+	Status      int64          `db:"status"`        // 1=启用 0=禁用
+	CreatedBy   int64          `db:"created_by"`
+	CreatedTime time.Time      `db:"created_time"`
+	UpdatedTime time.Time      `db:"updated_time"`
+	DeleteTime  sql.NullTime   `db:"delete_time"`
+}
+
+type SysRoleModel interface {
+	Insert(ctx context.Context, data *SysRole) (int64, error)
+	FindOne(ctx context.Context, id int64) (*SysRole, error)
+	FindByCode(ctx context.Context, code string) (*SysRole, error)
+	FindByIds(ctx context.Context, ids []int64) ([]*SysRole, error)
+	FindList(ctx context.Context, status *int64, page, pageSize int64) ([]*SysRole, int64, error)
+	Update(ctx context.Context, data *SysRole) error
+	SoftDelete(ctx context.Context, id int64) error
+}
+
+type defaultSysRoleModel struct {
+	conn  sqlx.SqlConn
+	table string
+}
+
+func NewSysRoleModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) SysRoleModel {
+	return &defaultSysRoleModel{conn: conn, table: "`sys_role`"}
+}
+
+func (m *defaultSysRoleModel) Insert(ctx context.Context, data *SysRole) (int64, error) {
+	query := fmt.Sprintf("insert into %s (role_code, role_name, description, is_system, sort_order, status, created_by) values (?, ?, ?, ?, ?, ?, ?)", m.table)
+	res, err := m.conn.ExecCtx(ctx, query, data.RoleCode, data.RoleName, data.Description, data.IsSystem, data.SortOrder, data.Status, data.CreatedBy)
+	if err != nil { return 0, err }
+	return res.LastInsertId()
+}
+
+func (m *defaultSysRoleModel) FindOne(ctx context.Context, id int64) (*SysRole, error) {
+	var v SysRole
+	err := m.conn.QueryRowCtx(ctx, &v, fmt.Sprintf("select * from %s where id = ? and delete_time is null", m.table), id)
+	return &v, err
+}
+
+func (m *defaultSysRoleModel) FindByCode(ctx context.Context, code string) (*SysRole, error) {
+	var v SysRole
+	err := m.conn.QueryRowCtx(ctx, &v, fmt.Sprintf("select * from %s where role_code = ? and delete_time is null limit 1", m.table), code)
+	return &v, err
+}
+
+func (m *defaultSysRoleModel) FindByIds(ctx context.Context, ids []int64) ([]*SysRole, error) {
+	if len(ids) == 0 { return nil, nil }
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	var list []*SysRole
+	query := fmt.Sprintf("select * from %s where id in (%s) and delete_time is null", m.table, strings.Join(placeholders, ","))
+	err := m.conn.QueryRowsCtx(ctx, &list, query, args...)
+	return list, err
+}
+
+func (m *defaultSysRoleModel) FindList(ctx context.Context, status *int64, page, pageSize int64) ([]*SysRole, int64, error) {
+	where := "where delete_time is null"
+	args := make([]interface{}, 0)
+	if status != nil {
+		where += " and status = ?"
+		args = append(args, *status)
+	}
+	var total int64
+	if err := m.conn.QueryRowCtx(ctx, &total, fmt.Sprintf("select count(*) from %s %s", m.table, where), args...); err != nil {
+		return nil, 0, err
+	}
+	offset := (page - 1) * pageSize
+	var list []*SysRole
+	query := fmt.Sprintf("select * from %s %s order by sort_order asc limit %d offset %d", m.table, where, pageSize, offset)
+	err := m.conn.QueryRowsCtx(ctx, &list, query, args...)
+	return list, total, err
+}
+
+func (m *defaultSysRoleModel) Update(ctx context.Context, data *SysRole) error {
+	_, err := m.conn.ExecCtx(ctx, fmt.Sprintf("update %s set role_name = ?, description = ?, status = ?, updated_time = now() where id = ?", m.table),
+		data.RoleName, data.Description, data.Status, data.Id)
+	return err
+}
+
+func (m *defaultSysRoleModel) SoftDelete(ctx context.Context, id int64) error {
+	_, err := m.conn.ExecCtx(ctx, fmt.Sprintf("update %s set delete_time = now() where id = ? and is_system = 0", m.table), id)
+	return err
+}
+
+// ==================== SysPermission ====================
+
+// SysPermission 权限定义表（树形结构）
+type SysPermission struct {
+	Id          int64          `db:"id"`
+	ParentId    sql.NullInt64  `db:"parent_id"`
+	Name        string         `db:"name"`
+	Code        string         `db:"code"`   // 全局唯一：user:read, user:write
+	Type        int64          `db:"type"`   // 1=菜单 2=按钮 3=API
+	Path        sql.NullString `db:"path"`   // API 路径
+	Icon        sql.NullString `db:"icon"`
+	SortOrder   int64          `db:"sort_order"`
+	Status      int64          `db:"status"` // 1=启用 0=禁用
+	CreatedTime time.Time      `db:"created_time"`
+	UpdatedTime time.Time      `db:"updated_time"`
+}
+
+type SysPermissionModel interface {
+	FindAll(ctx context.Context) ([]*SysPermission, error)
+	FindByIds(ctx context.Context, ids []int64) ([]*SysPermission, error)
+	FindByCode(ctx context.Context, code string) (*SysPermission, error)
+	FindWithFilter(ctx context.Context, typeFilter, statusFilter *int64) ([]*SysPermission, error)
+}
+
+type defaultSysPermissionModel struct {
+	conn  sqlx.SqlConn
+	table string
+}
+
+func NewSysPermissionModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) SysPermissionModel {
+	return &defaultSysPermissionModel{conn: conn, table: "`sys_permission`"}
+}
+
+func (m *defaultSysPermissionModel) FindAll(ctx context.Context) ([]*SysPermission, error) {
+	var list []*SysPermission
+	err := m.conn.QueryRowsCtx(ctx, &list, fmt.Sprintf("select * from %s where status = 1 order by sort_order asc", m.table))
+	return list, err
+}
+
+func (m *defaultSysPermissionModel) FindByIds(ctx context.Context, ids []int64) ([]*SysPermission, error) {
+	if len(ids) == 0 { return nil, nil }
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+	var list []*SysPermission
+	query := fmt.Sprintf("select * from %s where id in (%s) and status = 1", m.table, strings.Join(placeholders, ","))
+	err := m.conn.QueryRowsCtx(ctx, &list, query, args...)
+	return list, err
+}
+
+func (m *defaultSysPermissionModel) FindByCode(ctx context.Context, code string) (*SysPermission, error) {
+	var v SysPermission
+	err := m.conn.QueryRowCtx(ctx, &v, fmt.Sprintf("select * from %s where code = ? and status = 1 limit 1", m.table), code)
+	return &v, err
+}
+
+// FindWithFilter 根据 type/status 筛选权限列表（构建树之前调用）
+//   参数为 nil 表示不限制该维度，传入 -1 以外的任何值均可筛选
+func (m *defaultSysPermissionModel) FindWithFilter(ctx context.Context, typeFilter, statusFilter *int64) ([]*SysPermission, error) {
+	where := "where 1=1"
+	args := make([]interface{}, 0)
+
+	if typeFilter != nil {
+		where += " and type = ?"
+		args = append(args, *typeFilter)
+	}
+	if statusFilter != nil {
+		where += " and status = ?"
+		args = append(args, *statusFilter)
+	}
+
+	var list []*SysPermission
+	query := fmt.Sprintf("select * from %s %s order by sort_order asc", m.table, where)
+	err := m.conn.QueryRowsCtx(ctx, &list, query, args...)
+	return list, err
+}
+

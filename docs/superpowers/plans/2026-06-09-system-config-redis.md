@@ -1417,7 +1417,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - [ ] **Step 1: 运行 harness 检查**
 
 ```bash
-bash .harness/scripts/harness-checks.sh --service master-data-service
+bash .harness/skills/qa/scripts/harness-checks.sh --service master-data-service
 # Expected: 全部 PASS，无 FAIL
 ```
 

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社区家园移动端 · 色板</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+    background: #F5F0EA;
+    color: #3D3226;
+    padding: 32px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 24px; margin-bottom: 8px; color: #B8956A; }
+  .subtitle { font-size: 14px; color: #A6988A; margin-bottom: 32px; }
+  .section { margin-bottom: 40px; }
+  .section h2 { font-size: 16px; margin-bottom: 16px; color: #8B6F4E; padding-bottom: 8px; border-bottom: 1px solid #E8E0D5; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 12px; }
+  .swatch {
+    width: 120px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    background: #FFFFFF;
+  }
+  .swatch-color {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .swatch-color.light-text { color: #FFFFFF; }
+  .swatch-color.dark-text { color: #3D3226; }
+  .swatch-info { padding: 10px 12px; }
+  .swatch-name { font-size: 13px; font-weight: 600; display: block; }
+  .swatch-hex { font-size: 11px; color: #A6988A; }
+  .swatch-use { font-size: 10px; color: #CCC4BA; margin-top: 2px; }
+
+  /* Preview section */
+  .preview {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  }
+  .preview-title { font-size: 14px; color: #A6988A; margin-bottom: 16px; }
+  .preview-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 48px; padding: 0 32px; border-radius: 48px;
+    background: linear-gradient(135deg, #B8956A, #D4B896);
+    color: #FFFFFF; font-size: 16px; font-weight: 600;
+    margin-right: 12px; margin-bottom: 12px;
+    border: none; cursor: default;
+  }
+  .preview-btn-outline {
+    height: 48px; padding: 0 32px; border-radius: 48px;
+    background: #FFFFFF; border: 1px solid #B8956A;
+    color: #B8956A; font-size: 16px; font-weight: 600;
+    cursor: default;
+  }
+  .preview-card {
+    background: #FAF8F5; border-radius: 12px; padding: 20px;
+    margin-top: 16px; border: 1px solid #E8E0D5;
+  }
+  .preview-card p { font-size: 14px; line-height: 1.6; color: #3D3226; }
+  .preview-card .secondary { font-size: 12px; color: #A6988A; margin-top: 4px; }
+  .preview-input {
+    width: 100%; height: 48px; border-radius: 12px; border: 1px solid #E8E0D5;
+    background: #F5F0EA; padding: 0 16px; font-size: 14px; color: #3D3226;
+    margin-bottom: 12px;
+  }
+  .preview-input::placeholder { color: #CCC4BA; }
+  .preview-tabs {
+    display: flex; gap: 0; margin-bottom: 16px;
+  }
+  .preview-tab {
+    padding: 8px 20px; font-size: 14px; border-bottom: 2px solid #E8E0D5;
+    color: #A6988A; cursor: default;
+  }
+  .preview-tab.active {
+    color: #B8956A; border-bottom-color: #B8956A; font-weight: 600;
+  }
+  .preview-link { color: #B8956A; text-decoration: underline; font-size: 14px; }
+  .preview-success { color: #8DAF7E; font-size: 13px; font-weight: 600; }
+  .preview-warning { color: #E8C98E; font-size: 13px; font-weight: 600; }
+  .preview-error { color: #D4958A; font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>社区家园 · 移动端色板</h1>
+<p class="subtitle">白色为主，淡咖点缀，温暖、简单、松弛</p>
+
+<!-- Brand Colors -->
+<div class="section">
+  <h2>品牌色 — 咖色系</h2>
+  <div class="swatches">
+    <div class="swatch">
+      <div class="swatch-color light-text" style="background:#B8956A;">Primary</div>
+      <div class="swatch-info">
+        <span class="swatch-name">温暖咖</span>
+        <span class="swatch-hex">#B8956A</span>
+        <span class="swatch-use">按钮 · 选中 · 链接</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color dark-text" style="background:#D4B896;">Light</div>
+      <div class="swatch-info">
+        <span class="swatch-name">浅咖</span>
+        <span class="swatch-hex">#D4B896</span>
+        <span class="swatch-use">hover · 背景点缀</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color light-text" style="background:#8B6F4E;">Dark</div>
+      <div class="swatch-info">
+        <span class="swatch-name">深咖</span>
+        <span class="swatch-hex">#8B6F4E</span>
+        <span class="swatch-use">按下态</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Background Colors -->
+<div class="section">
+  <h2>背景色 — 白色系</h2>
+  <div class="swatches">
+    <div class="swatch">
+      <div class="swatch-color dark-text" style="background:#FFFFFF; border:1px solid #E8E0D5;">Page</div>
+      <div class="swatch-info">
+        <span class="swatch-name">纯白</span>
+        <span class="swatch-hex">#FFFFFF</span>
+        <span class="swatch-use">页面背景</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color dark-text" style="background:#FAF8F5; border:1px solid #E8E0D5;">Card</div>
+      <div class="swatch-info">
+        <span class="swatch-name">暖白</span>
+        <span class="swatch-hex">#FAF8F5</span>
+        <span class="swatch-use">卡片背景</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color dark-text" style="background:#F5F0EA; border:1px solid #E8E0D5;">Input</div>
+      <div class="swatch-info">
+        <span class="swatch-name">暖灰白</span>
+        <span class="swatch-hex">#F5F0EA</span>
+        <span class="swatch-use">输入框 / 灰色底</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Text Colors -->
+<div class="section">
+  <h2>文字色 — 暖棕系</h2>
+  <div class="swatches">
+    <div class="swatch">
+      <div class="swatch-color light-text" style="background:#3D3226;">主文字</div>
+      <div class="swatch-info">
+        <span class="swatch-name">暖深棕</span>
+        <span class="swatch-hex">#3D3226</span>
+        <span class="swatch-use">标题 · 正文</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color dark-text" style="background:#A6988A;">辅助</div>
+      <div class="swatch-info">
+        <span class="swatch-name">暖灰</span>
+        <span class="swatch-hex">#A6988A</span>
+        <span class="swatch-use">辅助文字</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color dark-text" style="background:#CCC4BA;">占位</div>
+      <div class="swatch-info">
+        <span class="swatch-name">浅暖灰</span>
+        <span class="swatch-hex">#CCC4BA</span>
+        <span class="swatch-use">占位符 · 禁用</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Functional Colors -->
+<div class="section">
+  <h2>功能色 — 柔和系</h2>
+  <div class="swatches">
+    <div class="swatch">
+      <div class="swatch-color dark-text" style="background:#8DAF7E;">成功</div>
+      <div class="swatch-info">
+        <span class="swatch-name">柔和绿</span>
+        <span class="swatch-hex">#8DAF7E</span>
+        <span class="swatch-use">成功 · 确认</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color dark-text" style="background:#E8C98E;">警告</div>
+      <div class="swatch-info">
+        <span class="swatch-name">柔和琥珀</span>
+        <span class="swatch-hex">#E8C98E</span>
+        <span class="swatch-use">警告提示</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color light-text" style="background:#D4958A;">错误</div>
+      <div class="swatch-info">
+        <span class="swatch-name">柔和红</span>
+        <span class="swatch-hex">#D4958A</span>
+        <span class="swatch-use">错误 · 删除</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Border & Divider -->
+<div class="section">
+  <h2>边框 · 阴影</h2>
+  <div class="swatches">
+    <div class="swatch">
+      <div class="swatch-color dark-text" style="background:#E8E0D5;">Border</div>
+      <div class="swatch-info">
+        <span class="swatch-name">暖色边框</span>
+        <span class="swatch-hex">#E8E0D5</span>
+        <span class="swatch-use">边框 · 分割线</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Live Preview -->
+<div class="section">
+  <h2>页面效果预览</h2>
+  <div class="preview">
+    <p class="preview-title">组件预览 · 咖啡色系</p>
+
+    <div class="preview-tabs">
+      <span class="preview-tab active">首页</span>
+      <span class="preview-tab">发现</span>
+      <span class="preview-tab">我的</span>
+    </div>
+
+    <div class="preview-card">
+      <p>欢迎来到社区家园 👋</p>
+      <p class="secondary">温暖、简单、松弛的生活空间</p>
+    </div>
+
+    <div style="margin-top:16px;">
+      <button class="preview-btn">登录 / 注册</button>
+      <button class="preview-btn-outline">了解更多</button>
+    </div>
+
+    <div style="margin-top:16px;">
+      <input class="preview-input" placeholder="请输入手机号" type="text" disabled>
+      <input class="preview-input" placeholder="请输入验证码" type="text" disabled>
+    </div>
+
+    <div style="margin-top:16px; display:flex; gap:24px;">
+      <span class="preview-success">✓ 操作成功</span>
+      <span class="preview-warning">⚠ 请注意</span>
+      <span class="preview-error">✗ 操作失败</span>
+      <span class="preview-link">《使用协议》</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+Name: file-api
+Host: 0.0.0.0
+Port: 8884
+Timeout: 30000
+
+Auth:
+  AccessSecret: ${JWT_ACCESS_SECRET}
+  AccessExpire: 86400
+
+FileRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: file.rpc

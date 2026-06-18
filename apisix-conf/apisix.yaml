@@ -1,0 +1,167 @@
+# APISIX Standalone Routes
+# Service discovery: host.docker.internal = Docker host IP (for dev)
+# In production, replace with actual service addresses / K8s DNS
+
+# =============================================================================
+# Plugin defaults
+# =============================================================================
+plugin_configs:
+  jwt-auth:
+    key: community-jwt
+    secret: QBViQKNdUpsAdq48ClBoFxRoRwayo7MZFrLr_eu5NL8
+    # Token expected in: Authorization: Bearer <token>
+
+# =============================================================================
+# Upstream: existing REST services
+# =============================================================================
+upstreams:
+  # Identity — legacy monolith, still serving frontend until Phase 5
+  identity-upstream:
+    type: roundrobin
+    nodes:
+      "host.docker.internal:8888": 1
+    timeout:
+      connect: 3
+      send: 30
+      read: 30
+
+  # Master Data — REST API on :8889
+  masterdata-upstream:
+    type: roundrobin
+    nodes:
+      "host.docker.internal:8889": 1
+    timeout:
+      connect: 3
+      send: 30
+      read: 30
+
+  # Moderation — REST-only on :8890
+  moderation-upstream:
+    type: roundrobin
+    nodes:
+      "host.docker.internal:8890": 1
+    timeout:
+      connect: 3
+      send: 30
+      read: 30
+
+  # AI Model — REST gateway on :8891
+  aimodel-upstream:
+    type: roundrobin
+    nodes:
+      "host.docker.internal:8891": 1
+    timeout:
+      connect: 3
+      send: 60
+      read: 60
+
+# =============================================================================
+# Routes
+# =============================================================================
+routes:
+  # ---- Public endpoints (no JWT) ----
+
+  # Identity: Auth public endpoints
+  - id: identity-auth-public
+    uri: /api/identity/auth/*
+    methods: [POST]
+    upstream_id: identity-upstream
+
+  # ---- JWT-protected endpoints ----
+
+  # Identity: All JWT-protected routes
+  - id: identity-protected
+    uri: /api/identity/*
+    methods: [GET, POST, PUT, DELETE]
+    upstream_id: identity-upstream
+    plugins:
+      jwt-auth:
+        _meta:
+          disable: false
+
+  # Master Data: All API routes
+  - id: masterdata
+    uri: /api/masterdata/*
+    upstream_id: masterdata-upstream
+    plugins:
+      jwt-auth: {}
+
+  # Moderation: All API routes
+  - id: moderation
+    uri: /api/moderation/*
+    upstream_id: moderation-upstream
+    plugins:
+      jwt-auth: {}
+
+  # AI Model: All API routes
+  - id: aimodel
+    uri: /api/v1/*
+    upstream_id: aimodel-upstream
+    plugins:
+      jwt-auth: {}
+
+  # ---- gRPC-Transcode routes (future: when services move off identity) ----
+
+  # Auth Service
+  - id: auth-grpc
+    uri: /api/auth/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "host.docker.internal:8083": 1
+    plugins:
+      grpc-transcode:
+        proto_id: api_descriptor.pb
+        service: auth.v1.AuthService
+        method: "*"
+
+  # User Service
+  - id: user-grpc
+    uri: /api/users/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "host.docker.internal:8082": 1
+    plugins:
+      grpc-transcode:
+        proto_id: api_descriptor.pb
+        service: user.v1.UserService
+        method: "*"
+
+  # Permission Service
+  - id: permission-grpc
+    uri: /api/perm/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "host.docker.internal:8084": 1
+    plugins:
+      grpc-transcode:
+        proto_id: api_descriptor.pb
+        service: permission.v1.PermissionService
+        method: "*"
+
+  # File Service
+  - id: file-grpc
+    uri: /api/files/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "host.docker.internal:8085": 1
+    plugins:
+      grpc-transcode:
+        proto_id: api_descriptor.pb
+        service: file.v1.FileService
+        method: "*"
+
+  # Health check
+  - id: health
+    uri: /health
+    upstream:
+      type: roundrobin
+      nodes:
+        "127.0.0.1:9080": 1
+    plugins:
+      redirect:
+        http_to_https: false
+# END

@@ -1,0 +1,28 @@
+# APISIX Standalone Configuration
+# All routes defined in apisix.yaml, no Admin API needed
+
+deployment:
+  role: traditional
+  role_traditional:
+    config_provider: yaml
+
+apisix:
+  node_listen: 9080
+  enable_admin: false
+  ssl:
+    enable: false
+
+nginx_config:
+  error_log: /dev/stderr
+  error_log_level: warn
+
+  worker_processes: auto
+  worker_rlimit_nofile: 20480
+
+  event:
+    worker_connections: 10620
+
+  http:
+    access_log: /dev/stdout
+    keepalive_timeout: 60s
+    client_max_body_size: 10m

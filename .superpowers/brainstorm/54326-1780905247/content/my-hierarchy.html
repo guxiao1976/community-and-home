@@ -1,0 +1,196 @@
+<h2>"我的" 页面 — 层级式布局</h2>
+<p class="subtitle">参照图片：主页面只有分类标题+箭头，点击进入子页面</p>
+
+<div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+
+  <!-- 主页面 -->
+  <div class="mockup" style="max-width: 370px;">
+    <div class="mockup-header">我的 — 主页（层级1）</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF; font-size: 12px;">
+      <!-- 头部渐变 -->
+      <div style="background: linear-gradient(160deg, #D4B896 0%, #E8DCCF 30%, #FAF8F5 55%, #FFFFFF 80%); padding: 80rpx 0 50rpx; text-align: center;">
+        <div style="width: 140rpx; height: 140rpx; border-radius: 50%; background: rgba(255,255,255,0.8); border: 3rpx solid rgba(184,149,106,0.25); margin: 0 auto 24rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.06);">
+          <span style="font-size: 72rpx;">👤</span>
+        </div>
+        <div style="font-size: 24rpx; color: #A6988A; margin-bottom: 6rpx;">当前用户</div>
+        <div style="font-size: 32rpx; font-weight: 600; color: #3D3226;">185****1501</div>
+      </div>
+
+      <!-- 小区管理 -->
+      <div style="padding: 0 40rpx; margin-top: 40rpx;">
+        <div style="background: #FAF8F5; border-radius: 16rpx; padding: 32rpx; margin-bottom: 20rpx;" @click="goCommunityManage">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12rpx;">
+              <span style="font-size: 40rpx;">🏘️</span>
+              <div>
+                <div style="font-size: 32rpx; font-weight: 600; color: #3D3226;">小区管理</div>
+                <div style="font-size: 24rpx; color: #A6988A; margin-top: 6rpx;">加入小区 · 退出小区 · 已加入 2/3</div>
+              </div>
+            </div>
+            <span style="font-size: 28rpx; color: #CCC4BA;">→</span>
+          </div>
+        </div>
+
+        <!-- 身份认证 -->
+        <div style="background: #FAF8F5; border-radius: 16rpx; padding: 32rpx; margin-bottom: 20rpx;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12rpx;">
+              <span style="font-size: 40rpx;">🪪</span>
+              <div>
+                <div style="font-size: 32rpx; font-weight: 600; color: #3D3226;">身份认证</div>
+                <div style="font-size: 24rpx; color: #A6988A; margin-top: 6rpx;">业主认证 · 租户认证 · 业委会 · 网格员 · 物业管理员 · 社区管理员 · 商家</div>
+              </div>
+            </div>
+            <span style="font-size: 28rpx; color: #CCC4BA;">→</span>
+          </div>
+        </div>
+
+        <!-- 账户管理 -->
+        <div style="background: #FAF8F5; border-radius: 16rpx; padding: 32rpx;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12rpx;">
+              <span style="font-size: 40rpx;">⚙️</span>
+              <div>
+                <div style="font-size: 32rpx; font-weight: 600; color: #3D3226;">账户管理</div>
+                <div style="font-size: 24rpx; color: #A6988A; margin-top: 6rpx;">个人信息 · 账号安全 · 关于我们</div>
+              </div>
+            </div>
+            <span style="font-size: 28rpx; color: #CCC4BA;">→</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 小区管理子页面 -->
+  <div class="mockup" style="max-width: 370px;">
+    <div class="mockup-header">小区管理（层级2）</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF; font-size: 12px;">
+      <div style="display: flex; align-items: center; padding: 28rpx 32rpx; border-bottom: 1rpx solid #F0EBE3;">
+        <span style="font-size: 28rpx; color: #B8956A;">← 返回</span>
+        <span style="font-size: 32rpx; font-weight: 600; color: #3D3226; margin-left: 16rpx;">小区管理</span>
+        <span style="margin-left: auto; font-size: 22rpx; color: #B8956A; background: rgba(184,149,106,0.08); padding: 4rpx 14rpx; border-radius: 20rpx;">已加入 2/3</span>
+      </div>
+
+      <div style="padding: 32rpx;">
+        <div style="background: #FAF8F5; border-radius: 16rpx; padding: 32rpx; margin-bottom: 16rpx;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12rpx;">
+              <div style="width: 80rpx; height: 80rpx; border-radius: 20rpx; background: linear-gradient(135deg, #B8956A, #D4B896); display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 44rpx; color: #fff;">➕</span>
+              </div>
+              <div>
+                <div style="font-size: 28rpx; font-weight: 600; color: #3D3226;">加入小区</div>
+                <div style="font-size: 22rpx; color: #A6988A; margin-top: 4rpx;">省→市→区→搜索→加入</div>
+              </div>
+            </div>
+            <span style="font-size: 28rpx; color: #CCC4BA;">→</span>
+          </div>
+        </div>
+
+        <div style="background: #FAF8F5; border-radius: 16rpx; padding: 32rpx;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12rpx;">
+              <div style="width: 80rpx; height: 80rpx; border-radius: 20rpx; background: linear-gradient(135deg, #D4958A, #E0ADA5); display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 44rpx; color: #fff;">🚪</span>
+              </div>
+              <div>
+                <div style="font-size: 28rpx; font-weight: 600; color: #3D3226;">退出小区</div>
+                <div style="font-size: 22rpx; color: #A6988A; margin-top: 4rpx;">查看并退出现有小区</div>
+              </div>
+            </div>
+            <span style="font-size: 28rpx; color: #CCC4BA;">→</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 身份认证子页面 -->
+  <div class="mockup" style="max-width: 370px;">
+    <div class="mockup-header">身份认证（层级2）</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF; font-size: 12px;">
+      <div style="display: flex; align-items: center; padding: 28rpx 32rpx; border-bottom: 1rpx solid #F0EBE3;">
+        <span style="font-size: 28rpx; color: #B8956A;">← 返回</span>
+        <span style="font-size: 32rpx; font-weight: 600; color: #3D3226; margin-left: 16rpx;">身份认证</span>
+      </div>
+
+      <div style="padding: 32rpx;">
+        <div style="background: #FAF8F5; border-radius: 16rpx; padding: 24rpx 28rpx;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid rgba(184,149,106,0.1);">
+            <span>业主认证</span>
+            <span style="font-size: 20rpx; color: #B8956A; background: rgba(184,149,106,0.08); padding: 2rpx 10rpx; border-radius: 8rpx;">需绑房</span>
+            <span style="color: #CCC4BA;">→</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid rgba(184,149,106,0.1);">
+            <span>租户认证</span>
+            <span style="font-size: 20rpx; color: #B8956A; background: rgba(184,149,106,0.08); padding: 2rpx 10rpx; border-radius: 8rpx;">需绑房</span>
+            <span style="color: #CCC4BA;">→</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid rgba(184,149,106,0.1);">
+            <span>业委会认证</span>
+            <span style="font-size: 20rpx; color: #B8956A; background: rgba(184,149,106,0.08); padding: 2rpx 10rpx; border-radius: 8rpx;">需业主</span>
+            <span style="color: #CCC4BA;">→</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid rgba(184,149,106,0.1);">
+            <span>网格员认证</span>
+            <span style="color: #CCC4BA;">→</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid rgba(184,149,106,0.1);">
+            <span>物业管理员认证</span>
+            <span style="color: #CCC4BA;">→</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid rgba(184,149,106,0.1);">
+            <span>社区管理员认证</span>
+            <span style="color: #CCC4BA;">→</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0;">
+            <span>商家认证</span>
+            <span style="color: #CCC4BA;">→</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>层级结构</h3>
+  <table style="width:100%; border-collapse: collapse; font-size: 13px;">
+    <tr style="border-bottom: 2px solid #B8956A;">
+      <th style="text-align:left;padding:6px;">层级1（我的）</th>
+      <th style="text-align:left;padding:6px;">层级2（子页面）</th>
+      <th style="text-align:left;padding:6px;">现有页面</th>
+    </tr>
+    <tr><td style="padding:8px 0;" rowspan="2">🏘️ 小区管理</td><td>加入小区</td><td>join-community.vue ✅</td></tr>
+    <tr><td>退出小区</td><td>leave-community.vue ✅</td></tr>
+    <tr style="background:#FFFBF5;"><td style="padding:8px 0;" rowspan="7">🪪 身份认证</td><td>业主认证</td><td>绑房弹窗（my.vue 内联）</td></tr>
+    <tr style="background:#FFFBF5;"><td>租户认证</td><td>同业主</td></tr>
+    <tr style="background:#FFFBF5;"><td>业委会认证</td><td>条件显示</td></tr>
+    <tr style="background:#FFFBF5;"><td>网格员认证</td><td>条件显示</td></tr>
+    <tr style="background:#FFFBF5;"><td>物业管理员认证</td><td>条件显示</td></tr>
+    <tr style="background:#FFFBF5;"><td>社区管理员认证</td><td>条件显示</td></tr>
+    <tr style="background:#FFFBF5;"><td>商家认证</td><td>条件显示</td></tr>
+    <tr><td style="padding:8px 0;" rowspan="3">⚙️ 账户管理</td><td>个人信息</td><td>待建</td></tr>
+    <tr><td>账号安全</td><td>account-security.vue ✅</td></tr>
+    <tr><td>关于我们</td><td>待建</td></tr>
+  </table>
+</div>
+
+<div class="options" style="margin-top: 24px;">
+  <div class="option" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>层级结构确认，执行改造</h3>
+      <p>主页面只显示3个分类+描述，子页面延用现有页面。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>需要调整</h3>
+      <p>请在终端说明。</p>
+    </div>
+  </div>
+</div>

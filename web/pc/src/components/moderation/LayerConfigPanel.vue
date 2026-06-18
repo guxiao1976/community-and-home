@@ -30,13 +30,8 @@
         </template>
         <el-form label-width="60px" size="small">
           <el-form-item label="模板">
-            <el-select v-model="localConfig.small_model_template_id" :disabled="!smallEnabled" placeholder="选择提示词模板" style="width: 100%;">
-              <el-option v-for="t in templates" :key="t.template_id" :label="`${t.template_name} v${t.version}`" :value="t.template_id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="模型">
-            <el-select v-model="localConfig.small_model_config_key" :disabled="!smallEnabled" placeholder="默认使用模板关联模型" clearable style="width: 100%;">
-              <el-option v-for="m in models" :key="m.config_key" :label="m.display_name" :value="m.config_key" />
+            <el-select v-model="localConfig.small_model_template_id" :disabled="!smallEnabled" placeholder="选择提示词模板（模型由模板关联）" style="width: 100%;">
+              <el-option v-for="t in templates" :key="t.id" :label="`${t.name}（${t.model_name}）`" :value="String(t.id)" />
             </el-select>
           </el-form-item>
         </el-form>
@@ -53,13 +48,8 @@
         </template>
         <el-form label-width="60px" size="small">
           <el-form-item label="模板">
-            <el-select v-model="localConfig.large_model_template_id" :disabled="!largeEnabled" placeholder="选择提示词模板" style="width: 100%;">
-              <el-option v-for="t in templates" :key="t.template_id" :label="`${t.template_name} v${t.version}`" :value="t.template_id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="模型">
-            <el-select v-model="localConfig.large_model_config_key" :disabled="!largeEnabled" placeholder="默认使用模板关联模型" clearable style="width: 100%;">
-              <el-option v-for="m in models" :key="m.config_key" :label="m.display_name" :value="m.config_key" />
+            <el-select v-model="localConfig.large_model_template_id" :disabled="!largeEnabled" placeholder="选择提示词模板（模型由模板关联）" style="width: 100%;">
+              <el-option v-for="t in templates" :key="t.id" :label="`${t.name}（${t.model_name}）`" :value="String(t.id)" />
             </el-select>
           </el-form-item>
         </el-form>
@@ -70,7 +60,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted } from 'vue';
-import { getModerationTemplates, getAvailableModels } from '@/api/aimodel';
+import { getModerationTemplates } from '@/api/aimodel';
 
 export interface LayerConfigValues {
   ac_enabled: number;
@@ -85,7 +75,6 @@ const props = defineProps<{ modelValue: LayerConfigValues }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: LayerConfigValues): void }>();
 
 const templates = ref<any[]>([]);
-const models = ref<any[]>([]);
 
 const localConfig = reactive<LayerConfigValues>({ ...props.modelValue });
 const smallEnabled = ref(props.modelValue.small_model_template_id !== '');
@@ -98,15 +87,16 @@ watch(() => props.modelValue, (v) => {
   largeEnabled.value = v.large_model_template_id !== '';
 });
 
-const onSmallToggle = (val: boolean) => { if (!val) localConfig.small_model_template_id = ''; };
-const onLargeToggle = (val: boolean) => { if (!val) localConfig.large_model_template_id = ''; };
+const onSmallToggle = (val: boolean) => { if (!val) { localConfig.small_model_template_id = ''; localConfig.small_model_config_key = ''; } };
+const onLargeToggle = (val: boolean) => { if (!val) { localConfig.large_model_template_id = ''; localConfig.large_model_config_key = ''; } };
 
 onMounted(async () => {
   try {
-    const [tResp, mResp] = await Promise.all([getModerationTemplates(), getAvailableModels()]);
-    templates.value = (tResp as any).list || [];
-    models.value = (mResp as any).models || (mResp as any).list || [];
-  } catch (e) { console.error('加载模板/模型列表失败', e); }
+    const tResp: any = await getModerationTemplates();
+    // AI model service returns double-wrapped: {code:0, data:{code:0, data:{templates:[], total:N}}}
+    // After axios interceptor strips one layer: {code:0, msg:"success", data:{templates:[], total:N}}
+    templates.value = tResp?.data?.templates || tResp?.templates || [];
+  } catch (e) { console.error('加载模板列表失败', e); }
 });
 </script>
 

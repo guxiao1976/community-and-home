@@ -1,6 +1,6 @@
 # 知识图谱上下文 — user-service
 
-> 自动生成于 2026-06-09 22:16:33 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-06-18 11:59:51 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -16,6 +16,7 @@
 | 依赖服务 | 依赖类型 |
 |---------|---------|
 | master-data-service | gRPC |
+| moderation-service | gRPC |
 
 ## 被依赖方
 
@@ -62,13 +63,14 @@
 | ReviewCertification | ReviewCertificationRequest | ReviewCertificationResponse |
 | SubmitCertification | SubmitCertificationRequest | SubmitCertificationResponse |
 | UpdateUser | UpdateUserRequest | UpdateUserResponse |
+| UpdateUserModerationStatus | UpdateModerationStatusRequest | UpdateModerationStatusResponse |
 
 ## 数据库表
 
 | 表名 | 列 |
 |------|-----|
-| user_base | delete_time (nullable), updated_time (datetime), created_time (datetime), preferences (nullable), credit_score (bigint), status (bigint), birth_date (nullable), gender (nullable), id_card_number (nullable), real_name (nullable), avatar_url (nullable), nickname (nullable), phone (varchar), id (bigint) |
-| user_certification | submit_time (datetime), review_notes (nullable), review_time (nullable), reviewer_id (nullable), status (bigint), document_urls (nullable), user_id (bigint), role_id (bigint), id (bigint) |
+| user_base | nickname_moderation_status (bigint), delete_time (nullable), updated_time (datetime), created_time (datetime), preferences (nullable), credit_score (bigint), status (bigint), birth_date (nullable), gender (nullable), id_card_number (nullable), real_name (nullable), avatar_url (nullable), nickname (nullable), phone (varchar), id (bigint) |
+| user_certification | moderation_time (nullable), moderation_status (bigint), submit_time (datetime), review_notes (nullable), review_time (nullable), reviewer_id (nullable), status (bigint), document_urls (nullable), user_id (bigint), role_id (bigint), id (bigint) |
 | user_community_membership | room (bigint), unit (bigint), building (bigint), updated_time (datetime), created_time (datetime), leave_time (nullable), join_time (datetime), bind_status (bigint), community_id (bigint), user_id (bigint), id (bigint) |
 | user_membership_role | updated_time (datetime), created_time (datetime), expires_at (nullable), verified_at (nullable), verf_status (bigint), role_code (varchar), community_id (bigint), membership_id (nullable), user_id (bigint), id (bigint) |
 | user_residence | updated_time (datetime), created_time (datetime), end_date (nullable), start_date (nullable), is_primary (bigint), room (varchar), unit (varchar), building (varchar), house_id (varchar), user_id (bigint), membership_id (bigint), id (bigint) |

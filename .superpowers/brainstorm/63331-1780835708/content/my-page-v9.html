@@ -1,0 +1,237 @@
+<h2>"我的" 页面 — V9 复用已有实现</h2>
+<p class="subtitle">加入小区→复用已有 4 步向导页；退出小区→选中+弹窗确认+软删除</p>
+
+<div style="display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;">
+
+  <!-- 主页面 -->
+  <div class="mockup" style="max-width: 370px;">
+    <div class="mockup-header">主页 — 默认状态</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF;">
+      <!-- 头部 -->
+      <div style="background: linear-gradient(160deg, #D4B896 0%, #E8DCCF 30%, #FAF8F5 55%, #FFFFFF 80%); padding: 80rpx 0 50rpx; text-align: center;">
+        <div style="width: 140rpx; height: 140rpx; border-radius: 50%; background: rgba(255,255,255,0.8); border: 3rpx solid rgba(184,149,106,0.25); margin: 0 auto 24rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.06);">
+          <span style="font-size: 72rpx;">👤</span>
+        </div>
+        <div style="font-size: 24rpx; color: #A6988A; margin-bottom: 6rpx;">当前用户</div>
+        <div style="font-size: 32rpx; font-weight: 600; color: #3D3226;">185****1501</div>
+      </div>
+
+      <!-- 小区管理 -->
+      <div style="padding: 0 40rpx; margin-top: 32rpx;">
+        <div style="display: flex; align-items: center; gap: 10rpx; margin-bottom: 28rpx;">
+          <span style="font-size: 36rpx;">🏘️</span>
+          <span style="font-size: 34rpx; font-weight: 600; color: #3D3226;">小区管理</span>
+          <span style="margin-left: auto; font-size: 22rpx; color: #B8956A; background: rgba(184,149,106,0.08); padding: 4rpx 14rpx; border-radius: 20rpx;">已加入 2/3</span>
+        </div>
+
+        <!-- 两个卡片横排 -->
+        <div style="display: flex; gap: 20rpx;">
+          <div style="flex: 1; height: 260rpx; background: #FAF8F5; border-radius: 24rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04); cursor: pointer;">
+            <div style="width: 160rpx; height: 160rpx; border-radius: 32rpx; background: linear-gradient(135deg, #B8956A, #D4B896); display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx;">
+              <span style="font-size: 84rpx; color: #fff; line-height: 1;">➕</span>
+            </div>
+            <span style="font-size: 28rpx; font-weight: 500; color: #3D3226;">加入小区</span>
+            <span style="font-size: 20rpx; color: #A6988A; margin-top: 4rpx;">省→市→区→搜索</span>
+          </div>
+
+          <div style="flex: 1; height: 260rpx; background: #FAF8F5; border-radius: 24rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04); cursor: pointer;">
+            <div style="width: 160rpx; height: 160rpx; border-radius: 32rpx; background: linear-gradient(135deg, #D4958A, #E0ADA5); display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx;">
+              <span style="font-size: 84rpx; color: #fff; line-height: 1;">🚪</span>
+            </div>
+            <span style="font-size: 28rpx; font-weight: 500; color: #3D3226;">退出小区</span>
+            <span style="font-size: 20rpx; color: #A6988A; margin-top: 4rpx;">查看已加入列表</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 设置 -->
+      <div style="padding: 0 40rpx; margin-top: 40rpx;">
+        <div style="background: #FAF8F5; border-radius: 20rpx; padding: 28rpx 32rpx;">
+          <div style="display: flex; align-items: center; gap: 8rpx; margin-bottom: 24rpx;">
+            <span style="font-size: 32rpx;">⚙️</span>
+            <span style="font-size: 30rpx; font-weight: 600; color: #3D3226;">设置</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 14rpx 0; border-bottom: 1rpx solid rgba(184,149,106,0.1);">
+            <span style="font-size: 28rpx; color: #3D3226;">个人信息</span>
+            <span style="font-size: 24rpx; color: #CCC4BA;">→</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 14rpx 0; border-bottom: 1rpx solid rgba(184,149,106,0.1);">
+            <span style="font-size: 28rpx; color: #3D3226;">账号安全</span>
+            <span style="font-size: 24rpx; color: #CCC4BA;">→</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 14rpx 0;">
+            <span style="font-size: 28rpx; color: #3D3226;">关于我们</span>
+            <span style="font-size: 24rpx; color: #CCC4BA;">→</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height: 60rpx;"></div>
+    </div>
+  </div>
+
+  <!-- 退出小区：已加入列表 -->
+  <div class="mockup" style="max-width: 370px;">
+    <div class="mockup-header">点击"退出小区" → 子页面</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF;">
+      <!-- 导航栏 -->
+      <div style="display: flex; align-items: center; padding: 28rpx 32rpx; border-bottom: 1rpx solid #F0EBE3;">
+        <span style="font-size: 28rpx; color: #D4958A; margin-right: 16rpx;">← 返回</span>
+        <span style="font-size: 32rpx; font-weight: 600; color: #3D3226;">退出小区</span>
+      </div>
+
+      <!-- 安全提示 -->
+      <div style="padding: 20rpx 32rpx 0;">
+        <div style="background: #FFF5F3; border-radius: 12rpx; padding: 18rpx 24rpx; font-size: 24rpx; color: #D4958A; line-height: 1.6;">
+          ⚠️ 退出后将不再接收该小区的通知和公告。退出后可重新申请加入。
+        </div>
+      </div>
+
+      <!-- 已加入小区列表 -->
+      <div style="padding: 20rpx 32rpx;">
+        <div style="font-size: 24rpx; color: #A6988A; margin-bottom: 16rpx;">已加入的小区（2个）</div>
+
+        <!-- 小区 1（当前小区） -->
+        <div style="background: #FAF8F5; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8rpx; margin-bottom: 8rpx;">
+                <span style="font-size: 28rpx; font-weight: 600; color: #3D3226;">🏘️ 阳光花园小区</span>
+                <span style="font-size: 18rpx; color: #B8956A; padding: 2rpx 10rpx; background: rgba(184,149,106,0.1); border-radius: 6rpx; flex-shrink: 0;">当前</span>
+              </div>
+              <div style="font-size: 22rpx; color: #A6988A;">广东省深圳市南山区</div>
+              <div style="font-size: 20rpx; color: #A6988A; margin-top: 4rpx;">加入于 2025-03-15</div>
+            </div>
+            <div style="width: 100rpx; height: 56rpx; border-radius: 28rpx; border: 2rpx solid #D4958A; display: flex; align-items: center; justify-content: center; color: #D4958A; font-size: 24rpx; font-weight: 600; flex-shrink: 0; margin-left: 16rpx;">退出</div>
+          </div>
+        </div>
+
+        <!-- 小区 2 -->
+        <div style="background: #FAF8F5; border-radius: 16rpx; padding: 24rpx;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 28rpx; font-weight: 600; color: #3D3226; margin-bottom: 8rpx;">🏘️ 翠竹苑小区</div>
+              <div style="font-size: 22rpx; color: #A6988A;">广东省深圳市罗湖区</div>
+              <div style="font-size: 20rpx; color: #A6988A; margin-top: 4rpx;">加入于 2025-06-02</div>
+            </div>
+            <div style="width: 100rpx; height: 56rpx; border-radius: 28rpx; border: 2rpx solid #D4958A; display: flex; align-items: center; justify-content: center; color: #D4958A; font-size: 24rpx; font-weight: 600; flex-shrink: 0; margin-left: 16rpx;">退出</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 确认弹窗（模拟悬浮） -->
+      <div style="margin: 0 32rpx; border: 2rpx dashed #D4958A; border-radius: 16rpx; padding: 24rpx; background: #FFFBFB;">
+        <div style="font-size: 22rpx; color: #D4958A; text-align: center; margin-bottom: 12rpx;">↑ 点击"退出"后弹出确认弹窗</div>
+        <div style="background: #fff; border-radius: 20rpx; padding: 32rpx 28rpx; box-shadow: 0 8rpx 40rpx rgba(0,0,0,0.15); text-align: center;">
+          <div style="font-size: 48rpx; margin-bottom: 16rpx;">⚠️</div>
+          <div style="font-size: 30rpx; font-weight: 600; color: #3D3226; margin-bottom: 12rpx;">确认退出？</div>
+          <div style="font-size: 24rpx; color: #A6988A; margin-bottom: 28rpx; line-height: 1.6;">
+            退出「<b style="color:#3D3226;">阳光花园小区</b>」后，<br>将不再接收该小区的通知公告等信息。
+          </div>
+          <div style="display: flex; gap: 16rpx;">
+            <div style="flex: 1; height: 80rpx; border-radius: 40rpx; background: #F0EBE3; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #8C7B6B;">取消</div>
+            <div style="flex: 1; height: 80rpx; border-radius: 40rpx; background: linear-gradient(135deg, #D4958A, #C1786E); display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #fff; font-weight: 600;">确认退出</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 加入小区：复用已有 -->
+  <div class="mockup" style="max-width: 370px;">
+    <div class="mockup-header">点击"加入小区" → 已有 4 步向导</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF;">
+      <!-- 导航栏 -->
+      <div style="display: flex; align-items: center; padding: 28rpx 32rpx; border-bottom: 1rpx solid #F0EBE3;">
+        <span style="font-size: 28rpx; color: #B8956A; margin-right: 16rpx;">← 返回</span>
+        <span style="font-size: 32rpx; font-weight: 600; color: #3D3226;">加入小区</span>
+      </div>
+
+      <!-- 进度指示 -->
+      <div style="display: flex; justify-content: center; gap: 12rpx; padding: 28rpx 0 20rpx;">
+        <div style="width: 48rpx; height: 48rpx; border-radius: 50%; background: #B8956A; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 24rpx; font-weight: 600;">1</div>
+        <div style="width: 60rpx; height: 2rpx; background: #E8DCCF; align-self: center;"></div>
+        <div style="width: 48rpx; height: 48rpx; border-radius: 50%; background: #E8DCCF; display: flex; align-items: center; justify-content: center; color: #A6988A; font-size: 24rpx; font-weight: 600;">2</div>
+        <div style="width: 60rpx; height: 2rpx; background: #E8DCCF; align-self: center;"></div>
+        <div style="width: 48rpx; height: 48rpx; border-radius: 50%; background: #E8DCCF; display: flex; align-items: center; justify-content: center; color: #A6988A; font-size: 24rpx; font-weight: 600;">3</div>
+        <div style="width: 60rpx; height: 2rpx; background: #E8DCCF; align-self: center;"></div>
+        <div style="width: 48rpx; height: 48rpx; border-radius: 50%; background: #E8DCCF; display: flex; align-items: center; justify-content: center; color: #A6988A; font-size: 24rpx; font-weight: 600;">4</div>
+      </div>
+      <div style="display: flex; justify-content: center; gap: 12rpx; font-size: 18rpx; color: #A6988A;">
+        <span style="width:48rpx;text-align:center;color:#B8956A;font-weight:600;">省</span>
+        <span style="width:60rpx;"></span>
+        <span style="width:48rpx;text-align:center;">市</span>
+        <span style="width:60rpx;"></span>
+        <span style="width:48rpx;text-align:center;">区</span>
+        <span style="width:60rpx;"></span>
+        <span style="width:48rpx;text-align:center;">搜索</span>
+      </div>
+
+      <!-- 省份列表（Step 1） -->
+      <div style="padding: 20rpx 32rpx;">
+        <div style="font-size: 22rpx; color: #A6988A; margin-bottom: 12rpx;">选择省份</div>
+        <div style="display: flex; flex-direction: column; gap: 8rpx;">
+          <div style="padding: 20rpx 24rpx; background: #FAF8F5; border-radius: 12rpx; font-size: 26rpx; color: #3D3226; display: flex; justify-content: space-between;">
+            广东省 <span style="color: #CCC4BA;">→</span>
+          </div>
+          <div style="padding: 20rpx 24rpx; background: #FAF8F5; border-radius: 12rpx; font-size: 26rpx; color: #3D3226; display: flex; justify-content: space-between;">
+            浙江省 <span style="color: #CCC4BA;">→</span>
+          </div>
+          <div style="padding: 20rpx 24rpx; background: #FAF8F5; border-radius: 12rpx; font-size: 26rpx; color: #3D3226; display: flex; justify-content: space-between;">
+            江苏省 <span style="color: #CCC4BA;">→</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 0 32rpx; margin-top: 16rpx;">
+        <div style="background: #F5F1EB; border-radius: 12rpx; padding: 16rpx 20rpx; font-size: 20rpx; color: #B8956A;">
+          📌 复用已有 <b>pages/join-community/join-community.vue</b><br>
+          API: <b>getDivisions() → searchResidentialAreas() → joinCommunity()</b>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 30px;">
+  <h3>V9 与已有实现的对应关系</h3>
+  <table style="width:100%; border-collapse: collapse; font-size: 13px;">
+    <tr style="border-bottom: 1px solid #E8DCCF;">
+      <th style="text-align:left;padding:10px 0;">页面</th>
+      <th style="text-align:left;padding:10px 0;">已有实现</th>
+      <th style="text-align:left;padding:10px 0;">需要新增</th>
+    </tr>
+    <tr style="border-bottom: 1px solid #E8DCCF;">
+      <td style="padding:8px 0;">加入小区</td>
+      <td style="padding:8px 0;">✅ <code>join-community.vue</code> 完整流程<br>API: <code>joinCommunity()</code> + 4步向导</td>
+      <td style="padding:8px 0; color: #A6988A;">无，直接 <code>uni.navigateTo</code> 跳转</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #E8DCCF;">
+      <td style="padding:8px 0;">退出小区<br><span style="font-size:11px;color:#A6988A;">(列表页)</span></td>
+      <td style="padding:8px 0;">✅ API: <code>leaveCommunity(id)</code><br>✅ Store: <code>communityStore.communities</code><br>✅ 软删除 (<code>bind_status=0</code>)</td>
+      <td style="padding:8px 0;">🆕 独立子页面（非旧版侧边栏）<br>🆕 确认弹窗组件</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 0;">退出小区<br><span style="font-size:11px;color:#A6988A;">(弹窗)</span></td>
+      <td style="padding:8px 0;">✅ 旧版 my.vue 有类似 modal</td>
+      <td style="padding:8px 0;">🆕 在新子页面中复用弹窗逻辑</td>
+    </tr>
+  </table>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>方向确认，继续细化</h3>
+      <p>复用 join-community 页面 + 新建退出子页面（含弹窗确认）。进入下一轮细化（空状态、边界情况）。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>需要调整</h3>
+      <p>整体方向 OK，但细节需要修改。请在终端说明。</p>
+    </div>
+  </div>
+</div>

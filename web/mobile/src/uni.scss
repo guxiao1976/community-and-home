@@ -1,0 +1,58 @@
+/* ========================================
+ * Uni-app Global Theme Variables
+ * 设计方向：白色为主，淡咖色点缀，温暖、简单、松弛
+ * ======================================== */
+
+/* --- Brand Colors（咖啡色系） --- */
+$uni-color-primary: #B8956A;
+$uni-color-primary-light: #D4B896;
+$uni-color-primary-dark: #8B6F4E;
+$uni-color-success: #8DAF7E;
+$uni-color-warning: #E8C98E;
+$uni-color-error: #D4958A;
+$uni-color-info: #A6988A;
+
+/* --- Text Colors（暖棕系） --- */
+$uni-text-color: #3D3226;
+$uni-text-color-grey: #A6988A;
+$uni-text-color-placeholder: #CCC4BA;
+$uni-text-color-inverse: #FFFFFF;
+$uni-text-color-disable: #CCC4BA;
+
+/* --- Background Colors（白色系） --- */
+$uni-bg-color: #FFFFFF;
+$uni-bg-color-grey: #F5F0EA;
+$uni-bg-color-card: #FAF8F5;
+$uni-bg-color-input: #F5F0EA;
+$uni-bg-color-hover: #F0EBE3;
+$uni-bg-color-mask: rgba(0, 0, 0, 0.4);
+
+/* --- Border（暖色边框） --- */
+$uni-border-color: #E8E0D5;
+$uni-border-radius: 8px;
+$uni-border-radius-card: 12rpx;
+$uni-border-radius-btn: 48rpx;
+
+/* --- Spacing --- */
+$uni-spacing-sm: 8px;
+$uni-spacing-md: 16px;
+$uni-spacing-lg: 24px;
+$uni-spacing-xl: 32px;
+
+/* --- Font Sizes --- */
+$uni-font-size-xs: 10px;
+$uni-font-size-sm: 12px;
+$uni-font-size-base: 14px;
+$uni-font-size-md: 16px;
+$uni-font-size-lg: 18px;
+$uni-font-size-xl: 20px;
+
+/* --- Shadows（轻盈不厚重） --- */
+$uni-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+$uni-shadow-base: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+/* --- Custom App Variables --- */
+$app-primary: #B8956A;
+$app-primary-light: #D4B896;
+$app-primary-dark: #8B6F4E;
+$app-safe-area-bottom: env(safe-area-inset-bottom, 0px);

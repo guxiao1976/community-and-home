@@ -1,0 +1,29 @@
+# Build outputs
+dist/
+.uni/
+unpackage/
+
+# Dependencies
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Zone.Identifier (Windows WSL)
+*:Zone.Identifier
+
+# Uni-app generated
+src/uni_modules/

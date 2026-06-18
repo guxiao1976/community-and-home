@@ -1,0 +1,194 @@
+<h2>加入小区 — 简化版（输入替代选择）</h2>
+<p class="subtitle">搜索到小区后，三个输入框填入楼号-单元-房号，带格式示例和校验</p>
+
+<div style="display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;">
+
+  <!-- Step 5: 输入地址 -->
+  <div class="mockup" style="max-width: 370px;">
+    <div class="mockup-header">输入楼号 · 单元 · 房号</div>
+    <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #FFFFFF; font-size: 12px;">
+      <div style="display: flex; align-items: center; padding: 24rpx 28rpx; border-bottom: 1px solid #F0EBE3;">
+        <span style="font-size: 28rpx; color: #B8956A;">← 返回</span>
+        <span style="font-size: 32rpx; font-weight: 600; color: #3D3226; margin-left: 16rpx;">加入小区</span>
+      </div>
+
+      <!-- 已选小区 -->
+      <div style="padding: 24rpx 28rpx 0;">
+        <div style="background: #F5F1EB; border-radius: 16rpx; padding: 24rpx 28rpx;">
+          <div style="font-size: 28rpx; font-weight: 600; color: #3D3226;">🏘️ 阳光花园小区</div>
+          <div style="font-size: 22rpx; color: #A6988A; margin-top: 6rpx;">广东省深圳市南山区</div>
+        </div>
+      </div>
+
+      <!-- 格式示例 -->
+      <div style="padding: 28rpx 28rpx 0;">
+        <div style="background: #FFFBF5; border: 1rpx solid rgba(184,149,106,0.2); border-radius: 14rpx; padding: 20rpx 24rpx; display: flex; align-items: center; gap: 16rpx;">
+          <span style="font-size: 40rpx;">📍</span>
+          <div>
+            <div style="font-size: 24rpx; color: #B8956A; font-weight: 600; margin-bottom: 6rpx;">示例格式</div>
+            <div style="font-size: 26rpx; color: #3D3226;">
+              5号楼 2单元 301 室 → <b style="color: #B8956A; font-size: 30rpx;">5-2-301</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 三个输入框 -->
+      <div style="padding: 32rpx 28rpx;">
+        <div style="display: flex; align-items: center; gap: 16rpx;">
+          <!-- 楼号 -->
+          <div style="flex: 1;">
+            <div style="font-size: 24rpx; color: #A6988A; margin-bottom: 10rpx;">楼号</div>
+            <input placeholder="如 5" style="width: 100%; height: 80rpx; border: 2rpx solid #E8DCCF; border-radius: 14rpx; padding: 0 16rpx; font-size: 36rpx; font-weight: 600; color: #3D3226; text-align: center; background: #FAF8F5; box-sizing: border-box;" value="5" />
+            <div style="font-size: 20rpx; color: #A6988A; margin-top: 6rpx; text-align: center;">数字，≤ 150</div>
+          </div>
+
+          <!-- 分隔符 -->
+          <div style="font-size: 36rpx; color: #CCC4BA; font-weight: 300; padding-top: 20rpx;">-</div>
+
+          <!-- 单元号 -->
+          <div style="flex: 0 0 120rpx;">
+            <div style="font-size: 24rpx; color: #A6988A; margin-bottom: 10rpx;">单元</div>
+            <input placeholder="2" style="width: 100%; height: 80rpx; border: 2rpx solid #B8956A; border-radius: 14rpx; padding: 0 12rpx; font-size: 36rpx; font-weight: 600; color: #3D3226; text-align: center; background: #fff; box-sizing: border-box;" value="2" />
+            <div style="font-size: 20rpx; color: #A6988A; margin-top: 6rpx; text-align: center;">≤ 5</div>
+          </div>
+
+          <!-- 分隔符 -->
+          <div style="font-size: 36rpx; color: #CCC4BA; font-weight: 300; padding-top: 20rpx;">-</div>
+
+          <!-- 房号 -->
+          <div style="flex: 1;">
+            <div style="font-size: 24rpx; color: #A6988A; margin-bottom: 10rpx;">房号</div>
+            <input placeholder="301" style="width: 100%; height: 80rpx; border: 2rpx solid #E8DCCF; border-radius: 14rpx; padding: 0 16rpx; font-size: 36rpx; font-weight: 600; color: #3D3226; text-align: center; background: #FAF8F5; box-sizing: border-box;" value="301" />
+            <div style="font-size: 20rpx; color: #A6988A; margin-top: 6rpx; text-align: center;">3 位数字</div>
+          </div>
+        </div>
+
+        <!-- 拼接预览 -->
+        <div style="text-align: center; margin-top: 28rpx;">
+          <span style="font-size: 24rpx; color: #A6988A;">完整地址</span>
+          <div style="font-size: 34rpx; font-weight: 700; color: #B8956A; margin-top: 8rpx;">
+            🏘️ 阳光花园小区 · <b>5-2-301</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- 校验错误示例 -->
+      <div style="padding: 0 28rpx;">
+        <div style="border-top: 1rpx dashed #E8DCCF; padding-top: 20rpx;">
+          <div style="font-size: 22rpx; color: #A6988A; margin-bottom: 12rpx;">校验规则（输入时实时提示）</div>
+          <div style="display: flex; flex-direction: column; gap: 8rpx;">
+            <div style="display: flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: #D4958A;">
+              <span>❌</span> 楼号 "abc" → 请输入数字
+            </div>
+            <div style="display: flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: #D4958A;">
+              <span>❌</span> 楼号 "160" → 楼号不能超过 150
+            </div>
+            <div style="display: flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: #D4958A;">
+              <span>❌</span> 单元 "6" → 单元号不能超过 5
+            </div>
+            <div style="display: flex; align-items: center; gap: 8rpx; font-size: 22rpx; color: #D4958A;">
+              <span>❌</span> 房号 "30" → 房号必须为 3 位数字
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 提交按钮 -->
+      <div style="padding: 28rpx;">
+        <div style="height: 88rpx; border-radius: 44rpx; background: linear-gradient(135deg, #B8956A, #D4B896); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 32rpx; font-weight: 600;">
+          确认加入
+        </div>
+      </div>
+
+      <div style="height: 20rpx;"></div>
+    </div>
+  </div>
+
+  <!-- 规则说明 -->
+  <div style="max-width: 360px; font-size: 13px;">
+    <div class="section">
+      <h3>流程对比：Before vs After</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #E8DCCF;">
+          <th style="text-align:left;padding:8px;"></th>
+          <th style="text-align:left;padding:8px;">旧（网格选择）</th>
+          <th style="text-align:left;padding:8px;color:#B8956A;">新（输入框）</th>
+        </tr>
+        <tr><td style="padding:5px 0;">楼号</td><td>5列网格，滚动选 1-100</td><td style="color:#B8956A;">一个数字输入框</td></tr>
+        <tr><td style="padding:5px 0;">单元</td><td>大卡片，1-5 点选</td><td style="color:#B8956A;">一个数字输入框</td></tr>
+        <tr><td style="padding:5px 0;">房号</td><td>按楼层分组网格</td><td style="color:#B8956A;">一个数字输入框</td></tr>
+        <tr><td style="padding:5px 0;">步骤数</td><td>7 步</td><td style="color:#B8956A;">5 步（输入合并为1步）</td></tr>
+        <tr><td style="padding:5px 0;">面积</td><td>需滚动查看</td><td style="color:#B8956A;">一屏展示完整</td></tr>
+        <tr><td style="padding:5px 0;">校验</td><td>无需（预生成）</td><td style="color:#B8956A;">实时校验+错误提示</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>校验规则</h3>
+      <div style="background: #FAF8F5; border-radius: 12px; padding: 16px 20px;">
+        <table style="width: 100%; font-size: 13px;">
+          <tr style="border-bottom: 1px solid #E8DCCF;">
+            <td style="padding:6px 0; font-weight:600;">楼号</td>
+            <td style="padding:6px 0;">必填，纯数字，1 ≤ n ≤ 150</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #E8DCCF;">
+            <td style="padding:6px 0; font-weight:600;">单元号</td>
+            <td style="padding:6px 0;">必填，纯数字，1 ≤ n ≤ 5</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0; font-weight:600;">房号</td>
+            <td style="padding:6px 0;">必填，3 位数字（如 301、102）</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>数据提交</h3>
+      <div style="background: #FAF8F5; border-radius: 12px; padding: 16px 20px; font-family: monospace; font-size: 13px; color: #3D3226;">
+        joinCommunity({<br>
+        &nbsp;&nbsp;community_id: "<span style="color:#A6988A;">小区ID</span>",<br>
+        &nbsp;&nbsp;building: 5,<br>
+        &nbsp;&nbsp;unit: 2,<br>
+        &nbsp;&nbsp;room: 301<br>
+        })<br><br>
+        <span style="color:#A6988A;">// 拼接地址: 5-2-301</span><br>
+        <span style="color:#A6988A;">// 需扩展 JoinCommunityRequest proto</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>需变更清单</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+        <tr style="border-bottom: 1px solid #E8DCCF;">
+          <th style="text-align:left;padding:6px 0;">层次</th>
+          <th style="text-align:left;padding:6px 0;">变更</th>
+        </tr>
+        <tr><td style="padding:4px 0;">Proto</td><td style="padding:4px 0;"><code>JoinCommunityRequest</code> 加 building/unit/room 字段</td></tr>
+        <tr><td style="padding:4px 0;">前端</td><td style="padding:4px 0;"><code>join-community.vue</code> 搜索后加输入步骤</td></tr>
+        <tr><td style="padding:4px 0;">API types</td><td style="padding:4px 0;"><code>JoinCommunityReq</code> 加对应字段</td></tr>
+        <tr><td style="padding:4px 0;">DB</td><td style="padding:4px 0;"><code>user_community_membership</code> 加 building/unit/room 列</td></tr>
+        <tr><td style="padding:4px 0;">Model</td><td style="padding:4px 0;">Go struct 加字段</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="options" style="margin-top: 24px;">
+  <div class="option" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>简化方案 OK，进入下一阶段</h3>
+      <p>三输入框 + 格式示例 + 实时校验。5步替代7步。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>需要调整</h3>
+      <p>请在终端说明具体调整点。</p>
+    </div>
+  </div>
+</div>

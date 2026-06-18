@@ -1,6 +1,6 @@
 # 知识图谱上下文 — community-hub-service
 
-> 自动生成于 2026-06-09 22:16:29 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-06-18 11:59:48 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -8,7 +8,7 @@
 |------|-----|
 | 名称 | community-hub-service |
 | 语言 | go |
-| 端口 (gRPC) | 8087 |
+| 端口 (gRPC) | 8088 |
 | 端口 (API)  | 8887 |
 
 ## 服务依赖
@@ -16,10 +16,13 @@
 | 依赖服务 | 依赖类型 |
 |---------|---------|
 | master-data-service | gRPC |
+| moderation-service | gRPC |
 
 ## 被依赖方
 
-无服务依赖本服务
+| 消费方 | 依赖类型 |
+|---------|---------|
+| moderation-service | None |
 
 ## REST API 路由
 
@@ -50,7 +53,9 @@
 | ListLostFound | ListLostFoundRequest | ListLostFoundResponse |
 | ListNotices | ListNoticesRequest | ListNoticesResponse |
 | ResolveLostFound | ResolveLostFoundRequest | ResolveLostFoundResponse |
+| UpdateLostFoundModerationStatus | UpdateModerationStatusRequest | UpdateModerationStatusResponse |
 | UpdateNotice | UpdateNoticeRequest | UpdateNoticeResponse |
+| UpdateNoticeModerationStatus | UpdateModerationStatusRequest | UpdateModerationStatusResponse |
 | UpsertContacts | UpsertContactsRequest | UpsertContactsResponse |
 
 ## 数据库表
@@ -58,9 +63,9 @@
 | 表名 | 列 |
 |------|-----|
 | community_contacts | updated_at (datetime), created_at (datetime), sort_order (bigint), phone (varchar), name (varchar), category (varchar), community_id (bigint), id (bigint) |
-| lost_found_items | deleted_at (datetime), updated_at (datetime), created_at (datetime), publisher_id (bigint), status (varchar), contact_phone (varchar), image_urls (varchar), description (varchar), title (varchar), type (varchar), community_id (bigint), id (bigint) |
+| lost_found_items | moderation_time (nullable), moderation_status (bigint), deleted_at (datetime), updated_at (datetime), created_at (datetime), publisher_id (bigint), status (varchar), contact_phone (varchar), image_urls (varchar), description (varchar), title (varchar), type (varchar), community_id (bigint), id (bigint) |
 | notice_attachments | created_at (datetime), file_size (bigint), file_url (varchar), file_name (varchar), notice_id (bigint), id (bigint) |
-| notices | deleted_at (datetime), updated_at (datetime), created_at (datetime), published_at (datetime), is_pinned (bigint), publisher (varchar), role (varchar), content (varchar), title (varchar), community_id (bigint), id (bigint) |
+| notices | moderation_time (nullable), moderation_status (bigint), deleted_at (datetime), updated_at (datetime), created_at (datetime), published_at (datetime), is_pinned (bigint), publisher (varchar), role (varchar), content (varchar), title (varchar), community_id (bigint), id (bigint) |
 
 ## 前端消费方
 

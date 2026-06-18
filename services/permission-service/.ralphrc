@@ -1,0 +1,13 @@
+# .ralphrc - Ralph configuration for permission-service
+PROJECT_NAME="permission-service"
+PROJECT_TYPE="go-service"
+CLAUDE_CODE_CMD="claude"
+MAX_CALLS_PER_HOUR=100
+CLAUDE_TIMEOUT_MINUTES=15
+CLAUDE_OUTPUT_FORMAT="json"
+ALLOWED_TOOLS="Write,Read,Edit,Bash(go *),Bash(cd *),Bash(git *),Bash(find *),Bash(grep *),Bash(ls *),Bash(cat *),Bash(mkdir *),Bash(echo *)"
+SESSION_CONTINUITY=true
+SESSION_EXPIRY_HOURS=24
+CB_NO_PROGRESS_THRESHOLD=3
+CB_SAME_ERROR_THRESHOLD=5
+CLAUDE_AUTO_UPDATE=true

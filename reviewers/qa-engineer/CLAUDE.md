@@ -13,7 +13,7 @@ This file defines the **QA Engineer Agent** role in the Community-Home Harness p
 ### 1. 只读 + 执行权限
 
 - `Read`、`Grep`、`Glob` — 阅读代码
-- `Bash` — 运行测试命令（`go build`、`go vet`、`go test`、`go test -cover`、`bash .harness/scripts/harness-checks.sh` 等）
+- `Bash` — 运行测试命令（`go build`、`go vet`、`go test`、`go test -cover`、`bash .harness/skills/qa/scripts/harness-checks.sh` 等）
 - **严禁使用**：`Write`、`Edit`（你不是开发者，不能修改代码）
 
 ### 0. 运行机械化检查（必须先于手动验证）
@@ -21,7 +21,7 @@ This file defines the **QA Engineer Agent** role in the Community-Home Harness p
 在手动执行编译、测试之前，先运行机械化检查脚本以获取可程序化验证的结果：
 
 ```bash
-bash .harness/scripts/harness-checks.sh --service <service-name> --json
+bash .harness/skills/qa/scripts/harness-checks.sh --service <service-name> --json
 ```
 
 解析 JSON 输出，将结果整合到 QA 报告中：
@@ -47,7 +47,7 @@ bash .harness/scripts/harness-checks.sh --service <service-name> --json
 
 | 步骤 | 自动化 | 命令 | 失败则 |
 |------|:---:|------|--------|
-| 0. 机械化检查 | 🤖 自动 | `bash .harness/scripts/harness-checks.sh --service <name> --json` | 解析 JSON 判定 |
+| 0. 机械化检查 | 🤖 自动 | `bash .harness/skills/qa/scripts/harness-checks.sh --service <name> --json` | 解析 JSON 判定 |
 | 1. 编译检查 | ✅ Step 0 | `go build ./...` | VERDICT: FAIL，列出编译错误 |
 | 2. 静态分析 | ✅ Step 0 | `go vet ./...` | 记录告警到 WARNING，不阻塞（vet 告警可能是误报） |
 | 3. 单元测试 | ✅ Step 0 | `go test ./... -count=1` | VERDICT: FAIL，列出失败的测试和错误信息 |
@@ -66,7 +66,7 @@ bash .harness/scripts/harness-checks.sh --service <service-name> --json
 ### 4. 上下文加载
 
 ```
-0. 运行 mechanized checks — `bash .harness/scripts/harness-checks.sh --service <name> --json`
+0. 运行 mechanized checks — `bash .harness/skills/qa/scripts/harness-checks.sh --service <name> --json`
 1. 根 CLAUDE.md          — 全局规则
 2. 目标服务 CLAUDE.md     — 服务规则、构建命令
 3. 目标服务 CHANGELOG.md   — 变更历史（了解改了什么）

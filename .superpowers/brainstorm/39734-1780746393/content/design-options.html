@@ -1,0 +1,184 @@
+<h2>公告信息页面 — 三种设计方案 ⭐</h2>
+<p class="subtitle">基于你的偏好：顶部下拉切换器 + 柔和渐变头部 + 全宽列表式布局 + 骨架屏 + 空状态插画</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>温暖社区风 (推荐) 🌅</h3>
+      <p>浅咖→白柔和渐变头部，下拉式小区切换器，通知卡片彩色左边条加粗，联络电话卡片用大图标网格，寻失卡片圆角大图。整体温暖、亲切，像一杯拿铁。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>清爽简约风</h3>
+      <p>纯白背景+微妙灰白卡片分区，减少颜色使用，强调留白和字体层级。适合喜欢极简风格的用户。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>活力社区风</h3>
+      <p>头部渐变更鲜明，每个板块有不同的强调色（通知=咖色、联络=绿色、寻失=琥珀色），视觉更丰富活泼。</p>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <h3>📱 方案 A 详细预览 — 温暖社区风</h3>
+  <p class="subtitle">点击上方选项选择方案，下方展示方案A的详细布局</p>
+</div>
+
+<div class="mockup" style="max-width: 390px; margin: 0 auto;">
+  <div class="mockup-header">方案 A：公告信息页面</div>
+  <div class="mockup-body" style="font-family: sans-serif; padding: 0; background: #fff;">
+
+    <!-- Soft Gradient Header -->
+    <div style="background: linear-gradient(160deg, #D4B896 0%, #E8DCCF 20%, #FAF8F5 45%, #FFFFFF 70%); padding: 24px 20px 20px;">
+      <!-- Top Row: Greeting -->
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 13px; color: #8B6F4E; margin-bottom: 2px;">☀️ 早安</div>
+        <div style="font-size: 20px; font-weight: 700; color: #3D3226;">张先生 👋</div>
+      </div>
+
+      <!-- Community Dropdown Selector -->
+      <div style="position: relative;">
+        <div style="display: flex; align-items: center; background: rgba(255,255,255,0.85); border-radius: 12px; padding: 10px 14px; border: 1px solid #E8E0D5; backdrop-filter: blur(10px);">
+          <span style="font-size: 18px; margin-right: 8px;">🏘️</span>
+          <span style="flex: 1; font-size: 14px; font-weight: 500; color: #3D3226;">阳光花园小区</span>
+          <span style="font-size: 12px; color: #B8956A; margin-right: 4px;">3个小区</span>
+          <span style="font-size: 10px; color: #A6988A;">▼</span>
+        </div>
+
+        <!-- Expanded Dropdown (shown on click) -->
+        <div style="position: absolute; top: 52px; left: 0; right: 0; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); z-index: 10; overflow: hidden; border: 1px solid #E8E0D5;">
+          <div style="padding: 12px 16px; border-bottom: 1px solid #F5F0EA;">
+            <span style="font-size: 12px; color: #A6988A;">已加入的小区</span>
+          </div>
+          <div style="padding: 6px 0;">
+            <div style="padding: 12px 16px; background: rgba(184,149,106,0.06); display: flex; align-items: center;">
+              <span style="font-size: 16px; margin-right: 10px;">🏘️</span>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; color: #B8956A; font-weight: 600;">阳光花园小区</div>
+                <div style="font-size: 11px; color: #A6988A;">广东省深圳市南山区</div>
+              </div>
+              <span style="color: #B8956A; font-size: 16px;">✓</span>
+            </div>
+            <div style="padding: 12px 16px; display: flex; align-items: center;">
+              <span style="font-size: 16px; margin-right: 10px;">🏘️</span>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; color: #3D3226;">翠竹苑小区</div>
+                <div style="font-size: 11px; color: #A6988A;">广东省深圳市罗湖区</div>
+              </div>
+            </div>
+            <div style="padding: 12px 16px; display: flex; align-items: center;">
+              <span style="font-size: 16px; margin-right: 10px;">🏘️</span>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; color: #3D3226;">碧海蓝天小区</div>
+                <div style="font-size: 11px; color: #A6988A;">广东省深圳市福田区</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div style="padding: 0 20px;">
+
+      <!-- Section 1: Notices -->
+      <div style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 18px;">📢</span>
+            <span style="font-size: 17px; font-weight: 600; color: #3D3226;">通知公告</span>
+          </div>
+          <span style="font-size: 12px; color: #B8956A;">查看全部 →</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; background: #FAF8F5; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+            <div style="width: 5px; background: linear-gradient(180deg, #D4958A, #D4958A);"></div>
+            <div style="padding: 14px 14px 10px; flex: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                <span style="font-size: 15px; font-weight: 500; color: #3D3226; flex: 1;">小区停水通知</span>
+                <span style="padding: 3px 10px; border-radius: 12px; background: rgba(212,149,138,0.12); color: #D4958A; font-size: 11px; font-weight: 500;">物业</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #A6988A;">
+                <span>🕐</span><span>2025-06-01 10:30</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; background: #FAF8F5; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+            <div style="width: 5px; background: linear-gradient(180deg, #8DAF7E, #8DAF7E);"></div>
+            <div style="padding: 14px 14px 10px; flex: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                <span style="font-size: 15px; font-weight: 500; color: #3D3226; flex: 1;">业委会选举结果公示</span>
+                <span style="padding: 3px 10px; border-radius: 12px; background: rgba(141,175,126,0.12); color: #8DAF7E; font-size: 11px; font-weight: 500;">业委会</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #A6988A;">
+                <span>🕐</span><span>2025-05-30 14:00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Contacts -->
+      <div style="margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px;">
+          <span style="font-size: 18px;">📞</span>
+          <span style="font-size: 17px; font-weight: 600; color: #3D3226;">便民联络</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+          <div style="background: linear-gradient(135deg, #FAF8F5, #F5F0EA); border-radius: 12px; padding: 14px 10px; text-align: center;">
+            <div style="font-size: 28px; margin-bottom: 4px;">💧</div>
+            <div style="font-size: 12px; color: #3D3226; font-weight: 500; margin-bottom: 4px;">供水维修</div>
+            <div style="font-size: 11px; color: #B8956A;">拨打</div>
+          </div>
+          <div style="background: linear-gradient(135deg, #FAF8F5, #F5F0EA); border-radius: 12px; padding: 14px 10px; text-align: center;">
+            <div style="font-size: 28px; margin-bottom: 4px;">⚡</div>
+            <div style="font-size: 12px; color: #3D3226; font-weight: 500; margin-bottom: 4px;">电力维修</div>
+            <div style="font-size: 11px; color: #B8956A;">拨打</div>
+          </div>
+          <div style="background: linear-gradient(135deg, #FAF8F5, #F5F0EA); border-radius: 12px; padding: 14px 10px; text-align: center;">
+            <div style="font-size: 28px; margin-bottom: 4px;">👮</div>
+            <div style="font-size: 12px; color: #3D3226; font-weight: 500; margin-bottom: 4px;">小区民警</div>
+            <div style="font-size: 11px; color: #B8956A;">拨打</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Lost & Found -->
+      <div style="margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px;">
+          <span style="font-size: 18px;">🔍</span>
+          <span style="font-size: 17px; font-weight: 600; color: #3D3226;">寻失互助</span>
+        </div>
+        <div style="display: flex; gap: 12px; overflow-x: auto;">
+          <div style="min-width: 150px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <div style="height: 110px; background: linear-gradient(135deg, #F5F0EA, #E8E0D5); position: relative; display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 40px;">🐕</span>
+              <span style="position: absolute; top: 8px; left: 8px; padding: 3px 10px; border-radius: 8px; background: #B8956A; color: #fff; font-size: 10px;">寻物</span>
+            </div>
+            <div style="padding: 10px 10px 12px;">
+              <div style="font-size: 13px; color: #3D3226; font-weight: 500; margin-bottom: 2px;">寻找灰色泰迪犬</div>
+              <div style="font-size: 11px; color: #A6988A;">2小时前</div>
+            </div>
+          </div>
+          <div style="min-width: 150px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <div style="height: 110px; background: linear-gradient(135deg, #F5F0EA, #E8E0D5); position: relative; display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 40px;">🔑</span>
+              <span style="position: absolute; top: 8px; left: 8px; padding: 3px 10px; border-radius: 8px; background: #8DAF7E; color: #fff; font-size: 10px;">招领</span>
+            </div>
+            <div style="padding: 10px 10px 12px;">
+              <div style="font-size: 13px; color: #3D3226; font-weight: 500; margin-bottom: 2px;">捡到钥匙一串</div>
+              <div style="font-size: 11px; color: #A6988A;">5小时前</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
