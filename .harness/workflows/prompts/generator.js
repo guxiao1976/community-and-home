@@ -2,18 +2,25 @@
 // Generator Prompt — Development Agent (TDD + Memory-Driven)
 // ============================================================
 
-function generatorPrompt(iteration, fixContext, taskType) {
+import { getContext, getSvcDir, getArgs, isFrontend } from './shared.js'
+
+export function generatorPrompt(iteration, fixContext, taskType) {
+  // 获取共享上下文
+  const ctx = getContext()
+  const SVC_DIR = getSvcDir()
+  const args = getArgs()
+  const isFrontendService = isFrontend()
+
   taskType = taskType || 'feature'
   const isChore = taskType === 'chore'
   const isDebt = taskType === 'debt'
   const strictTdd = !isChore && !isDebt  // full TDD only for feature/bug
-  const isFrontend = (SVC_DIR || '').startsWith('web/')
-  const langTool = isFrontend ? 'TypeScript' : 'Go'
-  const buildCmd = isFrontend ? 'npm run build' : 'go build ./...'
-  const testCmd = isFrontend ? 'npm run test:unit' : 'go test ./...'
-  const typeCmd = isFrontend ? 'npm run type-check' : 'go vet ./...'
+  const langTool = isFrontendService ? 'TypeScript' : 'Go'
+  const buildCmd = isFrontendService ? 'npm run build' : 'go build ./...'
+  const testCmd = isFrontendService ? 'npm run test:unit' : 'go test ./...'
+  const typeCmd = isFrontendService ? 'npm run type-check' : 'go vet ./...'
 
-  const base = `你是 ${args.serviceName} 的${isFrontend ? '前端' : ''}开发 Agent。
+  const base = `你是 ${args.serviceName} 的${isFrontendService ? '前端' : ''}开发 Agent。
 
 ## 启动上下文（服务专属，只加载你需要的）
 
