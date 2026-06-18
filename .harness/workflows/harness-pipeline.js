@@ -67,19 +67,50 @@ function generatorPrompt(iteration, fixContext, taskType) {
 
 在开始编写代码之前，你必须完成以下步骤：
 
-### Step A: 搜索相关记忆（两级匹配）
-1. 从任务描述中提取关键技术关键词（如 gRPC、Proto、数据库、JWT、Snowflake 等）
-2. **第一级：triggers 精确匹配（优先）**
-   - 读取 .harness/knowledge/memory/MEMORY.md 索引，获取所有记忆的 triggers 列表（格式：\`记忆标题, type, severity, keyword1 keyword2...\`）
-   - 用任务关键词精确匹配索引中的 triggers 关键词
-   - 命中 triggers 的记忆 → **高置信度**，直接列入候选
-3. **第二级：正文关键词匹配（降权，需人工判断）**
-   - 仅当第一级匹配结果 < 2 个时，才使用 Grep 搜索正文
-   - 正文命中的记忆 → **低置信度**，需检查其 \`type\` 和 \`severity\` 是否与任务相关
-   - 过滤规则：
-     - \`type: pitfall\` 且 triggered 关键词不在任务技术栈中 → 排除
-     - \`type: guideline\` 且 service 范围不匹配 → 排除
-4. 列出找到的相关记忆及其 severity 等级（must-follow / should-follow / info）和 type（pitfall / guideline / process）
+### Step A: 搜索相关记忆（索引查询模式）
+1. **提取任务关键词**：从任务描述中提取技术关键词（如 gRPC、Proto、数据库、JWT、Snowflake、测试、前端、API 等）
+
+2. **查询索引**（优先，O(K) 复杂度）：
+   \`\`\`bash
+   # 检查索引文件是否存在
+   INDEX_FILE=".harness/knowledge/memory/.memory-index.json"
+
+   if [ -f "$INDEX_FILE" ]; then
+     # 使用索引查询（快速）
+     bash .harness/scripts/memory-index-query.sh --union <keyword1> <keyword2> <keyword3>
+
+     # 索引返回格式：
+     # [severity] slug
+     #   标题: <title>
+     #   服务: <service> | 类型: <type>
+   else
+     # 降级到旧方式（索引不存在时）
+     # 读取 MEMORY.md 并逐行匹配 triggers
+     grep -i "<keyword>" .harness/knowledge/memory/MEMORY.md
+   fi
+   \`\`\`
+
+3. **结果过滤**：
+   - 优先级排序已由索引查询完成（must-follow > should-follow > info）
+   - 服务范围匹配：\`service: all\` 或 \`service: ${args.serviceDir}\` 的记忆
+   - 如果找到 ≥2 条 must-follow 记忆 → 足够，停止搜索
+   - 如果 <2 条 → 继续查看 should-follow 和 info 级别
+
+4. **读取记忆文件**：只读取命中的记忆文件（不读 MEMORY.md 全文）
+   \`\`\`bash
+   for slug in <matched_slugs>; do
+     cat .harness/knowledge/memory/$slug.md
+   done
+   \`\`\`
+
+5. **输出匹配报告**：
+   \`\`\`
+   搜索关键词: <keyword1>, <keyword2>, <keyword3>
+   命中记忆: N 条
+     - [[slug-1]] (must-follow, pitfall) — <title>
+     - [[slug-2]] (must-follow, guideline) — <title>
+     - [[slug-3]] (should-follow, process) — <title>
+   \`\`\`
 
 ### Step B: 应用记忆
 1. 对于每个 must-follow 记忆，确保生成的代码严格遵守其指导
