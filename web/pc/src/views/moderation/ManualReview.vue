@@ -12,6 +12,8 @@
       <ReviewTable
         :list="list"
         @detail="openDetail"
+        @approve="onQuickApprove"
+        @reject="onQuickReject"
       />
     </div>
 
@@ -37,7 +39,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import ReviewFilter from '@/components/moderation/ReviewFilter.vue';
 import ReviewTable from '@/components/moderation/ReviewTable.vue';
 import ReviewDetailDrawer from '@/components/moderation/ReviewDetailDrawer.vue';
@@ -76,7 +78,9 @@ async function fetchList() {
 
 async function openDetail(row: ReviewListItem) {
   try {
-    currentDetail.value = await getReviewDetail(row.id);
+    const res = await getReviewDetail(row.id);
+    // API wraps detail in { detail: {...} } after axios strips outer data layer
+    currentDetail.value = (res as any).detail || res;
     drawerVisible.value = true;
   } catch (e) {
     console.error('getReviewDetail failed:', e);
@@ -98,6 +102,51 @@ async function onSubmitReview(status: number, notes: string) {
   } catch (e) {
     console.error('submitReview failed:', e);
     ElMessage.error('提交审核失败');
+  }
+}
+
+// Quick review from table row (without opening drawer)
+async function onQuickApprove(row: ReviewListItem) {
+  try {
+    await ElMessageBox.confirm(
+      `确认通过「${row.content_summary}」的审核？`,
+      '快捷审核',
+      { confirmButtonText: '确认通过', cancelButtonText: '取消', type: 'info' }
+    );
+    await submitReview({
+      audit_log_id: row.id,
+      review_status: 1,
+      review_notes: '',
+    });
+    ElMessage.success('审核通过');
+    fetchList();
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      console.error('quick approve failed:', e);
+      ElMessage.error('操作失败');
+    }
+  }
+}
+
+async function onQuickReject(row: ReviewListItem) {
+  try {
+    await ElMessageBox.confirm(
+      `确认驳回「${row.content_summary}」？`,
+      '快捷审核',
+      { confirmButtonText: '确认驳回', cancelButtonText: '取消', type: 'warning' }
+    );
+    await submitReview({
+      audit_log_id: row.id,
+      review_status: 2,
+      review_notes: '',
+    });
+    ElMessage.success('已驳回');
+    fetchList();
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      console.error('quick reject failed:', e);
+      ElMessage.error('操作失败');
+    }
   }
 }
 

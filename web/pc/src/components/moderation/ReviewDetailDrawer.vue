@@ -4,17 +4,25 @@
       <el-descriptions :column="1" border>
         <el-descriptions-item label="ID">{{ detail.id }}</el-descriptions-item>
         <el-descriptions-item label="板块">{{ SOURCE_TYPE_LABELS[detail.source_type] || detail.source_type }}</el-descriptions-item>
+        <el-descriptions-item label="来源ID">{{ detail.source_id }}</el-descriptions-item>
+        <el-descriptions-item label="内容类型">{{ detail.content_type }}</el-descriptions-item>
         <el-descriptions-item label="内容摘要">{{ detail.content_summary }}</el-descriptions-item>
         <el-descriptions-item label="风险等级">
           <el-tag :type="detail.risk_level === 'high' ? 'danger' : detail.risk_level === 'medium' ? 'warning' : 'info'" size="small">{{ detail.risk_level }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="机器审核">{{ detail.pass ? '通过' : '不通过' }}</el-descriptions-item>
+        <el-descriptions-item label="机器审核结果">{{ detail.pass ? '通过' : '不通过' }}</el-descriptions-item>
         <el-descriptions-item label="审核理由">{{ detail.reason || '-' }}</el-descriptions-item>
         <el-descriptions-item label="审核层">{{ detail.check_layer || '-' }}</el-descriptions-item>
         <el-descriptions-item label="命中详情">
           <pre v-if="matchedItems.length" style="max-height: 200px; overflow: auto; font-size: 12px;">{{ JSON.stringify(matchedItems, null, 2) }}</pre>
           <span v-else>-</span>
         </el-descriptions-item>
+        <el-descriptions-item label="审核状态">
+          <el-tag :type="detail.review_status === 0 ? 'warning' : detail.review_status === 1 ? 'success' : 'danger'" size="small">
+            {{ detail.review_status === 0 ? '待审核' : detail.review_status === 1 ? '已通过' : '已不通过' }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="detail.review_notes" label="审核备注">{{ detail.review_notes }}</el-descriptions-item>
         <el-descriptions-item label="提交时间">{{ detail.created_time }}</el-descriptions-item>
       </el-descriptions>
 

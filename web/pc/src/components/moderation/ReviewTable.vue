@@ -22,9 +22,13 @@
       </template>
     </el-table-column>
     <el-table-column prop="created_time" label="提交时间" width="170" />
-    <el-table-column label="操作" width="100" fixed="right">
+    <el-table-column label="操作" width="180" fixed="right">
       <template #default="{ row }">
         <el-button type="primary" size="small" @click="$emit('detail', row)">详情</el-button>
+        <template v-if="row.review_status === 0">
+          <el-button type="success" size="small" @click="$emit('approve', row)">通过</el-button>
+          <el-button type="danger" size="small" @click="$emit('reject', row)">不通过</el-button>
+        </template>
       </template>
     </el-table-column>
   </el-table>
@@ -35,7 +39,11 @@ import type { ReviewListItem } from '@common/types/moderation';
 import { SOURCE_TYPE_LABELS, MODERATION_STATUS_MAP } from '@common/constants/moderation';
 
 defineProps<{ list: ReviewListItem[] }>();
-defineEmits<{ (e: 'detail', row: ReviewListItem): void }>();
+defineEmits<{
+  (e: 'detail', row: ReviewListItem): void;
+  (e: 'approve', row: ReviewListItem): void;
+  (e: 'reject', row: ReviewListItem): void;
+}>();
 
 function sourceTypeLabel(t: string) { return SOURCE_TYPE_LABELS[t] || t; }
 function riskLabel(r: string) {
