@@ -75,7 +75,7 @@ calculate_score() {
     local task_id=$(basename "$task_file" .md)
     local blocked_count=$(grep -r "blocked_by:.*$task_id" "$TASKS_DIR" 2>/dev/null | wc -l || echo "0")
     local dependency_boost=1.0
-    if [[ "$blocked_count" -gt 0 ]]; then
+    if [ "$blocked_count" -gt 0 ]; then
         dependency_boost=1.2
     fi
 

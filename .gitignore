@@ -52,3 +52,5 @@ target/
 
 # Graph sync runtime state
 .claude/.graph_last_sync
+data/
+api-proto/
