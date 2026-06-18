@@ -902,6 +902,74 @@ check_api_smoke() {
   fi
 }
 
+# ─── Check 16: Memory Index Freshness ────────────────────────────────
+
+check_memory_index() {
+  echo "[16/16] Memory Index Freshness" >&2
+
+  local index_file="$PROJECT_ROOT/.harness/knowledge/memory/.memory-index.json"
+  local memory_dir="$PROJECT_ROOT/.harness/knowledge/memory"
+
+  # Check if index file exists
+  if [[ ! -f "$index_file" ]]; then
+    log_fail "memory_index" "索引文件不存在，运行: bash .harness/scripts/memory-index-build.sh"
+    return
+  fi
+
+  # Check if jq is available
+  if ! command -v jq &> /dev/null; then
+    log_warn "memory_index" "jq 不可用，跳过新鲜度检查"
+    return
+  fi
+
+  # Extract index generation time
+  local index_time
+  index_time=$(jq -r '.generated_at' "$index_file" 2>/dev/null || echo "")
+
+  if [[ -z "$index_time" ]]; then
+    log_fail "memory_index" "索引文件格式错误，无法读取 generated_at"
+    return
+  fi
+
+  # Convert to epoch (Linux date)
+  local index_epoch
+  index_epoch=$(date -d "$index_time" +%s 2>/dev/null || echo "0")
+
+  if [[ "$index_epoch" -eq 0 ]]; then
+    # Try macOS date format
+    index_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$index_time" +%s 2>/dev/null || echo "0")
+  fi
+
+  if [[ "$index_epoch" -eq 0 ]]; then
+    log_warn "memory_index" "无法解析索引时间: $index_time"
+    return
+  fi
+
+  # Find the newest memory file modification time
+  local newest_memory
+  newest_memory=$(find "$memory_dir" -name "*.md" -not -name "MEMORY.md" -not -name "MAINTENANCE.md" -type f -printf '%T@\n' 2>/dev/null | sort -rn | head -1)
+
+  if [[ -z "$newest_memory" ]]; then
+    log_pass "memory_index" "无记忆文件"
+    return
+  fi
+
+  # Convert to integer (remove decimal)
+  local newest_memory_epoch
+  newest_memory_epoch=$(printf "%.0f" "$newest_memory")
+
+  # Compare timestamps
+  if [[ "$newest_memory_epoch" -gt "$index_epoch" ]]; then
+    local newest_file
+    newest_file=$(find "$memory_dir" -name "*.md" -not -name "MEMORY.md" -not -name "MAINTENANCE.md" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+    local detail
+    detail="索引过期 (最新记忆: $(basename "$newest_file"))，运行: bash .harness/scripts/memory-index-build.sh"
+    log_fail "memory_index" "$detail"
+  else
+    log_pass "memory_index" "索引最新 (生成于 $index_time)"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -927,6 +995,7 @@ main() {
   check_response_wrap
   check_bench_regression
   check_api_smoke
+  check_memory_index
 
   # Count results
   local pass=0 fail=0 warn=0
