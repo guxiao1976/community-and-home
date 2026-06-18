@@ -70,24 +70,17 @@ function generatorPrompt(iteration, fixContext, taskType) {
 ### Step A: 搜索相关记忆（索引查询模式）
 1. **提取任务关键词**：从任务描述中提取技术关键词（如 gRPC、Proto、数据库、JWT、Snowflake、测试、前端、API 等）
 
-2. **查询索引**（优先，O(K) 复杂度）：
+2. **查询索引**（必须执行，O(K) 复杂度）：
    \`\`\`bash
-   # 检查索引文件是否存在
-   INDEX_FILE=".harness/knowledge/memory/.memory-index.json"
+   # 使用索引查询（强制）
+   bash .harness/scripts/memory-index-query.sh --union <keyword1> <keyword2> <keyword3>
 
-   if [ -f "$INDEX_FILE" ]; then
-     # 使用索引查询（快速）
-     bash .harness/scripts/memory-index-query.sh --union <keyword1> <keyword2> <keyword3>
+   # 索引返回格式：
+   # [severity] slug
+   #   标题: <title>
+   #   服务: <service> | 类型: <type>
 
-     # 索引返回格式：
-     # [severity] slug
-     #   标题: <title>
-     #   服务: <service> | 类型: <type>
-   else
-     # 降级到旧方式（索引不存在时）
-     # 读取 MEMORY.md 并逐行匹配 triggers
-     grep -i "<keyword>" .harness/knowledge/memory/MEMORY.md
-   fi
+   # 注意：索引必须存在。如果索引缺失，说明环境配置有问题，立即报告。
    \`\`\`
 
 3. **结果过滤**：
