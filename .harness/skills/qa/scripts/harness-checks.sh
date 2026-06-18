@@ -996,6 +996,7 @@ main() {
   check_bench_regression
   check_api_smoke
   check_memory_index
+  check_frontend
 
   # Count results
   local pass=0 fail=0 warn=0
