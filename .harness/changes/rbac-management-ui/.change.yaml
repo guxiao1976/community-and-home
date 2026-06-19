@@ -1,0 +1,293 @@
+name: rbac-management-ui
+description: RBAC 管理界面 - 完整的角色权限管理系统
+status: requirement_analysis_complete
+created_at: 2026-06-19 08:30:00
+updated_at: 2026-06-19 09:45:00
+
+# 需求来源
+source:
+  type: user_request
+  original_request: |
+    在后台web pc 管理系统中，目前还没有完整的角色管理、权限管理等页面，根据系统中已有的用户进行角色设计、权限设计，不同角色的人能够看到不同的菜单、前端能够看到不同的内容，比如，发布通知，只有授权的人员才能看到相关图标。权限管理要实现接口级的管理，不能仅仅是前端是否展示相关按钮或者内容，这样知道api时，容易绕过去。数据权限一并考虑，只能看到授权了的数据。调用开发流水线来实现。
+
+# 路径选择
+path: OpenSpec
+reason:
+  - 跨2+服务（permission-service + web/pc + 其他服务权限中间件）
+  - 新功能开发（完整的角色管理、权限管理系统）
+  - 可能涉及Proto变更（角色管理、权限管理的gRPC接口）
+  - 需求需要澄清（角色设计、权限粒度、数据权限策略）
+
+# 涉及服务
+affected_services:
+  - name: permission-service
+    type: backend
+    change_type: minor_enhancement
+    description: 新增接口：GetRole（角色详情含权限列表）、ListPermissions（权限树）
+  - name: web/pc
+    type: frontend
+    change_type: major
+    description: 新增3个页面（角色管理、权限配置、用户角色分配）+ 权限指令 + 路由守卫
+  - name: user-service
+    type: backend
+    change_type: middleware_integration
+    description: 可选：集成权限校验中间件（示例服务）
+  - name: auth-service
+    type: backend
+    change_type: middleware_integration
+    description: 可选：集成权限校验中间件
+  - name: api-proto
+    type: proto
+    change_type: addition
+    description: 新增 Proto 消息（GetRoleResp, ListPermissionsResp, AssignRoleReq 等）
+
+# Brainstorming 决策记录
+decisions:
+  - id: 1
+    question: 角色设计范围
+    options:
+      - label: A
+        description: 仅预定义角色（固定4个）
+      - label: B
+        description: 仅自定义角色（用户自由创建）
+      - label: C
+        description: 混合模式（4个系统角色 + 自定义角色）
+    selected: C
+    reason: 系统角色对应现有业务实体，自定义角色支持灵活扩展
+
+  - id: 2
+    question: 权限粒度设计
+    options:
+      - label: A
+        description: 单层权限码（扁平结构）
+      - label: B
+        description: 菜单+功能点两层
+      - label: C
+        description: 模块+菜单+功能点三层
+    selected: B
+    reason: 菜单层简化侧边栏渲染，功能点层精细控制按钮和API
+
+  - id: 3
+    question: 数据权限作用域
+    options:
+      - label: A
+        description: 分配角色时指定作用域
+      - label: B
+        description: 角色自带固定作用域
+      - label: C
+        description: 动态计算作用域
+    selected: A
+    reason: 灵活性最高，一个用户可在多个作用域拥有同一角色
+
+  - id: 4
+    question: 接口级权限控制
+    options:
+      - label: A
+        description: APISIX Gateway统一拦截
+      - label: B
+        description: 各服务middleware二次校验
+      - label: C
+        description: A+B组合
+    selected: C
+    reason: 外部请求Gateway拦截，内部REST二次校验，gRPC信任域不校验
+
+# 能力拆分（Capabilities）
+capabilities:
+  - name: role-management
+    description: 角色管理（CRUD + 系统角色保护）
+    priority: P1
+    spec_file: specs/role-management/spec.md
+
+  - name: permission-management
+    description: 权限管理（权限树 + 角色-权限配置）
+    priority: P2
+    spec_file: specs/permission-management/spec.md
+
+  - name: user-role-assignment
+    description: 用户角色分配（含数据作用域）
+    priority: P3
+    spec_file: specs/user-role-assignment/spec.md
+
+  - name: menu-permission-control
+    description: 菜单权限控制（路由守卫 + 按钮指令）
+    priority: P4
+    spec_file: specs/menu-permission-control/spec.md
+
+  - name: api-permission-control
+    description: 接口权限控制（后端中间件）
+    priority: P5
+    spec_file: specs/api-permission-control/spec.md
+
+# 分阶段交付计划
+phases:
+  - phase: P0
+    name: Proto变更 + 后端接口增强
+    deliverables:
+      - api-proto/ 新增消息定义
+      - permission-service 新增 GetRole、ListPermissions 接口
+    acceptance: make ci 通过，新接口可调用
+
+  - phase: P1
+    name: 前端角色管理界面
+    deliverables:
+      - web/pc/src/views/roles/List.vue（增强）
+      - 系统角色不可删除保护
+    acceptance: 可创建自定义角色，系统角色不可删除
+
+  - phase: P2
+    name: 前端权限树管理
+    deliverables:
+      - web/pc/src/views/roles/Permissions.vue（增强）
+      - 权限树组件 PermissionTree.vue
+    acceptance: 权限树正确渲染，角色权限保存生效
+
+  - phase: P3
+    name: 前端用户角色分配
+    deliverables:
+      - web/pc/src/views/users/:id/roles（新增）
+      - 作用域级联选择器
+    acceptance: 可为用户分配角色并指定小区
+
+  - phase: P4
+    name: 前端菜单权限控制
+    deliverables:
+      - router/permission.ts（路由守卫）
+      - directives/permission.ts（v-permission指令）
+    acceptance: 无权限菜单不显示，访问受限路由跳转403
+
+  - phase: P5
+    name: 后端权限中间件
+    deliverables:
+      - middleware/permissionmiddleware.go（示例：user-service）
+      - 白名单配置
+    acceptance: user-service REST API 权限校验生效
+
+# Proto 变更清单
+proto_changes:
+  - file: api/permission/v1/permission.proto
+    type: addition
+    messages:
+      - GetRoleReq
+      - GetRoleResp (含 permission_ids 列表)
+      - ListPermissionsReq
+      - ListPermissionsResp
+      - PermissionInfo
+      - AssignRoleReq (含 scope_type, scope_id)
+      - RevokeRoleReq
+      - UserRoleInfo
+      - GetUserPermissionsReq
+      - GetUserPermissionsResp
+
+# 数据库变更
+database_changes:
+  - type: no_schema_change
+    description: 现有 4 张表（sys_role, sys_permission, rel_role_permission, rel_user_role）已满足需求
+  - type: data_initialization
+    description: |
+      需要初始化数据：
+      1. 初始化 4 个系统角色（owner, property_admin, community_admin, grid_worker）
+      2. 初始化权限树（菜单 + 按钮 + API 三层）
+      3. 系统角色自动关联全部权限
+    script: services/permission-service/scripts/init_permissions.sql
+
+# 风险与缓解
+risks:
+  - risk: 权限配置错误导致管理员无法登录
+    impact: high
+    mitigation: owner 角色天然全权限，确保至少一个 owner 账号
+
+  - risk: 权限树初始化数据不完整
+    impact: medium
+    mitigation: 提供 SQL 脚本 + 手动补录界面
+
+  - risk: 历史用户无角色数据
+    impact: medium
+    mitigation: 数据迁移脚本（user_membership_role → rel_user_role）
+
+  - risk: 性能回退（每次请求查权限）
+    impact: medium
+    mitigation: 依赖 permission-service 现有 Redis 缓存（30min TTL）
+
+# 产出物清单
+artifacts:
+  - path: .harness/changes/rbac-management-ui/request.md
+    type: requirement
+    status: complete
+
+  - path: .harness/changes/rbac-management-ui/proposal.md
+    type: requirement
+    status: complete
+
+  - path: .harness/changes/rbac-management-ui/specs/role-management/spec.md
+    type: specification
+    status: complete
+
+  - path: .harness/changes/rbac-management-ui/specs/permission-management/spec.md
+    type: specification
+    status: complete
+
+  - path: .harness/changes/rbac-management-ui/specs/user-role-assignment/spec.md
+    type: specification
+    status: complete
+
+  - path: .harness/changes/rbac-management-ui/specs/menu-permission-control/spec.md
+    type: specification
+    status: complete
+
+  - path: .harness/changes/rbac-management-ui/specs/api-permission-control/spec.md
+    type: specification
+    status: complete
+
+  - path: .harness/changes/rbac-management-ui/phase3-traceability.md
+    type: traceability
+    status: complete
+
+  - path: .harness/changes/rbac-management-ui/phase4-self-review.md
+    type: review
+    status: complete
+
+# Quality Gates
+quality_gates:
+  phase2_requirement_analysis:
+    - criterion: 无占位符
+      status: pass
+    - criterion: 术语一致性
+      status: pass
+    - criterion: 数据模型对齐（Proto/DB/TS）
+      status: pass
+    - criterion: 追溯表全✅
+      status: pass
+    - criterion: Self-Review PASS
+      status: pass
+    result: PASS
+
+# 下一步行动
+next_steps:
+  - action: 需求评审（阶段2）
+    assignee: owner-agent
+    description: 启动 3 个并行 Reviewer（coverage / structure / clarity），2/3 APPROVED → 通过
+
+  - action: 架构设计（阶段3）
+    assignee: architecture-designer subagent
+    dependencies: [需求评审通过]
+    description: 产出 design.md + tasks.md
+
+  - action: Proto 变更（阶段4）
+    assignee: owner-agent
+    dependencies: [架构设计完成]
+    description: 修改 api-proto/ + make ci
+
+  - action: 编码+测试（阶段5）
+    assignee: harness-pipeline.js (N×Workflow并行)
+    dependencies: [Proto变更完成]
+    description: 按服务分组并行执行，每服务独立 QA + Review
+
+# Metadata
+metadata:
+  analyst: requirement-analyst subagent
+  reviewer: owner-agent
+  total_spec_count: 5
+  total_decision_count: 4
+  total_pages: ~60
+  estimated_story_points: 34
+  estimated_duration: 3-4 weeks

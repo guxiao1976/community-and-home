@@ -168,6 +168,11 @@ Owner Agent 上下文 (~200 lines)
 **阶段 6 详细步骤**（Owner 执行）：
 
 ```bash
+# 0. 🚪 门禁检查 Phase 5 — 验证编码阶段产出物完整性（强制）
+bash .harness/scripts/harness-gate-check.sh --phase 5 --change <change-name>
+# 检查：每个服务的 _qa.md + _review*.md 存在 + QA PASS + Review PASS + CHANGELOG 更新
+# EXIT 1 → 阻塞进入归档阶段，必须回退修复
+
 # 1. 全链路编译验证（go.work workspace 级别 — 10 模块联合编译）
 cd $PROJECT_ROOT && go build ./...
 # go.work 联合解析所有模块的依赖。如果服务 A 的 Proto 变更破坏了服务 B 的
@@ -195,7 +200,12 @@ done
 # 3. 产出终稿
 # 基于各 impl/*/ 的摘要生成 summary.md
 
-# 4. 更新索引
+# 4. 🚪 门禁检查 Phase 6 — 验证归档完整性（强制）
+bash .harness/scripts/harness-gate-check.sh --phase 6 --change <change-name>
+# 检查：impl/ 目录存在 + summary.md 完整 + 包含关键章节
+# EXIT 1 → 阻塞交付，必须补全缺失产出
+
+# 5. 更新索引
 # 追加到 .harness/changes/INDEX.md
 ```
 
@@ -423,6 +433,7 @@ summary.md 是整个变更的 **Single Source of Truth**——从 proposal 到 d
 ### 禁止做的
 
 - **不输出路径选择就直接动手 ← 最高优先级禁令**
+- **不跳过门禁检查 (harness-gate-check.sh) ← P0约束**
 - 不跳过 select-tool 直接动手
 - 不跳过 QA 直接交付
 - 不隐瞒执行中发现的问题

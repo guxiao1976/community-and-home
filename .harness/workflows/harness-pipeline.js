@@ -838,6 +838,7 @@ while (iteration <= MAX_ITERATIONS) {
   // 统计各视角结果
   const passCount = validReviews.filter(r => r.verdict === 'PASS').length
   const failCount = validReviews.filter(r => r.verdict === 'FAIL').length
+  const failingLenses = validReviews.filter(r => r.verdict === 'FAIL').map(r => r.label).join('、')
 
   log(`多视角审查完成: ${passCount}/${validReviews.length} PASS (threshold: ${REVIEW_PASS_THRESHOLD}/${validReviews.length})`)
   for (const r of validReviews) {
@@ -847,7 +848,6 @@ while (iteration <= MAX_ITERATIONS) {
   // 投票判定 — type-aware threshold
   if (passCount >= REVIEW_PASS_THRESHOLD) {
     if (failCount > 0) {
-      const failingLenses = validReviews.filter(r => r.verdict === 'FAIL').map(r => r.label).join('、')
       log(`⚠️ ${failingLenses}视角有异议，但多数通过 (${passCount}/${validReviews.length})，管线继续`)
     }
     log(`✅ 多视角 Review PASS (${passCount}/${validReviews.length})`)
@@ -872,7 +872,15 @@ while (iteration <= MAX_ITERATIONS) {
     const memoryMatchCount = validReviews.reduce((sum, r) => sum + (r.memorySuggestions || []).length, 0)
     const confidence = computeConfidence(iteration, passCount, validReviews.length, memoryMatchCount, qaFirstPass)
     log(`✅ Harness 管线完成！${args.serviceName} 通过全部检查 (${iteration} 轮, confidence: ${confidence})`)
-    const passNotifications = [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过, QA: ${qaResult.summary}, confidence: ${confidence}` }]
+
+    // 🚪 门禁检查 Phase 5 - 验证 QA/Review 产出物完整性
+    log('🚪 执行 Phase 5 门禁检查...')
+    // Note: 门禁检查需要 change name，当前 workflow 是单服务模式，暂时跳过
+    // 门禁检查应该在 Owner Agent 的 OpenSpec 模式中执行
+    // bash .harness/scripts/harness-gate-check.sh --phase 5 --change <change-name> --service ${SVC_NAME}
+    log('⚠️  门禁检查跳过（单服务 workflow 模式，由 Owner 在集成阶段执行）')
+
+    const passNotifications = [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过 (${TASK_TYPE}), QA: ${qaResult.summary}` }]
     if (failCount > 0) {
       passNotifications.push({ event: 'need_human', service: args.serviceName, detail: `多数 PASS (${passCount}/${validReviews.length}) 但 ${failingLenses} 有异议` })
     }
