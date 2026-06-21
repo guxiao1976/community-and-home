@@ -32,9 +32,10 @@ Skill("architect-design")
 1. `.harness/changes/<change>/request.md` — 用户原始需求（了解初衷）
 2. `.harness/changes/<change>/proposal.md` + `specs/*/spec.md` — 需求规格（阶段1产出）
 3. 受影响服务的 `services/<name>/docs/design.md` — 现有数据模型和接口
-4. `CLAUDE.md` + `.harness/rules/工程结构.md` — 全局架构约束
-5. `api-proto/api/` — 现有 Proto 定义（避免重复或冲突）
-6. `.harness/knowledge/memory/MEMORY.md` — 架构决策相关记忆
+4. 受影响服务的 `services/<name>/docs/graph-context.md` — 技术清单（API路由/gRPC接口/数据表/服务依赖，Neo4j自动生成）
+5. `CLAUDE.md` + `.harness/rules/工程结构.md` — 全局架构约束
+6. `api-proto/api/` — 现有 Proto 定义（避免重复或冲突）
+7. `.harness/knowledge/memory/MEMORY.md` — 架构决策相关记忆
 
 ## 关键工具和能力
 

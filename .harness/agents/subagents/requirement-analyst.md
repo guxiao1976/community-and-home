@@ -33,9 +33,10 @@ Skill("requirement-analysis")
 2. `CLAUDE.md` — 项目架构、服务划分、全局约束
 3. `.harness/rules/项目编码规范.md` — 硬性约束（边界条件）
 4. 受影响服务的 `services/<name>/docs/design.md` — 现有数据模型
-5. `.harness/knowledge/memory/MEMORY.md` — 相关经验记忆
-6. `.harness/tasks/BACKLOG.md` — 当前待办（避免重复工作）
-7. （OpenSpec 路径）`docs/superpowers/specs/<date>-<topic>-design.md` — brainstorming 产出
+5. 受影响服务的 `services/<name>/docs/graph-context.md` — 技术清单（API路由/gRPC接口/数据表/服务依赖，Neo4j自动生成）
+6. `.harness/knowledge/memory/MEMORY.md` — 相关经验记忆
+7. `.harness/tasks/BACKLOG.md` — 当前待办（避免重复工作）
+8. （OpenSpec 路径）`docs/superpowers/specs/<date>-<topic>-design.md` — brainstorming 产出
 
 ## 关键工具
 

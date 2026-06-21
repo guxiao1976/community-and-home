@@ -105,3 +105,73 @@ cd web/pc && npm run dev         # Vite dev server
 cd web/pc && npm run build       # Type-check + build
 cd web/pc && npm run test:unit   # Vitest
 ```
+
+---
+
+## 硬性约束：工具调用失败处理
+
+### 规则
+
+**连续 2 次相同的工具调用失败后，必须立即停止并诊断。**
+
+**触发条件**：
+- 工具名称相同
+- 错误类型相同（如 `InputValidationError`）
+- 参数完全相同
+
+### 强制流程
+
+```
+第 1 次失败 → 记录
+第 2 次失败 → 记录
+第 3 次尝试前 → 必须执行以下步骤：
+  1. 停止当前方法
+  2. 输出诊断：
+     - 我调用了什么工具
+     - 传递了什么参数
+     - 收到什么错误
+     - 工具定义是什么（从系统提示引用）
+     - 根本原因分析
+  3. 尝试完全不同的方法
+```
+
+### 禁止行为
+
+❌ 连续 3 次以上相同的工具调用
+❌ "也许这次会成功"的重复尝试
+❌ 忽略错误信息中的提示
+
+### 案例
+
+#### ❌ 错误（违反规则）
+
+```
+TaskList(command="bash ...") → InputValidationError
+TaskList(command="bash ...") → InputValidationError
+TaskList(command="bash ...") → 违反规则！
+```
+
+#### ✅ 正确（遵守规则）
+
+```
+TaskList(command="bash ...") → InputValidationError
+TaskList(command="bash ...") → InputValidationError
+
+[诊断]
+- 工具：TaskList
+- 我的调用：TaskList(command="bash ...", description="...")
+- 错误：unexpected parameter 'command'
+- 工具定义：TaskList() — 不接受任何参数
+- 根因：我传递了工具不支持的参数
+- 新方法：分两步
+  1. TaskList() — 查看当前任务
+  2. Bash("bash script.sh") — 单独执行命令
+
+[执行新方法]
+TaskList() → 成功 ✅
+```
+
+### 参考
+
+- 熔断器设计：`.harness/docs/circuit-breaker.md`
+- 问题案例：2026-06-21 会话（30+ 次 TaskList 死循环）

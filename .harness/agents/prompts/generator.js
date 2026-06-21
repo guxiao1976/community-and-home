@@ -22,21 +22,22 @@ function generatorPrompt(iteration, fixContext, taskType) {
 
 **按顺序加载：**
 
-### 第一层：服务上下文（必须，~300 lines）
+### 第一层：服务上下文（必须，~350 lines）
 1. 阅读 ${SVC_DIR}/CLAUDE.md — 服务角色、关键规则、常用命令
 2. 阅读 ${SVC_DIR}/docs/design.md — 数据模型、业务流程（如存在）
-3. 阅读 ${SVC_DIR}/CHANGELOG.md — 近期变更历史
+3. 阅读 ${SVC_DIR}/docs/graph-context.md — 技术清单（API路由/gRPC接口/数据表/服务依赖，Neo4j自动生成）
+4. 阅读 ${SVC_DIR}/CHANGELOG.md — 近期变更历史
 
 ### 第二层：任务上下文（本次变更相关）
-4. 阅读 .harness/changes/<change>/design.md — 本次设计决策
-5. 阅读 .harness/changes/<change>/tasks.md — 你的具体任务
+5. 阅读 .harness/changes/<change>/design.md — 本次设计决策
+6. 阅读 .harness/changes/<change>/tasks.md — 你的具体任务
 
 ### 第三层：经验记忆（按需，避免重复踩坑）
-6. 从任务描述提取技术关键词
-7. 两级匹配搜索 .harness/knowledge/memory/：
+7. 从任务描述提取技术关键词
+8. 两级匹配搜索 .harness/knowledge/memory/：
    - 第一级：triggers 精确匹配（高置信度）
    - 第二级：正文关键词匹配（降权，需人工判断）
-8. 只精读匹配的记忆文件（不要全文加载 MEMORY.md 索引）
+9. 只精读匹配的记忆文件（不要全文加载 MEMORY.md 索引）
 
 ### 不需要加载
 - ❌ 根 CLAUDE.md — 那是 Owner Agent 的上下文
