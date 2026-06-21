@@ -1,6 +1,6 @@
 # 变更索引
 
-> 最后更新：2026-06-10
+> 最后更新：2026-06-21
 >
 > 变更模板见 [TEMPLATE.md](TEMPLATE.md) — 每个新需求复制此模板到 `.harness/changes/<name>/summary.md`。
 >
@@ -34,6 +34,41 @@
 ---
 
 ## 业务需求变更
+
+### ✅ RBAC 管理界面
+
+| 属性 | 值 |
+|------|-----|
+| 日期 | 2026-06-19 |
+| 状态 | ✅ 已完成 |
+| 范围 | permission-service, web/pc |
+
+**产物索引**:
+| 类型 | 路径 |
+|------|------|
+| Request | `.harness/changes/rbac-management-ui/request.md` |
+| Proposal | `.harness/changes/rbac-management-ui/proposal.md` |
+| Design | `.harness/changes/rbac-management-ui/design.md` |
+| Specs | `.harness/changes/rbac-management-ui/specs/` (5个规格说明) |
+| Tasks | `.harness/changes/rbac-management-ui/tasks.md` |
+| Execution Summary | `.harness/changes/rbac-management-ui/EXECUTION_SUMMARY.md` |
+| Implementation Summary | `.harness/changes/rbac-management-ui/IMPLEMENTATION_SUMMARY.md` |
+| Delivery Report | `.harness/changes/rbac-management-ui/DELIVERY_REPORT.md` |
+| CHANGELOG | `services/permission-service/CHANGELOG.md` |
+
+**核心交付**:
+- 后端：权限数据初始化脚本（4角色+50权限项）
+- 后端：单元测试覆盖（Model层19个测试、Logic层5个测试）
+- 后端：int64字段JSON序列化修复（7处修复点）
+- 前端：用户角色分配页面（支持4种数据权限作用域）
+- 前端：路由权限守卫（动态路由生成+权限过滤）
+- 前端：角色管理、权限配置、v-permission指令
+
+**关键特性**:
+- 接口级权限控制（防止前端绕过）
+- 数据权限管理（社区/楼栋/单元/房间四级作用域）
+- 菜单权限控制（动态路由）
+- 按钮/内容级权限控制（v-permission指令）
 
 ### 🟡 系统配置 Redis 化
 
@@ -120,6 +155,12 @@
 
 | 日期 | 变更 | 服务 | 备注 |
 |------|------|------|------|
+| 2026-06-21 | ai-model-service configx 统一 | ai-model-service | 改用 common/pkg/configx，消除本地副本 |
+| 2026-06-19 | permission-service 单元测试补充 | permission-service | Model层19测试+Logic层5测试，TDD覆盖 |
+| 2026-06-19 | permission-service int64序列化修复 | permission-service | 7处字段添加 json:",string" 标注 |
+| 2026-06-18 | master-data DivisionCountItem 修正 | master-data-service | Id字段加,string标签，Level改int32 |
+| 2026-06-16 | moderation-service 管线配置测试修复 | moderation-service | 修复 CRITICAL fallthrough + 7个WARNING |
+| 2026-06-15 | master-data GetDivision 桩实现补全 | master-data-service | QA修复 |
 | 2026-06-06 | community-hub-service 初始化 | community-hub-service | 新服务（通知/联络/寻失） |
 | 2026-06-04 | C1/C2 架构债务修复 | moderation-service | HTTP→gRPC, 直读DB→gRPC |
 | 2026-06-04 | C8 SMS 验证码绕过修复 | auth-service | 安全修复 |
