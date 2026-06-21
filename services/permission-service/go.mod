@@ -3,9 +3,12 @@ module github.com/guxiao1976/community-permission
 go 1.25.0
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
+	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/guxiao1976/api-proto v0.1.0
 	github.com/guxiao1976/community-common/v2 v2.0.0
 	github.com/redis/go-redis/v9 v9.19.0
+	github.com/stretchr/testify v1.11.1
 	github.com/zeromicro/go-zero v1.10.2
 	google.golang.org/grpc v1.81.0
 )
@@ -54,8 +57,10 @@ require (
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/titanous/json5 v1.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.21 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.21 // indirect
 	go.etcd.io/etcd/client/v3 v3.5.21 // indirect

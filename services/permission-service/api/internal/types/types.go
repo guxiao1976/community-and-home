@@ -3,13 +3,48 @@
 
 package types
 
+import (
+	"encoding/json"
+	"strconv"
+)
+
+// SEE: [[proto-jstype]] — Int64Array 包装类型，将 []int64 序列化为字符串数组以避免 JavaScript 精度丢失
+type Int64Array []int64
+
+func (a Int64Array) MarshalJSON() ([]byte, error) {
+	if a == nil {
+		return []byte("null"), nil
+	}
+	strs := make([]string, len(a))
+	for i, v := range a {
+		strs[i] = strconv.FormatInt(v, 10)
+	}
+	return json.Marshal(strs)
+}
+
+func (a *Int64Array) UnmarshalJSON(data []byte) error {
+	var strs []string
+	if err := json.Unmarshal(data, &strs); err != nil {
+		return err
+	}
+	*a = make([]int64, len(strs))
+	for i, s := range strs {
+		v, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return err
+		}
+		(*a)[i] = v
+	}
+	return nil
+}
+
 // ==================== Common ====================
 
 // PageInfo 分页信息
 type PageInfo struct {
 	Page       int32 `json:"page"`
 	PageSize   int32 `json:"pageSize"`
-	Total      int64 `json:"total"`
+	Total      int64 `json:"total,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
 	TotalPages int32 `json:"totalPages"`
 }
 
@@ -25,8 +60,8 @@ type RoleInfo struct {
 	Status      int32            `json:"status"`
 	SortOrder   int32            `json:"sortOrder"`
 	Permissions []PermissionInfo `json:"permissions,omitempty"`
-	CreatedAt   int64            `json:"createdAt"`
-	UpdatedAt   int64            `json:"updatedAt"`
+	CreatedAt   int64            `json:"createdAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
+	UpdatedAt   int64            `json:"updatedAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
 }
 
 // ListRolesReq 角色列表请求
@@ -44,11 +79,11 @@ type ListRolesResp struct {
 
 // CreateRoleReq 创建角色请求
 type CreateRoleReq struct {
-	Code          string  `json:"code"`
-	Name          string  `json:"name"`
-	Description   string  `json:"description,optional"`
-	SortOrder     int32   `json:"sortOrder,optional"`
-	PermissionIds []int64 `json:"permissionIds,optional"`
+	Code          string     `json:"code"`
+	Name          string     `json:"name"`
+	Description   string     `json:"description,optional"`
+	SortOrder     int32      `json:"sortOrder,optional"`
+	PermissionIds Int64Array `json:"permissionIds,optional"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
 }
 
 // CreateRoleResp 创建角色响应
@@ -68,12 +103,12 @@ type GetRoleResp struct {
 
 // UpdateRoleReq 更新角色请求（path param + body）
 type UpdateRoleReq struct {
-	Id            int64   `path:"id"`
-	Name          *string `json:"name,optional"`
-	Description   *string `json:"description,optional"`
-	Status        *int32  `json:"status,optional"`
-	SortOrder     *int32  `json:"sortOrder,optional"`
-	PermissionIds []int64 `json:"permissionIds,optional"`
+	Id            int64      `path:"id"`
+	Name          *string    `json:"name,optional"`
+	Description   *string    `json:"description,optional"`
+	Status        *int32     `json:"status,optional"`
+	SortOrder     *int32     `json:"sortOrder,optional"`
+	PermissionIds Int64Array `json:"permissionIds,optional"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
 }
 
 // UpdateRoleResp 更新角色响应
@@ -100,8 +135,8 @@ type PermissionInfo struct {
 	SortOrder int32            `json:"sortOrder"`
 	Status    int32            `json:"status"`
 	Children  []PermissionInfo `json:"children,omitempty"`
-	CreatedAt int64            `json:"createdAt"`
-	UpdatedAt int64            `json:"updatedAt"`
+	CreatedAt int64            `json:"createdAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
+	UpdatedAt int64            `json:"updatedAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
 }
 
 // ListPermissionsReq 权限列表请求
