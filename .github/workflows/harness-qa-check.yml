@@ -1,0 +1,171 @@
+name: Harness QA Checks
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - 'services/**/*.go'
+      - 'services/**/*.proto'
+      - '.harness/**'
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - 'services/**/*.go'
+      - 'services/**/*.proto'
+
+jobs:
+  harness-qa:
+    name: Harness Mechanical QA Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for diff detection
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install dependencies
+        run: |
+          # Install jq for JSON processing
+          sudo apt-get update && sudo apt-get install -y jq
+
+          # Build AST checker if needed
+          if [ ! -f .harness/tools/go-ast-checker/go-ast-checker ]; then
+            echo "Building AST checker..."
+            cd .harness/tools/go-ast-checker
+            go build -o go-ast-checker .
+            cd ../../..
+          fi
+
+      - name: Build service registry
+        run: |
+          bash .harness/scripts/build-service-registry.sh
+
+      - name: Detect changed services
+        id: detect-services
+        run: |
+          # Get list of changed services
+          changed_services=$(git diff --name-only HEAD~1 | grep "^services/" | cut -d'/' -f2 | sort -u | grep "-service$" || echo "")
+
+          if [ -z "$changed_services" ]; then
+            echo "No service changes detected"
+            echo "services=" >> $GITHUB_OUTPUT
+          else
+            echo "Changed services: $changed_services"
+            # Convert to JSON array
+            services_json=$(echo "$changed_services" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "services=$services_json" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Harness QA Checks
+        if: steps.detect-services.outputs.services != ''
+        run: |
+          services='${{ steps.detect-services.outputs.services }}'
+
+          echo "Running QA checks for changed services..."
+
+          overall_status=0
+
+          for service in $(echo "$services" | jq -r '.[]'); do
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Checking: $service"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # Run harness checks
+            if bash .harness/skills/qa/scripts/harness-checks.sh --service "$service" --json > "qa-results-${service}.json" 2>&1; then
+              echo "✅ $service: PASS"
+            else
+              echo "❌ $service: FAIL"
+              overall_status=1
+
+              # Display failures
+              cat "qa-results-${service}.json" | jq -r '.[] | select(.status == "FAIL") | "  ❌ \(.check): \(.detail)"'
+            fi
+
+            echo ""
+          done
+
+          exit $overall_status
+
+      - name: Upload QA Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-results
+          path: qa-results-*.json
+          retention-days: 30
+
+      - name: Comment PR with Results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const glob = require('@actions/glob');
+
+            // Find all QA result files
+            const globber = await glob.create('qa-results-*.json');
+            const files = await globber.glob();
+
+            if (files.length === 0) {
+              console.log('No QA results found');
+              return;
+            }
+
+            let comment = '## 🔍 Harness QA Check Results\n\n';
+
+            let totalPass = 0;
+            let totalFail = 0;
+
+            for (const file of files) {
+              const service = file.match(/qa-results-(.+)\.json/)[1];
+              const results = JSON.parse(fs.readFileSync(file, 'utf8'));
+
+              const passed = results.filter(r => r.status === 'PASS').length;
+              const failed = results.filter(r => r.status === 'FAIL').length;
+
+              totalPass += passed;
+              totalFail += failed;
+
+              comment += `### ${service}\n\n`;
+
+              if (failed === 0) {
+                comment += `✅ **All checks passed** (${passed} checks)\n\n`;
+              } else {
+                comment += `❌ **${failed} check(s) failed**, ${passed} passed\n\n`;
+
+                comment += '<details>\n<summary>Failed Checks</summary>\n\n';
+
+                results.filter(r => r.status === 'FAIL').forEach(r => {
+                  comment += `**${r.check}**\n`;
+                  comment += `- ${r.detail}\n`;
+                  if (r.why) comment += `- Why: ${r.why}\n`;
+                  if (r.fix) comment += `- Fix: ${r.fix}\n`;
+                  comment += '\n';
+                });
+
+                comment += '</details>\n\n';
+              }
+            }
+
+            comment += `---\n\n`;
+            comment += `📊 **Summary**: ${totalPass} passed, ${totalFail} failed\n\n`;
+
+            if (totalFail === 0) {
+              comment += '✅ All Harness QA checks passed!';
+            } else {
+              comment += '❌ Some checks failed. Please review and fix.';
+            }
+
+            // Post comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
