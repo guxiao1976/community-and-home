@@ -1,0 +1,77 @@
+# Deterministic Rules Configuration
+
+# This file defines the rules for deterministic checks
+# that run before AI judgment in the Harness Pipeline
+
+version: "1.0"
+
+# Check: Compilation
+compile:
+  required: true
+  blocker: true  # Blocks AI judgment if fails
+  description: "All packages must compile successfully"
+
+# Check: Tests
+tests:
+  required: true
+  blocker: true
+  min_tests: 1  # At least 1 test required
+  description: "All tests must pass, no 0/0 false pass"
+
+# Check: Test Coverage
+coverage:
+  required: true
+  blocker: false  # Warning only
+  min_coverage: 80  # Percentage
+  description: "Test coverage should be ≥80%"
+
+# Check: Static Analysis
+static_analysis:
+  required: true
+  blocker: false  # Warning only
+  description: "go vet should report no issues"
+
+# Check: Code Format
+format:
+  required: true
+  blocker: false  # Warning only
+  description: "Code should be properly formatted (gofmt)"
+
+# Check: Dependencies
+dependencies:
+  required: true
+  blocker: true
+  description: "All dependencies must be verified (go mod verify)"
+
+# AI Judgment Override Rules
+ai_override:
+  # AI says PASS but compile fails → Override to FAIL
+  - condition: "ai_pass AND compile_fail"
+    action: "override_to_fail"
+    reason: "Compilation failure is deterministic"
+
+  # AI says PASS but tests fail → Override to FAIL
+  - condition: "ai_pass AND tests_fail"
+    action: "override_to_fail"
+    reason: "Test failure is deterministic"
+
+  # AI says PASS but dependencies fail → Override to FAIL
+  - condition: "ai_pass AND dependencies_fail"
+    action: "override_to_fail"
+    reason: "Dependency verification is deterministic"
+
+  # AI says FAIL but all deterministic checks pass → Warn
+  - condition: "ai_fail AND all_deterministic_pass"
+    action: "warn_possible_false_negative"
+    reason: "AI may have misjudged, suggest human review"
+
+# Human Review Triggers
+human_review:
+  # Trigger human review when AI and deterministic checks conflict
+  - condition: "ai_fail AND compile_pass AND tests_pass"
+    priority: "medium"
+    message: "AI判断为FAIL，但编译和测试都通过，建议人工审查"
+
+  - condition: "ai_pass AND (compile_fail OR tests_fail)"
+    priority: "high"
+    message: "AI判断为PASS，但确定性检查失败，已自动推翻"
