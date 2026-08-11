@@ -128,6 +128,11 @@ request.interceptors.response.use(
 
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    // logout 请求的 401 直接静默失败，不触发 Token 刷新
+    if (originalRequest?.url?.includes('/api/auth/logout')) {
+      return Promise.reject(error);
+    }
+
     // Handle 401 Unauthorized - token expired
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {

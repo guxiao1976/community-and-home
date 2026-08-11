@@ -21,8 +21,8 @@ type UserResidence struct {
 	IsPrimary    int64        `db:"is_primary"`
 	StartDate    sql.NullTime `db:"start_date"`
 	EndDate      sql.NullTime `db:"end_date"`
-	CreatedTime  time.Time    `db:"created_time"`
-	UpdatedTime  time.Time    `db:"updated_time"`
+	CreatedTime  time.Time    `db:"created_at"`
+	UpdatedTime  time.Time    `db:"updated_at"`
 }
 
 type UserResidenceModel interface {
@@ -46,12 +46,12 @@ func NewUserResidenceModel(conn sqlx.SqlConn) UserResidenceModel {
 }
 
 func (m *defaultUserResidenceModel) Insert(ctx context.Context, data *UserResidence) (sql.Result, error) {
-	query := fmt.Sprintf(`INSERT INTO %s (id, membership_id, user_id, house_id, building, unit, room, is_primary, start_date, end_date, created_time, updated_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
+	query := fmt.Sprintf(`INSERT INTO %s (id, membership_id, user_id, house_id, building, unit, room, is_primary, start_date, end_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
 	return m.conn.ExecCtx(ctx, query, data.Id, data.MembershipId, data.UserId, data.HouseId, data.Building, data.Unit, data.Room, data.IsPrimary, data.StartDate, data.EndDate, data.CreatedTime, data.UpdatedTime)
 }
 
 func (m *defaultUserResidenceModel) FindByMembershipId(ctx context.Context, membershipId int64) ([]*UserResidence, error) {
-	query := fmt.Sprintf(`SELECT id, membership_id, user_id, house_id, building, unit, room, is_primary, start_date, end_date, created_time, updated_time FROM %s WHERE membership_id = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, membership_id, user_id, house_id, building, unit, room, is_primary, start_date, end_date, created_at, updated_at FROM %s WHERE membership_id = ?`, m.table)
 	var resp []*UserResidence
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, membershipId)
 	if err != nil {
@@ -61,7 +61,7 @@ func (m *defaultUserResidenceModel) FindByMembershipId(ctx context.Context, memb
 }
 
 func (m *defaultUserResidenceModel) FindByUserId(ctx context.Context, userId int64) ([]*UserResidence, error) {
-	query := fmt.Sprintf(`SELECT id, membership_id, user_id, house_id, building, unit, room, is_primary, start_date, end_date, created_time, updated_time FROM %s WHERE user_id = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, membership_id, user_id, house_id, building, unit, room, is_primary, start_date, end_date, created_at, updated_at FROM %s WHERE user_id = ?`, m.table)
 	var resp []*UserResidence
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, userId)
 	if err != nil {
@@ -71,7 +71,7 @@ func (m *defaultUserResidenceModel) FindByUserId(ctx context.Context, userId int
 }
 
 func (m *defaultUserResidenceModel) FindByMembershipAndHouse(ctx context.Context, membershipId int64, houseId string) (*UserResidence, error) {
-	query := fmt.Sprintf(`SELECT id, membership_id, user_id, house_id, building, unit, room, is_primary, start_date, end_date, created_time, updated_time FROM %s WHERE membership_id = ? AND house_id = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, membership_id, user_id, house_id, building, unit, room, is_primary, start_date, end_date, created_at, updated_at FROM %s WHERE membership_id = ? AND house_id = ?`, m.table)
 	var resp UserResidence
 	err := m.conn.QueryRowCtx(ctx, &resp, query, membershipId, houseId)
 	if err != nil {
@@ -84,7 +84,7 @@ func (m *defaultUserResidenceModel) FindByMembershipAndHouse(ctx context.Context
 }
 
 func (m *defaultUserResidenceModel) Update(ctx context.Context, data *UserResidence) error {
-	query := fmt.Sprintf(`UPDATE %s SET building=?, unit=?, room=?, is_primary=?, start_date=?, end_date=?, updated_time=? WHERE id=?`, m.table)
+	query := fmt.Sprintf(`UPDATE %s SET building=?, unit=?, room=?, is_primary=?, start_date=?, end_date=?, updated_at=? WHERE id=?`, m.table)
 	_, err := m.conn.ExecCtx(ctx, query, data.Building, data.Unit, data.Room, data.IsPrimary, data.StartDate, data.EndDate, time.Now(), data.Id)
 	return err
 }

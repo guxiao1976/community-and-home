@@ -14,5 +14,6 @@ type Config struct {
 		AccessExpire int64
 	}
 	UserRpc        zrpc.RpcClientConf
+	PermissionRpc  zrpc.RpcClientConf
 	SysConfigRedis redis.RedisConf // 系统参数配置 Redis（用于 sysconfig 客户端）
 }

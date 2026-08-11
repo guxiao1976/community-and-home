@@ -179,37 +179,80 @@ export function enableUser(id: string) {
  * Get user permissions
  */
 export function getUserPermissions(userId: string) {
-  return request.get<{ permissions: string[]; menus: Permission[] }>(`/api/users/${userId}/permissions`);
+  return request.get<{ permissionCodes: string[] }>(`/api/perm/users/${userId}/permissions`);
 }
 
 /**
  * Get user roles
  */
 export function getUserRoles(userId: string) {
-  return request.get<{ roles: Role[] }>(`/api/users/${userId}/roles`);
+  return request.get<{ roles: UserRole[] }>(`/api/perm/users/${userId}/roles`);
 }
 
 /**
- * Assign roles to user
+ * Get users assigned to a role
  */
-export function assignUserRoles(userId: string, roleIds: string[]) {
-  return request.post<{ success: boolean }>(`/api/users/${userId}/roles`, {
-    role_ids: roleIds
+export function getRoleUsers(roleId: string, page = 1, pageSize = 20) {
+  return request.get<{
+    users: Array<{ userId: string; phone: string; nickname: string }>;
+    page: number; pageSize: number; total: number; totalPages: number;
+  }>(`/api/perm/roles/${roleId}/users`, { params: { page, pageSize } });
+}
+
+/**
+ * Assign role to user with scope (admin operation).
+ * Matches backend AssignUserRoleReq: { userId, roleId, scopeType, scopeId }
+ */
+export function assignUserRole(data: {
+  userId: string;
+  roleId: string;
+  scopeType: string;
+  scopeId: string;
+}) {
+  return request.post<null>('/api/perm/user-roles', {
+    userId: data.userId,
+    roleId: data.roleId,
+    scopeType: data.scopeType,
+    scopeId: data.scopeId,
   });
 }
 
 /**
- * Remove role from user
+ * Revoke role from user (admin operation).
+ * Matches backend RevokeUserRoleReq: { userId, roleId, scopeType?, scopeId? }
  */
-export function removeUserRole(userId: string, roleId: string) {
-  return request.delete<{ success: boolean }>(`/api/users/${userId}/roles/${roleId}`);
+export function revokeUserRole(data: {
+  userId: string;
+  roleId: string;
+  scopeType?: string;
+  scopeId?: string;
+}) {
+  return request.delete<null>('/api/perm/user-roles', {
+    data: {
+      userId: data.userId,
+      roleId: data.roleId,
+      scopeType: data.scopeType,
+      scopeId: data.scopeId,
+    },
+  });
 }
 
 /**
  * Get all permissions
  */
 export function getPermissions() {
-  return request.get<Permission[]>('/api/perm/permissions');
+  return request.get<{ permissions: Permission[] }>('/api/perm/permissions');
+}
+
+/**
+ * Auto-discover: 扫描已注册路由，自动注册缺失的 API 权限
+ */
+export function autoDiscoverPermissions() {
+  return request.post<{
+    added: Array<{ id: string; parentId: string; name: string; code: string; path: string }>;
+    total: number;
+    message: string;
+  }>('/api/perm/permissions/auto-discover');
 }
 
 /**
@@ -223,7 +266,7 @@ export function getRoles(params?: PaginationParams) {
  * Get role by ID
  */
 export function getRoleById(id: string) {
-  return request.get<Role>(`/api/perm/roles/${id}`);
+  return request.get<{ role: Role }>(`/api/perm/roles/${id}`);
 }
 
 /**
@@ -266,7 +309,7 @@ export function getRolePermissions(roleId: string) {
  */
 export function assignRolePermissions(roleId: string, permissionIds: string[]) {
   return request.post<null>(`/api/perm/roles/${roleId}/permissions`, {
-    permission_ids: permissionIds
+    permissionIds: permissionIds
   });
 }
 

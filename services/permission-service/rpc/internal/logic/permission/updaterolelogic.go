@@ -2,6 +2,7 @@ package permission
 
 import (
 	"context"
+	"fmt"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
@@ -21,13 +22,21 @@ func NewUpdateRoleLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Update
 }
 
 // UpdateRole 更新角色
-//   校验角色存在 → 更新字段 → 替换权限列表 → 失效相关用户缓存
+//
+//	校验角色存在 → 更新字段 → 替换权限列表 → 失效相关用户缓存
 func (l *UpdateRoleLogic) UpdateRole(in *permissionv1.UpdateRoleRequest) (*permissionv1.UpdateRoleResponse, error) {
 	// 校验角色存在
 	existing, err := l.svcCtx.RoleModel.FindOne(l.ctx, in.Id)
 	if err != nil {
 		return &permissionv1.UpdateRoleResponse{
 			Base: responsex.NewBaseRespWithError(60001, "角色不存在"),
+		}, nil
+	}
+
+	// 系统角色不可修改（is_system 仅用于保护内置角色不被修改或删除）
+	if existing.IsSystem == 1 {
+		return &permissionv1.UpdateRoleResponse{
+			Base: responsex.NewBaseRespWithError(60004, "系统角色不可修改"),
 		}, nil
 	}
 
@@ -89,22 +98,35 @@ func (l *UpdateRoleLogic) UpdateRole(in *permissionv1.UpdateRoleRequest) (*permi
 
 // invalidateRoleCache 失效所有持有该角色的用户权限缓存
 func (l *UpdateRoleLogic) invalidateRoleCache(roleId int64) {
-	// 查询所有持有该角色的用户 ID，失效其缓存
-	// 由于没有反向查询方法，这里使用 Redis 的 key pattern 删除
-	// 实际项目中可以考虑维护 role→users 的映射
-	keys, err := l.svcCtx.RedisClient.Keys(l.ctx, "perm:user:*").Result()
+	// 查询所有持有该角色的用户 ID
+	userRoles, err := l.svcCtx.UserRoleModel.FindByRoleId(l.ctx, roleId)
 	if err != nil {
-		l.Errorf("invalidateRoleCache: keys failed: %v", err)
+		l.Errorf("invalidateRoleCache: find user roles failed: %v", err)
 		return
 	}
-	for _, key := range keys {
-		l.svcCtx.RedisClient.Del(l.ctx, key)
+
+	// 失效每个用户的权限缓存
+	deletedCount := 0
+	userSet := make(map[int64]bool)
+	for _, ur := range userRoles {
+		if userSet[ur.UserId] {
+			continue // 同一用户只删除一次
+		}
+		userSet[ur.UserId] = true
+
+		// 删除该用户的权限缓存和数据范围缓存
+		keys := []string{
+			fmt.Sprintf("perm:user:%d", ur.UserId),
+			fmt.Sprintf("perm:scopes:%d:community", ur.UserId),
+			fmt.Sprintf("perm:scopes:%d:building", ur.UserId),
+			fmt.Sprintf("perm:scopes:%d:unit", ur.UserId),
+			fmt.Sprintf("perm:scopes:%d:grid", ur.UserId),
+		}
+		if deleted, err := l.svcCtx.RedisClient.Del(l.ctx, keys...).Result(); err == nil {
+			deletedCount += int(deleted)
+		}
 	}
-	// 同时失效 scope 缓存
-	scopeKeys, _ := l.svcCtx.RedisClient.Keys(l.ctx, "perm:scopes:*").Result()
-	for _, key := range scopeKeys {
-		l.svcCtx.RedisClient.Del(l.ctx, key)
-	}
-	l.Infof("invalidateRoleCache: invalidated %d perm keys + %d scope keys for role %d",
-		len(keys), len(scopeKeys), roleId)
+
+	l.Infof("invalidateRoleCache: invalidated %d users (%d keys) for role %d",
+		len(userSet), deletedCount, roleId)
 }

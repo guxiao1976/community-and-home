@@ -10,7 +10,7 @@
 
     <el-card>
       <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="ID" width="200" />
         <el-table-column prop="name" label="角色名称" />
         <el-table-column prop="code" label="角色编码" />
         <el-table-column prop="description" label="描述" show-overflow-tooltip />
@@ -26,11 +26,12 @@
             <el-tag v-else type="danger" size="small">禁用</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column prop="created_at" label="创建时间" width="180" />
+        <el-table-column label="操作" width="380" fixed="right">
           <template #default="{ row }">
             <el-button v-permission="'role:update'" link type="primary" @click="handleEdit(row)">编辑</el-button>
             <el-button v-permission="'role:permission'" link type="primary" @click="handlePermissions(row)">权限配置</el-button>
+            <el-button link type="primary" @click="handleRoleUsers(row)">查看用户</el-button>
             <el-button
               v-permission="'role:delete'"
               link
@@ -100,6 +101,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { Plus } from '@element-plus/icons-vue';
@@ -151,8 +153,8 @@ const loadRoles = async () => {
       page: pagination.page,
       page_size: pagination.pageSize
     });
-    tableData.value = response?.list || [];
-    pagination.total = response?.total || 0;
+    tableData.value = response?.roles || [];
+    pagination.total = response?.page?.total || 0;
   } catch (error) {
     ElMessage.error('加载角色列表失败');
   } finally {
@@ -177,6 +179,10 @@ const handleEdit = (row: Role) => {
 
 const handlePermissions = (row: Role) => {
   router.push(`/roles/${row.id}/permissions`);
+};
+
+const handleRoleUsers = (row: Role) => {
+  router.push(`/roles/${row.id}/users`);
 };
 
 const handleDelete = async (row: Role) => {

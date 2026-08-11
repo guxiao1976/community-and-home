@@ -1,10 +1,10 @@
 import type { RouteRecordRaw } from 'vue-router';
 import { dashboardModule } from './modules/dashboard.config';
-import { masterdataModule } from './modules/masterdata.config';
-import { identityModule } from './modules/identity.config';
-import { moderationModule } from './modules/moderation.config';
+import { userPermissionModule } from './modules/user-permission.config';
+import { communityModule } from './modules/community.config';
+import { reviewCenterModule } from './modules/review-center.config';
 import { aimodelModule } from './modules/aimodel.config';
-import { monitoringModule } from './modules/monitoring.config';
+import { systemOpsModule } from './modules/system-ops.config';
 
 /**
  * 聚合所有模块的路由配置
@@ -12,11 +12,11 @@ import { monitoringModule } from './modules/monitoring.config';
 export function getModuleRoutes(): RouteRecordRaw[] {
   const modules = [
     dashboardModule,
-    masterdataModule,
-    identityModule,
-    moderationModule,
+    userPermissionModule,
+    communityModule,
+    reviewCenterModule,
     aimodelModule,
-    monitoringModule
+    systemOpsModule
   ];
 
   return modules.flatMap(module => module.routes);

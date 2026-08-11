@@ -12,6 +12,7 @@ import (
 	"github.com/guxiao1976/community-permission/api/internal/svc"
 
 	"github.com/guxiao1976/community-common/v2/pkg/configx"
+	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	"github.com/zeromicro/go-zero/rest"
 )
 
@@ -22,6 +23,12 @@ func main() {
 
 	var c config.Config
 	configx.MustLoad(*configFile, &c)
+
+	if c.AesKey != "" {
+		if err := crypto.InitAES(c.AesKey); err != nil {
+			panic(fmt.Sprintf("InitAES failed: %v", err))
+		}
+	}
 
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()

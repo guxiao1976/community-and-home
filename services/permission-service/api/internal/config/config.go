@@ -13,4 +13,6 @@ type Config struct {
 		AccessExpire int64
 	}
 	PermissionRpc zrpc.RpcClientConf
+	DataSource    string // MySQL DSN（供 auto-discover 等管理功能使用）
+	AesKey        string `json:",optional"` // AES 密钥（用于手机号解密）
 }

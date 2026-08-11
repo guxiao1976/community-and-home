@@ -20,8 +20,8 @@ type UserMembershipRole struct {
 	VerfStatus   int64         `db:"verf_status"`
 	VerifiedAt   sql.NullTime  `db:"verified_at"`
 	ExpiresAt    sql.NullTime  `db:"expires_at"`
-	CreatedTime  time.Time     `db:"created_time"`
-	UpdatedTime  time.Time     `db:"updated_time"`
+	CreatedTime  time.Time     `db:"created_at"`
+	UpdatedTime  time.Time     `db:"updated_at"`
 }
 
 type UserMembershipRoleModel interface {
@@ -49,12 +49,12 @@ func NewUserMembershipRoleModel(conn sqlx.SqlConn) UserMembershipRoleModel {
 }
 
 func (m *defaultUserMembershipRoleModel) Insert(ctx context.Context, data *UserMembershipRole) (sql.Result, error) {
-	query := fmt.Sprintf(`INSERT INTO %s (id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_time, updated_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
+	query := fmt.Sprintf(`INSERT INTO %s (id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
 	return m.conn.ExecCtx(ctx, query, data.Id, data.UserId, data.MembershipId, data.CommunityId, data.RoleCode, data.VerfStatus, data.VerifiedAt, data.ExpiresAt, data.CreatedTime, data.UpdatedTime)
 }
 
 func (m *defaultUserMembershipRoleModel) FindOne(ctx context.Context, id int64) (*UserMembershipRole, error) {
-	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_time, updated_time FROM %s WHERE id = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_at, updated_at FROM %s WHERE id = ?`, m.table)
 	var resp UserMembershipRole
 	err := m.conn.QueryRowCtx(ctx, &resp, query, id)
 	if err != nil {
@@ -67,7 +67,7 @@ func (m *defaultUserMembershipRoleModel) FindOne(ctx context.Context, id int64) 
 }
 
 func (m *defaultUserMembershipRoleModel) FindByMembershipAndRole(ctx context.Context, membershipId int64, roleCode string) (*UserMembershipRole, error) {
-	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_time, updated_time FROM %s WHERE membership_id = ? AND role_code = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_at, updated_at FROM %s WHERE membership_id = ? AND role_code = ?`, m.table)
 	var resp UserMembershipRole
 	err := m.conn.QueryRowCtx(ctx, &resp, query, membershipId, roleCode)
 	if err != nil {
@@ -80,7 +80,7 @@ func (m *defaultUserMembershipRoleModel) FindByMembershipAndRole(ctx context.Con
 }
 
 func (m *defaultUserMembershipRoleModel) FindByUserAndCommunity(ctx context.Context, userId, communityId int64) ([]*UserMembershipRole, error) {
-	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_time, updated_time FROM %s WHERE user_id = ? AND community_id = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_at, updated_at FROM %s WHERE user_id = ? AND community_id = ?`, m.table)
 	var resp []*UserMembershipRole
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, userId, communityId)
 	if err != nil {
@@ -90,7 +90,7 @@ func (m *defaultUserMembershipRoleModel) FindByUserAndCommunity(ctx context.Cont
 }
 
 func (m *defaultUserMembershipRoleModel) FindByUserId(ctx context.Context, userId int64) ([]*UserMembershipRole, error) {
-	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_time, updated_time FROM %s WHERE user_id = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_at, updated_at FROM %s WHERE user_id = ?`, m.table)
 	var resp []*UserMembershipRole
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, userId)
 	if err != nil {
@@ -119,7 +119,7 @@ func (m *defaultUserMembershipRoleModel) FindApprovedByUser(ctx context.Context,
 		where += fmt.Sprintf(" AND role_code IN (%s)", strings.Join(placeholders, ","))
 	}
 
-	query := fmt.Sprintf("SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_time, updated_time FROM %s %s", m.table, where)
+	query := fmt.Sprintf("SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_at, updated_at FROM %s %s", m.table, where)
 	var resp []*UserMembershipRole
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, args...)
 	if err != nil {
@@ -129,7 +129,7 @@ func (m *defaultUserMembershipRoleModel) FindApprovedByUser(ctx context.Context,
 }
 
 func (m *defaultUserMembershipRoleModel) FindExpiredRoles(ctx context.Context) ([]*UserMembershipRole, error) {
-	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_time, updated_time FROM %s WHERE verf_status = ? AND expires_at IS NOT NULL AND expires_at < NOW()`, m.table)
+	query := fmt.Sprintf(`SELECT id, user_id, membership_id, community_id, role_code, verf_status, verified_at, expires_at, created_at, updated_at FROM %s WHERE verf_status = ? AND expires_at IS NOT NULL AND expires_at < NOW()`, m.table)
 	var resp []*UserMembershipRole
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, RoleVerfStatusApproved)
 	if err != nil {
@@ -139,13 +139,13 @@ func (m *defaultUserMembershipRoleModel) FindExpiredRoles(ctx context.Context) (
 }
 
 func (m *defaultUserMembershipRoleModel) UpdateVerfStatus(ctx context.Context, id int64, verfStatus int64, verifiedAt, expiresAt sql.NullTime) error {
-	query := fmt.Sprintf(`UPDATE %s SET verf_status=?, verified_at=?, expires_at=?, updated_time=? WHERE id=?`, m.table)
+	query := fmt.Sprintf(`UPDATE %s SET verf_status=?, verified_at=?, expires_at=?, updated_at=? WHERE id=?`, m.table)
 	_, err := m.conn.ExecCtx(ctx, query, verfStatus, verifiedAt, expiresAt, time.Now(), id)
 	return err
 }
 
 func (m *defaultUserMembershipRoleModel) UpdateVerfStatusOnly(ctx context.Context, id int64, verfStatus int64) error {
-	query := fmt.Sprintf(`UPDATE %s SET verf_status=?, updated_time=? WHERE id=?`, m.table)
+	query := fmt.Sprintf(`UPDATE %s SET verf_status=?, updated_at=? WHERE id=?`, m.table)
 	_, err := m.conn.ExecCtx(ctx, query, verfStatus, time.Now(), id)
 	return err
 }

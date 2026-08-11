@@ -8,22 +8,13 @@
         </div>
       </template>
 
-      <!-- Filters -->
+      <!-- Filters: 手机号精确匹配（加密后查），昵称关键字模糊搜索 -->
       <el-form :inline="true" :model="filterForm" class="filter-form">
-        <el-form-item label="手机号">
-          <el-input v-model="filterForm.phone" placeholder="请输入手机号" clearable />
-        </el-form-item>
-        <el-form-item label="昵称">
-          <el-input v-model="filterForm.nickname" placeholder="请输入昵称" clearable />
-        </el-form-item>
-        <el-form-item label="用户类型">
-          <el-select v-model="filterForm.user_type" placeholder="请选择" clearable style="width: 150px">
-            <el-option label="普通用户" :value="0" />
-            <el-option label="管理员" :value="1" />
-          </el-select>
+        <el-form-item label="手机号/昵称">
+          <el-input v-model="filterForm.keyword" placeholder="11位手机号精确查，其他按昵称模糊查" clearable style="width: 260px" />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="filterForm.status" placeholder="请选择" clearable style="width: 150px">
+          <el-select v-model="filterForm.status" placeholder="请选择" clearable style="width: 120px">
             <el-option label="启用" :value="1" />
             <el-option label="禁用" :value="2" />
           </el-select>
@@ -36,21 +27,13 @@
 
       <!-- Table -->
       <el-table :data="userStore.users" v-loading="userStore.loading" border stripe>
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="ID" width="200" />
         <el-table-column prop="phone" label="手机号" width="140">
           <template #default="{ row }">
             {{ maskPhone(row.phone) }}
           </template>
         </el-table-column>
         <el-table-column prop="nickname" label="昵称" />
-        <el-table-column prop="user_type" label="用户类型" width="120">
-          <template #default="{ row }">
-            <el-tag :type="row.user_type === 1 ? 'warning' : 'info'">
-              {{ row.user_type === 1 ? '管理员' : '普通用户' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="scope" label="行政范围" width="200" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">
@@ -58,17 +41,24 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
+        <el-table-column label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ formatTime(row.created_at) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button v-permission="'user:detail'" link type="primary" size="small" @click="handleView(row.id)">
+            <el-button v-permission="'user:read'" link type="primary" size="small" @click="handleView(row.id)">
               查看
             </el-button>
             <el-button v-permission="'user:update'" link type="primary" size="small" @click="handleEdit(row.id)">
               编辑
             </el-button>
+            <el-button v-permission="'user:assign-role'" link type="primary" size="small" @click="handleAssignRole(row.id)">
+              分配角色
+            </el-button>
             <el-button
-              v-permission="'user:status'"
+              v-permission="'user:update'"
               link
               :type="row.status === 1 ? 'warning' : 'success'"
               size="small"
@@ -96,6 +86,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -107,9 +98,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const filterForm = ref({
-  phone: '',
-  nickname: '',
-  user_type: undefined as number | undefined,
+  keyword: '',
   status: undefined as number | undefined
 })
 
@@ -119,15 +108,31 @@ const maskPhone = (phone: string) => {
   return phone.substring(0, 3) + '****' + phone.substring(7)
 }
 
+// Format Unix timestamp to readable date
+const formatTime = (ts: string | number) => {
+  if (!ts) return '-'
+  const d = new Date(Number(ts) * 1000)
+  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+// 判断是否为手机号格式
+const isPhone = (s: string) => /^1[3-9]\d{9}$/.test(s)
+
 const loadUsers = async () => {
   try {
     userStore.setLoading(true)
-    const params = {
+    const keyword = filterForm.value.keyword?.trim() || ''
+    const params: Record<string, any> = {
       ...userStore.filters,
-      ...(filterForm.value.phone && { phone: filterForm.value.phone }),
-      ...(filterForm.value.nickname && { nickname: filterForm.value.nickname }),
-      ...(filterForm.value.user_type !== undefined && { user_type: filterForm.value.user_type }),
       ...(filterForm.value.status !== undefined && { status: filterForm.value.status })
+    }
+    // 11 位数字 → phone 精确查（后端加密后 phone = ?）；其他 → keyword 昵称模糊查
+    if (keyword) {
+      if (isPhone(keyword)) {
+        params.phone = keyword
+      } else {
+        params.keyword = keyword
+      }
     }
     const response = await getUsers(params)
     userStore.setUsers(response.list, response.total)
@@ -146,9 +151,7 @@ const handleFilter = () => {
 
 const handleResetFilter = () => {
   filterForm.value = {
-    phone: '',
-    nickname: '',
-    user_type: undefined,
+    keyword: '',
     status: undefined
   }
   userStore.resetFilters()
@@ -165,6 +168,10 @@ const handleView = (id: string) => {
 
 const handleEdit = (id: string) => {
   router.push({ name: 'UserEdit', params: { id } })
+}
+
+const handleAssignRole = (id: string) => {
+  router.push({ name: 'UserRoles', params: { id } })
 }
 
 const handleToggleStatus = async (user: User) => {

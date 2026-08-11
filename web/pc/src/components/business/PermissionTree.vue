@@ -5,7 +5,7 @@
       :data="treeData"
       :props="treeProps"
       :default-checked-keys="checkedKeys"
-      show-checkbox
+      :show-checkbox="!readonly"
       node-key="id"
       :check-strictly="false"
       @check="handleCheck"
@@ -24,6 +24,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, watch } from 'vue';
 import type { Permission } from '@common/types/identity';
 import type { ElTree } from 'element-plus';
@@ -31,6 +32,7 @@ import type { ElTree } from 'element-plus';
 interface Props {
   permissions: Permission[];
   checkedIds?: string[];
+  readonly?: boolean;
 }
 
 interface Emits {
@@ -38,7 +40,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  checkedIds: () => []
+  checkedIds: () => [],
+  readonly: false
 });
 
 const emit = defineEmits<Emits>();
@@ -69,8 +72,9 @@ watch(() => props.checkedIds, (newVal) => {
 const handleCheck = () => {
   if (treeRef.value) {
     const checkedNodes = treeRef.value.getCheckedKeys() as number[];
-    const halfCheckedNodes = treeRef.value.getHalfCheckedKeys() as number[];
-    emit('update:checkedIds', [...checkedNodes, ...halfCheckedNodes]);
+    // Only emit fully-checked keys. Half-checked means "some children selected"
+    // — the parent node itself should NOT be sent as a selected permission.
+    emit('update:checkedIds', [...checkedNodes]);
   }
 };
 

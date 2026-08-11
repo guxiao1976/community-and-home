@@ -20,7 +20,7 @@ import (
 type mockSQLResult struct{}
 
 func (m mockSQLResult) LastInsertId() (int64, error) { return 1, nil }
-func (m mockSQLResult) RowsAffected() (int64, error)  { return 1, nil }
+func (m mockSQLResult) RowsAffected() (int64, error) { return 1, nil }
 
 var _ sql.Result = mockSQLResult{}
 
@@ -63,14 +63,20 @@ func (m *mockUserBaseModel) FindByIds(ctx context.Context, ids []int64) ([]*mode
 	}
 	return r, nil
 }
-func (m *mockUserBaseModel) FindPage(ctx context.Context, kw string, status *int64, page, size int32) ([]*model.UserBase, int64, error) {
+func (m *mockUserBaseModel) FindPage(ctx context.Context, kw string, encryptedPhone string, status *int64, page, size int32) ([]*model.UserBase, int64, error) {
 	var r []*model.UserBase
 	for _, u := range m.data {
+		if encryptedPhone != "" && u.Phone != encryptedPhone {
+			continue
+		}
 		r = append(r, u)
 	}
 	return r, int64(len(r)), nil
 }
-func (m *mockUserBaseModel) Update(ctx context.Context, u *model.UserBase) error { m.data[u.Id] = u; return nil }
+func (m *mockUserBaseModel) Update(ctx context.Context, u *model.UserBase) error {
+	m.data[u.Id] = u
+	return nil
+}
 func (m *mockUserBaseModel) SoftDelete(ctx context.Context, id int64) error {
 	if u, ok := m.data[id]; ok {
 		u.DeleteTime = sql.NullTime{Time: time.Now(), Valid: true}
@@ -314,7 +320,9 @@ type mockCertModel struct {
 	data map[int64]*model.UserCertification
 }
 
-func newMockCertModel() *mockCertModel { return &mockCertModel{data: make(map[int64]*model.UserCertification)} }
+func newMockCertModel() *mockCertModel {
+	return &mockCertModel{data: make(map[int64]*model.UserCertification)}
+}
 
 func (m *mockCertModel) Insert(ctx context.Context, d *model.UserCertification) (sql.Result, error) {
 	m.data[d.Id] = d
@@ -427,21 +435,31 @@ func testSvc(t *testing.T) *svc.ServiceContext {
 	t.Helper()
 	require.NoError(t, crypto.InitAES(testAESKey))
 	return &svc.ServiceContext{
-		UserBaseModel:                 newMockUserBaseModel(),
-		UserCommunityMembershipModel:  newMockMembershipModel(),
-		UserMembershipRoleModel:       newMockRoleModel(),
-		UserCertificationModel:        newMockCertModel(),
-		UserResidenceModel:            newMockResidenceModel(),
-		Redis:                         nil, // nil = cache bypass
+		UserBaseModel:                newMockUserBaseModel(),
+		UserCommunityMembershipModel: newMockMembershipModel(),
+		UserMembershipRoleModel:      newMockRoleModel(),
+		UserCertificationModel:       newMockCertModel(),
+		UserResidenceModel:           newMockResidenceModel(),
+		Redis:                        nil, // nil = cache bypass
 	}
 }
 
 // cast helpers — return typed mock from svcCtx for direct data access
-func userBaseModel(s *svc.ServiceContext) *mockUserBaseModel       { return s.UserBaseModel.(*mockUserBaseModel) }
-func membershipModel(s *svc.ServiceContext) *mockMembershipModel   { return s.UserCommunityMembershipModel.(*mockMembershipModel) }
-func roleModel(s *svc.ServiceContext) *mockRoleModel             { return s.UserMembershipRoleModel.(*mockRoleModel) }
-func certModel(s *svc.ServiceContext) *mockCertModel             { return s.UserCertificationModel.(*mockCertModel) }
-func residenceModel(s *svc.ServiceContext) *mockResidenceModel   { return s.UserResidenceModel.(*mockResidenceModel) }
+func userBaseModel(s *svc.ServiceContext) *mockUserBaseModel {
+	return s.UserBaseModel.(*mockUserBaseModel)
+}
+func membershipModel(s *svc.ServiceContext) *mockMembershipModel {
+	return s.UserCommunityMembershipModel.(*mockMembershipModel)
+}
+func roleModel(s *svc.ServiceContext) *mockRoleModel {
+	return s.UserMembershipRoleModel.(*mockRoleModel)
+}
+func certModel(s *svc.ServiceContext) *mockCertModel {
+	return s.UserCertificationModel.(*mockCertModel)
+}
+func residenceModel(s *svc.ServiceContext) *mockResidenceModel {
+	return s.UserResidenceModel.(*mockResidenceModel)
+}
 
 // createTestUser inserts a user into the mock store.
 func createTestUser(t *testing.T, m *mockUserBaseModel, id int64, phone string) *model.UserBase {

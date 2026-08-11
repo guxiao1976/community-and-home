@@ -1,22 +1,25 @@
 import type { MenuItemConfig } from './types';
 import { dashboardModule } from './modules/dashboard.config';
-import { masterdataModule } from './modules/masterdata.config';
-import { identityModule } from './modules/identity.config';
-import { moderationModule } from './modules/moderation.config';
+import { userPermissionModule } from './modules/user-permission.config';
+import { communityModule } from './modules/community.config';
+import { reviewCenterModule } from './modules/review-center.config';
 import { aimodelModule } from './modules/aimodel.config';
-import { monitoringModule } from './modules/monitoring.config';
+import { systemOpsModule } from './modules/system-ops.config';
 
 /**
  * 聚合所有模块的菜单配置
+ *
+ * 菜单结构（按 RBAC 理念重构）：
+ *   仪表板 → 用户与权限 → 社区管理 → 审核中心 → AI模型管理 → 系统运维
  */
 export function getMenuItems(): MenuItemConfig[] {
   const modules = [
     dashboardModule,
-    masterdataModule,
-    identityModule,
-    moderationModule,
+    userPermissionModule,
+    communityModule,
+    reviewCenterModule,
     aimodelModule,
-    monitoringModule
+    systemOpsModule
   ];
 
   return modules.map(module => {

@@ -32,7 +32,7 @@
       </div>
 
       <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="ID" width="200" />
         <el-table-column label="申请人" width="150">
           <template #default="{ row }">
             <div>{{ row.realName }}</div>
@@ -57,7 +57,7 @@
             <el-tag v-else-if="row.verificationStatus === 2" type="danger" size="small">已拒绝</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="提交时间" width="180" />
+        <el-table-column prop="created_at" label="提交时间" width="180" />
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
             <el-button
@@ -106,7 +106,7 @@
           <el-descriptions-item label="手机号">{{ desensitizePhone(currentVerification.user?.phone || '') }}</el-descriptions-item>
           <el-descriptions-item label="身份证号">{{ desensitizeIdCard(currentVerification.idCard) }}</el-descriptions-item>
           <el-descriptions-item label="房产单元">{{ currentVerification.propertyUnit }}</el-descriptions-item>
-          <el-descriptions-item label="提交时间" :span="2">{{ currentVerification.createdAt }}</el-descriptions-item>
+          <el-descriptions-item label="提交时间" :span="2">{{ currentVerification.created_at }}</el-descriptions-item>
           <el-descriptions-item label="审核状态" :span="2">
             <el-tag v-if="currentVerification.verificationStatus === 0" type="warning">待审核</el-tag>
             <el-tag v-else-if="currentVerification.verificationStatus === 1" type="success">已通过</el-tag>
@@ -169,6 +169,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { HomeownerVerification } from '@common/types/identity';

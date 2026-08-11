@@ -5,9 +5,10 @@ import (
 
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/crypto"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-user/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 )
 
 type ListUsersLogic struct {
@@ -52,6 +53,15 @@ func (l *ListUsersLogic) ListUsers(in *userv1.ListUsersRequest) (*userv1.ListUse
 	if in.Keyword != nil {
 		keyword = *in.Keyword
 	}
+	encryptedPhone := ""
+	if in.Phone != nil && *in.Phone != "" {
+		enc, err := crypto.AESEncrypt(*in.Phone)
+		if err != nil {
+			l.Errorf("AES encrypt phone failed: %v", err)
+			return nil, err
+		}
+		encryptedPhone = enc
+	}
 
 	var status *int64
 	if in.Status != nil {
@@ -59,7 +69,7 @@ func (l *ListUsersLogic) ListUsers(in *userv1.ListUsersRequest) (*userv1.ListUse
 		status = &s
 	}
 
-	users, total, err := l.svcCtx.UserBaseModel.FindPage(l.ctx, keyword, status, page, pageSize)
+	users, total, err := l.svcCtx.UserBaseModel.FindPage(l.ctx, keyword, encryptedPhone, status, page, pageSize)
 	if err != nil {
 		l.Errorf("list users error: %v", err)
 		return nil, err

@@ -41,13 +41,6 @@
           />
         </el-form-item>
 
-        <el-form-item label="用户类型" prop="user_type">
-          <el-select v-model="formData.user_type" placeholder="请选择用户类型">
-            <el-option label="普通用户" :value="0" />
-            <el-option label="管理员" :value="1" />
-          </el-select>
-        </el-form-item>
-
         <el-form-item label="状态" prop="status" v-if="isEdit">
           <el-select v-model="formData.status" placeholder="请选择状态">
             <el-option label="启用" :value="1" />
@@ -55,14 +48,8 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="行政范围" prop="scope" v-if="formData.user_type === 1">
-          <el-input
-            v-model="formData.scope"
-            placeholder="例如: /110000/110100 (留空表示全国)"
-          />
-          <div class="form-tip">
-            行政范围格式：/省代码/市代码/区代码，留空表示全国范围
-          </div>
+        <el-form-item label="创建时间" v-if="isEdit && formData.created_at">
+          <span>{{ formatTime(formData.created_at) }}</span>
         </el-form-item>
 
         <el-form-item>
@@ -77,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
@@ -98,9 +86,8 @@ const formData = reactive({
   phone: '',
   password: '',
   nickname: '',
-  user_type: 0,
   status: 1,
-  scope: ''
+  created_at: '' as string | number
 })
 
 // Phone validation
@@ -132,7 +119,6 @@ const rules: FormRules = {
     { required: true, message: '请输入昵称', trigger: 'blur' },
     { min: 2, max: 50, message: '昵称长度为2-50个字符', trigger: 'blur' }
   ],
-  user_type: [{ required: true, message: '请选择用户类型', trigger: 'change' }]
 }
 
 const loadUser = async () => {
@@ -142,9 +128,8 @@ const loadUser = async () => {
     const user = await getUserById(userId.value)
     formData.phone = user.phone
     formData.nickname = user.nickname || ''
-    formData.user_type = user.userType
     formData.status = user.status
-    formData.scope = user.scope || ''
+    formData.created_at = user.created_at
   } catch (error) {
     ElMessage.error('加载用户信息失败')
     console.error('Load user error:', error)
@@ -162,18 +147,14 @@ const handleSubmit = async () => {
     if (isEdit.value) {
       await updateUser(userId.value!, {
         nickname: formData.nickname,
-        user_type: formData.user_type,
-        status: formData.status,
-        scope: formData.user_type === 1 ? formData.scope : undefined
+        status: formData.status
       })
       ElMessage.success('用户更新成功')
     } else {
       await createUser({
         phone: formData.phone,
         password: formData.password,
-        nickname: formData.nickname,
-        user_type: formData.user_type,
-        scope: formData.user_type === 1 ? formData.scope : undefined
+        nickname: formData.nickname
       })
       ElMessage.success('用户创建成功')
     }
@@ -181,12 +162,23 @@ const handleSubmit = async () => {
     handleBack()
   } catch (error: any) {
     if (error !== false) {
-      ElMessage.error(isEdit.value ? '用户更新失败' : '用户创建失败')
+      const msg = error?.message || ''
+      if (msg.includes('已注册') || msg.includes('10002')) {
+        ElMessage.error('该手机号已注册，请更换')
+      } else {
+        ElMessage.error(isEdit.value ? '用户更新失败' : '用户创建失败')
+      }
       console.error('Submit user error:', error)
     }
   } finally {
     submitting.value = false
   }
+}
+
+const formatTime = (ts: string | number) => {
+  if (!ts) return '-'
+  const d = new Date(Number(ts) * 1000)
+  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
 const handleBack = () => {

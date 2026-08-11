@@ -8,6 +8,7 @@ type ListUsersReq struct {
 	Page     int32  `form:"page,optional,default=1"`
 	PageSize int32  `form:"page_size,optional,default=10"`
 	Keyword  string `form:"keyword,optional"`
+	Phone    string `form:"phone,optional"`
 	Status   *int32 `form:"status,optional"`
 }
 
@@ -106,17 +107,17 @@ type LeaveCommunityReq struct {
 type LeaveCommunityResp struct{}
 
 type CommunityMembership struct {
-	Id          int64  `json:"id,string"`
-	UserId      int64  `json:"user_id,string"`
-	CommunityId int64  `json:"community_id,string"`
-	BindStatus  int32  `json:"bind_status"`
-	JoinTime    int64  `json:"join_time"`
-	LeaveTime   int64  `json:"leave_time"`
-	CreatedAt   int64  `json:"created_at"`
-	UpdatedAt   int64  `json:"updated_at"`
-	Building    int    `json:"building"` // 楼号
-	Unit        int    `json:"unit"`     // 单元号
-	Room        int    `json:"room"`     // 房号
+	Id          int64 `json:"id,string"`
+	UserId      int64 `json:"user_id,string"`
+	CommunityId int64 `json:"community_id,string"`
+	BindStatus  int32 `json:"bind_status"`
+	JoinTime    int64 `json:"join_time"`
+	LeaveTime   int64 `json:"leave_time"`
+	CreatedAt   int64 `json:"created_at"`
+	UpdatedAt   int64 `json:"updated_at"`
+	Building    int   `json:"building"` // 楼号
+	Unit        int   `json:"unit"`     // 单元号
+	Room        int   `json:"room"`     // 房号
 }
 
 // =============================================================================

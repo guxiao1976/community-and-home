@@ -325,8 +325,8 @@ CREATE TABLE auth_credential (
     identity_type   VARCHAR(20) NOT NULL COMMENT '登录方式：phone / sms / wechat',
     identifier      VARCHAR(255) NOT NULL COMMENT '标识符（AES 加密的手机号）',
     credential      VARCHAR(255) NOT NULL COMMENT '凭证（bcrypt 密文）',
-    created_time    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_time    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE INDEX uk_identity (identity_type, identifier),
     INDEX idx_user (user_id)

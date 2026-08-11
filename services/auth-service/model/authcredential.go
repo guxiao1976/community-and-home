@@ -18,8 +18,8 @@ type AuthCredential struct {
 	IdentityType string    `db:"identity_type"` // phone / sms / wechat
 	Identifier   string    `db:"identifier"`    // RSA 密文存储的手机号
 	Credential   string    `db:"credential"`    // bcrypt 密文
-	CreatedTime  time.Time `db:"created_time"`
-	UpdatedTime  time.Time `db:"updated_time"`
+	CreatedTime  time.Time `db:"created_at"`
+	UpdatedTime  time.Time `db:"updated_at"`
 }
 
 type AuthCredentialModel interface {
@@ -80,7 +80,7 @@ func (m *defaultAuthCredentialModel) FindByUserId(ctx context.Context, userId in
 
 // UpdateCredential 更新密码（bcrypt 密文）
 func (m *defaultAuthCredentialModel) UpdateCredential(ctx context.Context, id int64, newCredential string) error {
-	query := fmt.Sprintf("update %s set credential = ?, updated_time = now() where id = ?", m.table)
+	query := fmt.Sprintf("update %s set credential = ?, updated_at = now() where id = ?", m.table)
 	_, err := m.conn.ExecCtx(ctx, query, newCredential, id)
 	return err
 }

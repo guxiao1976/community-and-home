@@ -1,8 +1,10 @@
 # Permission Service 设计方案
 
+> **全局 RBAC 设计**：本文件是服务视角的实现细节。权限模型的完整方案（跨服务链路、前端对接、验收清单）见 [`docs/specs/rbac-design.md`](../../../docs/specs/rbac-design.md)。
+
 ## 一、定位
 
-`permission-service` 是社区平台的 **RBAC 权限和数据范围引擎**。RPC-only 服务（无 REST 层），回答两个核心问题：
+`permission-service` 是社区平台的 **RBAC 权限和数据范围引擎**。RPC 提供权限检查核心能力，API 网关（REST）提供管理后台操作入口。回答两个核心问题：
 
 1. "这个用户能不能访问这个 API？"（`CheckPermission`）
 2. "这个用户能看到哪些数据？"（`GetDataScopes`）
@@ -13,7 +15,7 @@
 |------|------|
 | 权限检查 | `CheckPermission` — 合并用户所有角色的权限集，匹配 `action:api_path`，Redis 缓存 30 分钟 |
 | 数据范围 | `GetDataScopes` — 返回用户在指定 scope_type 下的所有 scope_id，供其他服务 GORM 拦截器做 WHERE IN 过滤 |
-| 角色管理 | 创建/更新/删除/列表/详情，系统角色（is_system=1）不可删除，天然拥有全部权限 |
+| 角色管理 | 创建/更新/删除/列表/详情，系统角色（is_system=1）不可删除，权限由配置决定 |
 | 权限树管理 | `ListPermissions` — 按 parent_id 构建层级树，前端菜单渲染 |
 | 角色分配/撤销 | `AssignRole` / `RevokeRole` — 用户-角色-数据范围三元组管理，Redis 缓存失效 |
 | 用户角色/权限查询 | GetUserRoles, GetUserPermissions, GetRolesByIds |
@@ -30,11 +32,12 @@
 ### 1.3 核心设计决策
 
 - **RBAC + 数据范围双层模型**：角色决定"能做什么"（权限码），scope_type+scope_id 决定"在哪做"（数据边界）
-- **系统角色天然拥有全部权限**：`is_system=1` 的角色不参与权限匹配，直接放行
+- **is_system 仅用于保护内置角色**：`is_system=1` 的角色不可删除、不可修改，权限由 `rel_role_permission` 配置决定，无特殊权限提升。如需全权限角色，通过管理后台创建自定义角色并勾选全部权限
 - **权限树结构**：`sys_permission.parent_id` 自引用，前端按 sort_order 渲染层级菜单
-- **Redis Set 缓存权限码**：key=`perm:user:{user_id}`，value=Set of `"action:api_path"`，TTL 30 分钟
-- **角色变更全量刷新缓存**：UpdateRole 用 KEYS 模式扫描失效所有 `perm:user:*` 和 `perm:scopes:*`
-- **不对外暴露 REST**：权限检查和数据范围查询仅通过 gRPC 供其他服务调用，管理后台通过 REST 网关操作角色/权限
+- **Redis Set 缓存权限码**：key=`perm:user:{user_id}`，value=Set of `"METHOD:/api/path"`（直接存 `sys_permission.path`，不再拼 METHOD 前缀），TTL 30 分钟
+- **角色变更精确失效缓存**：UpdateRole 查 FindByRoleId 拿到所有持有者，逐个 DEL `perm:user:{user_id}`（不用 KEYS 全扫）
+- **用户禁用拦截**：CheckPermission 先查 `user:disabled:{user_id}` 标记，命中即拒绝；标记由 user-service 状态变更时写入
+- **双入口**：权限检查/数据范围仅 gRPC 供其他服务调用；管理操作（角色/权限/用户角色）通过 REST API 网关，API 层挂 PermMiddleware 校验调用者权限
 
 ---
 
@@ -48,10 +51,10 @@
 | `role_code` | string UNIQUE | 全局唯一编码：owner, property_admin, community_admin, grid_worker |
 | `role_name` | string | 显示名称 |
 | `description` | string? | 描述 |
-| `is_system` | int64 | 1=系统角色（不可删除，继承全部权限） |
+| `is_system` | int64 | 1=系统角色（不可删除，权限由配置决定，无自动继承） |
 | `sort_order` | int64 | 排序 |
 | `status` | int64 | 1=启用 0=禁用 |
-| `delete_time` | datetime? | 软删除时间 |
+| `deleted_at` | datetime? | 软删除时间 |
 
 ### 2.2 `sys_permission` — 权限定义表
 
@@ -62,7 +65,7 @@
 | `name` | string | 权限名称 |
 | `code` | string UNIQUE | 权限码，如 `user:read`, `user:write` |
 | `type` | int64 | 1=菜单 2=按钮 3=API |
-| `path` | string? | API 路径（type=3 时），如 `/api/user/v1/GetUser` |
+| `path` | string? | API 路径（type=3 时），格式 `METHOD:/api/path`，如 `GET:/api/users` |
 | `sort_order` | int64 | 排序 |
 
 权限不可删除（当前实现）。只读 `status=1` 的记录。
@@ -104,15 +107,18 @@ sys_role (1) ──< (N) rel_user_role (N) >── (1) user (外部)
 ### 3.1 CheckPermission 权限检查
 
 ```
-1. Redis SISMEMBER perm:user:{user_id} "{action}:{api_path}"
+0. 查 user:disabled:{user_id} 标记（用户禁用拦截）
+   HIT → 返回 allowed=false
+1. Redis SISMEMBER perm:user:{user_id} "{path}"（path 含 METHOD 前缀，如 "GET:/api/users"）
 2. HIT → 返回 allowed=true（<1ms）
 3. MISS → DB 查询:
    a. FindActiveByUserId → 获取用户所有活跃角色
-   b. 若任一角色 is_system=1 → 直接返回 allowed=true
-   c. 收集所有 role_id → 查 rel_role_permission → 收集 permission_id
-   d. 查 sys_permission → SADD 到 Redis Set → EXPIRE 30min
-   e. 匹配 needle → 返回结果
+   b. 收集所有 role_id → 查 rel_role_permission → 收集 permission_id
+   c. 查 sys_permission → SADD 到 Redis Set → EXPIRE 30min
+   d. 匹配 needle → 返回结果
 ```
+
+> 全局设计见 `docs/specs/rbac-design.md` §3.1（完整请求流）、§3.2（缓存策略）
 
 ### 3.2 GetDataScopes 数据范围
 
@@ -129,19 +135,19 @@ sys_role (1) ──< (N) rel_user_role (N) >── (1) user (外部)
 UpdateRole:
   1. 更新 sys_role 字段
   2. DELETE + BatchInsert rel_role_permission（替换权限列表）
-  3. Redis KEYS perm:user:* → 批量 DEL
-  4. Redis KEYS perm:scopes:* → 批量 DEL
+  3. FindByRoleId(roleId) → 查所有持有该角色的 user_id
+  4. 逐个 DEL perm:user:{user_id} + perm:scopes:{user_id}:*（精确失效，不用 KEYS 全扫）
 ```
 
 ---
 
 ## 四、gRPC 接口
 
-Proto 定义：`api-proto/api/permission/v1/permission.proto`，共 13 个 RPC：
+Proto 定义：`api-proto/api/permission/v1/permission.proto`，共 14 个 RPC：
 
 | RPC | 鉴权 | 超时 | 说明 |
 |-----|------|------|------|
-| `CheckPermission` | INTERNAL | 500ms | 权限检查（最核心，高频调用） |
+| `CheckPermission` | INTERNAL | 500ms | 权限检查（最核心，高频调用，含用户禁用拦截） |
 | `GetDataScopes` | INTERNAL | 500ms | 获取数据范围 |
 | `GetUserPermissions` | INTERNAL | 500ms | 获取用户所有权限码 |
 | `GetRolesByIds` | INTERNAL | 1s | 批量角色查询 |
@@ -154,6 +160,7 @@ Proto 定义：`api-proto/api/permission/v1/permission.proto`，共 13 个 RPC�
 | `UpdateRole` | JWT | 3s | 更新角色（含权限替换） |
 | `DeleteRole` | JWT | 3s | 软删除（系统角色/已分配角色不可删） |
 | `GetRole` | JWT | 1s | 角色详情（含权限列表） |
+| `InvalidateUserCache` | INTERNAL | 500ms | 失效用户权限缓存（用户禁用/状态变更时调用） |
 
 ---
 
@@ -161,14 +168,13 @@ Proto 定义：`api-proto/api/permission/v1/permission.proto`，共 13 个 RPC�
 
 | Key Pattern | 类型 | TTL | 读 | 写 | 失效 |
 |-------------|------|:---:|------|------|------|
-| `perm:user:{user_id}` | Set | 30min | CheckPermission MISS 时 SADD | CheckPermission MISS 时 | AssignRole/RevokeRole DEL；UpdateRole KEYS 全刷 |
-| `perm:scopes:{user_id}:{scope_type}` | Set | 30min | ⚠️ 写后即返回（不从 Redis 读） | GetDataScopes | AssignRole DEL 4 scope keys；UpdateRole KEYS 全刷 |
+| `perm:user:{user_id}` | Set | 30min | CheckPermission MISS 时 SADD | CheckPermission MISS 时 | AssignRole/RevokeRole DEL；UpdateRole 精确 DEL 所有持有者；InvalidateUserCache |
+| `perm:scopes:{user_id}:{scope_type}` | Set | 30min | ⚠️ 写后即返回（不从 Redis 读） | GetDataScopes | AssignRole/InvalidateUserCache DEL |
+| `user:disabled:{user_id}` | String | 24h | CheckPermission 每次先查 | user-service 禁用时写 | user-service 启用时删 |
 
 ### 已知问题
 
-- `CheckPermission` 中 `Expire` 用了纳秒值但 go-redis v9 期望 `time.Duration`，TTL 可能未正确设置
 - `GetDataScopes` 缓存为 write-only（只写不读），目前没起到加速作用
-- `UpdateRole` 用 `KEYS *` 全量扫描，小规模部署可接受，大规模需改为 SCAN 或精确失效
 
 ---
 

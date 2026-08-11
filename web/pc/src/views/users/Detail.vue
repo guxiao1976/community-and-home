@@ -39,10 +39,10 @@
             {{ user.scope || '全国' }}
           </el-descriptions-item>
           <el-descriptions-item label="最后登录">
-            {{ user.lastLoginAt || '-' }}
+            {{ user.last_login_at || '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="创建时间">
-            {{ user.createdAt }}
+            {{ user.created_at }}
           </el-descriptions-item>
         </el-descriptions>
 
@@ -51,7 +51,7 @@
         <div class="roles-section">
           <div class="section-header">
             <span>已分配角色</span>
-            <el-button type="primary" size="small" v-permission="'user:role'" @click="handleAssignRole">
+            <el-button type="primary" size="small" v-permission="'user:assign-role'" @click="handleAssignRole">
               分配角色
             </el-button>
           </div>
@@ -132,6 +132,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'

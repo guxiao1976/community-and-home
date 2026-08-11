@@ -5,16 +5,16 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-permission/model"
 	"github.com/guxiao1976/community-permission/rpc/internal/svc"
-	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-// SEE: [[testing-discipline]] — CheckPermission 核心场景测试：系统角色直接放行、权限匹配、拒绝、缓存
+// SEE: [[testing-discipline]] — CheckPermission 核心场景测试：系统角色走 rel_role_permission（无短路）、普通用户权限匹配、拒绝、缓存
 
 // MockUserRoleModel mocks RelUserRoleModel interface
 type MockUserRoleModel struct {
@@ -63,6 +63,14 @@ func (m *MockUserRoleModel) BatchInsertUserRoles(ctx context.Context, records []
 func (m *MockUserRoleModel) CountByRoleId(ctx context.Context, roleId int64) (int64, error) {
 	args := m.Called(ctx, roleId)
 	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockUserRoleModel) FindByRoleId(ctx context.Context, roleId int64) ([]*model.RelUserRole, error) {
+	args := m.Called(ctx, roleId)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.RelUserRole), args.Error(1)
 }
 
 // MockRolePermissionModel mocks RelRolePermissionModel interface
@@ -138,19 +146,31 @@ func setupMiniRedis(t *testing.T) (*redis.Client, *miniredis.Miniredis) {
 	return client, mr
 }
 
-func TestCheckPermission_SystemRole_DirectAllow(t *testing.T) {
-	// SEE: [[testing-discipline]] — 系统角色（is_system=1）直接放行，不查询权限
+func TestCheckPermission_SystemRole_RespectsPermissions(t *testing.T) {
+	// SEE: [[testing-discipline]] — 系统角色（is_system=1）走 rel_role_permission 匹配，无特权短路
 	mockUserRole := new(MockUserRoleModel)
+	mockRolePerm := new(MockRolePermissionModel)
+	mockPerm := new(MockPermissionModel)
 	redisClient, _ := setupMiniRedis(t)
 
-	// Mock 用户拥有系统角色
+	// Mock 用户拥有系统角色（有对应权限 — 应放行）
 	mockUserRole.On("FindActiveByUserId", mock.Anything, int64(100)).Return([]*model.UserRoleWithInfo{
-		{RoleId: 1, RoleCode: "super_admin", IsSystem: 1},
+		{RoleId: 1, RoleCode: "owner", IsSystem: 1},
+	}, nil)
+
+	mockRolePerm.On("FindByRoleId", mock.Anything, int64(1)).Return([]*model.RelRolePermission{
+		{RoleId: 1, PermissionId: 111},
+	}, nil)
+
+	mockPerm.On("FindByIds", mock.Anything, []int64{111}).Return([]*model.SysPermission{
+		{Id: 111, Code: "user:read:list-api", Path: sql.NullString{String: "GET:/api/users", Valid: true}},
 	}, nil)
 
 	svcCtx := &svc.ServiceContext{
-		UserRoleModel: mockUserRole,
-		RedisClient:   redisClient,
+		UserRoleModel:       mockUserRole,
+		RolePermissionModel: mockRolePerm,
+		PermissionModel:     mockPerm,
+		RedisClient:         redisClient,
 	}
 
 	logic := NewCheckPermissionLogic(context.Background(), svcCtx)
@@ -161,8 +181,42 @@ func TestCheckPermission_SystemRole_DirectAllow(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-	assert.True(t, resp.Allowed, "系统角色应该直接放行")
+	assert.True(t, resp.Allowed, "系统角色拥有匹配权限应放行（不走短路，走rel_role_permission）")
 	mockUserRole.AssertExpectations(t)
+
+	// 第二个测试：系统角色无匹配权限 — 应拒绝
+	mockUserRole2 := new(MockUserRoleModel)
+	mockRolePerm2 := new(MockRolePermissionModel)
+	mockPerm2 := new(MockPermissionModel)
+
+	mockUserRole2.On("FindActiveByUserId", mock.Anything, int64(200)).Return([]*model.UserRoleWithInfo{
+		{RoleId: 4, RoleCode: "grid_worker", IsSystem: 1},
+	}, nil)
+
+	mockRolePerm2.On("FindByRoleId", mock.Anything, int64(4)).Return([]*model.RelRolePermission{
+		{RoleId: 4, PermissionId: 411},
+	}, nil)
+
+	mockPerm2.On("FindByIds", mock.Anything, []int64{411}).Return([]*model.SysPermission{
+		{Id: 411, Code: "community:read:list-api", Path: sql.NullString{String: "GET:/api/community/communities", Valid: true}},
+	}, nil)
+
+	svcCtx2 := &svc.ServiceContext{
+		UserRoleModel:       mockUserRole2,
+		RolePermissionModel: mockRolePerm2,
+		PermissionModel:     mockPerm2,
+		RedisClient:         redisClient,
+	}
+
+	logic2 := NewCheckPermissionLogic(context.Background(), svcCtx2)
+	resp2, err2 := logic2.CheckPermission(&permissionv1.CheckPermissionRequest{
+		UserId:  200,
+		Action:  "DELETE",
+		ApiPath: "/api/users",
+	})
+
+	assert.NoError(t, err2)
+	assert.False(t, resp2.Allowed, "系统角色无匹配权限应拒绝（证明不再短路）")
 }
 
 func TestCheckPermission_NormalUser_PermissionMatched(t *testing.T) {
@@ -182,9 +236,9 @@ func TestCheckPermission_NormalUser_PermissionMatched(t *testing.T) {
 		{RoleId: 2, PermissionId: 101},
 	}, nil)
 
-	// Mock 权限定义（匹配请求） - 注意代码第75行: code := fmt.Sprintf("%s:%s", in.Action, p.Path.String)
+	// Mock 权限定义（匹配请求） - path 含 METHOD 前缀
 	mockPerm.On("FindByIds", mock.Anything, []int64{101}).Return([]*model.SysPermission{
-		{Id: 101, Code: "user:read", Path: sql.NullString{String: "/api/users", Valid: true}},
+		{Id: 101, Code: "user:read", Path: sql.NullString{String: "GET:/api/users", Valid: true}},
 	}, nil)
 
 	svcCtx := &svc.ServiceContext{
@@ -251,7 +305,7 @@ func TestCheckPermission_NormalUser_PermissionDenied(t *testing.T) {
 func TestCheckPermission_CacheHit(t *testing.T) {
 	// SEE: [[testing-discipline]] — Redis 缓存命中，不查询数据库
 	redisClient, mr := setupMiniRedis(t)
-	
+
 	// 预先设置缓存
 	mr.SetAdd("perm:user:400", "GET:/api/users")
 

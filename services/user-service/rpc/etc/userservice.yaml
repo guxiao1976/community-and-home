@@ -24,6 +24,9 @@ MasterDataRpc:
       - 127.0.0.1:2379
     Key: masterdata.rpc
 
+# AES 密钥（用于加密手机号等敏感信息）
+AesKey: "${AES_KEY}"
+
 # AES 加密密钥（16字节）— 用于手机号加密存储，需与 Auth Service 一致
 AesKey: "${AES_KEY}"
 
@@ -36,3 +39,9 @@ ModerationRpc:
 ModerationRedis:
   Host: localhost:6379
   Pass: "${REDIS_PASSWORD}"
+
+PermissionRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: permission.rpc

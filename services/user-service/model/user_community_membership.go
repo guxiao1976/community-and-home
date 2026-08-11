@@ -17,8 +17,8 @@ type UserCommunityMembership struct {
 	BindStatus  int64        `db:"bind_status"`
 	JoinTime    time.Time    `db:"join_time"`
 	LeaveTime   sql.NullTime `db:"leave_time"`
-	CreatedTime time.Time    `db:"created_time"`
-	UpdatedTime time.Time    `db:"updated_time"`
+	CreatedTime time.Time    `db:"created_at"`
+	UpdatedTime time.Time    `db:"updated_at"`
 	Building    int          `db:"building"` // 楼号
 	Unit        int          `db:"unit"`     // 单元号
 	Room        int          `db:"room"`     // 房号
@@ -54,12 +54,12 @@ func NewUserCommunityMembershipModel(conn sqlx.SqlConn) UserCommunityMembershipM
 }
 
 func (m *defaultUserCommunityMembershipModel) Insert(ctx context.Context, data *UserCommunityMembership) (sql.Result, error) {
-	query := fmt.Sprintf(`INSERT INTO %s (id, user_id, community_id, bind_status, join_time, created_time, updated_time, building, unit, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
+	query := fmt.Sprintf(`INSERT INTO %s (id, user_id, community_id, bind_status, join_time, created_at, updated_at, building, unit, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, m.table)
 	return m.conn.ExecCtx(ctx, query, data.Id, data.UserId, data.CommunityId, data.BindStatus, data.JoinTime, data.CreatedTime, data.UpdatedTime, data.Building, data.Unit, data.Room)
 }
 
 func (m *defaultUserCommunityMembershipModel) FindOne(ctx context.Context, id int64) (*UserCommunityMembership, error) {
-	query := fmt.Sprintf(`SELECT id, user_id, community_id, bind_status, join_time, leave_time, created_time, updated_time, building, unit, room FROM %s WHERE id = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, user_id, community_id, bind_status, join_time, leave_time, created_at, updated_at, building, unit, room FROM %s WHERE id = ?`, m.table)
 	var resp UserCommunityMembership
 	err := m.conn.QueryRowCtx(ctx, &resp, query, id)
 	if err != nil {
@@ -72,7 +72,7 @@ func (m *defaultUserCommunityMembershipModel) FindOne(ctx context.Context, id in
 }
 
 func (m *defaultUserCommunityMembershipModel) FindByUserAndCommunity(ctx context.Context, userId, communityId int64) (*UserCommunityMembership, error) {
-	query := fmt.Sprintf(`SELECT id, user_id, community_id, bind_status, join_time, leave_time, created_time, updated_time, building, unit, room FROM %s WHERE user_id = ? AND community_id = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, user_id, community_id, bind_status, join_time, leave_time, created_at, updated_at, building, unit, room FROM %s WHERE user_id = ? AND community_id = ?`, m.table)
 	var resp UserCommunityMembership
 	err := m.conn.QueryRowCtx(ctx, &resp, query, userId, communityId)
 	if err != nil {
@@ -85,7 +85,7 @@ func (m *defaultUserCommunityMembershipModel) FindByUserAndCommunity(ctx context
 }
 
 func (m *defaultUserCommunityMembershipModel) FindByUserId(ctx context.Context, userId int64) ([]*UserCommunityMembership, error) {
-	query := fmt.Sprintf(`SELECT id, user_id, community_id, bind_status, join_time, leave_time, created_time, updated_time, building, unit, room FROM %s WHERE user_id = ? AND bind_status = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, user_id, community_id, bind_status, join_time, leave_time, created_at, updated_at, building, unit, room FROM %s WHERE user_id = ? AND bind_status = ?`, m.table)
 	var resp []*UserCommunityMembership
 	err := m.conn.QueryRowsCtx(ctx, &resp, query, userId, MembershipBindStatusActive)
 	if err != nil {
@@ -105,7 +105,7 @@ func (m *defaultUserCommunityMembershipModel) CountActiveByUserId(ctx context.Co
 }
 
 func (m *defaultUserCommunityMembershipModel) FindByAddress(ctx context.Context, communityId int64, building, unit, room int) (*UserCommunityMembership, error) {
-	query := fmt.Sprintf(`SELECT id, user_id, community_id, bind_status, join_time, leave_time, created_time, updated_time, building, unit, room FROM %s WHERE community_id = ? AND building = ? AND unit = ? AND room = ? AND bind_status = ?`, m.table)
+	query := fmt.Sprintf(`SELECT id, user_id, community_id, bind_status, join_time, leave_time, created_at, updated_at, building, unit, room FROM %s WHERE community_id = ? AND building = ? AND unit = ? AND room = ? AND bind_status = ?`, m.table)
 	var resp UserCommunityMembership
 	err := m.conn.QueryRowCtx(ctx, &resp, query, communityId, building, unit, room, MembershipBindStatusActive)
 	if err != nil {
@@ -118,13 +118,13 @@ func (m *defaultUserCommunityMembershipModel) FindByAddress(ctx context.Context,
 }
 
 func (m *defaultUserCommunityMembershipModel) UpdateAddress(ctx context.Context, id int64, building, unit, room int) error {
-	query := fmt.Sprintf(`UPDATE %s SET building=?, unit=?, room=?, updated_time=? WHERE id=?`, m.table)
+	query := fmt.Sprintf(`UPDATE %s SET building=?, unit=?, room=?, updated_at=? WHERE id=?`, m.table)
 	_, err := m.conn.ExecCtx(ctx, query, building, unit, room, time.Now(), id)
 	return err
 }
 
 func (m *defaultUserCommunityMembershipModel) UpdateBindStatus(ctx context.Context, id int64, bindStatus int64, leaveTime time.Time) error {
-	query := fmt.Sprintf(`UPDATE %s SET bind_status=?, leave_time=?, updated_time=? WHERE id=?`, m.table)
+	query := fmt.Sprintf(`UPDATE %s SET bind_status=?, leave_time=?, updated_at=? WHERE id=?`, m.table)
 	_, err := m.conn.ExecCtx(ctx, query, bindStatus, leaveTime, time.Now(), id)
 	return err
 }

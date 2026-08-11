@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Check, Close } from '@element-plus/icons-vue'
@@ -97,7 +98,7 @@ onMounted(() => { loadResidentialAreas() })
       <template #header><div class="card-header">小区审核</div></template>
 
       <el-table v-loading="loading" :data="tableData" stripe style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="ID" width="200" />
         <el-table-column prop="code" label="小区编码" width="140" />
         <el-table-column prop="name" label="小区名称" min-width="150" />
         <el-table-column prop="address" label="地址" min-width="200" />

@@ -5,10 +5,10 @@ import (
 	"database/sql"
 
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-user/model"
 	"github.com/guxiao1976/community-user/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 )
 
 type UpdateUserLogic struct {
@@ -39,13 +39,15 @@ func (l *UpdateUserLogic) UpdateUser(in *userv1.UpdateUserRequest) (*userv1.Upda
 		return nil, err
 	}
 
-	// auth-service saga 补偿：status=3 → 软删除（设置 delete_time）
+	// auth-service saga 补偿：status=3 → 软删除（设置  deleted_at）
 	if in.Status != nil && *in.Status == 3 {
 		err := l.svcCtx.UserBaseModel.SoftDelete(l.ctx, in.Id)
 		if err != nil {
 			l.Errorf("soft delete user error: %v", err)
 			return nil, err
 		}
+		// 软删除也失效权限缓存 + 写禁用标记
+		invalidateUserPermissionCache(l.ctx, l.svcCtx, l.Logger, in.Id, 2)
 		return &userv1.UpdateUserResponse{
 			Base: responsex.NewBaseResp(),
 		}, nil
@@ -75,6 +77,11 @@ func (l *UpdateUserLogic) UpdateUser(in *userv1.UpdateUserRequest) (*userv1.Upda
 	if err != nil {
 		l.Errorf("update user error: %v", err)
 		return nil, err
+	}
+
+	// 状态变更（禁用/启用/软删）时失效权限缓存 + 写/删禁用标记
+	if in.Status != nil {
+		invalidateUserPermissionCache(l.ctx, l.svcCtx, l.Logger, in.Id, int64(*in.Status))
 	}
 
 	// 重新查询返回最新数据

@@ -3,6 +3,7 @@ package permission
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
@@ -21,13 +22,26 @@ func NewCheckPermissionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *C
 	return &CheckPermissionLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
-// CheckPermission 鉴权检查（spec/permission.md 核心逻辑流 3）
-//   组合 User Roles → 查询 API 权限集 → 判断是否包含请求的 API Path
-//   系统角色（is_system=1）直接 allowed=true
-//   先查 Redis 缓存，未命中则查 DB 并回填缓存
+// CheckPermission 鉴权检查
+//
+//	组合 User Roles → 查询 API 权限集 → 判断是否包含请求的 API Path
+//	先查 Redis 缓存，未命中则查 DB 并回填缓存
+//	所有角色（含 is_system=1）统一走 rel_role_permission 配置，无短路特权
 func (l *CheckPermissionLogic) CheckPermission(in *permissionv1.CheckPermissionRequest) (*permissionv1.CheckPermissionResponse, error) {
+	// 0. 检查用户是否被禁用（禁用标记由 user-service 写入）
+	disabledKey := fmt.Sprintf("user:disabled:%d", in.UserId)
+	disabled, err := l.svcCtx.RedisClient.Exists(l.ctx, disabledKey).Result()
+	if err == nil && disabled > 0 {
+		l.Infof("CheckPermission denied: user=%d is disabled", in.UserId)
+		return &permissionv1.CheckPermissionResponse{Base: responsex.NewBaseResp(), Allowed: false}, nil
+	}
+
 	permCacheKey := fmt.Sprintf("perm:user:%d", in.UserId)
-	needle := fmt.Sprintf("%s:%s", in.Action, in.ApiPath)
+	// needle: path 字段已包含 Method 前缀（如 "GET:/api/users"），无需再拼接
+	needle := in.ApiPath
+	if in.Action != "" && !strings.HasPrefix(in.ApiPath, in.Action+":") {
+		needle = in.Action + ":" + in.ApiPath
+	}
 
 	// 1. 查 Redis 缓存
 	cached, err := l.svcCtx.RedisClient.SIsMember(l.ctx, permCacheKey, needle).Result()
@@ -39,13 +53,6 @@ func (l *CheckPermissionLogic) CheckPermission(in *permissionv1.CheckPermissionR
 	roles, err := l.svcCtx.UserRoleModel.FindActiveByUserId(l.ctx, in.UserId)
 	if err != nil || len(roles) == 0 {
 		return &permissionv1.CheckPermissionResponse{Base: responsex.NewBaseResp(), Allowed: false}, nil
-	}
-
-	// 系统角色直接放行
-	for _, r := range roles {
-		if r.IsSystem == 1 {
-			return &permissionv1.CheckPermissionResponse{Base: responsex.NewBaseResp(), Allowed: true}, nil
-		}
 	}
 
 	// 收集 role_ids → permissions
@@ -73,9 +80,13 @@ func (l *CheckPermissionLogic) CheckPermission(in *permissionv1.CheckPermissionR
 
 	// 匹配 + 回填 Redis
 	for _, p := range perms {
-		code := fmt.Sprintf("%s:%s", in.Action, p.Path.String)
-		l.svcCtx.RedisClient.SAdd(l.ctx, permCacheKey, code)
-		if code == needle || p.Code == needle {
+		// path 字段已包含 Method 前缀（如 "GET:/api/users"），直接使用
+		cacheKey := p.Path.String
+		if cacheKey == "" {
+			cacheKey = fmt.Sprintf("%s:%s", in.Action, p.Code)
+		}
+		l.svcCtx.RedisClient.SAdd(l.ctx, permCacheKey, cacheKey)
+		if cacheKey == needle || p.Code == needle {
 			return &permissionv1.CheckPermissionResponse{Base: responsex.NewBaseResp(), Allowed: true}, nil
 		}
 	}

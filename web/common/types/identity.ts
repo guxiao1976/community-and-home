@@ -9,10 +9,10 @@ export interface User {
   status: UserStatus;
   verificationStatus: VerificationStatus;
   scope: string;
-  lastLoginAt: string;
-  createdAt: string;
-  updatedAt: string;
-  deleteTime: number;
+  last_login_at: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: number;
 }
 
 export enum UserType {
@@ -41,14 +41,28 @@ export interface Role {
   status: RoleStatus;
   sortOrder: number;
   permissions: Permission[];
-  createdAt: string;
-  updatedAt: string;
-  deleteTime: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: number;
 }
 
 export enum RoleStatus {
   Active = 1,
   Disabled = 2
+}
+
+export interface UserRole {
+  role: {
+    id: string;
+    name: string;
+    code: string;
+    description: string;
+    isSystem: boolean;
+    status: number;
+    sortOrder: number;
+  };
+  scopeType: string;
+  scopeId: string;
 }
 
 export interface Permission {
@@ -61,15 +75,16 @@ export interface Permission {
   icon: string;
   sortOrder: number;
   status: PermissionStatus;
-  createdAt: string;
-  updatedAt: string;
-  deleteTime: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: number;
   children?: Permission[];
 }
 
 export enum PermissionType {
   Menu = 1,
-  Button = 2
+  Button = 2,
+  API = 3
 }
 
 export enum PermissionStatus {
@@ -86,11 +101,11 @@ export interface HomeownerVerification {
   documentUrls: string[];
   verificationStatus: HomeownerVerificationStatus;
   reviewerId: string;
-  reviewedAt: string;
+  reviewed_at: string;
   reviewNotes: string;
-  createdAt: string;
-  updatedAt: string;
-  deleteTime: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: number;
   user?: User;
   reviewer?: User;
 }
@@ -156,8 +171,8 @@ export interface CommunityMembership {
   bindStatus: number;
   joinTime: number;
   leaveTime: number;
-  createdAt: number;
-  updatedAt: number;
+  created_at: number;
+  updated_at: number;
   building: number;
   unit: number;
   room: number;
@@ -187,6 +202,6 @@ export interface Residence {
   isPrimary: number;
   startDate: string;
   endDate: string;
-  createdAt: number;
-  updatedAt: number;
+  created_at: number;
+  updated_at: number;
 }

@@ -95,3 +95,9 @@ func (s *PermissionServiceServer) GetUserPermissions(ctx context.Context, in *pe
 	l := permission.NewGetUserPermissionsLogic(ctx, s.svcCtx)
 	return l.GetUserPermissions(in)
 }
+
+// InvalidateUserCache 失效用户权限缓存
+func (s *PermissionServiceServer) InvalidateUserCache(ctx context.Context, in *permissionv1.InvalidateUserCacheRequest) (*permissionv1.InvalidateUserCacheResponse, error) {
+	l := permission.NewInvalidateUserCacheLogic(ctx, s.svcCtx)
+	return l.InvalidateUserCache(in)
+}

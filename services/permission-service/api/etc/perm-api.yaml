@@ -7,6 +7,10 @@ Auth:
   AccessSecret: ${JWT_ACCESS_SECRET}
   AccessExpire: 7200
 
+# MySQL（供 auto-discover 等管理功能使用）
+DataSource: ${MYSQL_DATA_SOURCE}
+AesKey: ${AES_KEY}
+
 # 权限中心 gRPC 客户端（通过 etcd 发现）
 PermissionRpc:
   Etcd:

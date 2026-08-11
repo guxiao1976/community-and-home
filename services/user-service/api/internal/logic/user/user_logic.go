@@ -32,6 +32,9 @@ func (l *ListUsersLogic) ListUsers(req *types.ListUsersReq) (*types.ListUsersRes
 	if req.Keyword != "" {
 		rpcReq.Keyword = &req.Keyword
 	}
+	if req.Phone != "" {
+		rpcReq.Phone = &req.Phone
+	}
 
 	resp, err := l.svcCtx.UserRpc.ListUsers(l.ctx, rpcReq)
 	if err != nil {
@@ -67,12 +70,21 @@ func NewCreateUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Create
 }
 
 func (l *CreateUserLogic) CreateUser(req *types.CreateUserReq) (*types.CreateUserResp, error) {
+	// 参数验证
+	if req.Phone == "" {
+		return nil, fmt.Errorf("手机号不能为空")
+	}
+
 	resp, err := l.svcCtx.UserRpc.CreateUser(l.ctx, &userv1.CreateUserRequest{
 		Phone:    req.Phone,
 		Nickname: req.Nickname,
 	})
 	if err != nil {
 		return nil, err
+	}
+	// RPC 业务错误通过 Base 返回（非 Go error），需显式检查
+	if resp.Base != nil && resp.Base.GetCode() != 0 {
+		return nil, fmt.Errorf("%s", resp.Base.GetMsg())
 	}
 	return &types.CreateUserResp{UserId: resp.UserId}, nil
 }
@@ -90,6 +102,11 @@ func NewGetUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUserLo
 }
 
 func (l *GetUserLogic) GetUser(req *types.GetUserReq) (*types.GetUserResp, error) {
+	// 参数验证
+	if req.Id == 0 {
+		return nil, fmt.Errorf("用户ID不能为空")
+	}
+
 	resp, err := l.svcCtx.UserRpc.GetUser(l.ctx, &userv1.GetUserRequest{Id: req.Id})
 	if err != nil {
 		return nil, err

@@ -72,25 +72,9 @@
             </el-select>
           </el-form-item>
 
-          <el-form-item label="数据范围类型" required>
-            <el-radio-group v-model="assignForm.scopeType" @change="handleScopeTypeChange">
-              <el-radio value="community">小区</el-radio>
-              <el-radio value="building">楼栋</el-radio>
-              <el-radio value="unit">单元</el-radio>
-              <el-radio value="grid">网格</el-radio>
-            </el-radio-group>
-          </el-form-item>
-
-          <el-form-item label="选择范围实体" required>
-            <el-cascader
-              v-model="assignForm.scopeId"
-              :options="scopeOptions"
-              :props="cascaderProps"
-              placeholder="请选择具体的小区/楼栋/单元/网格"
-              clearable
-              filterable
-              style="width: 100%"
-            />
+          <!-- TODO: 数据范围选择暂未接入小区数据 API -->
+          <el-form-item label="数据范围">
+            <span style="color: #909399">暂不限制（后续支持选择小区/楼栋/单元）</span>
           </el-form-item>
 
           <el-form-item>
@@ -110,12 +94,12 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { User, Role, UserRole } from '@common/types/identity'
 import * as identityApi from '@/api/identity'
-import * as masterDataApi from '@/api/masterdata'
 
 const route = useRoute()
 const router = useRouter()
@@ -143,7 +127,7 @@ const cascaderProps = {
 }
 
 const canAssign = computed(() => {
-  return assignForm.roleId && assignForm.scopeType && assignForm.scopeId
+  return !!assignForm.roleId
 })
 
 onMounted(() => {
@@ -166,7 +150,7 @@ const loadUserRoles = async () => {
   loading.value = true
   try {
     const response = await identityApi.getUserRoles(userId.value)
-    userRoles.value = response?.list || []
+    userRoles.value = response?.roles || []
   } catch (error: any) {
     ElMessage.error(error.message || '加载用户角色失败')
   } finally {
@@ -177,20 +161,15 @@ const loadUserRoles = async () => {
 const loadAvailableRoles = async () => {
   try {
     const response = await identityApi.getRoles({ page: 1, pageSize: 100 })
-    availableRoles.value = response?.list || []
+    availableRoles.value = response?.roles || []
   } catch (error: any) {
     ElMessage.error(error.message || '加载角色列表失败')
   }
 }
 
 const loadScopeData = async () => {
-  try {
-    // 加载小区数据（级联：小区→楼栋→单元）
-    const communities = await masterDataApi.getCommunities()
-    scopeOptions.value = communities?.list || []
-  } catch (error: any) {
-    ElMessage.error(error.message || '加载范围数据失败')
-  }
+  // TODO: 接入小区/楼栋/单元数据 API 后启用
+  scopeOptions.value = []
 }
 
 const handleScopeTypeChange = () => {
@@ -222,8 +201,8 @@ const handleAssignRole = async () => {
     await identityApi.assignUserRole({
       userId: userId.value,
       roleId: assignForm.roleId,
-      scopeType: assignForm.scopeType,
-      scopeId: assignForm.scopeId!
+      scopeType: 'global',
+      scopeId: '0'
     })
 
     ElMessage.success('角色分配成功')

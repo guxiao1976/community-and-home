@@ -6,6 +6,7 @@ import type { User, LoginResponse } from '@common/types/identity';
 import { getAccessToken, getRefreshToken, setTokens, clearTokens, getTokenExpiry } from '@common/utils/auth';
 import * as identityApi from '@/api/identity';
 import { usePermissionStore } from '@/stores/permission';
+import router from '@/router';
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -47,9 +48,10 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async (): Promise<void> => {
     try {
       await identityApi.logout();
-    } finally {
-      clearSession();
+    } catch {
+      // 忽略 logout API 错误（Token 可能已过期），直接清理本地会话
     }
+    clearSession();
   };
 
   const refreshAccessToken = async (): Promise<void> => {
@@ -75,10 +77,10 @@ export const useAuthStore = defineStore('auth', () => {
       status: 1,
       verificationStatus: 0,
       scope: '',
-      lastLoginAt: '',
-      createdAt: '',
-      updatedAt: '',
-      deleteTime: 0,
+      last_login_at: '',
+      created_at: '',
+      updated_at: '',
+      deleted_at: 0,
     } as User;
 
     if (response.userId) {
@@ -102,6 +104,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearTokens();
     const permissionStore = usePermissionStore();
     permissionStore.clearPermissions();
+    router.push('/login').catch(() => {});
   };
 
   const restoreSession = (): void => {

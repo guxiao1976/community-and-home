@@ -16,7 +16,7 @@ type RelRolePermission struct {
 	Id           int64     `db:"id"`
 	RoleId       int64     `db:"role_id"`
 	PermissionId int64     `db:"permission_id"`
-	CreatedTime  time.Time `db:"created_time"`
+	CreatedTime  time.Time `db:"created_at"`
 }
 
 type RelRolePermissionModel interface {
@@ -38,7 +38,9 @@ func NewRelRolePermissionModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cac
 func (m *defaultRelRolePermissionModel) Insert(ctx context.Context, data *RelRolePermission) (int64, error) {
 	query := fmt.Sprintf("insert into %s (role_id, permission_id) values (?, ?)", m.table)
 	res, err := m.conn.ExecCtx(ctx, query, data.RoleId, data.PermissionId)
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return res.LastInsertId()
 }
 
@@ -69,9 +71,9 @@ type RelUserRole struct {
 	Id          int64     `db:"id"`
 	UserId      int64     `db:"user_id"`
 	RoleId      int64     `db:"role_id"`
-	ScopeType   string    `db:"scope_type"`   // community/building/unit/grid
-	ScopeId     int64     `db:"scope_id"`     // 对应层级的实体 ID
-	CreatedTime time.Time `db:"created_time"`
+	ScopeType   string    `db:"scope_type"` // community/building/unit/grid
+	ScopeId     int64     `db:"scope_id"`   // 对应层级的实体 ID
+	CreatedTime time.Time `db:"created_at"`
 }
 
 // UserRoleWithInfo 用户角色详细信息（联表查询结果）
@@ -89,6 +91,7 @@ type UserRoleWithInfo struct {
 type RelUserRoleModel interface {
 	Insert(ctx context.Context, data *RelUserRole) (int64, error)
 	FindByUserId(ctx context.Context, userId int64) ([]*RelUserRole, error)
+	FindByRoleId(ctx context.Context, roleId int64) ([]*RelUserRole, error)
 	// FindActiveByUserId 联表查询返回角色完整信息
 	FindActiveByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error)
 	// FindScopesByUserId 根据 user_id + scope_type 返回 scope_ids
@@ -113,7 +116,9 @@ func NewRelUserRoleModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Opt
 func (m *defaultRelUserRoleModel) Insert(ctx context.Context, data *RelUserRole) (int64, error) {
 	query := fmt.Sprintf("insert into %s (user_id, role_id, scope_type, scope_id) values (?, ?, ?, ?)", m.table)
 	res, err := m.conn.ExecCtx(ctx, query, data.UserId, data.RoleId, data.ScopeType, data.ScopeId)
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return res.LastInsertId()
 }
 
@@ -131,7 +136,7 @@ func (m *defaultRelUserRoleModel) FindActiveByUserId(ctx context.Context, userId
 		       ur.scope_type, ur.scope_id
 		FROM %s ur
 		INNER JOIN sys_role r ON ur.role_id = r.id
-		WHERE ur.user_id = ? AND r.delete_time IS NULL AND r.status = 1
+		WHERE ur.user_id = ? AND r. deleted_at IS NULL AND r.status = 1
 	`, m.table)
 	err := m.conn.QueryRowsCtx(ctx, &list, query, userId)
 	return list, err
@@ -143,7 +148,7 @@ func (m *defaultRelUserRoleModel) FindScopesByUserId(ctx context.Context, userId
 	query := fmt.Sprintf(`
 		SELECT DISTINCT ur.scope_id FROM %s ur
 		INNER JOIN sys_role r ON ur.role_id = r.id
-		WHERE ur.user_id = ? AND ur.scope_type = ? AND r.delete_time IS NULL AND r.status = 1
+		WHERE ur.user_id = ? AND ur.scope_type = ? AND r. deleted_at IS NULL AND r.status = 1
 	`, m.table)
 	err := m.conn.QueryRowsCtx(ctx, &scopeIds, query, userId, scopeType)
 	return scopeIds, err
@@ -172,6 +177,14 @@ func (m *defaultRelUserRoleModel) CountByRoleId(ctx context.Context, roleId int6
 	var count int64
 	err := m.conn.QueryRowCtx(ctx, &count, fmt.Sprintf("select count(*) from %s where role_id = ?", m.table), roleId)
 	return count, err
+}
+
+// FindByRoleId 查询持有指定角色的所有用户角色记录
+func (m *defaultRelUserRoleModel) FindByRoleId(ctx context.Context, roleId int64) ([]*RelUserRole, error) {
+	var list []*RelUserRole
+	query := fmt.Sprintf("SELECT id, user_id, role_id, scope_type, scope_id, assign_time FROM %s WHERE role_id = ?", m.table)
+	err := m.conn.QueryRowsCtx(ctx, &list, query, roleId)
+	return list, err
 }
 
 var _ = time.Now

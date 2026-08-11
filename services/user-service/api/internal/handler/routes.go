@@ -12,39 +12,39 @@ import (
 
 // RegisterHandlers 注册所有 HTTP 路由
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/api/users/profile",
-				Handler: user.GetProfileHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/api/users",
-				Handler: user.ListUsersHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/api/users",
-				Handler: user.CreateUserHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/api/users/:id",
-				Handler: user.GetUserHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPut,
-				Path:    "/api/users/:id",
-				Handler: user.UpdateUserHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodDelete,
-				Path:    "/api/users/:id",
-				Handler: user.DeleteUserHandler(serverCtx),
-			},
+	routes := rest.WithMiddleware(serverCtx.PermMiddleware.Handle, []rest.Route{
+		{
+			Method:  http.MethodGet,
+			Path:    "/api/users/profile",
+			Handler: user.GetProfileHandler(serverCtx),
 		},
+		{
+			Method:  http.MethodGet,
+			Path:    "/api/users",
+			Handler: user.ListUsersHandler(serverCtx),
+		},
+		{
+			Method:  http.MethodPost,
+			Path:    "/api/users",
+			Handler: user.CreateUserHandler(serverCtx),
+		},
+		{
+			Method:  http.MethodGet,
+			Path:    "/api/users/:id",
+			Handler: user.GetUserHandler(serverCtx),
+		},
+		{
+			Method:  http.MethodPut,
+			Path:    "/api/users/:id",
+			Handler: user.UpdateUserHandler(serverCtx),
+		},
+		{
+			Method:  http.MethodDelete,
+			Path:    "/api/users/:id",
+			Handler: user.DeleteUserHandler(serverCtx),
+		},
+	}...)
+	server.AddRoutes(routes,
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 	)
 

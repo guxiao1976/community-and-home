@@ -38,7 +38,7 @@ func (l *SmsSendLogic) SmsSend(phone string) error {
 		return errx.NewDefaultError("系统繁忙，请稍后再试")
 	}
 	if exists > 0 {
-		return errx.NewCodeError(990429, "60秒内已发送验证码，请稍后再试") // 990429 = Too Many Requests
+		return errx.NewCodeError(ErrCodeSmsTooManyRequests, "60秒内已发送验证码，请稍后再试")
 	}
 
 	// 生成 6 位随机验证码

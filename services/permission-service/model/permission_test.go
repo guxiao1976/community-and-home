@@ -43,10 +43,10 @@ func TestSysRoleModel_FindByIds_SingleId(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewSysRoleModel(conn, nil)
 
-	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_time", "updated_time", "delete_time"}).
+	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_at", "updated_at", "deleted_at"}).
 		AddRow(1, "owner", "业主", sql.NullString{String: "业主角色", Valid: true}, 0, 1, 1, 100, time.Now(), time.Now(), sql.NullTime{})
 
-	mock.ExpectQuery("select \\* from `sys_role` where id in \\(\\?\\) and delete_time is null").
+	mock.ExpectQuery("select \\* from `sys_role` where id in \\(\\?\\) and deleted_at is null").
 		WithArgs(int64(1)).
 		WillReturnRows(rows)
 
@@ -73,11 +73,11 @@ func TestSysRoleModel_FindByIds_MultipleIds(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewSysRoleModel(conn, nil)
 
-	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_time", "updated_time", "delete_time"}).
+	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_at", "updated_at", "deleted_at"}).
 		AddRow(1, "owner", "业主", sql.NullString{}, 0, 1, 1, 100, time.Now(), time.Now(), sql.NullTime{}).
 		AddRow(2, "property_admin", "物业管理员", sql.NullString{}, 0, 2, 1, 100, time.Now(), time.Now(), sql.NullTime{})
 
-	mock.ExpectQuery("select \\* from `sys_role` where id in \\(\\?,\\?\\) and delete_time is null").
+	mock.ExpectQuery("select \\* from `sys_role` where id in \\(\\?,\\?\\) and deleted_at is null").
 		WithArgs(int64(1), int64(2)).
 		WillReturnRows(rows)
 
@@ -117,15 +117,15 @@ func TestSysRoleModel_FindList_Pagination(t *testing.T) {
 			m := NewSysRoleModel(conn, nil)
 
 			// Mock count query
-			mock.ExpectQuery("select count\\(\\*\\) from `sys_role` where delete_time is null").
+			mock.ExpectQuery("select count\\(\\*\\) from `sys_role` where deleted_at is null").
 				WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(tt.total))
 
 			// Mock data query
-			rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_time", "updated_time", "delete_time"})
+			rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_at", "updated_at", "deleted_at"})
 			for i := 0; i < tt.wantRows; i++ {
 				rows.AddRow(int64(i+1), "code", "name", sql.NullString{}, 0, 1, 1, 100, time.Now(), time.Now(), sql.NullTime{})
 			}
-			mock.ExpectQuery("select \\* from `sys_role` where delete_time is null order by sort_order asc limit .* offset .*").
+			mock.ExpectQuery("select \\* from `sys_role` where deleted_at is null order by sort_order asc limit .* offset .*").
 				WillReturnRows(rows)
 
 			result, total, err := m.FindList(context.Background(), nil, tt.page, tt.pageSize)
@@ -155,14 +155,14 @@ func TestSysRoleModel_FindList_WithStatusFilter(t *testing.T) {
 
 	status := int64(1)
 
-	mock.ExpectQuery("select count\\(\\*\\) from `sys_role` where delete_time is null and status = \\?").
+	mock.ExpectQuery("select count\\(\\*\\) from `sys_role` where deleted_at is null and status = \\?").
 		WithArgs(status).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(5))
 
-	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_time", "updated_time", "delete_time"}).
+	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_at", "updated_at", "deleted_at"}).
 		AddRow(1, "owner", "业主", sql.NullString{}, 0, 1, 1, 100, time.Now(), time.Now(), sql.NullTime{})
 
-	mock.ExpectQuery("select \\* from `sys_role` where delete_time is null and status = \\? order by sort_order asc limit .* offset .*").
+	mock.ExpectQuery("select \\* from `sys_role` where deleted_at is null and status = \\? order by sort_order asc limit .* offset .*").
 		WithArgs(status).
 		WillReturnRows(rows)
 
@@ -227,7 +227,7 @@ func TestSysRoleModel_SoftDelete_SystemRoleProtected(t *testing.T) {
 	m := NewSysRoleModel(conn, nil)
 
 	// SoftDelete 的 SQL 包含 is_system = 0 条件，系统角色不会被删除
-	mock.ExpectExec("update `sys_role` set delete_time = now\\(\\) where id = \\? and is_system = 0").
+	mock.ExpectExec("update `sys_role` set deleted_at = now\\(\\) where id = \\? and is_system = 0").
 		WithArgs(int64(1)).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
@@ -269,7 +269,7 @@ func TestSysPermissionModel_FindWithFilter_NoFilter(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewSysPermissionModel(conn, nil)
 
-	rows := sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "created_time", "updated_time"}).
+	rows := sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "created_at", "updated_at"}).
 		AddRow(1, sql.NullInt64{}, "用户管理", "user:read", 1, sql.NullString{String: "/api/user", Valid: true}, sql.NullString{}, 1, 1, time.Now(), time.Now())
 
 	mock.ExpectQuery("select \\* from `sys_permission` where 1=1 order by sort_order asc").
@@ -297,7 +297,7 @@ func TestSysPermissionModel_FindWithFilter_TypeFilter(t *testing.T) {
 
 	typeFilter := int64(3) // API 类型
 
-	rows := sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "created_time", "updated_time"}).
+	rows := sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "created_at", "updated_at"}).
 		AddRow(1, sql.NullInt64{}, "API权限", "api:test", 3, sql.NullString{String: "/api/test", Valid: true}, sql.NullString{}, 1, 1, time.Now(), time.Now())
 
 	mock.ExpectQuery("select \\* from `sys_permission` where 1=1 and type = \\? order by sort_order asc").

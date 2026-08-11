@@ -6,6 +6,7 @@ import (
 
 	masterdatav1 "github.com/guxiao1976/api-proto/gen/go/masterdata/v1"
 	moderationv1 "github.com/guxiao1976/api-proto/gen/go/moderation/v1"
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	sysconfig "github.com/guxiao1976/community-common/v2/pkg/sysconfig"
 	"github.com/guxiao1976/community-user/model"
@@ -19,10 +20,10 @@ import (
 type ServiceContext struct {
 	Config config.Config
 
-	Redis     *redis.Redis       // Redis 缓存客户端
+	Redis     *redis.Redis      // Redis 缓存客户端
 	SysConfig *sysconfig.Client // 系统参数配置读取器
 
-	UserBaseModel               model.UserBaseModel
+	UserBaseModel                model.UserBaseModel
 	UserCommunityMembershipModel model.UserCommunityMembershipModel
 	UserMembershipRoleModel      model.UserMembershipRoleModel
 	UserCertificationModel       model.UserCertificationModel
@@ -30,6 +31,7 @@ type ServiceContext struct {
 
 	ModerationClient moderationv1.ModerationServiceClient
 	RedisClient      *redis.Redis
+	PermissionClient permissionv1.PermissionServiceClient // permission-service gRPC 客户端（失效权限缓存）
 }
 
 // NewServiceContext 创建服务上下文，初始化所有数据库模型、Redis 和加密组件
@@ -81,16 +83,24 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		r.Pass = c.ModerationRedis.Pass
 	})
 
+	// Initialize permission-service gRPC client
+	permConn, err := zrpc.NewClient(c.PermissionRpc)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create permission client: %v", err))
+	}
+	permClient := permissionv1.NewPermissionServiceClient(permConn.Conn())
+
 	return &ServiceContext{
-		Config:                     c,
-		Redis:                      rds,
-		SysConfig:                  sysCfg,
-		UserBaseModel:              model.NewUserBaseModel(conn),
+		Config:                       c,
+		Redis:                        rds,
+		SysConfig:                    sysCfg,
+		UserBaseModel:                model.NewUserBaseModel(conn),
 		UserCommunityMembershipModel: model.NewUserCommunityMembershipModel(conn),
-		UserMembershipRoleModel:    model.NewUserMembershipRoleModel(conn),
-		UserCertificationModel:     model.NewUserCertificationModel(conn),
-		UserResidenceModel:         model.NewUserResidenceModel(conn),
-		ModerationClient:           modClient,
-		RedisClient:                redisClient,
+		UserMembershipRoleModel:      model.NewUserMembershipRoleModel(conn),
+		UserCertificationModel:       model.NewUserCertificationModel(conn),
+		UserResidenceModel:           model.NewUserResidenceModel(conn),
+		ModerationClient:             modClient,
+		RedisClient:                  redisClient,
+		PermissionClient:             permClient,
 	}
 }

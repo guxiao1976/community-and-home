@@ -18,7 +18,7 @@
       stripe
       style="width: 100%"
     >
-      <el-table-column prop="id" label="ID" width="80" />
+      <el-table-column prop="id" label="ID" width="200" />
       <el-table-column prop="phone" label="手机号" width="130" />
       <el-table-column prop="nickname" label="昵称" width="150" />
       <el-table-column label="认证状态" width="100">
@@ -44,7 +44,7 @@
         </template>
       </el-table-column>
       <el-table-column prop="lastLoginAt" label="最后登录" width="180" />
-      <el-table-column prop="createdAt" label="创建时间" width="180" />
+      <el-table-column prop="created_at" label="创建时间" width="180" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <el-button
@@ -129,6 +129,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import {

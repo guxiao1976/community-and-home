@@ -20,7 +20,8 @@ func NewGetUserPermissionsLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 // GetUserPermissions 获取用户的所有权限编码列表
-//   查询用户活跃角色 → 收集角色关联的权限 ID → 查询权限编码 → 去重返回
+//
+//	查询用户活跃角色 → 收集角色关联的权限 ID → 查询权限编码 → 去重返回
 func (l *GetUserPermissionsLogic) GetUserPermissions(in *permissionv1.GetUserPermissionsRequest) (*permissionv1.GetUserPermissionsResponse, error) {
 	// 查询用户活跃角色
 	roles, err := l.svcCtx.UserRoleModel.FindActiveByUserId(l.ctx, in.UserId)
@@ -34,17 +35,6 @@ func (l *GetUserPermissionsLogic) GetUserPermissions(in *permissionv1.GetUserPer
 	// 收集所有角色的权限 ID
 	permIdSet := make(map[int64]struct{})
 	for _, r := range roles {
-		// 系统角色 → 拥有所有权限
-		if r.IsSystem == 1 {
-			allPerms, err := l.svcCtx.PermissionModel.FindAll(l.ctx)
-			if err == nil {
-				for _, p := range allPerms {
-					permIdSet[p.Id] = struct{}{}
-				}
-			}
-			break // 系统角色不需要再查其他角色
-		}
-
 		rps, _ := l.svcCtx.RolePermissionModel.FindByRoleId(l.ctx, r.RoleId)
 		for _, rp := range rps {
 			permIdSet[rp.PermissionId] = struct{}{}

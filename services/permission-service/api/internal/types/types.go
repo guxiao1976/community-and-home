@@ -121,6 +121,28 @@ type DeleteRoleReq struct {
 	Id int64 `path:"id"`
 }
 
+// ==================== Role Users ====================
+
+type ListRoleUsersReq struct {
+	Id       int64 `path:"id"`
+	Page     int32 `form:"page,optional,default=1"`
+	PageSize int32 `form:"pageSize,optional,default=20"`
+}
+
+type RoleUserInfo struct {
+	UserId   int64  `json:"userId,string"`
+	Phone    string `json:"phone"`
+	Nickname string `json:"nickname"`
+}
+
+type ListRoleUsersResp struct {
+	Users      []RoleUserInfo `json:"users"`
+	Page       int32          `json:"page"`
+	PageSize   int32          `json:"pageSize"`
+	Total      int64          `json:"total,string"`
+	TotalPages int32          `json:"totalPages"`
+}
+
 // ==================== Permission ====================
 
 // PermissionInfo 权限信息（HTTP 响应，支持树形结构）
@@ -148,4 +170,79 @@ type ListPermissionsReq struct {
 // ListPermissionsResp 权限列表响应（树形结构）
 type ListPermissionsResp struct {
 	Permissions []PermissionInfo `json:"permissions"`
+}
+
+// ==================== Role-Permission Assignment ====================
+
+// GetRolePermissionsResp 获取角色权限 ID 列表响应
+type GetRolePermissionsResp struct {
+	PermissionIds Int64Array `json:"permissionIds"`
+}
+
+// AssignRolePermissionsReq 分配角色权限请求
+type AssignRolePermissionsReq struct {
+	PermissionIds Int64Array `json:"permissionIds"`
+}
+
+// ==================== User-Role Assignment ====================
+
+// AssignUserRoleReq 为用户分配角色（管理员操作，含数据范围）
+type AssignUserRoleReq struct {
+	UserId    int64  `json:"userId,string"`
+	RoleId    int64  `json:"roleId,string"`
+	ScopeType string `json:"scopeType"`
+	ScopeId   int64  `json:"scopeId,string"`
+}
+
+// RevokeUserRoleReq 撤销用户角色（管理员操作）
+type RevokeUserRoleReq struct {
+	UserId    int64  `json:"userId,string"`
+	RoleId    int64  `json:"roleId,string"`
+	ScopeType string `json:"scopeType,optional"`
+	ScopeId   int64  `json:"scopeId,string,optional"`
+}
+
+// UserRoleInfo 用户角色关联信息（HTTP 响应）
+type UserRoleInfo struct {
+	Role      RoleInfo `json:"role"`
+	ScopeType string   `json:"scopeType"`
+	ScopeId   int64    `json:"scopeId,string"`
+}
+
+// GetUserRolesReq 查询用户角色请求（path param）
+type GetUserRolesReq struct {
+	UserId int64 `path:"userId"`
+}
+
+// GetUserRolesResp 查询用户角色响应
+type GetUserRolesResp struct {
+	Roles []UserRoleInfo `json:"roles"`
+}
+
+// GetUserPermissionsReq 查询用户权限请求（path param）
+type GetUserPermissionsReq struct {
+	UserId int64 `path:"userId"`
+}
+
+// GetUserPermissionsResp 查询用户权限响应
+type GetUserPermissionsResp struct {
+	PermissionCodes []string `json:"permissionCodes"`
+}
+
+// ==================== Auto-Discover ====================
+
+// AutoDiscoveredPerm 自动发现的单条权限
+type AutoDiscoveredPerm struct {
+	Id       int64  `json:"id,string"`
+	ParentId int64  `json:"parentId,string"`
+	Name     string `json:"name"`
+	Code     string `json:"code"`
+	Path     string `json:"path"`
+}
+
+// AutoDiscoverPermissionsResp 自动发现权限响应
+type AutoDiscoverPermissionsResp struct {
+	Added   []AutoDiscoveredPerm `json:"added"`
+	Total   int                  `json:"total"`
+	Message string               `json:"message"`
 }

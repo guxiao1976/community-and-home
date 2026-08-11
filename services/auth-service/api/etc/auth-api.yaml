@@ -18,7 +18,8 @@ MasterDataRpc:
 
 # JWT 配置
 JwtAuth:
-  AccessSecret: ${JWT_ACCESS_SECRET}
+  AccessSecret: "community-auth-secret-key-2024-must-be-at-least-8-chars"
+  AccessExpire: 7200
 
 # Redis 地址（用于短信验证码存储和限流）
 RedisAddr: localhost:6379

@@ -29,19 +29,18 @@ export const usePermissionStore = defineStore('permission', () => {
   // Actions
   const loadPermissions = async (): Promise<void> => {
     const response = await identityApi.getPermissions();
-    permissions.value = response || [];
+    permissions.value = response?.permissions || [];
   };
 
   const loadUserPermissionsAndMenus = async (userId: string): Promise<void> => {
     currentUserId.value = userId;
     try {
       const response = await identityApi.getUserPermissions(userId);
-      userPermissions.value = response?.permissions || [];
-      menuPermissions.value = response?.menus || [];
+      // API 返回 { permissionCodes: string[] }，修正字段名
+      userPermissions.value = response?.permissionCodes || [];
       loaded.value = true;
     } catch {
       userPermissions.value = [];
-      menuPermissions.value = [];
       loaded.value = false;
     }
   };

@@ -66,9 +66,9 @@ CREATE TABLE user_base (
     status              TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1-正常 2-禁用',
     credit_score        INT NOT NULL DEFAULT 100 COMMENT '信用分（默认100，最低0）',
     preferences         JSON NULL COMMENT '用户偏好。例: {"default_community_id":123}',
-    created_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    delete_time         DATETIME NULL COMMENT '软删除时间',
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at         DATETIME NULL COMMENT '软删除时间',
     PRIMARY KEY (id),
     UNIQUE INDEX idx_phone (phone),
     INDEX idx_status (status)
@@ -80,9 +80,9 @@ CREATE TABLE user_base (
 | `id` | 雪花算法生成，非自增 |
 | `phone` | AES-256 加密存储，唯一索引 |
 | `real_name` / `id_card_number` | 任何角色首次认证通过后回填，后续不再覆盖 |
-| `status` | 1-正常 2-禁用（无 3-已删除，软删除走 delete_time） |
+| `status` | 1-正常 2-禁用（无 3-已删除，软删除走 deleted_at） |
 | `preferences` | JSON 可扩展。当前仅含 `default_community_id`，后续可加语言、通知开关等 |
-| `delete_time` | 软删除。注销账号时设置，数据不物理删除 |
+| `deleted_at` | 软删除。注销账号时设置，数据不物理删除 |
 
 **无 `user_type`**：用户类型不在全局。角色是相对小区的，见 `user_membership_role`。
 **无 `cert_status`**：认证状态在 role 级别，不在 user 级别。
@@ -100,8 +100,8 @@ CREATE TABLE user_community_membership (
     bind_status         TINYINT NOT NULL DEFAULT 1 COMMENT '1-有效 0-已退出',
     join_time           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
     leave_time          DATETIME NULL COMMENT '退出时间',
-    created_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE INDEX uk_user_community (user_id, community_id),
     INDEX idx_community (community_id, bind_status)
@@ -130,8 +130,8 @@ CREATE TABLE user_membership_role (
     verf_status         TINYINT NOT NULL DEFAULT 0 COMMENT '认证状态：0-未认证 1-待审 2-已通过 3-已驳回 4-已过期',
     verified_at         DATETIME NULL COMMENT '认证通过时间',
     expires_at          DATETIME NULL COMMENT '过期时间，NULL=永久有效',
-    created_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE INDEX uk_member_role (membership_id, role_code),
     UNIQUE INDEX uk_user_community_role (user_id, community_id, role_code),
@@ -211,8 +211,8 @@ CREATE TABLE user_residence (
     is_primary          TINYINT NOT NULL DEFAULT 0 COMMENT '多套房时标记主房产：1-是 0-否',
     start_date          DATE NULL COMMENT '入住/合同开始日期',
     end_date            DATE NULL COMMENT '搬离/合同结束日期',
-    created_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_time        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE INDEX uk_member_house (membership_id, house_id),
     INDEX idx_user_id (user_id)
@@ -482,9 +482,9 @@ type UserBase struct {
     Status        int64          `db:"status"`
     CreditScore   int64          `db:"credit_score"`
     Preferences   sql.NullString `db:"preferences"`
-    CreatedTime   time.Time      `db:"created_time"`
-    UpdatedTime   time.Time      `db:"updated_time"`
-    DeleteTime    sql.NullTime   `db:"delete_time"`
+    CreatedTime   time.Time      `db:"created_at"`
+    UpdatedTime   time.Time      `db:"updated_at"`
+    DeleteTime    sql.NullTime   `db:"deleted_at"`
 }
 ```
 
@@ -498,8 +498,8 @@ type UserCommunityMembership struct {
     BindStatus  int64        `db:"bind_status"`
     JoinTime    time.Time    `db:"join_time"`
     LeaveTime   sql.NullTime `db:"leave_time"`
-    CreatedTime time.Time    `db:"created_time"`
-    UpdatedTime time.Time    `db:"updated_time"`
+    CreatedTime time.Time    `db:"created_at"`
+    UpdatedTime time.Time    `db:"updated_at"`
 }
 ```
 
@@ -515,8 +515,8 @@ type UserMembershipRole struct {
     VerfStatus   int64         `db:"verf_status"`
     VerifiedAt   sql.NullTime  `db:"verified_at"`
     ExpiresAt    sql.NullTime  `db:"expires_at"`
-    CreatedTime  time.Time     `db:"created_time"`
-    UpdatedTime  time.Time     `db:"updated_time"`
+    CreatedTime  time.Time     `db:"created_at"`
+    UpdatedTime  time.Time     `db:"updated_at"`
 }
 ```
 
@@ -550,8 +550,8 @@ type UserResidence struct {
     IsPrimary    int64         `db:"is_primary"`
     StartDate    sql.NullTime  `db:"start_date"`
     EndDate      sql.NullTime  `db:"end_date"`
-    CreatedTime  time.Time     `db:"created_time"`
-    UpdatedTime  time.Time     `db:"updated_time"`
+    CreatedTime  time.Time     `db:"created_at"`
+    UpdatedTime  time.Time     `db:"updated_at"`
 }
 ```
 

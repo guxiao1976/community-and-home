@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/golang-jwt/jwt/v4"
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-auth/model"
 	"github.com/guxiao1976/community-auth/rpc/internal/config"
 	"github.com/guxiao1976/community-auth/rpc/internal/svc"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -57,6 +57,9 @@ func (m *mockUserServiceClient) GetUserRoles(ctx context.Context, in *userv1.Get
 }
 
 // Remaining methods — auth-service doesn't call these directly
+func (m *mockUserServiceClient) BatchUpdateUsers(ctx context.Context, in *userv1.BatchUpdateUsersRequest, opts ...grpc.CallOption) (*userv1.BatchUpdateUsersResponse, error) {
+	return &userv1.BatchUpdateUsersResponse{}, nil
+}
 func (m *mockUserServiceClient) ListUsers(ctx context.Context, in *userv1.ListUsersRequest, opts ...grpc.CallOption) (*userv1.ListUsersResponse, error) {
 	return &userv1.ListUsersResponse{}, nil
 }
@@ -95,6 +98,9 @@ func (m *mockUserServiceClient) BindResidence(ctx context.Context, in *userv1.Bi
 }
 func (m *mockUserServiceClient) GetResidences(ctx context.Context, in *userv1.GetResidencesRequest, opts ...grpc.CallOption) (*userv1.GetResidencesResponse, error) {
 	return &userv1.GetResidencesResponse{}, nil
+}
+func (m *mockUserServiceClient) UpdateUserModerationStatus(ctx context.Context, in *userv1.UpdateModerationStatusRequest, opts ...grpc.CallOption) (*userv1.UpdateModerationStatusResponse, error) {
+	return &userv1.UpdateModerationStatusResponse{}, nil
 }
 
 var _ userv1.UserServiceClient = (*mockUserServiceClient)(nil)
@@ -210,7 +216,7 @@ func defaultMockCredentialModel(userId int64) *mockCredentialModel {
 	}
 }
 
-func okResp() *commonv1.BaseResp   { return &commonv1.BaseResp{Code: 0, Msg: "success"} }
+func okResp() *commonv1.BaseResp { return &commonv1.BaseResp{Code: 0, Msg: "success"} }
 func errResp(code int32, msg string) *commonv1.BaseResp {
 	return &commonv1.BaseResp{Code: code, Msg: msg}
 }
