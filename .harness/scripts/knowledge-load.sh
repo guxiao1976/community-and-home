@@ -99,8 +99,18 @@ if [ -n "$TASK_DESC" ] && [ ${#KEYWORDS[@]} -eq 0 ]; then
   # 简单分词：中英文混合提取
   # 提取英文单词（2+ 字符）
   eng_words=$(echo "$TASK_DESC" | grep -oE '[a-zA-Z_]{2,}' | tr '\n' ' ' || true)
-  # 提取中文词组（2-4 字）
-  chn_words=$(echo "$TASK_DESC" | grep -oP '[\x{4e00}-\x{9fff}]{2,4}' 2>/dev/null | tr '\n' ' ' || true)
+  # 中文滑动窗口提取（2-4 字子串，覆盖完整词组；grep 无法重叠匹配，用 python3）
+  chn_words=$(echo "$TASK_DESC" | python3 -c "
+import sys
+text = sys.stdin.read().strip()
+words = set()
+for i in range(len(text)):
+    for L in (2,3,4):
+        w = text[i:i+L]
+        if len(w) == L and all('\u4e00' <= c <= '\u9fff' for c in w):
+            words.add(w)
+print(' '.join(sorted(words)))
+" 2>/dev/null || echo "")
   combined="$eng_words $chn_words"
   # 去重
   read -ra KEYWORDS <<< "$(echo "$combined" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
