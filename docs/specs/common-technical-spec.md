@@ -4,7 +4,7 @@
 
 ### 1.1 错误码格式
 
-采用 **6 位数字编码**：`XXYYYY`
+采用 **5 位数字编码**：`XXYYY`
 
 - **XX**: 服务中心编码（2位）
 - **YYYY**: 具体错误编码（4位）
@@ -26,14 +26,14 @@ const (
 ```go
 const (
     CodeSuccess       = 0      // 成功
-    CodeInvalidParam  = 990400 // 参数错误
-    CodeUnauthorized  = 990401 // 未授权
-    CodeForbidden     = 990403 // 禁止访问
-    CodeNotFound      = 990404 // 资源不存在
-    CodeInternalError = 990500 // 内部错误
-    CodeDatabaseError = 990501 // 数据库错误
-    CodeCacheError    = 990502 // 缓存错误
-    CodeRPCError      = 990503 // RPC调用错误
+    CodeInvalidParam  = 99400 // 参数错误
+    CodeUnauthorized  = 99401 // 未授权
+    CodeForbidden     = 99403 // 禁止访问
+    CodeNotFound      = 99404 // 资源不存在
+    CodeInternalError = 99500 // 内部错误
+    CodeDatabaseError = 99501 // 数据库错误
+    CodeCacheError    = 99502 // 缓存错误
+    CodeRPCError      = 99503 // RPC调用错误
 )
 ```
 
@@ -41,7 +41,7 @@ const (
 
 ```go
 // 创建错误
-err := errx.NewCodeError(990400, "用户ID不能为空")
+err := errx.NewCodeError(99400, "用户ID不能为空")
 err := errx.NewInvalidParamError("参数错误")
 err := errx.NewUnauthorizedError("未授权")
 
@@ -73,7 +73,7 @@ type Body struct {
    - `data` = 业务数据（不能为 null，至少为空对象 `{}`）
 
 2. **失败响应**：
-   - `code` = 错误码（6位数字）
+   - `code` = 错误码（5位数字）
    - `msg` = 错误描述（中文，可直接弹窗展示）
    - `data` = null（严禁夹带脏数据）
 
@@ -173,7 +173,7 @@ resp := responsex.NewBaseResp()
 // 返回: &BaseResp{Code: 0, Msg: "success"}
 
 // 创建错误响应
-resp := responsex.NewBaseRespWithError(990400, "参数错误")
+resp := responsex.NewBaseRespWithError(99400, "参数错误")
 
 // 从 error 创建响应
 resp := responsex.NewBaseRespFromError(err)
@@ -337,7 +337,7 @@ docs/                 # 文档
 ### v2.0.0 (2024-05-29)
 
 **破坏性变更**：
-- 错误码从 HTTP 状态码风格（400, 401, 500）升级为 6 位数字格式（990400, 990401, 990500）
+- 错误码从 HTTP 状态码风格（400, 401, 500）升级为 5 位数字格式（99400, 99401, 99500）
 - responsex 的 gRPC 支持改为使用 api-proto 中的 BaseResp 定义
 - IsSuccess() 和 ToError() 从方法改为函数
 
