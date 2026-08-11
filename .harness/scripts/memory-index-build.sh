@@ -54,8 +54,9 @@ EOF
 TOTAL=0
 SKIPPED=0
 
-# ─── 遍历记忆文件 ───
-for md_file in "$MEMORY_DIR"/*.md; do
+# ─── 遍历记忆文件（支持子目录）───
+shopt -s globstar nullglob
+for md_file in "$MEMORY_DIR"/**/*.md; do
     basename_file=$(basename "$md_file")
 
     # 跳过 MEMORY.md 和 MAINTENANCE.md
@@ -129,10 +130,13 @@ for md_file in "$MEMORY_DIR"/*.md; do
     # 提取标题
     TITLE=$(awk '/^---$/{if(++count==2) flag=1; next} flag && /^# /{print; exit}' "$md_file" | sed 's/^# //' || echo "$SLUG")
 
+    # 计算相对 MEMORY_DIR 的路径（如 global/testing-discipline.md）
+    REL_PATH="${md_file#$MEMORY_DIR/}"
+
     # 写入 memories 元数据
     jq --arg slug "$SLUG" \
        --arg title "$TITLE" \
-       --arg file "$basename_file" \
+       --arg file "$REL_PATH" \
        --arg severity "$SEVERITY" \
        --arg type "$TYPE" \
        --arg service "$SERVICE" \

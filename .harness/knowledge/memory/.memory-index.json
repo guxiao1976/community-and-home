@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated_at": "2026-06-18T11:51:12Z",
-  "total_memories": 25,
+  "generated_at": "2026-08-11T11:08:57Z",
+  "total_memories": 33,
   "index": {
     "模板": [
       "ai-model-template-variable-content"
@@ -29,6 +29,102 @@
     ],
     "ModerateText": [
       "ai-model-template-variable-content"
+    ],
+    "DeepSeek": [
+      "deepseek-thinking-response",
+      "llm-connection-test"
+    ],
+    "thinking": [
+      "deepseek-thinking-response"
+    ],
+    "Claude adapter": [
+      "deepseek-thinking-response"
+    ],
+    "response parse": [
+      "deepseek-thinking-response"
+    ],
+    "content block": [
+      "deepseek-thinking-response"
+    ],
+    "deepseek-v4": [
+      "deepseek-thinking-response"
+    ],
+    "endpoint": [
+      "endpoint-auto-complete"
+    ],
+    "端点补全": [
+      "endpoint-auto-complete"
+    ],
+    "auto-complete": [
+      "endpoint-auto-complete"
+    ],
+    "API path": [
+      "endpoint-auto-complete",
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "base URL": [
+      "endpoint-auto-complete"
+    ],
+    "v1/chat": [
+      "endpoint-auto-complete"
+    ],
+    "v1/messages": [
+      "endpoint-auto-complete"
+    ],
+    "连接测试": [
+      "llm-connection-test"
+    ],
+    "test connection": [
+      "llm-connection-test"
+    ],
+    "大模型 API": [
+      "llm-connection-test"
+    ],
+    "LLM endpoint": [
+      "llm-connection-test"
+    ],
+    "测试连接": [
+      "llm-connection-test"
+    ],
+    "OpenAI": [
+      "llm-connection-test"
+    ],
+    "Claude": [
+      "llm-connection-test"
+    ],
+    "Anthropic": [
+      "llm-connection-test"
+    ],
+    "provider": [
+      "llm-connection-test"
+    ],
+    "连通性": [
+      "llm-connection-test"
+    ],
+    "proto": [
+      "edit-form-data-integrity",
+      "proto-jstype"
+    ],
+    "int64": [
+      "proto-jstype"
+    ],
+    "jstype": [
+      "proto-jstype"
+    ],
+    "JS_STRING": [
+      "proto-jstype"
+    ],
+    "Snowflake": [
+      "proto-jstype"
+    ],
+    "ID": [
+      "proto-jstype"
+    ],
+    "精度丢失": [
+      "proto-jstype"
+    ],
+    "序列化": [
+      "proto-jstype"
     ],
     "API 响应": [
       "api-response-single-wrap"
@@ -95,14 +191,16 @@
     ],
     "提交": [
       "change-verification-checklist",
-      "pre-commit-checks"
+      "pre-commit-checks",
+      "testing-discipline"
     ],
     "commit": [
       "change-verification-checklist",
       "pre-commit-checks"
     ],
     "PR": [
-      "change-verification-checklist"
+      "change-verification-checklist",
+      "testing-discipline"
     ],
     "前后端": [
       "change-verification-checklist"
@@ -113,48 +211,29 @@
     "忘了": [
       "change-verification-checklist"
     ],
-    "DeepSeek": [
-      "deepseek-thinking-response",
-      "llm-connection-test"
-    ],
-    "thinking": [
-      "deepseek-thinking-response"
-    ],
-    "Claude adapter": [
-      "deepseek-thinking-response"
-    ],
-    "response parse": [
-      "deepseek-thinking-response"
-    ],
-    "content block": [
-      "deepseek-thinking-response"
-    ],
-    "deepseek-v4": [
-      "deepseek-thinking-response"
-    ],
-    "编辑回显数据完整性": [
+    "编辑": [
       "edit-form-data-integrity"
     ],
-    "endpoint": [
-      "endpoint-auto-complete"
+    "回显": [
+      "edit-form-data-integrity"
     ],
-    "端点补全": [
-      "endpoint-auto-complete"
+    "表单": [
+      "edit-form-data-integrity"
     ],
-    "auto-complete": [
-      "endpoint-auto-complete"
+    "下拉框": [
+      "edit-form-data-integrity"
     ],
-    "API path": [
-      "endpoint-auto-complete"
+    "model_type": [
+      "edit-form-data-integrity"
     ],
-    "base URL": [
-      "endpoint-auto-complete"
+    "数据丢失": [
+      "edit-form-data-integrity"
     ],
-    "v1/chat": [
-      "endpoint-auto-complete"
+    "types.go": [
+      "edit-form-data-integrity"
     ],
-    "v1/messages": [
-      "endpoint-auto-complete"
+    "TS": [
+      "edit-form-data-integrity"
     ],
     "前端": [
       "frontend-pipeline-integration-pattern"
@@ -175,7 +254,8 @@
       "frontend-pipeline-integration-pattern"
     ],
     "TypeScript": [
-      "frontend-pipeline-integration-pattern"
+      "frontend-pipeline-integration-pattern",
+      "typescript-erasable-syntax-enum-conflict"
     ],
     "generator": [
       "frontend-pipeline-integration-pattern"
@@ -195,30 +275,6 @@
     ],
     "npm": [
       "frontend-pipeline-integration-pattern"
-    ],
-    "UI": [
-      "frontend-visual-development-workflow"
-    ],
-    "页面": [
-      "frontend-visual-development-workflow"
-    ],
-    "设计": [
-      "frontend-visual-development-workflow"
-    ],
-    "样式": [
-      "frontend-visual-development-workflow"
-    ],
-    "视觉": [
-      "frontend-visual-development-workflow"
-    ],
-    "mockup": [
-      "frontend-visual-development-workflow"
-    ],
-    "brainstorming": [
-      "frontend-visual-development-workflow"
-    ],
-    "Visual Companion": [
-      "frontend-visual-development-workflow"
     ],
     "TODO stub": [
       "goctl-logic-stubs"
@@ -253,30 +309,6 @@
     "gRPC": [
       "grpc-max-msg-size-sensitive-words",
       "grpc-only-comms"
-    ],
-    "ResourceExhausted": [
-      "grpc-max-msg-size-sensitive-words"
-    ],
-    "message larger than max": [
-      "grpc-max-msg-size-sensitive-words"
-    ],
-    "消息上限": [
-      "grpc-max-msg-size-sensitive-words"
-    ],
-    "4MB": [
-      "grpc-max-msg-size-sensitive-words"
-    ],
-    "敏感词": [
-      "grpc-max-msg-size-sensitive-words"
-    ],
-    "MaxCallRecvMsgSize": [
-      "grpc-max-msg-size-sensitive-words"
-    ],
-    "grpc.Dial": [
-      "grpc-max-msg-size-sensitive-words"
-    ],
-    "MustNewClient": [
-      "grpc-max-msg-size-sensitive-words"
     ],
     "服务间通信": [
       "grpc-only-comms"
@@ -329,35 +361,20 @@
     "四支柱": [
       "harness-architecture-decisions"
     ],
-    "连接测试": [
-      "llm-connection-test"
+    "undefined": [
+      "harness-pipeline-undefined-guard"
     ],
-    "test connection": [
-      "llm-connection-test"
+    "harness-pipeline": [
+      "harness-pipeline-undefined-guard"
     ],
-    "大模型 API": [
-      "llm-connection-test"
+    "args": [
+      "harness-pipeline-undefined-guard"
     ],
-    "LLM endpoint": [
-      "llm-connection-test"
+    "serviceName": [
+      "harness-pipeline-undefined-guard"
     ],
-    "测试连接": [
-      "llm-connection-test"
-    ],
-    "OpenAI": [
-      "llm-connection-test"
-    ],
-    "Claude": [
-      "llm-connection-test"
-    ],
-    "Anthropic": [
-      "llm-connection-test"
-    ],
-    "provider": [
-      "llm-connection-test"
-    ],
-    "连通性": [
-      "llm-connection-test"
+    "参数校验": [
+      "harness-pipeline-undefined-guard"
     ],
     "migration": [
       "migration-must-execute"
@@ -386,26 +403,20 @@
     "unknown column": [
       "migration-must-execute"
     ],
-    "CheckText": [
-      "moderation-checktext-pipeline"
+    "submodule": [
+      "moderation-submodule-broken"
     ],
-    "审核接口": [
-      "moderation-checktext-pipeline"
+    "worktree": [
+      "moderation-submodule-broken"
     ],
-    "RPC审核": [
-      "moderation-checktext-pipeline"
+    ".gitmodules": [
+      "moderation-submodule-broken"
     ],
-    "生产管线": [
-      "moderation-checktext-pipeline"
+    "moderation-service": [
+      "moderation-submodule-broken"
     ],
-    "is_production": [
-      "moderation-checktext-pipeline"
-    ],
-    "内容审核调用": [
-      "moderation-checktext-pipeline"
-    ],
-    "moderation": [
-      "moderation-checktext-pipeline"
+    "master-data-service": [
+      "moderation-submodule-broken"
     ],
     "端口": [
       "monorepo-port-management"
@@ -503,30 +514,6 @@
     "gate": [
       "pre-commit-checks"
     ],
-    "proto": [
-      "proto-jstype"
-    ],
-    "int64": [
-      "proto-jstype"
-    ],
-    "jstype": [
-      "proto-jstype"
-    ],
-    "JS_STRING": [
-      "proto-jstype"
-    ],
-    "Snowflake": [
-      "proto-jstype"
-    ],
-    "ID": [
-      "proto-jstype"
-    ],
-    "精度丢失": [
-      "proto-jstype"
-    ],
-    "序列化": [
-      "proto-jstype"
-    ],
     "qwen": [
       "qwen-3b-unsuitable-for-moderation"
     ],
@@ -581,6 +568,39 @@
     "go-zero": [
       "redis-cache-soft-delete"
     ],
+    "JWT_ACCESS_SECRET": [
+      "service-api-jwt-env"
+    ],
+    "env": [
+      "service-api-jwt-env"
+    ],
+    "启动": [
+      "service-api-jwt-env"
+    ],
+    "API layer": [
+      "service-api-jwt-env"
+    ],
+    "panic": [
+      "service-api-jwt-env"
+    ],
+    "secret": [
+      "service-api-jwt-env"
+    ],
+    "测试": [
+      "testing-discipline"
+    ],
+    "TDD": [
+      "testing-discipline"
+    ],
+    "unit test": [
+      "testing-discipline"
+    ],
+    "integration test": [
+      "testing-discipline"
+    ],
+    "改动": [
+      "testing-discipline"
+    ],
     "API路由": [
       "verify-api-before-calling"
     ],
@@ -605,6 +625,149 @@
     "HTTP 404": [
       "verify-api-before-calling"
     ],
+    "ResourceExhausted": [
+      "grpc-max-msg-size-sensitive-words"
+    ],
+    "message larger than max": [
+      "grpc-max-msg-size-sensitive-words"
+    ],
+    "消息上限": [
+      "grpc-max-msg-size-sensitive-words"
+    ],
+    "4MB": [
+      "grpc-max-msg-size-sensitive-words"
+    ],
+    "敏感词": [
+      "grpc-max-msg-size-sensitive-words"
+    ],
+    "MaxCallRecvMsgSize": [
+      "grpc-max-msg-size-sensitive-words"
+    ],
+    "grpc.Dial": [
+      "grpc-max-msg-size-sensitive-words"
+    ],
+    "MustNewClient": [
+      "grpc-max-msg-size-sensitive-words"
+    ],
+    "CheckText": [
+      "moderation-checktext-pipeline"
+    ],
+    "审核接口": [
+      "moderation-checktext-pipeline"
+    ],
+    "RPC审核": [
+      "moderation-checktext-pipeline"
+    ],
+    "生产管线": [
+      "moderation-checktext-pipeline"
+    ],
+    "is_production": [
+      "moderation-checktext-pipeline"
+    ],
+    "内容审核调用": [
+      "moderation-checktext-pipeline"
+    ],
+    "moderation": [
+      "moderation-checktext-pipeline"
+    ],
+    "is_system": [
+      "is-system-no-permission-shortcut"
+    ],
+    "系统角色": [
+      "is-system-no-permission-shortcut"
+    ],
+    "permission": [
+      "is-system-no-permission-shortcut",
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "权限": [
+      "is-system-no-permission-shortcut"
+    ],
+    "CheckPermission": [
+      "is-system-no-permission-shortcut",
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "短路": [
+      "is-system-no-permission-shortcut"
+    ],
+    "RBAC": [
+      "is-system-no-permission-shortcut"
+    ],
+    "seed": [
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "init_permissions": [
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "权限路径": [
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "path 前缀": [
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "路由匹配": [
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "UI": [
+      "frontend-visual-development-workflow"
+    ],
+    "页面": [
+      "frontend-visual-development-workflow"
+    ],
+    "设计": [
+      "frontend-visual-development-workflow"
+    ],
+    "样式": [
+      "frontend-visual-development-workflow"
+    ],
+    "视觉": [
+      "frontend-visual-development-workflow"
+    ],
+    "mockup": [
+      "frontend-visual-development-workflow"
+    ],
+    "brainstorming": [
+      "frontend-visual-development-workflow"
+    ],
+    "Visual Companion": [
+      "frontend-visual-development-workflow"
+    ],
+    "VITE_APP_TITLE": [
+      "system-name-configurable"
+    ],
+    "系统名称": [
+      "system-name-configurable"
+    ],
+    "环境变量": [
+      "system-name-configurable"
+    ],
+    "AppHeader": [
+      "system-name-configurable"
+    ],
+    "Login": [
+      "system-name-configurable"
+    ],
+    "title": [
+      "system-name-configurable"
+    ],
+    "erasableSyntaxOnly": [
+      "typescript-erasable-syntax-enum-conflict"
+    ],
+    "enum": [
+      "typescript-erasable-syntax-enum-conflict"
+    ],
+    "TS1294": [
+      "typescript-erasable-syntax-enum-conflict"
+    ],
+    "npm run build": [
+      "typescript-erasable-syntax-enum-conflict"
+    ],
+    "vue-tsc": [
+      "typescript-erasable-syntax-enum-conflict"
+    ],
+    "tsconfig": [
+      "typescript-erasable-syntax-enum-conflict"
+    ],
     "Vue 模板": [
       "vue-template-nested-interpolation"
     ],
@@ -627,7 +790,7 @@
   "memories": {
     "ai-model-template-variable-content": {
       "title": "模板变量名必须用 {{content}}，不能用 {{input}}",
-      "file": "ai-model-template-variable-content.md",
+      "file": "ai-model-service/ai-model-template-variable-content.md",
       "severity": "must-follow",
       "type": "pitfall",
       "service": "ai-model-service",
@@ -643,11 +806,79 @@
         "ModerateText"
       ]
     },
-    "api-response-single-wrap": {
-      "title": "API 响应必须单层包装",
-      "file": "api-response-single-wrap.md",
+    "deepseek-thinking-response": {
+      "title": "DeepSeek/Claude 响应可能包含 thinking 块，需遍历所有 Content",
+      "file": "ai-model-service/deepseek-thinking-response.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "ai-model-service",
+      "triggers": [
+        "DeepSeek",
+        "thinking",
+        "Claude adapter",
+        "response parse",
+        "content block",
+        "deepseek-v4"
+      ]
+    },
+    "endpoint-auto-complete": {
+      "title": "端点自动补全逻辑必须在所有调用路径共享",
+      "file": "ai-model-service/endpoint-auto-complete.md",
       "severity": "must-follow",
       "type": "guideline",
+      "service": "ai-model-service",
+      "triggers": [
+        "endpoint",
+        "端点补全",
+        "auto-complete",
+        "API path",
+        "base URL",
+        "v1/chat",
+        "v1/messages"
+      ]
+    },
+    "llm-connection-test": {
+      "title": "大模型 API 连接测试实现规范",
+      "file": "ai-model-service/llm-connection-test.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "ai-model-service",
+      "triggers": [
+        "连接测试",
+        "test connection",
+        "大模型 API",
+        "LLM endpoint",
+        "测试连接",
+        "DeepSeek",
+        "OpenAI",
+        "Claude",
+        "Anthropic",
+        "provider",
+        "连通性"
+      ]
+    },
+    "proto-jstype": {
+      "title": "Proto int64 字段必须加 jstype=JS_STRING",
+      "file": "api-proto/proto-jstype.md",
+      "severity": "must-follow",
+      "type": "guideline",
+      "service": "api-proto",
+      "triggers": [
+        "proto",
+        "int64",
+        "jstype",
+        "JS_STRING",
+        "Snowflake",
+        "ID",
+        "精度丢失",
+        "序列化"
+      ]
+    },
+    "api-response-single-wrap": {
+      "title": "API 响应必须单层包装",
+      "file": "global/api-response-single-wrap.md",
+      "severity": "must-follow",
+      "type": "pitfall",
       "service": "all",
       "triggers": [
         "API 响应",
@@ -662,7 +893,7 @@
     },
     "change-verification-checklist": {
       "title": "每次代码变更必须执行验证清单",
-      "file": "change-verification-checklist.md",
+      "file": "global/change-verification-checklist.md",
       "severity": "must-follow",
       "type": "process",
       "service": "all",
@@ -688,50 +919,27 @@
         "忘了"
       ]
     },
-    "deepseek-thinking-response": {
-      "title": "DeepSeek/Claude 响应可能包含 thinking 块，需遍历所有 Content",
-      "file": "deepseek-thinking-response.md",
-      "severity": "must-follow",
-      "type": "guideline",
-      "service": "ai-model-service",
-      "triggers": [
-        "DeepSeek",
-        "thinking",
-        "Claude adapter",
-        "response parse",
-        "content block",
-        "deepseek-v4"
-      ]
-    },
     "edit-form-data-integrity": {
       "title": "编辑回显数据完整性",
-      "file": "edit-form-data-integrity.md",
-      "severity": "info",
-      "type": "guideline",
+      "file": "global/edit-form-data-integrity.md",
+      "severity": "must-follow",
+      "type": "pitfall",
       "service": "all",
       "triggers": [
-        "编辑回显数据完整性"
-      ]
-    },
-    "endpoint-auto-complete": {
-      "title": "端点自动补全逻辑必须在所有调用路径共享",
-      "file": "endpoint-auto-complete.md",
-      "severity": "must-follow",
-      "type": "guideline",
-      "service": "ai-model-service",
-      "triggers": [
-        "endpoint",
-        "端点补全",
-        "auto-complete",
-        "API path",
-        "base URL",
-        "v1/chat",
-        "v1/messages"
+        "编辑",
+        "回显",
+        "表单",
+        "下拉框",
+        "model_type",
+        "数据丢失",
+        "proto",
+        "types.go",
+        "TS"
       ]
     },
     "frontend-pipeline-integration-pattern": {
       "title": "前端管线接入模式：条件分支而非独立文件",
-      "file": "frontend-pipeline-integration-pattern.md",
+      "file": "global/frontend-pipeline-integration-pattern.md",
       "severity": "should-follow",
       "type": "guideline",
       "service": "all",
@@ -750,28 +958,11 @@
         "npm"
       ]
     },
-    "frontend-visual-development-workflow": {
-      "title": "前端开发优先使用浏览器可视化伴侣进行设计评审",
-      "file": "frontend-visual-development-workflow.md",
-      "severity": "should-follow",
-      "type": "process",
-      "service": "web/mobile",
-      "triggers": [
-        "UI",
-        "页面",
-        "设计",
-        "样式",
-        "视觉",
-        "mockup",
-        "brainstorming",
-        "Visual Companion"
-      ]
-    },
     "goctl-logic-stubs": {
       "title": "goctl 生成的 Logic 空壳必须实现后才能交付",
-      "file": "goctl-logic-stubs.md",
+      "file": "global/goctl-logic-stubs.md",
       "severity": "must-follow",
-      "type": "guideline",
+      "type": "pitfall",
       "service": "all",
       "triggers": [
         "TODO stub",
@@ -786,27 +977,9 @@
         "假成功"
       ]
     },
-    "grpc-max-msg-size-sensitive-words": {
-      "title": "gRPC 默认 4MB 消息上限无法传输 5万+ 敏感词",
-      "file": "grpc-max-msg-size-sensitive-words.md",
-      "severity": "must-follow",
-      "type": "pitfall",
-      "service": "moderation-service",
-      "triggers": [
-        "gRPC",
-        "ResourceExhausted",
-        "message larger than max",
-        "消息上限",
-        "4MB",
-        "敏感词",
-        "MaxCallRecvMsgSize",
-        "grpc.Dial",
-        "MustNewClient"
-      ]
-    },
     "grpc-only-comms": {
       "title": "服务间通信仅通过 gRPC，禁止直连数据库",
-      "file": "grpc-only-comms.md",
+      "file": "global/grpc-only-comms.md",
       "severity": "must-follow",
       "type": "guideline",
       "service": "all",
@@ -820,9 +993,9 @@
     },
     "grpc-timeout-layers": {
       "title": "gRPC 调用链需要三层超时对齐",
-      "file": "grpc-timeout-layers.md",
+      "file": "global/grpc-timeout-layers.md",
       "severity": "must-follow",
-      "type": "guideline",
+      "type": "pitfall",
       "service": "all",
       "triggers": [
         "gRPC timeout",
@@ -836,7 +1009,7 @@
     },
     "harness-architecture-decisions": {
       "title": "Harness 架构决策记录",
-      "file": "harness-architecture-decisions.md",
+      "file": "global/harness-architecture-decisions.md",
       "severity": "should-follow",
       "type": "decision",
       "service": "all",
@@ -849,29 +1022,23 @@
         "四支柱"
       ]
     },
-    "llm-connection-test": {
-      "title": "大模型 API 连接测试实现规范",
-      "file": "llm-connection-test.md",
-      "severity": "must-follow",
-      "type": "guideline",
-      "service": "ai-model-service",
+    "harness-pipeline-undefined-guard": {
+      "title": "Harness Pipeline: 参数校验防止 undefined 字符串化",
+      "file": "global/harness-pipeline-undefined-guard.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
       "triggers": [
-        "连接测试",
-        "test connection",
-        "大模型 API",
-        "LLM endpoint",
-        "测试连接",
-        "DeepSeek",
-        "OpenAI",
-        "Claude",
-        "Anthropic",
-        "provider",
-        "连通性"
+        "undefined",
+        "harness-pipeline",
+        "args",
+        "serviceName",
+        "参数校验"
       ]
     },
     "migration-must-execute": {
       "title": "Migration 文件提交后必须执行",
-      "file": "migration-must-execute.md",
+      "file": "global/migration-must-execute.md",
       "severity": "must-follow",
       "type": "pitfall",
       "service": "all",
@@ -887,27 +1054,23 @@
         "unknown column"
       ]
     },
-    "moderation-checktext-pipeline": {
-      "title": "CheckText RPC 已接入管线配置",
-      "file": "moderation-checktext-pipeline.md",
-      "severity": "must-follow",
-      "type": "decision",
-      "service": "moderation-service",
+    "moderation-submodule-broken": {
+      "title": "",
+      "file": "global/moderation-submodule-broken.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
       "triggers": [
-        "CheckText",
-        "管线",
-        "pipeline",
-        "审核接口",
-        "RPC审核",
-        "生产管线",
-        "is_production",
-        "内容审核调用",
-        "moderation"
+        "submodule",
+        "worktree",
+        ".gitmodules",
+        "moderation-service",
+        "master-data-service"
       ]
     },
     "monorepo-port-management": {
       "title": "Monorepo 端口管理：冲突检测与启动顺序",
-      "file": "monorepo-port-management.md",
+      "file": "global/monorepo-port-management.md",
       "severity": "must-follow",
       "type": "pitfall",
       "service": "all",
@@ -928,7 +1091,7 @@
     },
     "phone-encryption": {
       "title": "手机号 AES 加密存储，读取时必须解密",
-      "file": "phone-encryption.md",
+      "file": "global/phone-encryption.md",
       "severity": "must-follow",
       "type": "pitfall",
       "service": "all",
@@ -945,7 +1108,7 @@
     },
     "pipeline-data-trust-simulated-vs-real": {
       "title": "管线数据可信度：模拟数据 vs 真实数据",
-      "file": "pipeline-data-trust-simulated-vs-real.md",
+      "file": "global/pipeline-data-trust-simulated-vs-real.md",
       "severity": "must-follow",
       "type": "pitfall",
       "service": "all",
@@ -963,7 +1126,7 @@
     },
     "pre-commit-checks": {
       "title": "代码变更提交前必须通过机械化检查",
-      "file": "pre-commit-checks.md",
+      "file": "global/pre-commit-checks.md",
       "severity": "must-follow",
       "type": "process",
       "service": "all",
@@ -977,26 +1140,9 @@
         "gate"
       ]
     },
-    "proto-jstype": {
-      "title": "Proto int64 字段必须加 jstype=JS_STRING",
-      "file": "proto-jstype.md",
-      "severity": "must-follow",
-      "type": "guideline",
-      "service": "api-proto",
-      "triggers": [
-        "proto",
-        "int64",
-        "jstype",
-        "JS_STRING",
-        "Snowflake",
-        "ID",
-        "精度丢失",
-        "序列化"
-      ]
-    },
     "qwen-3b-unsuitable-for-moderation": {
       "title": "qwen2.5:3b 不适合内容审核初筛",
-      "file": "qwen-3b-unsuitable-for-moderation.md",
+      "file": "global/qwen-3b-unsuitable-for-moderation.md",
       "severity": "must-follow",
       "type": "pitfall",
       "service": "all",
@@ -1013,9 +1159,9 @@
     },
     "redis-cache-soft-delete": {
       "title": "软删除 + Redis 索引缓存 = 唯一索引冲突",
-      "file": "redis-cache-soft-delete.md",
+      "file": "global/redis-cache-soft-delete.md",
       "severity": "should-follow",
-      "type": "guideline",
+      "type": "pitfall",
       "service": "all",
       "triggers": [
         "Redis cache",
@@ -1030,9 +1176,40 @@
         "go-zero"
       ]
     },
+    "service-api-jwt-env": {
+      "title": "",
+      "file": "global/service-api-jwt-env.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "JWT_ACCESS_SECRET",
+        "env",
+        "启动",
+        "API layer",
+        "panic",
+        "secret"
+      ]
+    },
+    "testing-discipline": {
+      "title": "",
+      "file": "global/testing-discipline.md",
+      "severity": "must-follow",
+      "type": "process",
+      "service": "all",
+      "triggers": [
+        "测试",
+        "TDD",
+        "unit test",
+        "integration test",
+        "PR",
+        "提交",
+        "改动"
+      ]
+    },
     "verify-api-before-calling": {
       "title": "前端调用 API 前必须验证路由存在，禁止静默吞错",
-      "file": "verify-api-before-calling.md",
+      "file": "global/verify-api-before-calling.md",
       "severity": "must-follow",
       "type": "pitfall",
       "service": "all",
@@ -1047,11 +1224,128 @@
         "HTTP 404"
       ]
     },
+    "grpc-max-msg-size-sensitive-words": {
+      "title": "gRPC 默认 4MB 消息上限无法传输 5万+ 敏感词",
+      "file": "moderation-service/grpc-max-msg-size-sensitive-words.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "moderation-service",
+      "triggers": [
+        "gRPC",
+        "ResourceExhausted",
+        "message larger than max",
+        "消息上限",
+        "4MB",
+        "敏感词",
+        "MaxCallRecvMsgSize",
+        "grpc.Dial",
+        "MustNewClient"
+      ]
+    },
+    "moderation-checktext-pipeline": {
+      "title": "CheckText RPC 已接入管线配置",
+      "file": "moderation-service/moderation-checktext-pipeline.md",
+      "severity": "must-follow",
+      "type": "decision",
+      "service": "moderation-service",
+      "triggers": [
+        "CheckText",
+        "管线",
+        "pipeline",
+        "审核接口",
+        "RPC审核",
+        "生产管线",
+        "is_production",
+        "内容审核调用",
+        "moderation"
+      ]
+    },
+    "is-system-no-permission-shortcut": {
+      "title": "is_system 字段仅用于保护角色不可删除/修改，不再授予全权限",
+      "file": "permission-service/is-system-no-permission-shortcut.md",
+      "severity": "must-follow",
+      "type": "decision",
+      "service": "permission-service",
+      "triggers": [
+        "is_system",
+        "系统角色",
+        "permission",
+        "权限",
+        "CheckPermission",
+        "短路",
+        "RBAC"
+      ]
+    },
+    "permission-seed-api-path-must-match-routes": {
+      "title": "种子数据 API 权限的 path 必须与实际 REST 路由一致",
+      "file": "permission-service/permission-seed-api-path-must-match-routes.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "permission-service",
+      "triggers": [
+        "seed",
+        "init_permissions",
+        "API path",
+        "权限路径",
+        "permission",
+        "CheckPermission",
+        "path 前缀",
+        "路由匹配"
+      ]
+    },
+    "frontend-visual-development-workflow": {
+      "title": "前端开发优先使用浏览器可视化伴侣进行设计评审",
+      "file": "web/frontend-visual-development-workflow.md",
+      "severity": "should-follow",
+      "type": "process",
+      "service": "web/mobile",
+      "triggers": [
+        "UI",
+        "页面",
+        "设计",
+        "样式",
+        "视觉",
+        "mockup",
+        "brainstorming",
+        "Visual Companion"
+      ]
+    },
+    "system-name-configurable": {
+      "title": "",
+      "file": "web/system-name-configurable.md",
+      "severity": "info",
+      "type": "reference",
+      "service": "web",
+      "triggers": [
+        "VITE_APP_TITLE",
+        "系统名称",
+        "环境变量",
+        "AppHeader",
+        "Login",
+        "title"
+      ]
+    },
+    "typescript-erasable-syntax-enum-conflict": {
+      "title": "TypeScript erasableSyntaxOnly 与 enum 冲突",
+      "file": "web/typescript-erasable-syntax-enum-conflict.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "web",
+      "triggers": [
+        "TypeScript",
+        "erasableSyntaxOnly",
+        "enum",
+        "TS1294",
+        "npm run build",
+        "vue-tsc",
+        "tsconfig"
+      ]
+    },
     "vue-template-nested-interpolation": {
       "title": "Vue 模板中不能出现嵌套的 {{ 字面量",
-      "file": "vue-template-nested-interpolation.md",
+      "file": "web/vue-template-nested-interpolation.md",
       "severity": "must-follow",
-      "type": "guideline",
+      "type": "pitfall",
       "service": "web",
       "triggers": [
         "Vue 模板",

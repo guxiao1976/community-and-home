@@ -25,7 +25,7 @@
 |------|------|
 | `.harness/rules/工程结构.md` | Go Workspace、服务分层、Proto 组织、中间件 IP |
 | `docs/specs/ai-dev-team-design.md` | AI 五层架构、完整流水线设计 |
-| `docs/specs/architecture-audit.md` | 90+ 发现的全量架构审查报告 |
+| `docs/archived/specs/architecture-audit.md` | 90+ 发现的全量架构审查报告（2026-06 快照，已归档） |
 
 ### Harness 方法论
 
@@ -35,14 +35,13 @@
 
 ### 业务知识
 
+> 服务级业务知识见各服务 `docs/design.md`。跨服务方案见 `docs/specs/`。
+
 | 文档 | 领域 |
 |------|------|
-| `docs/specs/user-design.md` | 用户体系 |
-| `docs/specs/auth-design.md` | 认证体系 |
-| `docs/specs/permission.md` | 权限体系 |
-| `docs/specs/community-dynamics-design.md` | 社区动态 |
-| `docs/specs/monitoring-module-design.md` | 监控模块 |
-| `docs/specs/notify.md` | 通知系统 |
+| `docs/specs/rbac-design.md` | RBAC 权限体系（角色/权限/认证/生命周期） |
+| 各服务 `docs/design.md` | 用户/认证/权限/文件/主数据/审核等单服务设计 |
+| `docs/archived/specs/` | 早期愿景/已归档设计（user/auth/permission/community-dynamics/notify 等） |
 
 ### 业务流程
 
@@ -71,7 +70,7 @@ QA 机械化检查第 9 项会验证图谱新鲜度（`graph_freshness`），确
 ## 使用方式
 
 - **编码前**: 读目标服务的 `design.md` + `graph-context.md`（图谱自动生成）
-- **架构决策前**: 读 `rules/工程结构.md` + `docs/specs/architecture-audit.md`
-- **理解业务前**: 读对应领域的 `docs/specs/` 设计文档
-- **避免踩坑**: 读 `memory/MEMORY.md`，按触发词匹配
+- **架构决策前**: 读 `rules/工程结构.md` + `docs/specs/INDEX.md`
+- **理解业务前**: 读对应服务的 `docs/design.md` 或 `docs/specs/`
+- **避免踩坑**: 运行 `bash .harness/scripts/knowledge-load.sh --service <服务> --task "<任务描述>"` 加载相关记忆
 - **图谱过期**: 运行 `bash .harness/scripts/graph-sync.sh`
