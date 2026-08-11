@@ -1,0 +1,10 @@
+{
+  "name": "monitoring-service",
+  "displayName": "monitoring-service",
+  "language": "go",
+  "module": "github.com/guxiao1976/community-monitoring",
+  "hasApi": true,
+  "hasRpc": false,
+  "generated": "2026-07-10T11:40:26Z",
+  "generatedBy": "generate-service-metadata.sh"
+}

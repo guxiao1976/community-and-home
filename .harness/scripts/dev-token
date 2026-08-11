@@ -1,0 +1,28 @@
+#!/bin/bash
+# ============================================================
+# dev-token — 生成开发调试用的 JWT Token
+# ============================================================
+# 用法: bash .harness/scripts/dev-token [user_id]
+#   默认 user_id = 4544322234965024768 (18562955889 / 社区管理员)
+#
+# 输出可直接用于:
+#   curl -H "Authorization: Bearer $(bash .harness/scripts/dev-token)" http://...
+# ============================================================
+set -e
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+# 生产环境禁用：仅在 dev/staging 可用，防止泄露 JWT 签发能力
+if [ "${ENV:-dev}" = "production" ] || [ "${APP_ENV:-}" = "production" ]; then
+  echo "❌ dev-token 仅限开发环境使用 (ENV!=production)"
+  exit 1
+fi
+
+USER_ID="${1:-4544322234965024768}"
+
+# 从 .env 读取 JWT secret（跳过含特殊字符的 RSA key 行）
+JWT_SECRET=$(grep '^JWT_ACCESS_SECRET=' "$ROOT/.env" 2>/dev/null | head -1 | cut -d= -f2-)
+JWT_SECRET="${JWT_SECRET:-QBViQKNdUpsAdq48ClBoFxRoRwayo7MZFrLr_eu5NL8}"
+
+# 用 Go 生成 HS256 JWT
+# 在 auth-service 模块下运行（它有 golang-jwt 依赖）
+(cd "$ROOT/services/auth-service" && GOWORK=off go run "$ROOT/.harness/scripts/dev-token.go" "$USER_ID" "$JWT_SECRET")

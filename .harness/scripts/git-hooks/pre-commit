@@ -119,7 +119,25 @@ echo ""
 echo "[2/4] 运行变更文件的测试..."
 
 # 提取所有变更的包路径
-PACKAGES=$(echo "$GO_FILES" | xargs -I {} dirname {} | sort -u | sed 's|^|./|' | tr '\n' ' ')
+RAW_PACKAGES=$(echo "$GO_FILES" | xargs -I {} dirname {} | sort -u | sed 's|^|./|' | tr '\n' ' ')
+
+# 只保留位于 go.mod 模块内的包（排除 .harness/ 等独立工具脚本，它们不在 go.work 模块中）
+PACKAGES=""
+for pkg in $RAW_PACKAGES; do
+    search="$pkg"
+    found_module=false
+    while [[ "$search" != "." && "$search" != "/" ]]; do
+        if [[ -f "$search/go.mod" ]]; then
+            found_module=true
+            break
+        fi
+        search=$(dirname "$search")
+    done
+    if $found_module; then
+        PACKAGES="$PACKAGES $pkg"
+    fi
+done
+PACKAGES=$(echo $PACKAGES | xargs)
 
 if [[ -n "$PACKAGES" ]]; then
     echo "  测试包: $PACKAGES"

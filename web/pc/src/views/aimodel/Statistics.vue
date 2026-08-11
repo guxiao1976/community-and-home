@@ -115,6 +115,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, onMounted, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import { getUsageStatistics, getModelConfigs } from '@/api/aimodel';

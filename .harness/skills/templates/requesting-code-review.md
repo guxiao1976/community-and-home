@@ -274,7 +274,7 @@ cp -r assets.backup/* .
 ## 🔗 相关链接
 
 - Issue: #123 - 实现用户权限管理
-- 设计文档: `docs/specs/permission.md`
+- 设计文档: `docs/specs/rbac-design.md`
 - API 文档: `services/permission-service/docs/api.md`
 - Casbin 文档: https://casbin.org/
 

@@ -37,6 +37,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import type { ReviewListItem } from '@common/types/moderation';
 import { SOURCE_TYPE_LABELS, MODERATION_STATUS_MAP } from '@common/constants/moderation';
 

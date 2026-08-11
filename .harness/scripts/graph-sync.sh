@@ -19,9 +19,18 @@ NEO4J_DB="${NEO4J_DB:-neo4j}"
 MODE="${1:-incremental}"
 
 # Check Neo4j is reachable
-if ! curl -sf -o /dev/null "http://localhost:7474"; then
-    echo "[graph-sync] Neo4j not reachable — skipping graph sync"
-    exit 0
+# FIX: silent `exit 0` on unreachable Neo4j made the QA `graph_freshness` check
+# fail forever without any actionable signal (the loop treated it as "success").
+# Now fail loudly with a non-zero exit so callers (loop self-heal, humans, CI)
+# know the sync did NOT happen and why.
+if ! curl -sf -o /dev/null --max-time 5 "http://localhost:7474"; then
+    echo "[graph-sync] ❌ ERROR: Neo4j not reachable at http://localhost:7474 (bolt:${NEO4J_URI})" >&2
+    echo "   原因: 知识图谱未同步，QA 的 graph_freshness 检查会持续 FAIL。" >&2
+    echo "   修复: 启动 Neo4j 后重试:" >&2
+    echo "     docker compose up -d neo4j" >&2
+    echo "     或设置 NEO4J_URI/NEO4J_PASSWORD 环境变量。" >&2
+    echo "   注意: 本脚本退出码为非零（未执行同步），不要将未同步误判为成功。" >&2
+    exit 1
 fi
 
 cd "$POPULATOR_DIR"

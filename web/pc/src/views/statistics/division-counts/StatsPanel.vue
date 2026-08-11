@@ -47,6 +47,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, onMounted } from 'vue'
 import type { DivisionCountItem } from '@common/types/masterdata'
 

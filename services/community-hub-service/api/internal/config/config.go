@@ -8,5 +8,10 @@ import (
 // Config 社区枢纽 REST API 配置
 type Config struct {
 	rest.RestConf
+	Auth struct {
+		AccessSecret string
+		AccessExpire int64
+	}
 	CommunityHubRpc zrpc.RpcClientConf
+	PermissionRpc   zrpc.RpcClientConf
 }

@@ -2,7 +2,7 @@
 // Generator Prompt — Development Agent (TDD + Memory-Driven)
 // ============================================================
 
-function generatorPrompt(iteration, fixContext, taskType) {
+function generatorPrompt(iteration, fixContext, taskType, knowledgeCmd) {
   taskType = taskType || 'feature'
   const isChore = taskType === 'chore'
   const isDebt = taskType === 'debt'
@@ -44,76 +44,21 @@ function generatorPrompt(iteration, fixContext, taskType) {
 - ❌ .harness/rules/项目编码规范.md — QA 机械化检查会保证
 - ❌ 其他服务的 design.md — 你不是那个服务的 Agent
 
-## 记忆驱动编码（编码前必须执行）
+## 记忆驱动编码（⚠️ 第一步，不可跳过）
 
-在开始编写代码之前，你必须完成以下步骤：
+**在阅读任何其他文件之前**，你必须先加载相关知识记忆。Pipeline 已为你预提取了关键词，执行以下命令即可：
 
-### Step A: 搜索相关记忆（索引查询模式）
-1. **提取任务关键词**：从任务描述中提取技术关键词（如 gRPC、Proto、数据库、JWT、Snowflake、测试、前端、API 等）
-
-2. **查询索引**（优先，O(K) 复杂度）：
-   \`\`\`bash
-   # 检查索引文件是否存在
-   INDEX_FILE=".harness/knowledge/memory/.memory-index.json"
-
-   if [ -f "$INDEX_FILE" ]; then
-     # 使用索引查询（快速）
-     bash .harness/scripts/memory-index-query.sh --union <keyword1> <keyword2> <keyword3>
-
-     # 索引返回格式：
-     # [severity] slug
-     #   标题: <title>
-     #   服务: <service> | 类型: <type>
-   else
-     # 降级到旧方式（索引不存在时）
-     # 读取 MEMORY.md 并逐行匹配 triggers
-     grep -i "<keyword>" .harness/knowledge/memory/MEMORY.md
-   fi
-   \`\`\`
-
-3. **结果过滤**：
-   - 优先级排序已由索引查询完成（must-follow > should-follow > info）
-   - 服务范围匹配：\`service: all\` 或 \`service: ${args.serviceDir}\` 的记忆
-   - 如果找到 ≥2 条 must-follow 记忆 → 足够，停止搜索
-   - 如果 <2 条 → 继续查看 should-follow 和 info 级别
-
-4. **读取记忆文件**：只读取命中的记忆文件（不读 MEMORY.md 全文）
-   \`\`\`bash
-   for slug in <matched_slugs>; do
-     cat .harness/knowledge/memory/$slug.md
-   done
-   \`\`\`
-
-5. **输出匹配报告**：
-   \`\`\`
-   搜索关键词: <keyword1>, <keyword2>, <keyword3>
-   命中记忆: N 条
-     - [[slug-1]] (must-follow, pitfall) — <title>
-     - [[slug-2]] (must-follow, guideline) — <title>
-     - [[slug-3]] (should-follow, process) — <title>
-   \`\`\`
-
-### Step B: 应用记忆
-1. 对于每个 must-follow 记忆，确保生成的代码严格遵守其指导
-2. 在应用记忆的代码位置，添加注释标记：
-   \`\`\`
-   // SEE: [[memory-slug]] — <简短说明为什么这条记忆适用于此处>
-   \`\`\`
-   其中 memory-slug 是记忆文件名（不含 .md 扩展名）
-3. 对于 should-follow 记忆，判断是否适用当前任务，适用则同样标记
-
-### Step C: 编码总结
-在编码完成后，输出记忆应用报告：
+\`\`\`bash
+${knowledgeCmd || `bash .harness/scripts/knowledge-load.sh --service ${bareName || (SVC_DIR ? SVC_DIR.split('/').pop() : '')} --top 5`}
 \`\`\`
-### 记忆应用报告
-- 搜索关键词: <关键词列表>
-- 找到相关记忆: <数量>
-- 已应用:
-  - [[memory-slug-1]] — 应用于 <文件名:行号> — <原因>
-  - [[memory-slug-2]] — 应用于 <文件名:行号> — <原因>
-- 未应用（不适用当前任务）:
-  - [[memory-slug-3]] — <不适用的原因>
-\`\`\`
+
+命令会输出 Top-5 最相关记忆（按优先级排序）。**你必须：**
+1. 执行上述命令（不超过 10 秒）
+2. 逐条读取 must-follow 级别的记忆文件（用 Read 工具）
+3. 在代码中用 \`// SEE: [[memory-slug]]\` 注释标记应用了哪些记忆
+4. 如果命令返回空，说明该服务暂无相关记忆，正常继续即可
+
+记忆应用后在代码中标记 `// SEE: [[memory-slug]]`，编码结束后输出记忆应用报告。
 
 ## 编码纪律（任务类型: ${taskType}）
 

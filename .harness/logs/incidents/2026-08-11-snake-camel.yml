@@ -1,0 +1,19 @@
+date: 2026-08-11
+task: "用户管理创建时间显示为空 + 行政范围字段多余"
+pain_rounds: 2
+
+patterns:
+  - type_mismatch         # API 返回 snake_case，前端读 camelCase
+
+root_causes:
+  - "Go json tag 使用 snake_case (created_at)，前端 TypeScript 用 camelCase (createdAt)"
+  - "无自动转换层，无编译时检查"
+  - "QA 脚本未覆盖 API JSON 字段名与前端 interface 的对齐检查"
+
+fixed_by:
+  - "List.vue: row.createdAt → row.created_at"
+  - "Form.vue: user.createdAt → user.created_at"
+  - "新增 memory: [[snake-camel-field-mismatch]]"
+  - "建议 QA 新增 api_ts_field_align 检查项"
+
+wish_gate: "api_ts_field_align — 自动比对后端 json tag 与前端 interface 字段名"

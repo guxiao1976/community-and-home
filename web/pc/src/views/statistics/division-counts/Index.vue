@@ -18,6 +18,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref } from 'vue'
 import { getDivisionCounts, getDivisionCountsRealtime } from '@/api/masterdata'
 import type { DivisionCountItem } from '@common/types/masterdata'

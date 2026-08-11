@@ -24,14 +24,7 @@
 
 ## 全局公约
 
-所有服务统一遵守以下约束（详见 `../../.harness/`）：
-
-| 规则 | 详见 |
-|------|------|
-| 服务间仅 gRPC | `.harness/rules/项目编码规范.md` §1 |
-| 密钥在 .env，服务入口用 configx.MustLoad | `.harness/rules/项目编码规范.md` §7 |
-| 提交前必须 QA 检查 | `bash ../../.harness/skills/qa/scripts/harness-checks.sh --service monitoring-service` |
-
+全局约束见根 [`CLAUDE.md`](../../CLAUDE.md) §7条硬性约束。提交前 `bash ../../.harness/skills/qa/scripts/harness-checks.sh --service monitoring-service`。
 ## 常用命令
 
 ```bash

@@ -55,6 +55,16 @@ upstreams:
       send: 60
       read: 60
 
+  # Auth Service — REST API on :8881（auth service 自行处理 JWT）
+  auth-upstream:
+    type: roundrobin
+    nodes:
+      "host.docker.internal:8881": 1
+    timeout:
+      connect: 3
+      send: 30
+      read: 30
+
 # =============================================================================
 # Routes
 # =============================================================================
@@ -100,20 +110,14 @@ routes:
     plugins:
       jwt-auth: {}
 
-  # ---- gRPC-Transcode routes (future: when services move off identity) ----
+  # ---- Auth Service (REST API, 自行处理 JWT) ----
 
-  # Auth Service
-  - id: auth-grpc
+  - id: auth-api
     uri: /api/auth/*
-    upstream:
-      type: roundrobin
-      nodes:
-        "host.docker.internal:8083": 1
-    plugins:
-      grpc-transcode:
-        proto_id: api_descriptor.pb
-        service: auth.v1.AuthService
-        method: "*"
+    methods: [GET, POST, PUT, DELETE]
+    upstream_id: auth-upstream
+
+  # ---- gRPC-Transcode routes (future: when services move off identity) ----
 
   # User Service
   - id: user-grpc

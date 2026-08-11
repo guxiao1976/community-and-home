@@ -19,6 +19,7 @@
 #   4. hardcoded-secrets — no API keys, tokens, or passwords in source code
 #   5. debug-artifacts   — no console.log/debugger in non-test code
 #   6. type-safety       — no `as any` escape hatches in production code
+#   7. api-field-align    — snake_case/camelCase field name mismatch between API and frontend
 
 set -eu
 # pipefail intentionally disabled — grep returning 1 (no match) in pipelines
@@ -410,6 +411,24 @@ check_debug_artifacts() {
 
 # ─── Check 6: Type Safety ─────────────────────────────────────────────
 
+# --- check 7: api-field-align -------------------------------------------
+# 检查前端是否使用了 camelCase 读取后端 snake_case API 字段
+check_api_field_align() {
+  local script="$PROJECT_ROOT/.harness/skills/qa/scripts/check-api-field-align.sh"
+  if [ ! -x "$script" ]; then
+    log_warn "api_field_align" "检查脚本不可用: $script"
+    return
+  fi
+  local output
+  if output=$("$script" 2>&1); then
+    log_pass "api_field_align" "API 字段名对齐"
+  else
+    local count
+    count=$(echo "$output" | grep -c "❌" || true)
+    log_warn "api_field_align" "$count 处 snake_case/camelCase 不匹配（WARN级别，关注 created_at/user_type 等）"
+  fi
+}
+
 check_type_safety() {
   echo "[6/6] TypeScript type safety" >&2
 
@@ -458,6 +477,7 @@ main() {
   check_hardcoded_secrets
   check_debug_artifacts
   check_type_safety
+  check_api_field_align
   set -e
 
   # Count results
@@ -488,7 +508,7 @@ main() {
     printf '}\n'
   else
     local n=0
-    local labels=("type-check" "unit-test" "build" "hardcoded-secrets" "debug-artifacts" "type-safety")
+    local labels=("type-check" "unit-test" "build" "hardcoded-secrets" "debug-artifacts" "type-safety" "api-field-align")
     for result in "${RESULTS[@]}"; do
       local status label detail
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

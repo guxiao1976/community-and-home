@@ -321,7 +321,6 @@ export function testModelConnection(data: {
   endpoint: string;
   api_key: string;
   provider?: string;
-  model_name?: string;
 }) {
   return request.post<{ success: boolean; latency_ms: number; error?: string }>(
     '/api/v1/model/test-connection', data

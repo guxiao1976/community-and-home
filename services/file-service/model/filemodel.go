@@ -27,7 +27,7 @@ func NewFileModel(conn sqlx.SqlConn) FileModel {
 
 func (m *defaultFileModel) Insert(ctx context.Context, f *File) (int64, error) {
 	query := fmt.Sprintf(
-		"insert into %s (user_id, entity_type, entity_id, file_name, file_path, file_size, mime_type, bucket_name, upload_time, created_time, updated_time) values (?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now())",
+		"insert into %s (user_id, entity_type, entity_id, file_name, file_path, file_size, mime_type, bucket_name, upload_time, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now())",
 		m.table,
 	)
 	res, err := m.conn.ExecCtx(ctx, query, f.UserID, f.EntityType, f.EntityID, f.FileName, f.FilePath, f.FileSize, f.MimeType, f.BucketName, f.UploadTime)
@@ -98,7 +98,7 @@ func (m *defaultFileModel) FindPage(ctx context.Context, userID *int64, entityTy
 }
 
 func (m *defaultFileModel) Delete(ctx context.Context, id int64) error {
-	query := fmt.Sprintf("update %s set is_deleted = 1, updated_time = now() where id = ?", m.table)
+	query := fmt.Sprintf("update %s set is_deleted = 1, updated_at = now() where id = ?", m.table)
 	_, err := m.conn.ExecCtx(ctx, query, id)
 	return err
 }

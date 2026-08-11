@@ -19,20 +19,12 @@
 以下仅列出本服务特有规则，通用约束见 `.harness/rules/`：
 
 1. **权限缓存一致性** — Redis 缓存与 MySQL 保持一致，修改角色/权限时必须批量刷新缓存（Redis KEYS → DEL）
-2. **系统角色直接放行** — `is_system=1` 的角色跳过权限匹配
+2. **is_system 仅防止误删/误改** — `is_system=1` 的角色不自动获得全权限，权限由 `rel_role_permission` 配置决定
 3. **数据范围安全** — `GetDataScopes` 返回的 scope_id 列表由调用方用于 WHERE IN 过滤
 
 ## 全局公约
 
-所有服务统一遵守以下约束（详见 `../../.harness/`）：
-
-| 规则 | 详见 |
-|------|------|
-| Proto 统一在 api-proto/，修改需切换到全局 Claude | `.harness/rules/Proto管理规范.md` |
-| 服务间仅 gRPC，禁止直连其他服务 DB | `.harness/rules/项目编码规范.md` §1 |
-| Snowflake ID → `[jstype=JS_STRING]` + `json:",string"` | `.harness/rules/项目编码规范.md` §5 |
-| 提交前必须 QA 检查 | `bash ../../.harness/skills/qa/scripts/harness-checks.sh --service permission-service` |
-
+全局约束见根 [`CLAUDE.md`](../../CLAUDE.md) §7条硬性约束。提交前 `bash ../../.harness/skills/qa/scripts/harness-checks.sh --service permission-service`。
 ## 常用命令
 
 ```bash

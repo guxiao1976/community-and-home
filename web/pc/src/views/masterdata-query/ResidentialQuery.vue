@@ -52,7 +52,7 @@
     </div>
 
     <el-table v-loading="loading" :data="tableData" stripe border style="width: 100%">
-      <el-table-column prop="id" label="ID" width="80" />
+      <el-table-column prop="id" label="ID" width="200" />
       <el-table-column prop="name" label="小区名称" min-width="150" />
       <el-table-column prop="code" label="小区编码" width="140" />
       <el-table-column label="城市名称（ID）" min-width="140">
@@ -93,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'

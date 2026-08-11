@@ -1,0 +1,21 @@
+# Incident 记录模板
+# 每次开发中出现反复修改/测试/修复循环时，按此格式记录
+
+date: YYYY-MM-DD
+task: "简要描述本次开发任务"
+pain_rounds: 0              # 估算反复交互的轮数
+
+# 反复出现的问题模式（从下方枚举中选择）
+# 枚举: run_old_code | db_cache_stale | no_self_verify | api_not_checked |
+#       type_mismatch | process_not_restarted | config_missing |
+#       compile_pass_but_runtime_fail | duplicated_effort | missing_gate
+patterns: []
+
+# 每个模式对应的根因
+root_causes: []
+
+# 本次如何修复的
+fixed_by: []
+
+# 如果当时有哪个门禁/检查能避免这个问题
+wish_gate: ""

@@ -1,5 +1,17 @@
 name: Harness QA Checks
 
+# 职责：深度质量检查（15 项机械化检查）
+# - 编译检查、单元测试、覆盖率（0/0 检测）
+# - AST 分析（Context 使用、事务回滚、SQL 注入）
+# - Proto 规范、安全检查（硬编码密钥、SQL 注入）
+# - 性能检查（Benchmark 回归）、API 冒烟测试
+# - 差分模式：仅检查变更的服务（高效）
+# - 输出 JSON 报告 + PR 自动评论
+#
+# 与 test.yml 的区别：
+# - test.yml: 基础测试 + 覆盖率 + lint（快速反馈）
+# - harness-qa-check.yml: 15 项机械化检查（深度验证）
+
 on:
   pull_request:
     branches: [ main, master, develop ]
@@ -84,7 +96,9 @@ jobs:
               overall_status=1
 
               # Display failures
-              cat "qa-results-${service}.json" | jq -r '.[] | select(.status == "FAIL") | "  ❌ \(.check): \(.detail)"'
+              # FIX: harness-checks.sh --json emits {"results":[...], ...} — a top-level
+              # OBJECT, not a bare array. Old `.[]` iterated object values and showed nothing.
+              cat "qa-results-${service}.json" | jq -r '.results[] | select(.status == "FAIL") | "  ❌ \(.check): \(.detail)"'
             fi
 
             echo ""
@@ -124,7 +138,10 @@ jobs:
 
             for (const file of files) {
               const service = file.match(/qa-results-(.+)\.json/)[1];
-              const results = JSON.parse(fs.readFileSync(file, 'utf8'));
+              // FIX: old code called .filter() on the parsed OBJECT (which has no filter
+              // method) → this step always threw. Must read the .results[] array.
+              const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+              const results = Array.isArray(data.results) ? data.results : [];
 
               const passed = results.filter(r => r.status === 'PASS').length;
               const failed = results.filter(r => r.status === 'FAIL').length;

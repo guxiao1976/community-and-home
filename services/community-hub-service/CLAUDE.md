@@ -25,15 +25,7 @@
 
 ## 全局公约
 
-所有服务统一遵守以下约束（详见 `../../.harness/`）：
-
-| 规则 | 详见 |
-|------|------|
-| Proto 统一在 api-proto/，修改需切换到全局 Claude | `.harness/rules/Proto管理规范.md` |
-| 服务间仅 gRPC，禁止直连其他服务 DB | `.harness/rules/项目编码规范.md` §1 |
-| Snowflake ID → `[jstype=JS_STRING]` + `json:",string"` | `.harness/rules/项目编码规范.md` §5 |
-| 提交前必须 QA 检查 | `bash ../../.harness/skills/qa/scripts/harness-checks.sh --service community-hub-service` |
-
+全局约束见根 [`CLAUDE.md`](../../CLAUDE.md) §7条硬性约束。提交前 `bash ../../.harness/skills/qa/scripts/harness-checks.sh --service community-hub-service`。
 ## 常用命令
 
 ```bash

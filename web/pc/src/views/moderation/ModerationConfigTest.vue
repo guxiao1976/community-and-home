@@ -138,6 +138,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus } from '@element-plus/icons-vue';

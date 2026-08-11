@@ -35,31 +35,31 @@ start_rpc() {
   # master-data-service RPC (8087) — sysconfig 基础，所有服务依赖
   echo -n "  [1/8] master-data-service RPC (8087) ... "
   cd "$ROOT/services/master-data-service"
-  go run rpc/masterdata.go -f rpc/etc/masterdata.yaml &>/tmp/masterdata-rpc.log &
+  setsid nohup go run rpc/masterdata.go -f rpc/etc/masterdata.yaml < /dev/null &>/tmp/masterdata-rpc.log & disown
   echo "pid=$!"
 
   # user-service RPC (8082) — 用户基础
   echo -n "  [2/8] user-service RPC (8082) ... "
   cd "$ROOT/services/user-service"
-  go run rpc/userservice.go -f rpc/etc/userservice.yaml &>/tmp/user-rpc.log &
+  setsid nohup go run rpc/userservice.go -f rpc/etc/userservice.yaml < /dev/null &>/tmp/user-rpc.log & disown
   echo "pid=$!"
 
   # permission-service RPC (8084)
   echo -n "  [3/8] permission-service RPC (8084) ... "
   cd "$ROOT/services/permission-service"
-  go run rpc/permissionservice.go -f rpc/etc/permissionservice.yaml &>/tmp/perm-rpc.log &
+  setsid nohup go run rpc/permissionservice.go -f rpc/etc/permissionservice.yaml < /dev/null &>/tmp/perm-rpc.log & disown
   echo "pid=$!"
 
   # file-service RPC (8085)
   echo -n "  [4/8] file-service RPC (8085) ... "
   cd "$ROOT/services/file-service"
-  go run rpc/fileservice.go -f rpc/etc/fileservice.yaml &>/tmp/file-rpc.log &
+  setsid nohup go run rpc/fileservice.go -f rpc/etc/fileservice.yaml < /dev/null &>/tmp/file-rpc.log & disown
   echo "pid=$!"
 
   # ai-model-service RPC (8080)
   echo -n "  [5/8] ai-model-service RPC (8080) ... "
   cd "$ROOT/services/ai-model-service"
-  go run rpc/aimodel.go -f rpc/etc/aimodel.yaml &>/tmp/aimodel-rpc.log &
+  setsid nohup go run rpc/aimodel.go -f rpc/etc/aimodel.yaml < /dev/null &>/tmp/aimodel-rpc.log & disown
   echo "pid=$!"
 
   # 等待基础服务注册到 etcd
@@ -71,19 +71,19 @@ start_rpc() {
   # auth-service RPC (8083) — 依赖 user-service
   echo -n "  [6/8] auth-service RPC (8083) ... "
   cd "$ROOT/services/auth-service/rpc"
-  go run authservice.go -f etc/authservice.yaml &>/tmp/auth-rpc.log &
+  setsid nohup go run authservice.go -f etc/authservice.yaml < /dev/null &>/tmp/auth-rpc.log & disown
   echo "pid=$!"
 
   # moderation-service RPC (8086) — 依赖 ai-model + master-data
   echo -n "  [7/8] moderation-service RPC (8086) ... "
   cd "$ROOT/services/moderation-service"
-  go run rpc/moderation.go -f rpc/etc/moderation.yaml &>/tmp/moderation-rpc.log &
+  setsid nohup go run rpc/moderation.go -f rpc/etc/moderation.yaml < /dev/null &>/tmp/moderation-rpc.log & disown
   echo "pid=$!"
 
   # community-hub-service RPC (8088) — 依赖 user + moderation
   echo -n "  [8/8] community-hub-service RPC (8088) ... "
   cd "$ROOT/services/community-hub-service"
-  go run rpc/communityhub.go -f rpc/etc/communityhub.yaml &>/tmp/communityhub-rpc.log &
+  setsid nohup go run rpc/communityhub.go -f rpc/etc/communityhub.yaml < /dev/null &>/tmp/communityhub-rpc.log & disown
   echo "pid=$!"
 
   echo ""

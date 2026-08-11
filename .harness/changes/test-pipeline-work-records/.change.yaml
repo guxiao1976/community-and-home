@@ -1,0 +1,18 @@
+schema: spec-driven
+created: 2026-06-22
+services:
+  - master-data-service
+  - web/pc
+proto_changes: false
+description: |
+  测试流水线工作记录模块 - 用于验证开发流水线效果
+
+  功能范围：
+  - 工作事项维护（CRUD）
+  - 工作内容记录（CRUD + 日期范围查询）
+  - 数据使用 pipeline_test_ 前缀隔离
+
+  目标：
+  - 验证从需求分析到交付的完整流水线
+  - 记录开发过程日志，发现流水线改进点
+  - 建立流水线效果评估基准

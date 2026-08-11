@@ -1,0 +1,183 @@
+name: Docker Build and Deploy
+
+# 职责：容器化构建和部署
+# - 构建 Docker 镜像
+# - 推送到容器仓库
+# - 部署到目标环境（需配置）
+# - 健康检查和回滚
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  # 修改为你的 GitHub 用户名/组织名
+  IMAGE_PREFIX: ${{ github.repository_owner }}
+
+jobs:
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        service:
+          - user-service
+          - auth-service
+          - permission-service
+          - master-data-service
+          - moderation-service
+          - ai-model-service
+          - file-service
+          - community-hub-service
+          - monitoring-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if Dockerfile exists
+        id: check-dockerfile
+        run: |
+          if [ -f "services/${{ matrix.service }}/Dockerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          elif [ -f "services/${{ matrix.service }}/rpc/Dockerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "path=rpc" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push
+        if: steps.check-dockerfile.outputs.exists == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: services/${{ matrix.service }}/${{ steps.check-dockerfile.outputs.path || '.' }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # TODO: 取消注释并配置实际的部署逻辑
+  # deploy-staging:
+  #   name: Deploy to Staging
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   if: github.ref == 'refs/heads/develop'
+  #   environment:
+  #     name: staging
+  #     url: https://staging.example.com
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Deploy to Kubernetes
+  #       run: |
+  #         # 示例：使用 kubectl 部署
+  #         # kubectl set image deployment/user-service user-service=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/user-service:${{ github.sha }}
+  #         # kubectl rollout status deployment/user-service
+  #         echo "TODO: 配置 Kubernetes 部署"
+  #
+  #     - name: Health check
+  #       run: |
+  #         # 示例：检查服务健康状态
+  #         # curl -f https://staging.example.com/health || exit 1
+  #         echo "TODO: 配置健康检查"
+
+  # deploy-production:
+  #   name: Deploy to Production
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   if: startsWith(github.ref, 'refs/tags/v')
+  #   environment:
+  #     name: production
+  #     url: https://example.com
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Deploy to Production
+  #       run: |
+  #         # 示例：生产部署（需要更严格的验证）
+  #         echo "TODO: 配置生产部署"
+  #
+  #     - name: Health check
+  #       run: |
+  #         echo "TODO: 配置生产健康检查"
+  #
+  #     - name: Rollback on failure
+  #       if: failure()
+  #       run: |
+  #         # 示例：回滚到上一个版本
+  #         # kubectl rollout undo deployment/user-service
+  #         echo "TODO: 配置回滚逻辑"
+
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: build
+    if: always()
+
+    steps:
+      - name: Summary
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Docker Build Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo ""
+          echo "Build Status: ${{ needs.build.result }}"
+          echo ""
+
+          if [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "❌ Some builds failed"
+            exit 1
+          fi
+
+          echo "✅ All builds succeeded"

@@ -32,6 +32,9 @@ etcd_put "/apisix/upstreams/moderation" \
 etcd_put "/apisix/upstreams/aimodel" \
   '{"name":"aimodel","type":"roundrobin","nodes":{"host.docker.internal:8891":1},"timeout":{"connect":3,"send":60,"read":60},"id":"aimodel"}'
 
+etcd_put "/apisix/upstreams/auth" \
+  '{"name":"auth","type":"roundrobin","nodes":{"host.docker.internal:8881":1},"timeout":{"connect":3,"send":30,"read":30},"id":"auth"}'
+
 echo "=== Creating routes ==="
 
 # Public — no JWT
@@ -50,6 +53,10 @@ etcd_put "/apisix/routes/moderation" \
 
 etcd_put "/apisix/routes/aimodel" \
   '{"uri":"/api/v1/*","upstream_id":"aimodel","priority":5,"id":"aimodel","status":1,"plugins":{"jwt-auth":{}}}'
+
+# Auth — REST API（不在 APISIX 层加 JWT；auth service 自行处理认证）
+etcd_put "/apisix/routes/auth-api" \
+  '{"uri":"/api/auth/*","methods":["GET","POST","PUT","DELETE"],"upstream_id":"auth","priority":10,"id":"auth-api","status":1}'
 
 echo "=== Creating JWT consumer ==="
 

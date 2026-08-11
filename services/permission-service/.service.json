@@ -1,0 +1,10 @@
+{
+  "name": "permission-service",
+  "displayName": "permission-service",
+  "language": "go",
+  "module": "github.com/guxiao1976/community-permission",
+  "hasApi": true,
+  "hasRpc": true,
+  "generated": "2026-07-10T11:40:26Z",
+  "generatedBy": "generate-service-metadata.sh"
+}

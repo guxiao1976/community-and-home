@@ -1,6 +1,6 @@
 # 知识图谱上下文 — user-service
 
-> 自动生成于 2026-06-21 17:30:02 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-11 19:33:32 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -17,6 +17,7 @@
 |---------|---------|
 | master-data-service | gRPC |
 | moderation-service | gRPC |
+| permission-service | gRPC |
 
 ## 被依赖方
 
@@ -33,6 +34,8 @@
 | Delete | /api/users/:id |
 | Put | /api/users/:id |
 | Get | /api/users/:id |
+| Get | /api/users/certifications |
+| Post | /api/users/certifications |
 | Post | /api/users/communities/join |
 | Post | /api/users/communities/leave |
 | Get | /api/users/communities/memberships |
@@ -40,12 +43,15 @@
 | Post | /api/users/residences/bind |
 | Get | /api/users/roles |
 | Post | /api/users/roles/apply |
+| Get | /api/verifications |
+| Post | /api/verifications/:id/review |
 
 ## gRPC 接口
 
 | RPC 方法 | 输入消息 | 输出消息 |
 |---------|---------|---------|
 | ApplyRole | ApplyRoleRequest | ApplyRoleResponse |
+| BatchUpdateUsers | BatchUpdateUsersRequest | BatchUpdateUsersResponse |
 | BindResidence | BindResidenceRequest | BindResidenceResponse |
 | CheckAccess | CheckAccessRequest | CheckAccessResponse |
 | CreateUser | CreateUserRequest | CreateUserResponse |
@@ -69,16 +75,17 @@
 
 | 表名 | 列 |
 |------|-----|
-| user_base | nickname_moderation_status (bigint), delete_time (nullable), updated_time (datetime), created_time (datetime), preferences (nullable), credit_score (bigint), status (bigint), birth_date (nullable), gender (nullable), id_card_number (nullable), real_name (nullable), avatar_url (nullable), nickname (nullable), phone (varchar), id (bigint) |
+| user_base | deleted_at (nullable), updated_at (datetime), created_at (datetime), nickname_moderation_status (bigint), delete_time (nullable), updated_time (datetime), created_time (datetime), preferences (nullable), credit_score (bigint), status (bigint), birth_date (nullable), gender (nullable), id_card_number (nullable), real_name (nullable), avatar_url (nullable) ... |
 | user_certification | moderation_time (nullable), moderation_status (bigint), submit_time (datetime), review_notes (nullable), review_time (nullable), reviewer_id (nullable), status (bigint), document_urls (nullable), user_id (bigint), role_id (bigint), id (bigint) |
-| user_community_membership | room (bigint), unit (bigint), building (bigint), updated_time (datetime), created_time (datetime), leave_time (nullable), join_time (datetime), bind_status (bigint), community_id (bigint), user_id (bigint), id (bigint) |
+| user_community_membership | updated_at (datetime), created_at (datetime), room (bigint), unit (bigint), building (bigint), updated_time (datetime), created_time (datetime), leave_time (nullable), join_time (datetime), bind_status (bigint), community_id (bigint), user_id (bigint), id (bigint) |
 | user_membership_role | updated_time (datetime), created_time (datetime), expires_at (nullable), verified_at (nullable), verf_status (bigint), role_code (varchar), community_id (bigint), membership_id (nullable), user_id (bigint), id (bigint) |
-| user_residence | updated_time (datetime), created_time (datetime), end_date (nullable), start_date (nullable), is_primary (bigint), room (varchar), unit (varchar), building (varchar), house_id (varchar), user_id (bigint), membership_id (bigint), id (bigint) |
+| user_residence | updated_at (datetime), created_at (datetime), updated_time (datetime), created_time (datetime), end_date (nullable), start_date (nullable), is_primary (bigint), room (varchar), unit (varchar), building (varchar), house_id (varchar), user_id (bigint), membership_id (bigint), id (bigint) |
 
 ## 前端消费方
 
 | 方法 | URL | 文件 |
 |------|-----|------|
+| GET | /api/verifications | web/pc/src/api/identity.ts |
 | GET | /api/users/roles | web/mobile/src/api/user.ts |
 | POST | /api/users/roles/apply | web/mobile/src/api/user.ts |
 | POST | /api/users/residences/bind | web/mobile/src/api/user.ts |

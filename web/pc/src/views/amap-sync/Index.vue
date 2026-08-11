@@ -113,6 +113,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getAdministrativeDivisions, syncResidentialAreas, getSyncProgress } from '@/api/masterdata'

@@ -1,6 +1,6 @@
 # 知识图谱上下文 — file-service
 
-> 自动生成于 2026-06-21 17:29:59 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-11 19:33:30 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -52,6 +52,8 @@
 | 方法 | URL | 文件 |
 |------|-----|------|
 | POST | /api/users/roles/apply | web/mobile/src/api/user.ts |
+| POST | /api/perm/user-roles | web/pc/src/api/identity.ts |
+| POST | /api/perm/permissions/auto-discover | web/pc/src/api/identity.ts |
 | POST | /api/masterdata/approval/batch-review | web/pc/src/api/masterdata.ts |
 | POST | /api/masterdata/divisions/batch-submit | web/pc/src/api/masterdata.ts |
 | POST | /api/masterdata/residential-areas/batch-submit | web/pc/src/api/masterdata.ts |
@@ -113,6 +115,7 @@
 | POST | /api/auth/token/refresh | web/mobile/src/api/identity.ts |
 | POST | /api/auth/register | web/pc/src/api/identity.ts |
 | POST | /api/auth/register | web/mobile/src/api/identity.ts |
+| DELETE | /api/perm/user-roles | web/pc/src/api/identity.ts |
 | POST | /api/auth/sms/send | web/pc/src/api/identity.ts |
 | POST | /api/auth/sms/send | web/mobile/src/api/identity.ts |
 | POST | /api/moderation/review/submit | web/pc/src/api/moderation.ts |

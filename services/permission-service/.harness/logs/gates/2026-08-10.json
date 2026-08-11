@@ -1,0 +1,96 @@
+[
+  {
+    "timestamp": "2026-08-10T12:20:45.377Z",
+    "phase": "qa",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "qa"
+  },
+  {
+    "timestamp": "2026-08-10T12:20:45.433Z",
+    "phase": "verify",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "verify_no_panic_in_logs",
+        "message": "最近的服务日志不能有 panic/fatal"
+      }
+    ],
+    "warnings": [],
+    "context": "verify"
+  },
+  {
+    "timestamp": "2026-08-10T12:21:06.537Z",
+    "phase": "verify",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "verify_no_panic_in_logs",
+        "message": "最近的服务日志不能有 panic/fatal"
+      }
+    ],
+    "warnings": [
+      {
+        "gate": "verify_db_no_duplicates",
+        "message": "核心表无重复记录（检查 UNIQUE 约束违规）"
+      }
+    ],
+    "context": "verify"
+  },
+  {
+    "timestamp": "2026-08-10T12:21:55.033Z",
+    "phase": "verify",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "verify_no_panic_in_logs",
+        "message": "最近的服务日志不能有 panic/fatal"
+      }
+    ],
+    "warnings": [],
+    "context": "verify"
+  },
+  {
+    "timestamp": "2026-08-10T12:22:26.701Z",
+    "phase": "verify",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "verify"
+  },
+  {
+    "timestamp": "2026-08-10T12:36:53.575Z",
+    "phase": "verify",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "verify_no_panic_in_logs",
+        "message": "最近的服务日志不能有 panic/fatal"
+      }
+    ],
+    "warnings": [],
+    "context": "verify"
+  },
+  {
+    "timestamp": "2026-08-10T12:37:16.380Z",
+    "phase": "verify",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "verify_no_panic_in_logs",
+        "message": "最近的服务日志不能有 panic/fatal"
+      }
+    ],
+    "warnings": [],
+    "context": "verify"
+  },
+  {
+    "timestamp": "2026-08-10T12:37:49.086Z",
+    "phase": "verify",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "verify"
+  }
+]

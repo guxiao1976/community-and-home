@@ -12,6 +12,7 @@
             :model="passwordForm"
             :rules="passwordRules"
             class="login-form"
+            autocomplete="off"
             @submit.prevent="handlePasswordLogin"
           >
             <el-form-item prop="phone">
@@ -20,6 +21,8 @@
                 placeholder="请输入手机号"
                 prefix-icon="Phone"
                 size="large"
+                autocomplete="off"
+                name="login-phone"
               />
             </el-form-item>
             <el-form-item prop="password">
@@ -30,6 +33,8 @@
                 prefix-icon="Lock"
                 size="large"
                 show-password
+                autocomplete="new-password"
+                name="login-password"
               />
             </el-form-item>
             <el-form-item>
@@ -52,6 +57,7 @@
             :model="smsForm"
             :rules="smsRules"
             class="login-form"
+            autocomplete="off"
             @submit.prevent="handleSmsLogin"
           >
             <el-form-item prop="phone">
@@ -60,6 +66,8 @@
                 placeholder="请输入手机号"
                 prefix-icon="Phone"
                 size="large"
+                autocomplete="off"
+                name="sms-phone"
               />
             </el-form-item>
             <el-form-item prop="smsCode">
@@ -94,10 +102,6 @@
           </el-form>
         </el-tab-pane>
       </el-tabs>
-
-      <div class="login-footer">
-        <router-link to="/register">还没有账号？立即注册</router-link>
-      </div>
     </div>
   </div>
 </template>
@@ -338,20 +342,4 @@ const handleSendSms = async () => {
     width: 120px;
     border-radius: 8px;
   }
-}
-
-.login-footer {
-  text-align: center;
-  margin-top: 24px;
-
-  a {
-    font-size: 14px;
-    color: #0091FF;
-    text-decoration: none;
-
-    &:hover {
-      color: #33a8ff;
-    }
-  }
-}
-</style>
+}</style>

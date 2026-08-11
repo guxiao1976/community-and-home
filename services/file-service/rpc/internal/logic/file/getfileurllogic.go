@@ -5,9 +5,9 @@ import (
 	"time"
 
 	filev1 "github.com/guxiao1976/api-proto/gen/go/file/v1"
-	"github.com/guxiao1976/community-file/rpc/internal/svc"
 	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
+	"github.com/guxiao1976/community-file/rpc/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -29,7 +29,7 @@ func NewGetFileUrlLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetFil
 func (l *GetFileUrlLogic) GetFileUrl(in *filev1.GetFileUrlRequest) (*filev1.GetFileUrlResponse, error) {
 	f, err := l.svcCtx.FileModel.FindOne(l.ctx, in.FileId)
 	if err != nil {
-		return nil, errx.NewCodeError(70001, "file not found")
+		return nil, errx.NewCodeError(ErrCodeFileNotFound, "file not found")
 	}
 
 	expireSeconds := in.ExpireSeconds
@@ -52,7 +52,7 @@ func (l *GetFileUrlLogic) GetFileUrl(in *filev1.GetFileUrlRequest) (*filev1.GetF
 	url, err := l.svcCtx.MinioCli.GetURL(f.FilePath, time.Duration(expireSeconds)*time.Second)
 	if err != nil {
 		l.Errorf("get file url failed: %v", err)
-		return nil, errx.NewCodeError(70002, "generate download URL failed")
+		return nil, errx.NewCodeError(ErrCodeFileAccessDenied, "generate download URL failed")
 	}
 
 	return &filev1.GetFileUrlResponse{

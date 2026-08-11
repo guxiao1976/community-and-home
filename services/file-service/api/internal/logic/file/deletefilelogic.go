@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	filev1 "github.com/guxiao1976/api-proto/gen/go/file/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-file/api/internal/svc"
 	"github.com/guxiao1976/community-file/api/internal/types"
-	"github.com/guxiao1976/community-common/v2/pkg/errx"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -38,7 +38,7 @@ func (l *DeleteFileLogic) DeleteFile(userId int64, req *types.DeleteFileReq) err
 	}
 
 	if fileResp.File != nil && fileResp.File.UserId != userId {
-		return errx.NewCodeError(70003, "permission denied: not the file owner")
+		return errx.NewCodeError(ErrCodeFileOperationFailed, "permission denied: not the file owner")
 	}
 
 	rpcReq := &filev1.DeleteFileRequest{

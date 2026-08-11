@@ -1,0 +1,362 @@
+# Harness Quality Gates Configuration
+# 所有阶段的质量门禁集中定义
+#
+# 设计理念：
+# "If it can't be mechanically enforced, the agent will drift."
+# 所有门禁条件必须可程序化验证
+
+version: 1.0
+
+gates:
+  # ============================================================================
+  # 阶段 1: 需求分析
+  # ============================================================================
+  requirement_analysis:
+    - type: file_exists
+      path: "proposal.md"
+      error: "需求提案文件缺失"
+
+    - type: content_check
+      file: "proposal.md"
+      required_sections:
+        - "## 背景"
+        - "## 目标"
+        - "## 技术方案"
+        - "## 风险评估"
+        - "## 时间估算"
+      error: "proposal.md 缺少必填章节"
+
+    - type: word_count
+      file: "proposal.md"
+      min: 500
+      error: "proposal.md 内容不足 500 字"
+
+    - type: directory_exists
+      path: "specs/"
+      error: "specs 目录缺失"
+
+    - type: spec_completeness
+      directory: "specs/"
+      required:
+        - at_least_one_service_spec: true
+      error: "specs 目录至少需要一个服务的 spec 文件"
+
+  # ============================================================================
+  # 阶段 2: 架构设计
+  # ============================================================================
+  architecture_design:
+    - type: file_exists
+      path: "design.md"
+      error: "架构设计文档缺失"
+
+    - type: word_count
+      file: "design.md"
+      min: 5000
+      error: "design.md 内容不足 5000 字（详细设计要求）"
+      warning_threshold: 3000
+      warning_message: "design.md 内容偏少，建议补充技术细节"
+
+    - type: content_check
+      file: "design.md"
+      required_sections:
+        - "## 架构概述"
+        - "## 技术选型"
+        - "## 数据模型"
+        - "## 接口定义"
+      recommended_sections:
+        - "## 部署架构"
+        - "## 风险评估"
+        - "## 性能考虑"
+      error: "design.md 缺少核心章节"
+
+    - type: file_exists
+      path: "tasks.md"
+      error: "任务拆解文档缺失"
+
+    - type: task_count
+      file: "tasks.md"
+      min: 3
+      error: "tasks.md 任务数量不足 3 个"
+      check_format: true
+      expected_format: "checkbox_list"  # - [ ] Task description
+
+  # ============================================================================
+  # 阶段 3: 编码实现
+  # ============================================================================
+  coding:
+    - type: compilation
+      expect: SUCCESS
+      error: "代码编译失败"
+      details_required: true
+
+    - type: ast_check
+      rules:
+        - name: no_json_string_literals
+          description: "禁止 JSON.parse/stringify 字符串字面量"
+          severity: ERROR
+          script: ".harness/skills/qa/scripts/check_ast_json_string.sh"
+
+        - name: no_unsafe_any
+          description: "前端禁止不安全的 any 类型"
+          severity: WARNING
+          file_pattern: "web/**/*.ts"
+
+        - name: proto_id_range
+          description: "Proto 消息 ID 必须在分配范围内"
+          severity: ERROR
+          file_pattern: "**/*.proto"
+
+      error: "AST 检查发现违规代码"
+
+    - type: file_exists
+      path: "coding_report.md"
+      optional: true
+      warning: "建议生成编码报告记录实现细节"
+
+  # ============================================================================
+  # 阶段 4: QA 验证
+  # ============================================================================
+  qa:
+    - type: ci_check
+      conditions:
+        status:
+          equals: "SUCCESS"
+          error: "CI 状态非 SUCCESS"
+
+        total_tests:
+          greater_than: 0
+          error: "测试用例数为 0"
+
+        passed:
+          equals_field: "total_tests"
+          error: "存在失败的测试用例"
+
+        coverage:
+          greater_than_or_equal: 30
+          error: "测试覆盖率低于 30%"
+          warning_threshold: 40
+          warning_message: "测试覆盖率建议达到 40% 以上"
+
+      error_messages:
+        compilation: "编译失败，无法执行测试"
+        timeout: "测试执行超时"
+
+    - type: file_exists
+      path: "_qa.md"
+      error: "QA 报告缺失"
+      required_in_services: true
+
+    - type: no_test_skip
+      description: "禁止跳过测试（skip/pending）"
+      severity: WARNING
+      max_skipped: 0
+
+  # ============================================================================
+  # 阶段 5: 代码评审
+  # ============================================================================
+  review:
+    - type: file_exists
+      path: "review/*.md"
+      min_count: 1
+      error: "评审报告缺失"
+
+    - type: review_verdict
+      allowed: ["APPROVED", "REVISION_REQUIRED", "ESCALATED"]
+      min_approved: 2
+      total_reviewers: 3
+      error: "评审未通过（需至少 2/3 视角 APPROVED）"
+      escalation_reason_required: true
+
+    - type: must_fix_resolved
+      description: "所有 MUST_FIX 问题必须解决"
+      severity: ERROR
+      check_in_latest_version: true
+
+    - type: iteration_limit
+      max: 2
+      current_iteration_field: "review_iteration"
+      error: "评审轮次超过 2 轮，需升级人工决策"
+      action_on_exceed: "ESCALATE_TO_HUMAN"
+
+  # ============================================================================
+  # 阶段 7: CI 验证（外部）
+  # ============================================================================
+  ci:
+    - type: external_ci
+      expect: ALL_PASS
+      error: "外部 CI 检查失败"
+      required_checks:
+        - build
+        - unit_test
+        - lint
+      optional_checks:
+        - e2e_test
+        - security_scan
+
+  # ============================================================================
+  # 阶段 8: 部署验证
+  # ============================================================================
+  deployment:
+    - type: smoke_test
+      expect: PASS
+      error: "冒烟测试失败"
+      required_endpoints:
+        - health_check
+        - basic_api
+
+    - type: rollback_plan
+      required: true
+      error: "缺少回滚计划"
+
+  # ============================================================================
+  # 阶段 9: 文档交付
+  # ============================================================================
+  documentation:
+    - type: file_exists
+      path: "summary.md"
+      error: "变更摘要文档缺失"
+
+    - type: content_check
+      file: "summary.md"
+      required_sections:
+        - "## Executive Summary"
+        - "## 关键变更"
+        - "## 测试结果"
+        - "## 部署状态"
+      error: "summary.md 缺少必填章节"
+
+    - type: changelog_updated
+      description: "确认 CHANGELOG 已更新"
+      optional: true
+      file_path: "CHANGELOG.md"
+
+# ============================================================================
+# 循环控制配置
+# ============================================================================
+iteration_limits:
+  requirement_review: 3      # 需求评审最多 3 轮
+  architecture_review: 3     # 架构评审最多 3 轮
+  code_review: 2             # 代码评审最多 2 轮
+  qa_debug_loop: 2           # QA-Debug-Generator 循环最多 2 轮
+
+  # 超出后的动作
+  on_exceed:
+    action: "ESCALATE_TO_HUMAN"
+    message: "已达循环上限，需要人工介入决策"
+    log_to: "summary.md"
+
+# ============================================================================
+# 回退路径配置
+# ============================================================================
+rollback_rules:
+  # QA 失败的回退规则
+  qa_fail:
+    - condition: "total_tests == 0 && status == 'FAIL'"
+      rollback_to: "test_write"
+      reason: "测试用例数为 0，回退到测试编写阶段"
+      action: "REOPEN_TASK"
+      notify: true
+
+    - condition: "compile_error == true"
+      rollback_to: "coding"
+      reason: "编译错误，回退到编码实现阶段"
+      action: "REOPEN_TASK"
+      preserve_logs: true
+
+    - condition: "tests_failed > 0 && retries < 2"
+      rollback_to: "debug"
+      reason: "测试失败，触发 Debug Agent 根因分析"
+      action: "SPAWN_DEBUG_AGENT"
+      systematic_debugging: true
+
+    - condition: "retries >= 2"
+      rollback_to: "human_decision"
+      reason: "QA 失败超过 2 次，升级人工决策"
+      action: "ESCALATE"
+      include_history: true
+
+  # 评审失败的回退规则
+  review_fail:
+    - condition: "approved_count < 2 && iteration < 2"
+      rollback_to: "coding"
+      reason: "评审未通过，回退到编码实现"
+      action: "REVISION_REQUIRED"
+      attach_review_comments: true
+
+    - condition: "iterations >= 2"
+      rollback_to: "human_decision"
+      reason: "评审超过 2 轮，升级人工决策"
+      action: "ESCALATE"
+      summary_required: true
+
+  # CI 失败的回退规则
+  ci_fail:
+    - condition: "build_failed == true"
+      rollback_to: "coding"
+      reason: "构建失败，回退到编码阶段"
+
+    - condition: "test_failed == true"
+      rollback_to: "qa"
+      reason: "CI 测试失败，回退到 QA 验证"
+
+    - condition: "lint_failed == true"
+      rollback_to: "coding"
+      reason: "代码规范检查失败"
+
+# ============================================================================
+# Human-in-the-Loop 确认点配置
+# ============================================================================
+hitl_checkpoints:
+  - stage: "requirement_analysis"
+    trigger: "PENDING_DECISION"
+    description: "需求待决议时暂停，等待用户澄清"
+    timeout: null
+    required: true
+
+  - stage: "architecture_review"
+    trigger: "APPROVED"
+    description: "架构评审通过后，展示计划摘要，等待用户确认"
+    show_summary: true
+    required: true
+
+  - stage: "code_review"
+    trigger: "APPROVED"
+    description: "代码评审通过后，确认是否推送代码"
+    show_diff: true
+    required: true
+
+  - stage: "deployment"
+    trigger: "BEFORE_DEPLOY"
+    description: "部署前确认环境参数（环境、版本、回滚策略）"
+    show_params: true
+    required: true
+
+  - stage: "final_delivery"
+    trigger: "READY"
+    description: "最终交付确认，验证所有产出物完整"
+    show_checklist: true
+    required: true
+
+# ============================================================================
+# 配置元数据
+# ============================================================================
+metadata:
+  version: "1.0.0"
+  created: "2026-07-11"
+  author: "Harness Engineering Team"
+  description: "集中管理所有阶段的质量门禁，确保可程序化验证"
+
+  references:
+    - ".harness/workflows/harness-pipeline.js"
+    - ".harness/agents/owner-agent.md"
+    - ".harness/docs/harness-engineering-comparison.md"
+
+  usage:
+    - "在 workflow 中通过 loadQualityGates() 加载此配置"
+    - "每个阶段结束前调用 validateGate() 验证门禁"
+    - "门禁失败时根据 rollback_rules 选择回退路径"
+
+  notes:
+    - "所有门禁条件必须可程序化验证"
+    - "门禁失败应有清晰的错误信息和修复建议"
+    - "定期审查和更新门禁标准"

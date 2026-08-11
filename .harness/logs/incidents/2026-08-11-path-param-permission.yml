@@ -1,0 +1,18 @@
+date: 2026-08-11
+task: "用户编辑页面 99401 — 路径参数不匹配"
+pain_rounds: 1
+
+patterns:
+  - api_not_checked       # 昨晚只测了列表 API，没测带 :id 的详情 API
+  - type_mismatch         # sys_permission.path 存 ":id" 模式，实际请求是数字 ID
+
+root_causes:
+  - "PermMiddleware 发送 r.URL.Path（实际数字 ID），但 sys_permission.path 存的是 :id 占位符模式"
+  - "CheckPermission 做精确字符串匹配，GET:/api/users/:id ≠ GET:/api/users/4542136688377323520"
+  - "verify-before-deliver Step 2 没有明确要求测试所有路由类型（列表/详情/创建/更新/删除）"
+
+fixed_by:
+  - "common/pkg/middleware/permission.go 新增 normalizePathParams()，正则将数字段替换为 :id"
+  - "verify-before-deliver SKILL.md Step 2 增加必测路由类型清单（含 :id 详情路由）"
+
+wish_gate: "verify_api_route_types — 自动测试所有 CRUD 路由类型（不仅是列表）"

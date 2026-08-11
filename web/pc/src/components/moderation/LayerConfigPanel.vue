@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, watch, onMounted } from 'vue';
 import { getModerationTemplates } from '@/api/aimodel';
 

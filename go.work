@@ -1,6 +1,7 @@
 go 1.25.10
 
 use (
+	./.harness/tools/go-ast-checker
 	./api-proto
 	./common
 	./services/ai-model-service/api

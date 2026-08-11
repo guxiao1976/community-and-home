@@ -1,6 +1,6 @@
 # 知识图谱上下文 — community-hub-service
 
-> 自动生成于 2026-06-21 17:29:58 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-11 19:33:29 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -17,6 +17,7 @@
 |---------|---------|
 | master-data-service | gRPC |
 | moderation-service | gRPC |
+| permission-service | gRPC |
 
 ## 被依赖方
 

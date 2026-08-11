@@ -3,9 +3,20 @@ Host: 0.0.0.0
 Port: 8887
 Timeout: 30000
 
+Auth:
+  AccessSecret: ${JWT_ACCESS_SECRET}
+  AccessExpire: 7200
+
 # community-hub-service gRPC 客户端（etcd 发现）
 CommunityHubRpc:
   Etcd:
     Hosts:
       - 127.0.0.1:2379
     Key: community-hub.rpc
+
+# permission-service gRPC 客户端（RBAC 鉴权）
+PermissionRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: permission.rpc

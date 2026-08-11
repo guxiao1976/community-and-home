@@ -45,17 +45,29 @@ EXIT_CODE=0
 # Results array: each element is a JSON-like string for internal tracking
 declare -a RESULTS
 
-# Service → module path prefix mapping (for cross-service import check)
+# ============================================================
+# Load service registry (replaces hardcoded SVC_MODULE_MAP)
+# ============================================================
+REGISTRY_FILE="$PROJECT_ROOT/.harness/registry/services.json"
+
+if [ ! -f "$REGISTRY_FILE" ]; then
+  echo "❌ Error: Service registry not found at $REGISTRY_FILE" >&2
+  echo "   Run: bash .harness/scripts/build-service-registry.sh" >&2
+  exit 1
+fi
+
+# Load service module mappings into SVC_MODULE_MAP associative array
 declare -A SVC_MODULE_MAP
-SVC_MODULE_MAP["user-service"]="github.com/guxiao1976/community-user"
-SVC_MODULE_MAP["auth-service"]="github.com/guxiao1976/community-auth"
-SVC_MODULE_MAP["permission-service"]="github.com/guxiao1976/community-permission"
-SVC_MODULE_MAP["file-service"]="github.com/guxiao1976/community-file"
-SVC_MODULE_MAP["master-data-service"]="github.com/guxiao1976/community-master-data-service"
-SVC_MODULE_MAP["moderation-service"]="github.com/guxiao1976/community-moderation-service"
-SVC_MODULE_MAP["monitoring-service"]="github.com/guxiao1976/community-monitoring"
-SVC_MODULE_MAP["community-hub-service"]="github.com/guxiao1976/community-hub"
-SVC_MODULE_MAP["ai-model-service"]="github.com/guxiao/community-and-home/services/ai-model"
+while IFS='=' read -r svc module; do
+  [ -n "$module" ] && SVC_MODULE_MAP["$svc"]="$module"
+done < <(jq -r '.services[] | "\(.name)=\(.module)"' "$REGISTRY_FILE")
+
+# Verify registry loaded
+if [ ${#SVC_MODULE_MAP[@]} -eq 0 ]; then
+  echo "❌ Error: Failed to load service registry" >&2
+  exit 1
+fi
+# ============================================================
 
 # ─── Helpers ──────────────────────────────────────────────────────────
 
@@ -69,14 +81,26 @@ log_pass() {
 }
 
 log_fail() {
-  local check="$1" detail="$2"
-  RESULTS+=("{\"check\":\"$check\",\"status\":\"FAIL\",\"detail\":\"$detail\"}")
+  local check="$1" detail="$2" why="${3:-}" fix="${4:-}" example="${5:-}" reference="${6:-}"
+  local json_result="{\"check\":\"$check\",\"status\":\"FAIL\",\"detail\":\"$detail\""
+  [[ -n "$why" ]] && json_result+=",\"why\":\"$why\""
+  [[ -n "$fix" ]] && json_result+=",\"fix\":\"$fix\""
+  [[ -n "$example" ]] && json_result+=",\"example\":\"$example\""
+  [[ -n "$reference" ]] && json_result+=",\"reference\":\"$reference\""
+  json_result+="}"
+  RESULTS+=("$json_result")
   EXIT_CODE=1
 }
 
 log_warn() {
-  local check="$1" detail="$2"
-  RESULTS+=("{\"check\":\"$check\",\"status\":\"WARN\",\"detail\":\"$detail\"}")
+  local check="$1" detail="$2" why="${3:-}" fix="${4:-}" example="${5:-}" reference="${6:-}"
+  local json_result="{\"check\":\"$check\",\"status\":\"WARN\",\"detail\":\"$detail\""
+  [[ -n "$why" ]] && json_result+=",\"why\":\"$why\""
+  [[ -n "$fix" ]] && json_result+=",\"fix\":\"$fix\""
+  [[ -n "$example" ]] && json_result+=",\"example\":\"$example\""
+  [[ -n "$reference" ]] && json_result+=",\"reference\":\"$reference\""
+  json_result+="}"
+  RESULTS+=("$json_result")
 }
 
 # Get changed files from git diff (for diff-only scan mode).
@@ -142,7 +166,7 @@ fi
 # ─── Check 1: go build ───────────────────────────────────────────────
 
 check_go_build() {
-  echo "[1/11] go build ./..." >&2
+  echo "[1/16] go build ./..." >&2
   local out err rc
   cd "$TARGET_DIR"
   set +e
@@ -165,7 +189,7 @@ check_go_build() {
 # ─── Check 2: go vet ─────────────────────────────────────────────────
 
 check_go_vet() {
-  echo "[2/11] go vet ./..." >&2
+  echo "[2/16] go vet ./..." >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -188,7 +212,7 @@ check_go_vet() {
 # ─── Check 3: go test (with 0/0 detection) ───────────────────────────
 
 check_go_test() {
-  echo "[3/15] go test ./... (with 0/0 + new-package detection)" >&2
+  echo "[3/16] go test ./... (with 0/0 + new-package detection)" >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -281,7 +305,7 @@ check_go_test() {
 # ─── Check 4: Proto int64 jstype ─────────────────────────────────────
 
 check_proto_jstype() {
-  echo "[4/11] Proto int64 jstype" >&2
+  echo "[4/16] Proto int64 jstype" >&2
   local proto_dir="$PROJECT_ROOT/api-proto/api"
   local violations=()
 
@@ -330,14 +354,18 @@ check_proto_jstype() {
     local detail
     detail="$(printf '%s; ' "${violations[@]}" | head -c 2000)"
     detail="$(json_escape "$detail")"
-    log_fail "proto_jstype" "${#violations[@]} violations: $detail"
+    local why="Snowflake ID 是 19 位整数，超过 JavaScript Number.MAX_SAFE_INTEGER（约 16 位），JSON 传输时会精度丢失。"
+    local fix="在 proto 文件的 int64 ID 字段后添加 [(gogoproto.jstype) = JS_STRING] 选项，确保 protojson 序列化时以字符串输出。"
+    local example="api-proto/api/user/v1/user.proto:15 | api-proto/api/auth/v1/auth.proto:22"
+    local reference=".harness/rules/项目编码规范.md §5 | .harness/linters/patterns/proto-jstype.md"
+    log_fail "proto_jstype" "${#violations[@]} violations: $detail" "$why" "$fix" "$example" "$reference"
   fi
 }
 
-# ─── Check 5: Go json:",string" ──────────────────────────────────────
+# ─── Check 5: Go json:",string" (AST-based with regex fallback) ─────
 
 check_json_string() {
-  echo "[5/11] Go json:\",string\"" >&2
+  echo "[5/16] Go json:\",string\" (AST)" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -345,6 +373,50 @@ check_json_string() {
     search_dir="$PROJECT_ROOT/services"
   fi
 
+  # Try AST-based check first
+  local ast_checker="$PROJECT_ROOT/.harness/tools/go-ast-checker/go-ast-checker"
+
+  if [[ -f "$ast_checker" ]] && [[ -n "$SERVICE_NAME" ]]; then
+    echo "  (using AST checker)" >&2
+
+    # Run AST checks and capture JSON output
+    local ast_output
+    ast_output=$(bash "$PROJECT_ROOT/.harness/skills/qa/scripts/ast-checks.sh" \
+      "$search_dir" "$SERVICE_NAME" "true" 2>/dev/null)
+
+    if [[ $? -eq 0 ]]; then
+      log_pass "ast_json_string" "all int64 ID fields have json:\",string\" (AST verified)"
+      return
+    else
+      # Parse JSON results and report failures
+      local violations=()
+      while IFS= read -r item; do
+        local check=$(echo "$item" | jq -r '.check // empty' 2>/dev/null)
+        if [[ "$check" == "json_string_tag" ]]; then
+          local detail=$(echo "$item" | jq -r '.detail // empty' 2>/dev/null)
+          local location=$(echo "$item" | jq -r '.location // empty' 2>/dev/null)
+          [[ -n "$location" ]] && violations+=("$location: $detail")
+        fi
+      done < <(echo "$ast_output" | jq -c '.[] // empty' 2>/dev/null)
+
+      if [[ ${#violations[@]} -gt 0 ]]; then
+        local detail="$(printf '%s; ' "${violations[@]}" | head -c 2000)"
+        detail="$(json_escape "$detail")"
+        local why="Snowflake IDs exceed JavaScript Number.MAX_SAFE_INTEGER, must be transmitted as strings"
+        local fix="Add 'string' option to json tag: json:\"field_name,string\""
+        local example="UserId int64 \`json:\"user_id,string\"\`"
+        local reference=".harness/rules/项目编码规范.md §5"
+        log_fail "ast_json_string" "${#violations[@]} violations: $detail" "$why" "$fix" "$example" "$reference"
+        return
+      else
+        log_pass "ast_json_string" "all int64 ID fields have json:\",string\" (AST verified)"
+        return
+      fi
+    fi
+  fi
+
+  # Fallback to regex-based check
+  echo "  (AST checker not available, using regex fallback)" >&2
   local violations=()
 
   # Determine which Go files to scan
@@ -395,14 +467,18 @@ check_json_string() {
     local detail
     detail="$(printf '%s; ' "${violations[@]}" | head -c 2000)"
     detail="$(json_escape "$detail")"
-    log_fail "json_string" "${#violations[@]} violations: $detail"
+    local why="Go REST API 的 int64 ID 字段默认 JSON 序列化为数字，前端 JavaScript 解析时精度丢失。"
+    local fix="在结构体的 int64 ID 字段的 json tag 中添加 string 选项：json:\\\"user_id,string\\\" 或 json:\\\"id,omitempty,string\\\""
+    local example="services/user-service/api/internal/types/types.go:18 | services/auth-service/api/internal/types/types.go:25"
+    local reference=".harness/rules/项目编码规范.md §5 | .harness/linters/patterns/json-string.md"
+    log_fail "json_string" "${#violations[@]} violations: $detail" "$why" "$fix" "$example" "$reference"
   fi
 }
 
 # ─── Check 6: Cross-service DB import ────────────────────────────────
 
 check_cross_service_import() {
-  echo "[6/11] Cross-service DB import" >&2
+  echo "[6/16] Cross-service DB import" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -459,14 +535,18 @@ check_cross_service_import() {
     local detail
     detail="$(printf '%s; ' "${violations[@]}")"
     detail="$(json_escape "$detail")"
-    log_fail "cross_service_import" "${#violations[@]} violations: $detail"
+    local why="服务间通信必须通过 gRPC。直接访问其他服务的数据库破坏服务边界，造成紧耦合。"
+    local fix="1. 移除跨服务的 model 包导入\\n2. 在 svcCtx 中添加对应的 RPC 客户端（如 UserRpc）\\n3. 通过 RPC 调用获取数据：svcCtx.UserRpc.GetUserInfo(ctx, req)\\n4. 将 RPC 响应映射到 Logic 返回类型"
+    local example="services/auth-service/api/internal/logic/verify_token_logic.go:28-35"
+    local reference=".harness/rules/项目编码规范.md §1 | .harness/linters/patterns/cross-service-rpc.md"
+    log_fail "cross_service_import" "${#violations[@]} violations: $detail" "$why" "$fix" "$example" "$reference"
   fi
 }
 
 # ─── Check 7: Error code format ──────────────────────────────────────
 
 check_error_codes() {
-  echo "[7/11] Error code format" >&2
+  echo "[7/16] Error code format" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -508,7 +588,7 @@ check_error_codes() {
 # ─── Check 8: Hardcoded secrets ──────────────────────────────────────
 
 check_hardcoded_secrets() {
-  echo "[8/11] Hardcoded secrets" >&2
+  echo "[8/16] Hardcoded secrets" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -555,18 +635,25 @@ check_hardcoded_secrets() {
     local detail
     detail="$(printf '%s; ' "${violations[@]}" | head -c 2000)"
     detail="$(json_escape "$detail")"
-    log_fail "hardcoded_secrets" "${#violations[@]} potential secrets: $detail"
+    local why="硬编码的密钥会被提交到 Git 历史，造成安全风险。即使后续删除，历史记录中仍然可见。"
+    local fix="1. 将密钥移到 .env 文件（已在 .gitignore 中）\\n2. 在配置 YAML 中使用环境变量引用：Password: \\\${DB_PASSWORD}\\n3. 使用 configx.MustLoad 加载配置（自动展开环境变量）"
+    local example="services/user-service/api/etc/user-api.yaml:12 | .env.example"
+    local reference=".harness/rules/项目编码规范.md §7"
+    log_fail "hardcoded_secrets" "${#violations[@]} potential secrets: $detail" "$why" "$fix" "$example" "$reference"
   fi
 }
 
 # ─── Check 9: Knowledge graph freshness ───────────────────────────────
 
 check_graph_freshness() {
-  echo "[9/11] Knowledge graph freshness" >&2
+  echo "[9/16] Knowledge graph freshness" >&2
   local stamp_file="$PROJECT_ROOT/.harness/.graph_last_sync"
 
   if [[ ! -f "$stamp_file" ]]; then
-    log_fail "graph_freshness" "graph never synced — run: bash .harness/scripts/graph-sync.sh --full"
+    local why="知识图谱为 Agent 提供服务依赖、RPC 接口、数据表等上下文。未同步的图谱导致 graph-context.md 缺失。"
+    local fix="运行同步脚本创建图谱：bash .harness/scripts/graph-sync.sh --full"
+    local reference=".harness/rules/项目编码规范.md §6"
+    log_fail "graph_freshness" "graph never synced" "$why" "$fix" "" "$reference"
     return
   fi
 
@@ -589,7 +676,10 @@ check_graph_freshness() {
   done
 
   if [[ $latest_commit -gt $stamp ]]; then
-    log_fail "graph_freshness" "graph is stale (last sync: ${age}h ago, latest commit is newer) — run: bash .harness/scripts/graph-sync.sh"
+    local why="知识图谱为 Agent 提供服务依赖、RPC 接口、数据表等上下文。过期的图谱会导致 Agent 使用错误的信息。"
+    local fix="运行同步脚本更新图谱：bash .harness/scripts/graph-sync.sh"
+    local reference=".harness/rules/项目编码规范.md §6 | services/*/docs/graph-context.md"
+    log_fail "graph_freshness" "graph is stale (last sync: ${age}h ago, latest commit is newer)" "$why" "$fix" "" "$reference"
   else
     log_pass "graph_freshness" "graph up-to-date (synced ${age}h ago)"
   fi
@@ -598,7 +688,7 @@ check_graph_freshness() {
 # ─── Check 10: CLAUDE.md structural data ──────────────────────────
 
 check_claude_structural_data() {
-  echo "[10/11] CLAUDE.md structural data check" >&2
+  echo "[10/16] CLAUDE.md structural data check" >&2
   local violations=()
 
   # Determine which CLAUDE.md files to scan
@@ -675,7 +765,7 @@ check_claude_structural_data() {
 # ─── Check 11: Proto→TypeScript alignment ─────────────────────────
 
 check_proto_ts_align() {
-  echo "[11/11] Proto→TypeScript alignment" >&2
+  echo "[11/16] Proto→TypeScript alignment" >&2
   local check_script="$PROJECT_ROOT/.harness/skills/qa/scripts/check-proto-ts-align.sh"
 
   if [[ ! -f "$check_script" ]]; then
@@ -706,7 +796,7 @@ check_proto_ts_align() {
 # {code:0, data:null} — a "silent success" that masks missing functionality.
 
 check_api_stubs() {
-  echo "[12/13] API logic TODO stubs" >&2
+  echo "[12/16] API logic TODO stubs" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -726,7 +816,10 @@ check_api_stubs() {
     local detail
     detail=$(echo "$stubs" | sed "s|$PROJECT_ROOT/||g" | tr '\n' '; ')
     detail="$(json_escape "$detail")"
-    log_fail "api_stubs" "${count} TODO stubs: $detail"
+    local why="goctl 生成的 TODO 桩返回 (nil, nil)，Handler 会响应 {code:0, data:null}，这是'静默成功'，掩盖了未实现的功能。"
+    local fix="删除 '// todo: add your logic here and delete this line'，实现真正的业务逻辑。如果是占位接口，至少返回明确的错误：return nil, errx.NewCodeError(50001, \\\"功能未实现\\\")"
+    local reference=".harness/rules/项目编码规范.md §9"
+    log_fail "api_stubs" "${count} TODO stubs: $detail" "$why" "$fix" "" "$reference"
   fi
 }
 
@@ -739,7 +832,7 @@ check_api_stubs() {
 # (goctl Response types embed BaseResponse). These should return raw data instead.
 
 check_response_wrap() {
-  echo "[13/15] Response single-wrap" >&2
+  echo "[13/16] Response single-wrap" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -760,13 +853,17 @@ check_response_wrap() {
     local detail
     detail=$(echo "$violations" | sed "s|$PROJECT_ROOT/||g" | tr '\n' '; ')
     detail="$(json_escape "$detail")"
-    log_warn "response_wrap" "${count} Logic funcs return Response types (potential double-wrap): $detail"
+    local why="Logic 返回 *types.XxxResponse（含 BaseResponse），Handler 再用 response.Success() 包装，造成双层嵌套：{code:0, data:{code:0, data:{...}}}"
+    local fix="修改 Logic 返回类型为纯业务数据（struct 或 pointer），不使用 goctl 生成的 Response 类型。Handler 中用 response.Success(w, data) 包一层。"
+    local example="services/ai-model-service/api/internal/logic/create_model_logic.go:25"
+    local reference=".harness/rules/项目编码规范.md §9 | .harness/linters/patterns/response-wrap.md"
+    log_warn "response_wrap" "${count} Logic funcs return Response types (potential double-wrap): $detail" "$why" "$fix" "$example" "$reference"
   fi
 }
 
 # Check 14: Benchmark regression — compare against stored baselines (non-blocking)
 check_bench_regression() {
-  echo "[14/15] Benchmark regression" >&2
+  echo "[14/16] Benchmark regression" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -838,7 +935,7 @@ check_bench_regression() {
 
 # Check 15: API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
 check_api_smoke() {
-  echo "[15/15] API smoke test" >&2
+  echo "[15/16] API smoke test" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -875,18 +972,28 @@ check_api_smoke() {
     return
   fi
 
+  # Derive the API URL prefix from the service name (goctl convention:
+  # /api/<service-name-without-"-service">). FIX: this used to hardcode
+  # "/api/moderation" which sent every other service's smoke test to the
+  # moderation-service routes — wrong service, guaranteed false results.
+  local svc_bare="${SERVICE_NAME%-service}"
+  local api_prefix="/api/${svc_bare:-${SERVICE_NAME}}"
+
   # Test each new route
-  local failed=0 total=0 details=""
+  local failed=0 total=0 unreachable=0 details=""
   while IFS= read -r route; do
     [[ -z "$route" ]] && continue
     total=$((total + 1))
-    local url="http://127.0.0.1:${port}/api/moderation/${route}"
+    local url="http://127.0.0.1:${port}${api_prefix}${route}"
     local http_code
     http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "$url" 2>/dev/null || echo "000")
     # 401/403 = route exists (auth required), 200 = success. 404 = route missing.
-    if [[ "$http_code" == "404" || "$http_code" == "000" ]]; then
+    if [[ "$http_code" == "404" ]]; then
       failed=$((failed + 1))
       details="${details}${url}=${http_code}; "
+    elif [[ "$http_code" == "000" ]]; then
+      # FIX: service not running is NOT a route-missing failure — report as skip
+      unreachable=$((unreachable + 1))
     fi
   done <<< "$new_routes"
 
@@ -895,6 +1002,8 @@ check_api_smoke() {
 
   if [[ $total -eq 0 ]]; then
     log_pass "api_smoke" "no routes to test"
+  elif [[ $unreachable -gt 0 && $failed -eq 0 ]]; then
+    log_warn "api_smoke" "服务未运行（${unreachable}/${total} 个路由无法连接）— 跳过冒烟验证，非路由缺失"
   elif [[ $failed -gt 0 ]]; then
     log_warn "api_smoke" "${failed}/${total} new routes returned 404 — service may need restart: $detail_escaped"
   else
@@ -941,7 +1050,8 @@ check_memory_index() {
   fi
 
   if [[ "$index_epoch" -eq 0 ]]; then
-    log_warn "memory_index" "无法解析索引时间: $index_time"
+    local fix="重新生成索引：bash .harness/scripts/memory-index-build.sh"
+    log_warn "memory_index" "无法解析索引时间: $index_time" "" "$fix"
     return
   fi
 
@@ -963,8 +1073,11 @@ check_memory_index() {
     local newest_file
     newest_file=$(find "$memory_dir" -name "*.md" -not -name "MEMORY.md" -not -name "MAINTENANCE.md" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
     local detail
-    detail="索引过期 (最新记忆: $(basename "$newest_file"))，运行: bash .harness/scripts/memory-index-build.sh"
-    log_fail "memory_index" "$detail"
+    detail="索引过期 (最新记忆: $(basename "$newest_file"))"
+    local why="Memory 索引用于语义搜索和关键词触发。过期索引会导致新记忆无法被检索到。"
+    local fix="重新生成索引：bash .harness/scripts/memory-index-build.sh"
+    local reference=".harness/knowledge/memory/MAINTENANCE.md"
+    log_fail "memory_index" "$detail" "$why" "$fix" "" "$reference"
   else
     log_pass "memory_index" "索引最新 (生成于 $index_time)"
   fi
@@ -996,7 +1109,7 @@ main() {
   check_bench_regression
   check_api_smoke
   check_memory_index
-  check_frontend
+  # Note: frontend checks use separate script: harness-checks-frontend.sh
 
   # Count results
   local pass=0 fail=0 warn=0
@@ -1028,16 +1141,35 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test")
+    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness")
     for result in "${RESULTS[@]}"; do
-      local status label detail
+      local status label detail why fix example reference
       status=$(echo "$result" | grep -oP '"status":"\K\w+')
       detail=$(echo "$result" | grep -oP '"detail":"\K[^"]*')
+      why=$(echo "$result" | grep -oP '"why":"\K[^"]*' || echo "")
+      fix=$(echo "$result" | grep -oP '"fix":"\K[^"]*' || echo "")
+      example=$(echo "$result" | grep -oP '"example":"\K[^"]*' || echo "")
+      reference=$(echo "$result" | grep -oP '"reference":"\K[^"]*' || echo "")
       label="${labels[$n]}"
+
       case "$status" in
-        PASS) echo "[PASS] $((n+1)). $label — $detail" ;;
-        FAIL) echo "[FAIL] $((n+1)). $label — $detail" ;;
-        WARN) echo "[WARN] $((n+1)). $label — $detail" ;;
+        PASS)
+          echo "[PASS] $((n+1)). $label — $detail"
+          ;;
+        FAIL)
+          echo "[FAIL] $((n+1)). $label — $detail"
+          [[ -n "$why" ]] && echo "  WHY: $why"
+          [[ -n "$fix" ]] && echo "  FIX: $fix"
+          [[ -n "$example" ]] && echo "  EXAMPLE: $example"
+          [[ -n "$reference" ]] && echo "  REFERENCE: $reference"
+          ;;
+        WARN)
+          echo "[WARN] $((n+1)). $label — $detail"
+          [[ -n "$why" ]] && echo "  WHY: $why"
+          [[ -n "$fix" ]] && echo "  FIX: $fix"
+          [[ -n "$example" ]] && echo "  EXAMPLE: $example"
+          [[ -n "$reference" ]] && echo "  REFERENCE: $reference"
+          ;;
       esac
       n=$((n + 1))
     done

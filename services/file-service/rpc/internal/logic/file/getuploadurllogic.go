@@ -6,9 +6,9 @@ import (
 	"time"
 
 	filev1 "github.com/guxiao1976/api-proto/gen/go/file/v1"
-	"github.com/guxiao1976/community-file/rpc/internal/svc"
 	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
+	"github.com/guxiao1976/community-file/rpc/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -29,7 +29,7 @@ func NewGetUploadUrlLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetU
 
 func (l *GetUploadUrlLogic) GetUploadUrl(in *filev1.GetUploadUrlRequest) (*filev1.GetUploadUrlResponse, error) {
 	if l.svcCtx.RawMinio == nil {
-		return nil, errx.NewCodeError(70002, "MinIO not available")
+		return nil, errx.NewCodeError(ErrCodeFileAccessDenied, "MinIO not available")
 	}
 
 	objectKey := fmt.Sprintf("uploads/%d/%d_%s", in.UserId, time.Now().UnixNano(), in.FileName)
@@ -44,7 +44,7 @@ func (l *GetUploadUrlLogic) GetUploadUrl(in *filev1.GetUploadUrlRequest) (*filev
 	url, err := l.svcCtx.RawMinio.PresignedPutObject(l.ctx, l.svcCtx.Bucket, objectKey, expiry)
 	if err != nil {
 		l.Errorf("presigned put object failed: %v", err)
-		return nil, errx.NewCodeError(70002, "generate upload URL failed")
+		return nil, errx.NewCodeError(ErrCodeFileAccessDenied, "generate upload URL failed")
 	}
 
 	return &filev1.GetUploadUrlResponse{

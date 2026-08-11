@@ -36,36 +36,35 @@ const REVIEW_SCHEMA = {
 
 // ── 多视角审查：三个 Lens，并行执行 ──
 
-const isFrontend = (SVC_DIR || '').startsWith('web/')
+function isFrontendService() { return (SVC_DIR || '').startsWith('web/') }
 
 const REVIEW_LENSES = [
   {
     key: 'security-arch',
     label: '安全架构',
     dimensions: '架构一致性(#1)、安全性(#5)、变更完整性(#8)',
-    focus: isFrontend
-      ? '你关注前端架构的正确性和安全风险。检查组件分层合理性、API 调用权限校验、Token 存储安全（localStorage/cookie）、XSS 防护（v-html）、CORS 配置、硬编码密钥、敏感信息泄露到前端、CHANGELOG 完整性。'
-      : '你关注架构决策的正确性和安全风险。检查 Proto/gRPC 规范、服务边界、跨服务 DB 访问、硬编码密钥、SQL 注入、输入校验、CHANGELOG 完整性。',
+    focusGo: '你关注架构决策的正确性和安全风险。检查 Proto/gRPC 规范、服务边界、跨服务 DB 访问、硬编码密钥、SQL 注入、输入校验、CHANGELOG 完整性。',
+    focusFrontend: '你关注前端架构的正确性和安全风险。检查组件分层合理性、API 调用权限校验、Token 存储安全（localStorage/cookie）、XSS 防护（v-html）、CORS 配置、硬编码密钥、敏感信息泄露到前端、CHANGELOG 完整性。',
   },
   {
     key: 'standards-eng',
     label: '规范工程',
     dimensions: '规范遵循(#3)、复用性(#6)、测试覆盖(#7)、记忆遵守(#9)',
-    focus: isFrontend
-      ? '你关注前端编码规范和工程质量。检查 Snowflake ID string 类型、no `as any`（type-safety）、no console.log/debugger、hardcoded secrets、web/common/ 复用（勿重复定义类型）、API 响应直接使用（勿 res.data 双解包）、Vue 模板勿嵌套 {{ }}、测试覆盖(新增组件/函数)、记忆遵守(M1-M4)。'
-      : '你关注编码规范和工程质量。检查 Snowflake ID 序列化(jstype/json:\\",string\\")、错误码格式(5位)、API 响应格式、代码复用、测试覆盖(新增函数是否有测试)、记忆遵守(M1-M4)。',
+    focusGo: '你关注编码规范和工程质量。检查 Snowflake ID 序列化(jstype/json:",string")、错误码格式(5位)、API 响应格式、代码复用、测试覆盖(新增函数是否有测试)、记忆遵守(M1-M4)。',
+    focusFrontend: '你关注前端编码规范和工程质量。检查 Snowflake ID string 类型、no `as any`（type-safety）、no console.log/debugger、hardcoded secrets、web/common/ 复用（勿重复定义类型）、API 响应直接使用（勿 res.data 双解包）、Vue 模板勿嵌套 {{ }}、测试覆盖(新增组件/函数)、记忆遵守(M1-M4)。',
   },
   {
     key: 'design-biz',
     label: '设计业务',
     dimensions: '设计一致性(#2)、代码质量(#4)、Migration(#8部分)',
-    focus: isFrontend
-      ? '你关注前端业务逻辑的正确性和设计一致性。检查与 design.md 一致性、API 字段名与 api-proto 对齐、组件状态管理合理性、边界条件处理(loading/empty/error 状态)、错误处理完善性(ElMessage 用户提示)、表单验证完整性、性能(大列表虚拟滚动/懒加载)。'
-      : '你关注业务逻辑的正确性和设计一致性。检查与 design.md 一致性、数据模型正确性、业务流程正确性、边界条件处理(null/零值/错误路径)、错误处理完善性、资源泄露、Migration 安全性(回滚方案/锁表/影响现有数据)。',
+    focusGo: '你关注业务逻辑的正确性和设计一致性。检查与 design.md 一致性、数据模型正确性、业务流程正确性、边界条件处理(null/零值/错误路径)、错误处理完善性、资源泄露、Migration 安全性(回滚方案/锁表/影响现有数据)。',
+    focusFrontend: '你关注前端业务逻辑的正确性和设计一致性。检查与 design.md 一致性、API 字段名与 api-proto 对齐、组件状态管理合理性、边界条件处理(loading/empty/error 状态)、错误处理完善性(ElMessage 用户提示)、表单验证完整性、性能(大列表虚拟滚动/懒加载)。',
   },
 ]
 
 function reviewLensPrompt(lens) {
+  const isFrontend = (SVC_DIR || '').startsWith('web/')
+  const focus = isFrontend ? lens.focusFrontend : lens.focusGo
   return `你是 Code Reviewer Agent — ${lens.label}视角。
 
 ## 角色定义（必须先读）
@@ -75,7 +74,7 @@ function reviewLensPrompt(lens) {
 从 **${lens.label}** 视角审查 ${SVC_DIR}/ 的代码变更（QA 已通过，_qa.md 可供参考）。
 
 ## 你的审查焦点
-${lens.focus}
+${focus}
 
 ## 审查步骤
 1. 阅读 ${ROOT_CLAUDE} — 全局规则

@@ -1,6 +1,10 @@
 Name: monitoring-api
 Host: 0.0.0.0
 Port: 8886
+Auth:
+  AccessSecret: ${JWT_ACCESS_SECRET}
+  AccessExpire: 7200
+
 
 Monitoring:
   Services:
@@ -66,3 +70,10 @@ Monitoring:
   AiModelCheck:
     Endpoint: http://127.0.0.1:8891/api/v1/models
     Timeout: 5s
+
+# permission-service gRPC 客户端（RBAC 鉴权）
+PermissionRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: permission.rpc

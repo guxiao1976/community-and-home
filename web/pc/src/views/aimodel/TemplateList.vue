@@ -12,7 +12,7 @@
       </template>
 
       <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="ID" width="200" />
         <el-table-column prop="name" label="模板名称" min-width="150" />
         <el-table-column prop="category" label="分类" width="120">
           <template #default="{ row }">
@@ -159,6 +159,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';

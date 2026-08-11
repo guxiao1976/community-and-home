@@ -1,0 +1,194 @@
+[
+  {
+    "timestamp": "2026-08-08T10:01:00.758Z",
+    "phase": "qa",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test1"
+  },
+  {
+    "timestamp": "2026-08-08T10:01:00.766Z",
+    "phase": "qa",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test2"
+  },
+  {
+    "timestamp": "2026-08-08T10:01:00.779Z",
+    "phase": "qa",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "qa_verdict_enum",
+        "message": "QA verdict 必须是 PASS/FAIL（quality-gates.yml qa.ci_check.status 等价物）；畸形判定按 FAIL 处理"
+      }
+    ],
+    "warnings": [],
+    "context": "test3"
+  },
+  {
+    "timestamp": "2026-08-08T10:01:00.817Z",
+    "phase": "qa",
+    "passed": true,
+    "failures": [],
+    "warnings": [
+      {
+        "gate": "qa_failures_shape",
+        "message": "QA 判定 PASS 时 failures 应为空；非空说明 agent 自相矛盾（假 PASS 风险）"
+      }
+    ],
+    "context": "test4"
+  },
+  {
+    "timestamp": "2026-08-08T10:01:00.830Z",
+    "phase": "qa",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "qa_verdict_enum",
+        "message": "QA verdict 必须是 PASS/FAIL（quality-gates.yml qa.ci_check.status 等价物）；畸形判定按 FAIL 处理"
+      },
+      {
+        "gate": "qa_failures_shape",
+        "message": "gate 执行异常: Cannot read properties of undefined (reading 'verdict')"
+      }
+    ],
+    "warnings": [],
+    "context": "test5"
+  },
+  {
+    "timestamp": "2026-08-08T10:01:00.843Z",
+    "phase": "review",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test6"
+  },
+  {
+    "timestamp": "2026-08-08T10:01:00.856Z",
+    "phase": "review",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "review_min_approved",
+        "message": "评审需 ≥2/3 视角通过（quality-gates.yml review.review_verdict.min_approved=2, total_reviewers=3）；debt 类单视角 ≥1"
+      }
+    ],
+    "warnings": [],
+    "context": "test7"
+  },
+  {
+    "timestamp": "2026-08-08T10:01:00.869Z",
+    "phase": "review",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test8"
+  },
+  {
+    "timestamp": "2026-08-08T10:01:00.883Z",
+    "phase": "review",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test9"
+  },
+  {
+    "timestamp": "2026-08-08T10:21:36.672Z",
+    "phase": "qa",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test1"
+  },
+  {
+    "timestamp": "2026-08-08T10:21:36.686Z",
+    "phase": "qa",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test2"
+  },
+  {
+    "timestamp": "2026-08-08T10:21:36.699Z",
+    "phase": "qa",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "qa_verdict_enum",
+        "message": "QA verdict 必须是 PASS/FAIL（quality-gates.yml qa.ci_check.status 等价物）；畸形判定按 FAIL 处理"
+      }
+    ],
+    "warnings": [],
+    "context": "test3"
+  },
+  {
+    "timestamp": "2026-08-08T10:21:36.712Z",
+    "phase": "qa",
+    "passed": true,
+    "failures": [],
+    "warnings": [
+      {
+        "gate": "qa_failures_shape",
+        "message": "QA 判定 PASS 时 failures 应为空；非空说明 agent 自相矛盾（假 PASS 风险）"
+      }
+    ],
+    "context": "test4"
+  },
+  {
+    "timestamp": "2026-08-08T10:21:36.725Z",
+    "phase": "qa",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "qa_verdict_enum",
+        "message": "QA verdict 必须是 PASS/FAIL（quality-gates.yml qa.ci_check.status 等价物）；畸形判定按 FAIL 处理"
+      },
+      {
+        "gate": "qa_failures_shape",
+        "message": "gate 执行异常: Cannot read properties of undefined (reading 'verdict')"
+      }
+    ],
+    "warnings": [],
+    "context": "test5"
+  },
+  {
+    "timestamp": "2026-08-08T10:21:36.737Z",
+    "phase": "review",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test6"
+  },
+  {
+    "timestamp": "2026-08-08T10:21:36.751Z",
+    "phase": "review",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "review_min_approved",
+        "message": "评审需 ≥2/3 视角通过（quality-gates.yml review.review_verdict.min_approved=2, total_reviewers=3）；debt 类单视角 ≥1"
+      }
+    ],
+    "warnings": [],
+    "context": "test7"
+  },
+  {
+    "timestamp": "2026-08-08T10:21:36.765Z",
+    "phase": "review",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test8"
+  },
+  {
+    "timestamp": "2026-08-08T10:21:36.778Z",
+    "phase": "review",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "test9"
+  }
+]

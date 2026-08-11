@@ -1,0 +1,30 @@
+date: 2026-08-10
+task: "菜单 RBAC 重构 + 权限自动发现功能"
+pain_rounds: 18
+
+patterns:
+  - run_old_code          # RPC 进程 08:54 启动，改到 19:57 才发现没重启
+  - no_self_verify        # 每次改完都直接让用户点击，没有 curl 自查 API
+  - process_not_restarted # start.sh 不会杀掉旧进程，端口冲突
+  - type_mismatch          # sqlx COALESCE + string 映射失败，SELECT * + sql.NullString 才成功
+  - db_cache_stale         # Redis 缓存双重 Method 前缀（GET:GET:/api/users），CheckPermission 永远返回 false
+  - config_missing         # MYSQL_DATA_SOURCE 未设置，gate-engine 配置缺失
+  - compile_pass_but_runtime_fail # Go build 成功，但运行时 sqlx 映射为空
+
+root_causes:
+  - "sqlx 列映射: COALESCE(path,'') as path 别名 + Go string 字段 → Path 始终为空，比较逻辑从未生效"
+  - "CheckPermission 缓存: p.Path 已含 Method 前缀（GET:/api/users），fmt.Sprintf 又拼一次 → 双重前缀"
+  - "start.sh --api-only 只重启 API，RPC 进程未被管理"
+  - "每次改完没有自查 API 的机制，依赖用户点击反馈"
+  - "gRPC ListPermissions 返回树形结构，顶层只有 type=1 节点，walkPermissions 找不到嵌套的 type=3"
+
+fixed_by:
+  - "verify-before-deliver skill (6 步验证)"
+  - "gate-engine.js 新增 verify 门禁 (编译/进程新鲜度/日志无panic/数据重复检查)"
+  - "修复 checkpermissionlogic.go 缓存格式：p.Path.String 直接使用"
+  - "修复 Permissions.vue 双模式（编辑/只读）+ 权限树 readonly prop"
+  - "修复 stores/permission.ts: permissionCodes 字段名"
+  - "新增 resourceToMenu + specialParent 映射（DELETE /api/perm/user-roles → user:assign-role）"
+  - ".env 添加 MYSQL_DATA_SOURCE"
+
+wish_gate: "verify_process_fresh — 如果第一轮就有这个门禁，RPC 旧进程问题会在第一轮被发现"

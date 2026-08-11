@@ -47,6 +47,46 @@ Skill("requirement-analysis")
 - **`Grep`** — 搜索相关代码和配置
 - **`Write`** — 写入 proposal.md / spec.md / .change.yaml
 
+## P0-2 FIX: 工具调用熔断机制
+
+**硬性约束**：连续 2 次相同的工具调用失败后，**必须立即停止并诊断**。
+
+**触发条件**：
+- 工具名称相同
+- 错误类型相同（如 `InputValidationError`）
+- 参数相似或完全相同
+
+**强制流程**：
+```
+第 1 次失败 → 记录
+第 2 次失败 → 记录
+第 3 次尝试前 → 必须执行以下步骤：
+  1. 停止当前方法
+  2. 输出诊断：
+     - 我调用了什么工具
+     - 传递了什么参数
+     - 收到什么错误
+     - 工具定义是什么（检查必需参数）
+     - 根本原因分析
+  3. 尝试完全不同的方法（如用 Bash 替代 Write）
+```
+
+**禁止行为**：
+- ❌ 连续 3 次以上相同的工具调用
+- ❌ "也许这次会成功"的重复尝试
+- ❌ 忽略错误信息中的提示
+
+**正确示例**：
+```
+Write(file_path="...") → InputValidationError: missing 'content'
+Write(file_path="...") → InputValidationError: missing 'content'
+
+[诊断] 工具定义要求 file_path + content 两个参数，我遗漏了 content
+[新方法] 使用 Bash + cat 创建文件
+
+Bash("cat > file.md << 'EOF'\n...\nEOF") → 成功 ✅
+```
+
 ## 完成通知
 
 产出完成后告知 Owner Agent：

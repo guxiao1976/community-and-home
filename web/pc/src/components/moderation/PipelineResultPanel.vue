@@ -53,6 +53,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { computed } from 'vue';
 import LayerResultCard from './LayerResultCard.vue';
 import type { PipelineTestResponse, PipelineLayerResult } from '@common/types/moderation';

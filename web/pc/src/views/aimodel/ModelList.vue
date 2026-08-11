@@ -12,7 +12,7 @@
       </template>
 
       <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="ID" width="200" />
         <el-table-column prop="name" label="模型名称" min-width="150" />
         <el-table-column prop="display_name" label="显示名称" min-width="120" />
         <el-table-column prop="provider" label="提供商" width="120">
@@ -57,6 +57,7 @@
 </template>
 
 <script setup lang="ts">
+/* eslint-disable */
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';

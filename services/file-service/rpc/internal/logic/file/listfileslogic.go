@@ -3,11 +3,11 @@ package file
 import (
 	"context"
 
-	filev1 "github.com/guxiao1976/api-proto/gen/go/file/v1"
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
-	"github.com/guxiao1976/community-file/rpc/internal/svc"
+	filev1 "github.com/guxiao1976/api-proto/gen/go/file/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
+	"github.com/guxiao1976/community-file/rpc/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -64,7 +64,7 @@ func (l *ListFilesLogic) ListFiles(in *filev1.ListFilesRequest) (*filev1.ListFil
 	files, total, err := l.svcCtx.FileModel.FindPage(l.ctx, userID, entityType, entityID, int64(page), int64(pageSize))
 	if err != nil {
 		l.Errorf("list files failed: %v", err)
-		return nil, errx.NewCodeError(70002, "query files failed")
+		return nil, errx.NewCodeError(ErrCodeFileAccessDenied, "query files failed")
 	}
 
 	totalPages := int32(total / int64(pageSize))
