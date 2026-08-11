@@ -19,10 +19,11 @@ func NewGetUserRolesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetU
 	return &GetUserRolesLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
-// GetUserRoles 查询用户拥有的所有角色（含作用域信息）
-//   联表 JOIN rel_user_role + sys_role
+// GetUserRoles 查询用户拥有的所有角色（含个体生命周期状态）
+//
+//	联表 JOIN rel_user_role + sys_role，返回全部状态（前端展示认证进度）
 func (l *GetUserRolesLogic) GetUserRoles(in *permissionv1.GetUserRolesRequest) (*permissionv1.GetUserRolesResponse, error) {
-	roles, err := l.svcCtx.UserRoleModel.FindActiveByUserId(l.ctx, in.UserId)
+	roles, err := l.svcCtx.UserRoleModel.FindAllByUserId(l.ctx, in.UserId)
 	if err != nil || len(roles) == 0 {
 		return &permissionv1.GetUserRolesResponse{
 			Base:  responsex.NewBaseResp(),
@@ -32,6 +33,13 @@ func (l *GetUserRolesLogic) GetUserRoles(in *permissionv1.GetUserRolesRequest) (
 
 	var pbRoles []*permissionv1.UserRoleInfo
 	for _, r := range roles {
+		var verifiedAt, expiresAt int64
+		if r.VerifiedAt.Valid {
+			verifiedAt = r.VerifiedAt.Time.Unix()
+		}
+		if r.ExpiresAt.Valid {
+			expiresAt = r.ExpiresAt.Time.Unix()
+		}
 		pbRoles = append(pbRoles, &permissionv1.UserRoleInfo{
 			Role: &permissionv1.Role{
 				Id:          r.RoleId,
@@ -41,8 +49,11 @@ func (l *GetUserRolesLogic) GetUserRoles(in *permissionv1.GetUserRolesRequest) (
 				IsSystem:    r.IsSystem == 1,
 				Status:      int32(r.Status),
 			},
-			ScopeType: r.ScopeType,
-			ScopeId:   r.ScopeId,
+			ScopeType:  r.ScopeType,
+			ScopeId:    r.ScopeId,
+			Status:     int32(r.URStatus),
+			VerifiedAt: verifiedAt,
+			ExpiresAt:  expiresAt,
 		})
 	}
 

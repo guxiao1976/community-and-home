@@ -9,14 +9,18 @@
 --   如需超级管理员，通过管理后台新建角色并勾选全部权限即可
 -- ============================================================================
 
--- 1. 初始化 4 个系统角色（如果不存在）
+-- 1. 初始化 8 个系统角色（如果不存在）
 -- is_system=1 表示系统角色，仅用于保护不被误删和误改
-INSERT IGNORE INTO sys_role (id, role_code, role_name, description, is_system, status, sort_order, created_by, created_time, updated_time)
+INSERT IGNORE INTO sys_role (id, role_code, role_name, description, is_system, status, sort_order, created_by, created_at, updated_at)
 VALUES
 (1, 'owner', '业主', '小区业主，查看自己单元相关信息的权限', 1, 1, 10, 0, NOW(), NOW()),
 (2, 'property_admin', '物业管理员', '物业公司管理人员，负责小区日常管理和通知发布', 1, 1, 20, 0, NOW(), NOW()),
 (3, 'community_admin', '社区管理员', '社区居委会管理人员，拥有最全面的管理权限', 1, 1, 30, 0, NOW(), NOW()),
-(4, 'grid_worker', '网格员', '社区网格员，负责网格内的巡查和信息查看', 1, 1, 40, 0, NOW(), NOW());
+(4, 'grid_worker', '网格员', '社区网格员，负责网格内的巡查和信息查看', 1, 1, 40, 0, NOW(), NOW()),
+(5, 'tenant', '租户', '小区租户，查看租约房屋相关信息的权限', 1, 1, 50, 0, NOW(), NOW()),
+(6, 'committee', '业委会', '小区业委会成员，参与小区公共事务管理', 1, 1, 60, 0, NOW(), NOW()),
+(7, 'merchant', '商家', '入驻商家，管理自身商业信息', 1, 1, 70, 0, NOW(), NOW()),
+(8, 'sys_admin', '系统管理员', '系统管理员，拥有全部管理权限', 1, 1, 5, 0, NOW(), NOW());
 
 -- 2. 初始化权限树（菜单 → 按钮 → API 三层）
 -- type: 1=菜单(menu), 2=按钮(button), 3=API(api)
@@ -26,7 +30,7 @@ VALUES
 -- ============================================================================
 -- 用户管理模块
 -- ============================================================================
-INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_time, updated_time)
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
 VALUES
 -- 菜单层
 (100, 0, '用户管理', 'user:menu', 1, '/users', 'user', 10, 1, NOW(), NOW()),
@@ -49,7 +53,7 @@ VALUES
 -- ============================================================================
 -- 角色管理模块
 -- ============================================================================
-INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_time, updated_time)
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
 VALUES
 -- 菜单层
 (200, 0, '角色管理', 'role:menu', 1, '/roles', 'role', 20, 1, NOW(), NOW()),
@@ -73,7 +77,7 @@ VALUES
 -- ============================================================================
 -- 权限管理模块
 -- ============================================================================
-INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_time, updated_time)
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
 VALUES
 -- 菜单层
 (300, 0, '权限管理', 'permission:menu', 1, '/permissions', 'permission', 30, 1, NOW(), NOW()),
@@ -87,7 +91,7 @@ VALUES
 -- ============================================================================
 -- 社区管理模块
 -- ============================================================================
-INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_time, updated_time)
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
 VALUES
 -- 菜单层
 (400, 0, '社区管理', 'community:menu', 1, '/community', 'community', 40, 1, NOW(), NOW()),
@@ -106,7 +110,7 @@ VALUES
 -- ============================================================================
 -- 审核管理模块
 -- ============================================================================
-INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_time, updated_time)
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
 VALUES
 -- 菜单层
 (500, 0, '审核管理', 'moderation:menu', 1, '/moderation', 'moderation', 50, 1, NOW(), NOW()),
@@ -155,13 +159,33 @@ INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
 (4, 100), (4, 110), (4, 111), (4, 112),      -- 用户查看
 (4, 400), (4, 410), (4, 411);                 -- 社区查看
 
+-- 租户(role_id=5)：用户查看 + 社区查看（与业主类似，无角色/权限管理）
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(5, 100), (5, 110), (5, 111), (5, 112),      -- 用户查看
+(5, 400), (5, 410), (5, 411);                 -- 社区查看
+
+-- 业委会(role_id=6)：用户查看 + 社区查看 + 发布通知
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(6, 100), (6, 110), (6, 111), (6, 112),      -- 用户查看
+(6, 400), (6, 410), (6, 411),                 -- 社区查看
+(6, 420), (6, 421);                           -- 发布通知
+
+-- 商家(role_id=7)：用户查看 + 社区查看
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(7, 100), (7, 110), (7, 111), (7, 112),      -- 用户查看
+(7, 400), (7, 410), (7, 411);                 -- 社区查看
+
+-- 系统管理员(role_id=8)：全部权限（选择所有 permission_id）
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id)
+SELECT 8, id FROM sys_permission WHERE status = 1;
+
 -- ============================================================================
 -- 数据验证查询
 -- ============================================================================
 
--- 验证角色数量（应该至少有 4 个系统角色）
+-- 验证角色数量（应该至少有 8 个系统角色）
 SELECT '角色数量检查' AS check_type, COUNT(*) AS count,
-       CASE WHEN COUNT(*) >= 4 THEN '✅ PASS' ELSE '❌ FAIL' END AS status
+       CASE WHEN COUNT(*) >= 8 THEN '✅ PASS' ELSE '❌ FAIL' END AS status
 FROM sys_role
 WHERE is_system = 1;
 
@@ -172,6 +196,7 @@ SELECT '角色权限分布' AS check_type, r.role_code, r.role_name, COUNT(rp.pe
          WHEN r.role_code = 'property_admin' AND COUNT(rp.permission_id) >= 8 THEN '✅ PASS'
          WHEN r.role_code = 'community_admin' AND COUNT(rp.permission_id) >= 15 THEN '✅ PASS'
          WHEN r.role_code = 'grid_worker' AND COUNT(rp.permission_id) >= 5 THEN '✅ PASS'
+         WHEN r.role_code = 'sys_admin' AND COUNT(rp.permission_id) >= 20 THEN '✅ PASS'
          ELSE '⚠️ REVIEW'
        END AS status
 FROM sys_role r

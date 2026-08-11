@@ -1,5 +1,20 @@
 # CHANGELOG — auth-service
 
+## 2026-08-11 — RBAC 角色来源切换 + 时间字段标准化
+
+### 做了什么
+- JWT 角色来源：经 user-service `GetUserRoles` 代理到 permission-service（自动生效，无代码改动）
+- 时间字段：`auth_credential` 表 `created_time`/`updated_time` → `created_at`/`updated_at`
+- 登录 JWT roles 现在来自 permission-service 的 rel_user_role（已认证角色）
+
+### 为什么
+角色合并后 permission-service 成为唯一角色权威，auth JWT 从 permission-service 获取已认证角色。
+
+### 影响
+- 调用方: 前端 JWT roles 语义变化（现在对应 rel_user_role 状态）
+- 数据库: `auth_credential` 时间字段改名
+- 关联: 提交待定
+
 ## 2026-06-04 — C8: SMS 验证码认证绕过修复
 
 ### 做了什么

@@ -1,5 +1,27 @@
 # CHANGELOG — permission-service
 
+## 2026-08-11 — RBAC 角色体系合并（方案 B）
+
+### 做了什么
+- `rel_user_role` 扩展：新增 `status`（个体角色生命周期 0-4）、`verified_at`、`expires_at`
+- 角色从 4 个扩到 8 个：新增 `tenant`/`committee`/`merchant`/`sys_admin`
+- `AssignRole` 支持 status/verified_at/expires_at 参数
+- `GetUserRoles` 返回个体生命周期状态（status/verifiedAt/expiresAt）
+- `CheckPermission` 增加个体角色过期校验（status=2 且未过期才生效）
+- 新增 `UpdateUserRoleStatus` RPC：认证通过/驳回时更新角色状态
+- 新增 `FindAllByUserId`/`UpdateRoleStatus` model 方法
+- `FindActiveByUserId` 只返回已认证（status=2）且未过期的角色
+- API 层 `UserRoleInfo` 加生命周期字段，挂载 PermMiddleware
+
+### 为什么
+废弃 user-service 的 `user_membership_role`，permission-service 成为角色唯一权威，统一两套角色体系。
+
+### 影响
+- Proto: `api-proto/api/permission/v1/permission.proto`（UserRoleInfo + UpdateUserRoleStatus）
+- 调用方: auth-service（JWT roles）、user-service（认证流程）、前端 PC/移动端（状态展示）
+- 数据库: `rel_user_role` 加 3 列
+- 关联: 提交待定
+
 ## 2026-06-19 — 修复 int64 字段 JSON 序列化精度丢失
 
 ### 做了什么

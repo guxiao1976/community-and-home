@@ -33,9 +33,12 @@ sys_permission (权限树)
 ├── icon, sort_order, status
 └── created_at, updated_at
 
-rel_user_role (用户-角色)
+rel_user_role (用户-角色关联，含个体生命周期)
 ├── user_id, role_id
-├── scope_type, scope_id (数据范围, 预留)
+├── scope_type, scope_id (数据范围: community/building/unit/grid/global)
+├── status (个体角色生命周期: 0=未认证 1=待审 2=已认证 3=已驳回 4=已过期)
+├── verified_at (个体认证通过时间)
+├── expires_at (个体角色到期时间, NULL=永久)
 └── created_at
 
 rel_role_permission (角色-权限)
@@ -43,14 +46,20 @@ rel_role_permission (角色-权限)
 └── created_at
 ```
 
-### 2.2 系统角色
+### 2.2 系统角色（8 个）
 
-| role_code | 角色名 | 典型权限范围 |
-|-----------|--------|-------------|
-| `owner` | 业主 | 查看用户、查看社区（只读） |
-| `property_admin` | 物业管理员 | 用户查看 + 社区查看 + 通知发布 + 审核查看 |
-| `community_admin` | 社区管理员 | 用户/角色/社区/审核全面管理 |
-| `grid_worker` | 网格员 | 用户查看 + 社区查看（最小权限） |
+| role_code | 角色名 | 有效期默认 | 典型权限范围 |
+|-----------|--------|-----------|-------------|
+| `sys_admin` | 系统管理员 | 永久 | 全部权限（角色/权限管理） |
+| `owner` | 业主 | 永久 | 查看用户、查看社区（只读） |
+| `tenant` | 租户 | 租约到期日 | 查看用户、查看社区（只读） |
+| `grid_worker` | 网格员 | 1年 | 用户查看 + 社区查看（最小权限） |
+| `property_admin` | 物业管理员 | 任期 | 用户查看 + 社区查看 + 通知发布 + 审核查看 |
+| `community_admin` | 社区管理员 | 任期 | 用户/角色/社区/审核全面管理 |
+| `committee` | 业委会 | 任期 | 用户查看 + 社区查看 + 发布通知 |
+| `merchant` | 商家 | 永久 | 用户查看 + 社区查看 |
+
+> **角色本身不过期**，是"某个体持有的角色关联"（rel_user_role）可过期。例如：张三的社区管理员任期 1 年，到期张三的角色失效，但"社区管理员"角色永远存在。
 
 ### 2.3 权限编码规范
 
@@ -71,6 +80,40 @@ GET:/api/users/:id
 ```
 
 **:id 占位符匹配**：`PermMiddleware` 会将实际请求中的数字路径段自动替换为 `:id` 再进行匹配（`normalizePathParams`）。
+
+---
+
+### 2.5 个体角色生命周期（认证状态流转）
+
+rel_user_role 的 `status` 字段承载"该用户持有的这个角色"的生命周期状态。**角色定义永不过期，个体角色关联可过期**。
+
+```
+申请角色 → 待审 → 通过（个体获得角色，可选有效期）/ 驳回
+   ↑                        │
+   └── 重新申请              ├─ 有有效期 → 到期 → 该个体角色失效
+                            └─ 无有效期 → 长期有效
+```
+
+| status | 含义 | 能否鉴权 |
+|--------|------|:---:|
+| 0 | 未认证（刚申请） | ❌ |
+| 1 | 待审核（已提交材料） | ❌ |
+| 2 | 已认证（审核通过） | ✅ |
+| 3 | 已驳回（材料不合格） | ❌ |
+| 4 | 已过期（有效期到） | ❌ |
+
+**服务分工**：
+- user-service：认证材料收集与审核（`user_certification`，房产证/租约/身份证真伪判断）
+- permission-service：角色状态权威（认证通过 → status=2 生效；驳回 → 3）
+
+**过期处理**（懒校验）：
+```
+CheckPermission 流程:
+  1. 查 user:disabled 标记 → 禁用拒绝
+  2. 查 rel_user_role 活跃角色（status=2）
+     → 若有 expires_at 且已过期 → 标记 status=4 → 不纳入鉴权
+  3. SIsMember 权限缓存匹配
+```
 
 ---
 
@@ -293,14 +336,16 @@ Snowflake 19 位 ID，`el-table-column` 统一 `width="200"`。
 
 ### 6.4 角色验收矩阵
 
-| 测试场景 | owner | property_admin | community_admin |
-|----------|-------|---------------|-----------------|
-| 查看用户列表 | ✅ | ✅ | ✅ |
-| 创建用户 | ❌ | ❌ | ✅ |
-| 查看角色列表 | ❌ | ❌ | ✅ |
-| 创建/删除角色 | ❌ | ❌ | ✅ |
-| 配置角色权限 | ❌ | ❌ | ✅ |
-| 为用户分配角色 | ❌ | ❌ | ✅ |
+> 角色/权限变更由 **sys_admin（系统管理员）** 直接管理，无需审批流（变更频率极低）。
+
+| 测试场景 | owner | property_admin | community_admin | sys_admin |
+|----------|-------|---------------|-----------------|-----------|
+| 查看用户列表 | ✅ | ✅ | ✅ | ✅ |
+| 创建用户 | ❌ | ❌ | ✅ | ✅ |
+| 查看角色列表 | ❌ | ❌ | ✅ | ✅ |
+| 创建/删除角色 | ❌ | ❌ | ✅ | ✅ |
+| 配置角色权限 | ❌ | ❌ | ✅ | ✅ |
+| 为用户分配角色 | ❌ | ❌ | ✅ | ✅ |
 
 ---
 
@@ -329,9 +374,21 @@ Snowflake 19 位 ID，`el-table-column` 统一 `width="200"`。
 | 1 | permission-service API 无 PermMiddleware | 任何登录用户可操作角色/权限 | ✅ 已修复 |
 | 2 | 前端 `getRoleById` 返回 `{role:{...}}` 与类型定义不一致 | 角色名显示为空 | ✅ 已修复 |
 | 3 | permission-service 未加入 RouteRegistry | 自动发现只能扫描权限服务自身路由 | ✅ 已修复 |
-| 4 | 用户角色分配缺少数据范围实现 | scope 用 hardcode 的 global/0 | P2（需社区 API） |
+| 4 | 用户角色分配缺少数据范围实现 | scope 用 hardcode 的 global/0 | ✅ 已修复（2026-08-11 角色合并） |
 | 5 | `v-permission` 指令和路由守卫的权限码未完全对齐 | 部分按钮显隐不准确 | ✅ 已修复 |
 | 6 | 自动发现新增权限自动归入 `parent_id=0` | 直到 specialParent 映射补充前是孤儿节点 | P2（已部分修复） |
+
+### 7.1 角色体系合并（2026-08-11）
+
+废弃 `user_membership_role`（user-service），统一用 `rel_user_role`（permission-service）：
+
+| 变更 | 说明 |
+|------|------|
+| 角色源统一 | rel_user_role 成为唯一角色权威，含个体生命周期（status/verified_at/expires_at） |
+| 角色扩到 8 个 | 新增 tenant/committee/merchant/sys_admin |
+| 认证流程迁移 | ApplyRole/SubmitCertification/ReviewCertification 改走 permission-service |
+| JWT 来源切换 | auth-service 角色从 permission-service 获取（经 user-service 代理） |
+| 微服务职责 | user-service 管身份/材料审核；permission-service 管角色/权限/生命周期 |
 
 ---
 

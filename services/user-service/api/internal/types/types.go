@@ -172,3 +172,62 @@ type RoleInfo struct {
 	RoleCode    string `json:"role_code"`
 	VerfStatus  int32  `json:"verf_status"`
 }
+
+// =============================================================================
+// 认证（Certification）
+// =============================================================================
+
+type SubmitCertificationReq struct {
+	RoleId       int64    `json:"role_id,string"`
+	DocumentUrls []string `json:"document_urls"`
+	RealName     string   `json:"real_name"`
+	IdCardNumber string   `json:"id_card_number"`
+	Building     string   `json:"building,optional"`
+	Unit         string   `json:"unit,optional"`
+	Room         string   `json:"room,optional"`
+}
+
+type SubmitCertificationResp struct {
+	Certification CertificationInfo `json:"certification"`
+}
+
+type ReviewCertificationReq struct {
+	Result      int32  `json:"result"`
+	ReviewNotes string `json:"review_notes,optional"`
+	ExpiresAt   string `json:"expires_at,optional"`
+}
+
+type ReviewCertificationResp struct{}
+
+type CertificationInfo struct {
+	Id           int64  `json:"id,string"`
+	RoleId       int64  `json:"role_id,string"`
+	UserId       int64  `json:"user_id,string"`
+	RoleCode     string `json:"role_code,optional"`
+	DocumentUrls string `json:"document_urls"`
+	RealName     string `json:"real_name,optional"`
+	Status       int32  `json:"status"`
+	ReviewerId   int64  `json:"reviewer_id,string,optional"`
+	ReviewNotes  string `json:"review_notes,optional"`
+	ReviewTime   int64  `json:"review_time,string,optional"`
+	SubmitTime   int64  `json:"submit_time,string"`
+}
+
+type ListCertificationsReq struct {
+	Page     int32  `form:"page,optional,default=1"`
+	PageSize int32  `form:"page_size,optional,default=10"`
+	Status   *int32 `form:"status,optional"`
+}
+
+type ListCertificationsResp struct {
+	Certifications []CertificationInfo `json:"certifications"`
+	Total          int64               `json:"total,string"`
+}
+
+type GetMyCertificationsReq struct {
+	UserId int64 `path:"userId"`
+}
+
+type GetMyCertificationsResp struct {
+	Certifications []CertificationInfo `json:"certifications"`
+}

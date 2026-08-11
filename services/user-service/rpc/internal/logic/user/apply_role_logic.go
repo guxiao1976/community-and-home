@@ -2,20 +2,19 @@ package user
 
 import (
 	"context"
-	"database/sql"
-	"time"
 
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
-	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-user/model"
 	"github.com/guxiao1976/community-user/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 )
 
-// ApplyRole 不再直接创建 residence。
-// owner/tenant 的 residence 延后到 SubmitCertification(存储房屋信息) → ReviewCertification(通过后创建)。
-// 这样确保 residence 只在产权/租赁被验证后才存在。
+// ApplyRole 申请角色（角色授予迁移到 permission-service 的 rel_user_role）
+//   - owner/tenant/committee/grid_worker/property_admin/community_admin → 绑定小区（scope_type=community, scope_id=communityId）
+//   - merchant → 全局（scope_type=global, scope_id=0）
+//   - 申请时 status=0（未认证），认证通过后 permission-service 更新为 2
 
 type ApplyRoleLogic struct {
 	ctx    context.Context
@@ -31,7 +30,7 @@ func NewApplyRoleLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ApplyRo
 	}
 }
 
-// ApplyRole 申请角色（per 设计文档 3.3）
+// ApplyRole 申请角色
 func (l *ApplyRoleLogic) ApplyRole(in *userv1.ApplyRoleRequest) (*userv1.ApplyRoleResponse, error) {
 	// 0. 校验用户存在
 	if _, err := l.svcCtx.UserBaseModel.FindOne(l.ctx, in.UserId); err != nil {
@@ -43,16 +42,12 @@ func (l *ApplyRoleLogic) ApplyRole(in *userv1.ApplyRoleRequest) (*userv1.ApplyRo
 		return nil, err
 	}
 
-	// 商家角色特殊处理：不绑小区
-	var membershipId sql.NullInt64
-	var communityId int64
+	// 确定作用域（merchant 全局，其他绑定小区）
+	scopeType := "global"
+	scopeId := int64(0)
 
-	if in.RoleCode == model.RoleCodeMerchant {
-		communityId = 0
-	} else {
-		communityId = in.CommunityId
-
-		// 查 membership
+	if in.RoleCode != model.RoleCodeMerchant {
+		// 查 membership，校验用户是该小区成员
 		membership, err := l.svcCtx.UserCommunityMembershipModel.FindByUserAndCommunity(l.ctx, in.UserId, in.CommunityId)
 		if err != nil {
 			if err == model.ErrNotFound {
@@ -68,50 +63,48 @@ func (l *ApplyRoleLogic) ApplyRole(in *userv1.ApplyRoleRequest) (*userv1.ApplyRo
 				Base: responsex.NewBaseRespWithError(10005, "小区成员关系不存在或已退出"),
 			}, nil
 		}
-		membershipId = sql.NullInt64{Int64: membership.Id, Valid: true}
+		scopeType = "community"
+		scopeId = in.CommunityId
 	}
 
-	// 查是否已有该角色
-	if membershipId.Valid {
-		existing, err := l.svcCtx.UserMembershipRoleModel.FindByMembershipAndRole(l.ctx, membershipId.Int64, in.RoleCode)
-		if err != nil && err != model.ErrNotFound {
-			l.Errorf("find role error: %v", err)
-			return nil, err
-		}
-		if existing != nil {
-			return &userv1.ApplyRoleResponse{
-				Base: responsex.NewBaseRespWithError(10008, "该角色已存在"),
-			}, nil
-		}
+	// role_code → role_id（permission-service 的 sys_role）
+	roleID, ok := roleIDByCode(l.ctx, l.svcCtx, l.Logger, in.RoleCode)
+	if !ok {
+		l.Errorf("ApplyRole: role_code=%s not found in permission-service", in.RoleCode)
+		return &userv1.ApplyRoleResponse{
+			Base: responsex.NewBaseRespWithError(10008, "角色不存在"),
+		}, nil
 	}
 
-	// 创建角色
-	now := time.Now()
-	roleId := snowflake.NextID()
-	role := &model.UserMembershipRole{
-		Id:           roleId,
-		UserId:       in.UserId,
-		MembershipId: membershipId,
-		CommunityId:  communityId,
-		RoleCode:     in.RoleCode,
-		VerfStatus:   model.RoleVerfStatusUnverified,
-		CreatedTime:  now,
-		UpdatedTime:  now,
+	// 调用 permission-service AssignRole（status=0 未认证）
+	if l.svcCtx.PermissionClient == nil {
+		l.Errorf("ApplyRole: PermissionClient is nil")
+		return &userv1.ApplyRoleResponse{
+			Base: responsex.NewBaseRespWithError(50000, "系统繁忙"),
+		}, nil
 	}
-
-	if _, err := l.svcCtx.UserMembershipRoleModel.Insert(l.ctx, role); err != nil {
-		l.Errorf("insert role error: %v", err)
+	_, err := l.svcCtx.PermissionClient.AssignRole(l.ctx, &permissionv1.AssignRoleRequest{
+		UserId:    in.UserId,
+		RoleId:    roleID,
+		ScopeType: scopeType,
+		ScopeId:   scopeId,
+		Status:    int32Ptr(0), // 未认证
+	})
+	if err != nil {
+		l.Errorf("ApplyRole: AssignRole failed userId=%d roleId=%d err=%v", in.UserId, roleID, err)
 		return nil, err
 	}
 
-	// owner/tenant 的房屋记录延后到认证通过时创建
-	// 房产证/租赁合同才是房屋归属的证明，未认证前不创建 residence
-	// building/unit/room 信息在 SubmitCertification 时传入并暂存
+	l.Infof("ApplyRole success, userId=%d, roleCode=%s, roleId=%d, scope=%s:%d",
+		in.UserId, in.RoleCode, roleID, scopeType, scopeId)
 
-	l.Infof("ApplyRole success, userId=%d, communityId=%d, roleCode=%s, roleId=%d",
-		in.UserId, communityId, in.RoleCode, roleId)
 	return &userv1.ApplyRoleResponse{
 		Base: responsex.NewBaseResp(),
-		Role: toProtoRole(role),
+		Role: &userv1.MembershipRole{
+			UserId:      in.UserId,
+			RoleCode:    in.RoleCode,
+			CommunityId: scopeId,
+			VerfStatus:  model.RoleVerfStatusUnverified,
+		},
 	}, nil
 }

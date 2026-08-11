@@ -23,14 +23,14 @@
         <el-table :data="userRoles" stripe>
           <el-table-column prop="role.name" label="角色名称" />
           <el-table-column prop="role.code" label="角色编码" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="getRoleStatusType(row.status)">{{ getRoleStatusLabel(row.status) }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="数据范围" width="200">
             <template #default="{ row }">
               <el-tag type="success">{{ getScopeLabel(row.scopeType) }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="范围实体" width="200">
-            <template #default="{ row }">
-              {{ getScopeEntityName(row.scopeType, row.scopeId) }}
             </template>
           </el-table-column>
           <el-table-column label="操作" width="120">
@@ -183,7 +183,8 @@ const getScopeLabel = (scopeType: string) => {
     community: '小区',
     building: '楼栋',
     unit: '单元',
-    grid: '网格'
+    grid: '网格',
+    global: '全局'
   }
   return map[scopeType] || scopeType
 }
@@ -191,6 +192,29 @@ const getScopeLabel = (scopeType: string) => {
 const getScopeEntityName = (scopeType: string, scopeId: string) => {
   // TODO: 从缓存或API获取实体名称
   return scopeId || '-'
+}
+
+// 个体角色生命周期状态展示
+const getRoleStatusLabel = (status: number) => {
+  const map: Record<number, string> = {
+    0: '未认证',
+    1: '待审核',
+    2: '已认证',
+    3: '已驳回',
+    4: '已过期'
+  }
+  return map[status] ?? '未知'
+}
+
+const getRoleStatusType = (status: number) => {
+  const map: Record<number, string> = {
+    0: 'info',
+    1: 'warning',
+    2: 'success',
+    3: 'danger',
+    4: 'danger'
+  }
+  return map[status] ?? 'info'
 }
 
 const handleAssignRole = async () => {

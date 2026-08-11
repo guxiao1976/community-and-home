@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	moderationv1 "github.com/guxiao1976/api-proto/gen/go/moderation/v1"
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
@@ -19,12 +21,15 @@ import (
 
 // certMetadata 认证材料元数据，存储在 document_urls 字段中
 type certMetadata struct {
-	Urls           []string `json:"urls"`
-	RealName       string   `json:"real_name"`
-	IdCardNumber   string   `json:"id_card_number"` // AES 加密
-	Building       string   `json:"building,omitempty"`
-	Unit           string   `json:"unit,omitempty"`
-	Room           string   `json:"room,omitempty"`
+	Urls         []string `json:"urls"`
+	RealName     string   `json:"real_name"`
+	IdCardNumber string   `json:"id_card_number"`          // AES 加密
+	RoleCode     string   `json:"role_code,omitempty"`     // 申请的角色编码
+	MembershipId int64    `json:"membership_id,omitempty"` // 小区成员关系ID（merchant 为 0）
+	CommunityId  int64    `json:"community_id,omitempty"`  // 小区ID（merchant 为 0）
+	Building     string   `json:"building,omitempty"`
+	Unit         string   `json:"unit,omitempty"`
+	Room         string   `json:"room,omitempty"`
 }
 
 type SubmitCertificationLogic struct {
@@ -43,22 +48,43 @@ func NewSubmitCertificationLogic(ctx context.Context, svcCtx *svc.ServiceContext
 
 // SubmitCertification 提交认证材料（per 设计文档 3.4）
 func (l *SubmitCertificationLogic) SubmitCertification(in *userv1.SubmitCertificationRequest) (*userv1.SubmitCertificationResponse, error) {
-	// 1. 查 role
-	role, err := l.svcCtx.UserMembershipRoleModel.FindOne(l.ctx, in.RoleId)
+	// 1. 通过 permission-service 查询用户角色，确认该 role 存在且状态允许提交
+	//    in.RoleId 是 rel_user_role 的 role_id
+	if l.svcCtx.PermissionClient == nil {
+		l.Errorf("SubmitCertification: PermissionClient is nil")
+		return &userv1.SubmitCertificationResponse{
+			Base: responsex.NewBaseRespWithError(50000, "系统繁忙"),
+		}, nil
+	}
+
+	userRolesResp, err := l.svcCtx.PermissionClient.GetUserRoles(l.ctx, &permissionv1.GetUserRolesRequest{UserId: in.UserId})
 	if err != nil {
-		if err == model.ErrNotFound {
-			return &userv1.SubmitCertificationResponse{
-				Base: responsex.NewBaseRespWithError(10007, "认证申请不存在或状态不允许操作"),
-			}, nil
-		}
-		l.Errorf("find role error: %v", err)
+		l.Errorf("GetUserRoles failed: %v", err)
 		return nil, err
 	}
 
-	// 2. 校验 role 状态：verf_status IN (0,3,4) 允许提交
-	if role.VerfStatus == model.RoleVerfStatusPending || role.VerfStatus == model.RoleVerfStatusApproved {
+	// 找到对应 role，确定 role_code 和 scope
+	var roleCode string
+	var scopeType, scopeID string
+	found := false
+	for _, r := range userRolesResp.Roles {
+		if r.Role.Id == in.RoleId {
+			found = true
+			roleCode = r.Role.Code
+			scopeType = r.ScopeType
+			scopeID = fmt.Sprintf("%d", r.ScopeId)
+			// 校验状态：status IN (0,3,4) 允许提交（未认证/已驳回/已过期）
+			if r.Status == 1 || r.Status == 2 {
+				return &userv1.SubmitCertificationResponse{
+					Base: responsex.NewBaseRespWithError(10003, "该角色已提交认证申请，请勿重复提交"),
+				}, nil
+			}
+			break
+		}
+	}
+	if !found {
 		return &userv1.SubmitCertificationResponse{
-			Base: responsex.NewBaseRespWithError(10003, "该角色已提交认证申请，请勿重复提交"),
+			Base: responsex.NewBaseRespWithError(10007, "角色不存在或不属于该用户"),
 		}, nil
 	}
 
@@ -74,9 +100,17 @@ func (l *SubmitCertificationLogic) SubmitCertification(in *userv1.SubmitCertific
 		Urls:         in.DocumentUrls,
 		RealName:     in.RealName,
 		IdCardNumber: encryptedIdCard,
+		RoleCode:     roleCode,
+	}
+	if scopeType == "community" {
+		meta.CommunityId, _ = strconv.ParseInt(scopeID, 10, 64)
+		// 查 membership 获取 membership_id（用于认证通过后创建 residence）
+		if membership, err := l.svcCtx.UserCommunityMembershipModel.FindByUserAndCommunity(l.ctx, in.UserId, meta.CommunityId); err == nil {
+			meta.MembershipId = membership.Id
+		}
 	}
 	// owner/tenant 角色的房屋信息也暂存在这里，认证通过后创建 residence
-	if model.RolesRequiringResidence[role.RoleCode] {
+	if model.RolesRequiringResidence[roleCode] {
 		meta.Building = in.Building
 		meta.Unit = in.Unit
 		meta.Room = in.Room
@@ -101,10 +135,22 @@ func (l *SubmitCertificationLogic) SubmitCertification(in *userv1.SubmitCertific
 		return nil, err
 	}
 
-	// 6. 更新 role verf_status → 1（待审核）
-	err = l.svcCtx.UserMembershipRoleModel.UpdateVerfStatusOnly(l.ctx, in.RoleId, model.RoleVerfStatusPending)
+	// 6. 调 permission-service 更新角色状态 → 待审核(1)
+	scopeTypeVal := "community"
+	scopeIDVal, _ := strconv.ParseInt(scopeID, 10, 64)
+	if scopeType == "global" {
+		scopeTypeVal = "global"
+		scopeIDVal = 0
+	}
+	_, err = l.svcCtx.PermissionClient.UpdateUserRoleStatus(l.ctx, &permissionv1.UpdateUserRoleStatusRequest{
+		UserId:    in.UserId,
+		RoleId:    in.RoleId,
+		ScopeType: scopeTypeVal,
+		ScopeId:   scopeIDVal,
+		Status:    1, // 待审核
+	})
 	if err != nil {
-		l.Errorf("update role verf_status error: %v", err)
+		l.Errorf("update role status error: %v", err)
 		return nil, err
 	}
 

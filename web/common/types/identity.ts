@@ -63,6 +63,10 @@ export interface UserRole {
   };
   scopeType: string;
   scopeId: string;
+  // 个体角色生命周期：0=未认证 1=待审 2=已认证 3=已驳回 4=已过期
+  status: number;
+  verifiedAt: string;
+  expiresAt: string;
 }
 
 export interface Permission {

@@ -99,9 +99,6 @@ export async function searchResidentialAreas(params: {
 /**
  * Bind a residence (building/unit/room) to a membership.
  * Required before applying for owner/tenant role.
- *
- * TODO: Backend route POST /api/users/residences/bind needs to be created
- * in services/user-service/api/internal/handler/routes.go
  */
 export async function bindResidence(params: {
   membership_id: string;
@@ -118,10 +115,7 @@ export async function bindResidence(params: {
 
 /**
  * Apply for a role (owner, tenant, grid_worker, etc.)
- * Requires JWT.
- *
- * TODO: Backend route POST /api/users/roles/apply needs to be created
- * in services/user-service/api/internal/handler/routes.go
+ * 后端走 permission-service 写入 rel_user_role（角色申请，status=0 未认证）
  */
 export async function applyRole(params: {
   community_id: string;
@@ -142,10 +136,7 @@ export async function getResidentialAreasByIds(ids: string[]): Promise<Residenti
 
 /**
  * Get user's roles.
- * Requires JWT.
- *
- * TODO: Backend route GET /api/users/roles needs to be created
- * in services/user-service/api/internal/handler/routes.go
+ * 后端从 permission-service 获取（含认证状态 status）
  */
 export async function getUserRoles(): Promise<any[]> {
   const res = await request.get<any>('/api/users/roles');

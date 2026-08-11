@@ -29,9 +29,12 @@ func (l *GetUserRolesLogic) GetUserRoles(req *types.GetUserRolesReq) (*types.Get
 	roles := make([]types.UserRoleInfo, 0, len(grpcResp.Roles))
 	for _, r := range grpcResp.Roles {
 		roles = append(roles, types.UserRoleInfo{
-			Role:      toRoleInfo(r.Role),
-			ScopeType: r.ScopeType,
-			ScopeId:   r.ScopeId,
+			Role:       toRoleInfo(r.Role),
+			ScopeType:  r.ScopeType,
+			ScopeId:    r.ScopeId,
+			Status:     r.Status,
+			VerifiedAt: r.VerifiedAt,
+			ExpiresAt:  r.ExpiresAt,
 		})
 	}
 

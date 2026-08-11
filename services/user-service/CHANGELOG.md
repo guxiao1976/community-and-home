@@ -1,5 +1,30 @@
 # CHANGELOG — user-service
 
+## 2026-08-11 — RBAC 角色体系合并 + 认证 REST API
+
+### 做了什么
+- **废弃 `user_membership_role`**：角色授予迁移到 permission-service 的 `rel_user_role`
+- `ApplyRole` 改调 permission-service AssignRole（写入 rel_user_role，status=0）
+- `SubmitCertification` 改走 permission-service（提交时 UpdateUserRoleStatus status=1）
+- `ReviewCertification` 改走 permission-service（通过 status=2+expires，驳回 status=3）
+- `GetUserRoles`/`CheckAccess` 改为代理 permission-service
+- 新增 `role_mapper.go`：role_code↔role_id 映射（调 permission-service ListRoles 缓存）
+- 新增认证 REST API：
+  - `POST /api/users/certifications`（提交认证材料）
+  - `GET /api/users/certifications`（我的认证记录）
+  - `GET /api/verifications`（管理员列表认证申请）
+  - `POST /api/verifications/:id/review`（管理员审核）
+- 移动端 `my.vue` hasOwnerRole 改为真实查询
+
+### 为什么
+permission-service 成为角色唯一权威，认证流程从 user-service 自管角色改为调用 permission-service。
+
+### 影响
+- Proto: 无（复用现有 RPC）
+- 调用方: auth-service（JWT roles 经代理获取）、移动端（applyRole/getUserRoles）
+- 数据库: 废弃 `user_membership_role` 表，rel_user_role 承载角色
+- 关联: 提交待定
+
 ## 2026-06-04 — 错误码 6 位 → 5 位统一
 
 ### 做了什么

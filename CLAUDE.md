@@ -24,6 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 编码规范 / 硬性约束 | [`.harness/rules/项目编码规范.md`](.harness/rules/项目编码规范.md) |
 | 跨服务设计规范 | [`docs/specs/INDEX.md`](docs/specs/INDEX.md) |
 | RBAC 权限设计 | [`docs/specs/rbac-design.md`](docs/specs/rbac-design.md) |
+| 开发日志（每日） | [`docs/devlog/`](docs/devlog/) |
 | Proto 管理规则 | [`.harness/rules/Proto管理规范.md`](.harness/rules/Proto管理规范.md) |
 | 踩过的坑 / 经验记忆 | [`.harness/knowledge/memory/MEMORY.md`](.harness/knowledge/memory/MEMORY.md) |
 | 当前待办 | [`.harness/tasks/BACKLOG.md`](.harness/tasks/BACKLOG.md) | |

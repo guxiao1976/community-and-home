@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-user/api/internal/svc"
 	"github.com/guxiao1976/community-user/api/internal/types"
@@ -249,5 +250,165 @@ func toMembership(m *userv1.CommunityMembership) types.CommunityMembership {
 		Building:    int(m.Building),
 		Unit:        int(m.Unit),
 		Room:        int(m.Room),
+	}
+}
+
+// =============================================================================
+// 认证（Certification）
+// =============================================================================
+
+type SubmitCertificationLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewSubmitCertificationLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SubmitCertificationLogic {
+	return &SubmitCertificationLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
+}
+
+func (l *SubmitCertificationLogic) SubmitCertification(req *types.SubmitCertificationReq) (*types.SubmitCertificationResp, error) {
+	userId := getUserIdFromJwt(l.ctx)
+	if userId == 0 {
+		return nil, fmt.Errorf("未登录或 token 无效")
+	}
+	resp, err := l.svcCtx.UserRpc.SubmitCertification(l.ctx, &userv1.SubmitCertificationRequest{
+		UserId:       userId,
+		RoleId:       req.RoleId,
+		DocumentUrls: req.DocumentUrls,
+		RealName:     req.RealName,
+		IdCardNumber: req.IdCardNumber,
+		Building:     req.Building,
+		Unit:         req.Unit,
+		Room:         req.Room,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.Base != nil && resp.Base.GetCode() != 0 {
+		return nil, fmt.Errorf("%s", resp.Base.GetMsg())
+	}
+	return &types.SubmitCertificationResp{
+		Certification: toCertificationInfo(resp.Certification),
+	}, nil
+}
+
+type ReviewCertificationLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewReviewCertificationLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ReviewCertificationLogic {
+	return &ReviewCertificationLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
+}
+
+func (l *ReviewCertificationLogic) ReviewCertification(certID int64, req *types.ReviewCertificationReq) (*types.ReviewCertificationResp, error) {
+	reviewerId := getUserIdFromJwt(l.ctx)
+	if reviewerId == 0 {
+		return nil, fmt.Errorf("未登录或 token 无效")
+	}
+	resp, err := l.svcCtx.UserRpc.ReviewCertification(l.ctx, &userv1.ReviewCertificationRequest{
+		CertificationId: certID,
+		ReviewerId:      reviewerId,
+		Result:          req.Result,
+		ReviewNotes:     req.ReviewNotes,
+		ExpiresAt:       req.ExpiresAt,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.Base != nil && resp.Base.GetCode() != 0 {
+		return nil, fmt.Errorf("%s", resp.Base.GetMsg())
+	}
+	return &types.ReviewCertificationResp{}, nil
+}
+
+type ListCertificationsLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewListCertificationsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ListCertificationsLogic {
+	return &ListCertificationsLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
+}
+
+func (l *ListCertificationsLogic) ListCertifications(req *types.ListCertificationsReq) (*types.ListCertificationsResp, error) {
+	resp, err := l.svcCtx.UserRpc.ListCertifications(l.ctx, &userv1.ListCertificationsRequest{
+		Page:   &commonv1.PageRequest{Page: req.Page, PageSize: req.PageSize},
+		Status: req.Status,
+	})
+	if err != nil {
+		return nil, err
+	}
+	certs := make([]types.CertificationInfo, 0, len(resp.Certifications))
+	for _, c := range resp.Certifications {
+		certs = append(certs, toCertificationInfo(c))
+	}
+	return &types.ListCertificationsResp{
+		Certifications: certs,
+		Total:          resp.Page.GetTotal(),
+	}, nil
+}
+
+type GetMyCertificationsLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewGetMyCertificationsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetMyCertificationsLogic {
+	return &GetMyCertificationsLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
+}
+
+func (l *GetMyCertificationsLogic) GetMyCertifications() (*types.GetMyCertificationsResp, error) {
+	userId := getUserIdFromJwt(l.ctx)
+	if userId == 0 {
+		return nil, fmt.Errorf("未登录或 token 无效")
+	}
+	resp, err := l.svcCtx.UserRpc.GetMyCertifications(l.ctx, &userv1.GetMyCertificationsRequest{UserId: userId})
+	if err != nil {
+		return nil, err
+	}
+	certs := make([]types.CertificationInfo, 0, len(resp.Certifications))
+	for _, c := range resp.Certifications {
+		certs = append(certs, toCertificationInfo(c))
+	}
+	return &types.GetMyCertificationsResp{Certifications: certs}, nil
+}
+
+func toCertificationInfo(c *userv1.Certification) types.CertificationInfo {
+	if c == nil {
+		return types.CertificationInfo{}
+	}
+	return types.CertificationInfo{
+		Id:           c.Id,
+		RoleId:       c.RoleId,
+		UserId:       c.UserId,
+		DocumentUrls: c.DocumentUrls,
+		Status:       c.Status,
+		ReviewerId:   c.ReviewerId,
+		ReviewNotes:  c.ReviewNotes,
+		ReviewTime:   c.ReviewTime,
+		SubmitTime:   c.SubmitTime,
+	}
+}
+
+func getUserIdFromJwt(ctx context.Context) int64 {
+	v := ctx.Value("user_id")
+	if v == nil {
+		return 0
+	}
+	switch n := v.(type) {
+	case float64:
+		return int64(n)
+	case int64:
+		return n
+	case json.Number:
+		id, _ := n.Int64()
+		return id
+	default:
+		return 0
 	}
 }

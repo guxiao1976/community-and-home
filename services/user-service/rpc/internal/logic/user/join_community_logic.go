@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"time"
 
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
 	"github.com/guxiao1976/community-user/model"
 	"github.com/guxiao1976/community-user/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 )
 
 type JoinCommunityLogic struct {
@@ -181,15 +182,18 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 	}, nil
 }
 
-// isVerifiedOwnerOrTenant 检查用户是否有已认证的业主或租户角色
+// isVerifiedOwnerOrTenant 检查用户是否有已认证的业主或租户角色（从 permission-service 获取）
 func (l *JoinCommunityLogic) isVerifiedOwnerOrTenant(userId int64) bool {
-	roles, err := l.svcCtx.UserMembershipRoleModel.FindByUserId(l.ctx, userId)
+	if l.svcCtx.PermissionClient == nil {
+		return false
+	}
+	resp, err := l.svcCtx.PermissionClient.GetUserRoles(l.ctx, &permissionv1.GetUserRolesRequest{UserId: userId})
 	if err != nil {
 		return false
 	}
-	for _, r := range roles {
-		if r.VerfStatus == model.RoleVerfStatusApproved &&
-			(r.RoleCode == model.RoleCodeOwner || r.RoleCode == model.RoleCodeTenant) {
+	for _, r := range resp.Roles {
+		if r.Status == model.RoleVerfStatusApproved &&
+			(r.Role.Code == model.RoleCodeOwner || r.Role.Code == model.RoleCodeTenant) {
 			return true
 		}
 	}

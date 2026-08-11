@@ -65,6 +65,19 @@ func (m *MockUserRoleModel) CountByRoleId(ctx context.Context, roleId int64) (in
 	return args.Get(0).(int64), args.Error(1)
 }
 
+func (m *MockUserRoleModel) FindAllByUserId(ctx context.Context, userId int64) ([]*model.UserRoleWithInfo, error) {
+	args := m.Called(ctx, userId)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.UserRoleWithInfo), args.Error(1)
+}
+
+func (m *MockUserRoleModel) UpdateRoleStatus(ctx context.Context, userId, roleId int64, scopeType string, scopeId, status int64, verifiedAt, expiresAt sql.NullTime) error {
+	args := m.Called(ctx, userId, roleId, scopeType, scopeId, status, verifiedAt, expiresAt)
+	return args.Error(0)
+}
+
 func (m *MockUserRoleModel) FindByRoleId(ctx context.Context, roleId int64) ([]*model.RelUserRole, error) {
 	args := m.Called(ctx, roleId)
 	if args.Get(0) == nil {

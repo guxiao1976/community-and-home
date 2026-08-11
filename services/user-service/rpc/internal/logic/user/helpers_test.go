@@ -214,105 +214,6 @@ func (m *mockMembershipModel) CountDistinctCommunitiesThisYear(ctx context.Conte
 var _ model.UserCommunityMembershipModel = (*mockMembershipModel)(nil)
 
 // =============================================================================
-// Mock UserMembershipRoleModel
-// =============================================================================
-
-type mockRoleModel struct {
-	data map[int64]*model.UserMembershipRole
-}
-
-func newMockRoleModel() *mockRoleModel {
-	return &mockRoleModel{data: make(map[int64]*model.UserMembershipRole)}
-}
-
-func (m *mockRoleModel) Insert(ctx context.Context, d *model.UserMembershipRole) (sql.Result, error) {
-	m.data[d.Id] = d
-	return mockSQLResult{}, nil
-}
-func (m *mockRoleModel) FindOne(ctx context.Context, id int64) (*model.UserMembershipRole, error) {
-	if d, ok := m.data[id]; ok {
-		return d, nil
-	}
-	return nil, model.ErrNotFound
-}
-func (m *mockRoleModel) FindByMembershipAndRole(ctx context.Context, mid int64, roleCode string) (*model.UserMembershipRole, error) {
-	for _, d := range m.data {
-		if d.MembershipId.Valid && d.MembershipId.Int64 == mid && d.RoleCode == roleCode {
-			return d, nil
-		}
-	}
-	return nil, model.ErrNotFound
-}
-func (m *mockRoleModel) FindByUserAndCommunity(ctx context.Context, uid, cid int64) ([]*model.UserMembershipRole, error) {
-	var r []*model.UserMembershipRole
-	for _, d := range m.data {
-		if d.UserId == uid && d.CommunityId == cid {
-			r = append(r, d)
-		}
-	}
-	return r, nil
-}
-func (m *mockRoleModel) FindByUserId(ctx context.Context, uid int64) ([]*model.UserMembershipRole, error) {
-	var r []*model.UserMembershipRole
-	for _, d := range m.data {
-		if d.UserId == uid {
-			r = append(r, d)
-		}
-	}
-	return r, nil
-}
-func (m *mockRoleModel) FindApprovedByUser(ctx context.Context, uid, cid int64, roleCodes []string) ([]*model.UserMembershipRole, error) {
-	var r []*model.UserMembershipRole
-	for _, d := range m.data {
-		if d.UserId == uid && d.VerfStatus == model.RoleVerfStatusApproved {
-			if cid > 0 && d.CommunityId != cid {
-				continue
-			}
-			if len(roleCodes) > 0 {
-				f := false
-				for _, rc := range roleCodes {
-					if d.RoleCode == rc {
-						f = true
-						break
-					}
-				}
-				if !f {
-					continue
-				}
-			}
-			r = append(r, d)
-		}
-	}
-	return r, nil
-}
-func (m *mockRoleModel) FindExpiredRoles(ctx context.Context) ([]*model.UserMembershipRole, error) {
-	var r []*model.UserMembershipRole
-	now := time.Now()
-	for _, d := range m.data {
-		if d.VerfStatus == model.RoleVerfStatusApproved && d.ExpiresAt.Valid && d.ExpiresAt.Time.Before(now) {
-			r = append(r, d)
-		}
-	}
-	return r, nil
-}
-func (m *mockRoleModel) UpdateVerfStatus(ctx context.Context, id int64, s int64, va, ex sql.NullTime) error {
-	if d, ok := m.data[id]; ok {
-		d.VerfStatus = s
-		d.VerifiedAt = va
-		d.ExpiresAt = ex
-	}
-	return nil
-}
-func (m *mockRoleModel) UpdateVerfStatusOnly(ctx context.Context, id int64, s int64) error {
-	if d, ok := m.data[id]; ok {
-		d.VerfStatus = s
-	}
-	return nil
-}
-
-var _ model.UserMembershipRoleModel = (*mockRoleModel)(nil)
-
-// =============================================================================
 // Mock UserCertificationModel
 // =============================================================================
 
@@ -437,7 +338,6 @@ func testSvc(t *testing.T) *svc.ServiceContext {
 	return &svc.ServiceContext{
 		UserBaseModel:                newMockUserBaseModel(),
 		UserCommunityMembershipModel: newMockMembershipModel(),
-		UserMembershipRoleModel:      newMockRoleModel(),
 		UserCertificationModel:       newMockCertModel(),
 		UserResidenceModel:           newMockResidenceModel(),
 		Redis:                        nil, // nil = cache bypass
@@ -450,9 +350,6 @@ func userBaseModel(s *svc.ServiceContext) *mockUserBaseModel {
 }
 func membershipModel(s *svc.ServiceContext) *mockMembershipModel {
 	return s.UserCommunityMembershipModel.(*mockMembershipModel)
-}
-func roleModel(s *svc.ServiceContext) *mockRoleModel {
-	return s.UserMembershipRoleModel.(*mockRoleModel)
 }
 func certModel(s *svc.ServiceContext) *mockCertModel {
 	return s.UserCertificationModel.(*mockCertModel)
@@ -483,16 +380,4 @@ func createTestMembership(t *testing.T, m *mockMembershipModel, id, uid, cid int
 	m.data[ms.Id] = ms
 	m.byUserCommIdx[fmt.Sprintf("%d_%d", uid, cid)] = ms.Id
 	return ms
-}
-
-// createTestRole inserts a role into the mock store.
-func createTestRole(t *testing.T, m *mockRoleModel, id, uid, mid, cid int64, roleCode string, verfStatus int64) *model.UserMembershipRole {
-	t.Helper()
-	r := &model.UserMembershipRole{
-		Id: id, UserId: uid, MembershipId: sql.NullInt64{Int64: mid, Valid: true},
-		CommunityId: cid, RoleCode: roleCode, VerfStatus: verfStatus,
-		CreatedTime: time.Now(), UpdatedTime: time.Now(),
-	}
-	m.data[r.Id] = r
-	return r
 }

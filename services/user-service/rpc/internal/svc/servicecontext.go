@@ -25,7 +25,6 @@ type ServiceContext struct {
 
 	UserBaseModel                model.UserBaseModel
 	UserCommunityMembershipModel model.UserCommunityMembershipModel
-	UserMembershipRoleModel      model.UserMembershipRoleModel
 	UserCertificationModel       model.UserCertificationModel
 	UserResidenceModel           model.UserResidenceModel
 
@@ -96,7 +95,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		SysConfig:                    sysCfg,
 		UserBaseModel:                model.NewUserBaseModel(conn),
 		UserCommunityMembershipModel: model.NewUserCommunityMembershipModel(conn),
-		UserMembershipRoleModel:      model.NewUserMembershipRoleModel(conn),
 		UserCertificationModel:       model.NewUserCertificationModel(conn),
 		UserResidenceModel:           model.NewUserResidenceModel(conn),
 		ModerationClient:             modClient,

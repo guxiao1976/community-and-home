@@ -95,6 +95,33 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/api/users/roles",
 				Handler: community.GetUserRolesHandler(serverCtx),
 			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/api/users/certifications",
+				Handler: community.SubmitCertificationHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/api/users/certifications",
+				Handler: community.GetMyCertificationsHandler(serverCtx),
+			},
+		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+	)
+
+	// 管理员认证审核（审核中心用）
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/api/verifications",
+				Handler: community.ListCertificationsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/api/verifications/:id/review",
+				Handler: community.ReviewCertificationHandler(serverCtx),
+			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 	)

@@ -101,3 +101,9 @@ func (s *PermissionServiceServer) InvalidateUserCache(ctx context.Context, in *p
 	l := permission.NewInvalidateUserCacheLogic(ctx, s.svcCtx)
 	return l.InvalidateUserCache(in)
 }
+
+// UpdateUserRoleStatus 更新用户角色的生命周期状态
+func (s *PermissionServiceServer) UpdateUserRoleStatus(ctx context.Context, in *permissionv1.UpdateUserRoleStatusRequest) (*permissionv1.UpdateUserRoleStatusResponse, error) {
+	l := permission.NewUpdateUserRoleStatusLogic(ctx, s.svcCtx)
+	return l.UpdateUserRoleStatus(in)
+}

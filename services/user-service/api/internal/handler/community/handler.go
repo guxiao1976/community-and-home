@@ -77,3 +77,59 @@ func GetUserRolesHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		responsex.Response(w, resp, err)
 	}
 }
+
+func SubmitCertificationHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.SubmitCertificationReq
+		if err := httpx.Parse(r, &req); err != nil {
+			responsex.Response(w, nil, err)
+			return
+		}
+		l := community.NewSubmitCertificationLogic(r.Context(), svcCtx)
+		resp, err := l.SubmitCertification(&req)
+		responsex.Response(w, resp, err)
+	}
+}
+
+func ReviewCertificationHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Id          int64  `path:"id"`
+			Result      int32  `json:"result"`
+			ReviewNotes string `json:"review_notes,optional"`
+			ExpiresAt   string `json:"expires_at,optional"`
+		}
+		if err := httpx.Parse(r, &req); err != nil {
+			responsex.Response(w, nil, err)
+			return
+		}
+		l := community.NewReviewCertificationLogic(r.Context(), svcCtx)
+		resp, err := l.ReviewCertification(req.Id, &types.ReviewCertificationReq{
+			Result:      req.Result,
+			ReviewNotes: req.ReviewNotes,
+			ExpiresAt:   req.ExpiresAt,
+		})
+		responsex.Response(w, resp, err)
+	}
+}
+
+func ListCertificationsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.ListCertificationsReq
+		if err := httpx.Parse(r, &req); err != nil {
+			responsex.Response(w, nil, err)
+			return
+		}
+		l := community.NewListCertificationsLogic(r.Context(), svcCtx)
+		resp, err := l.ListCertifications(&req)
+		responsex.Response(w, resp, err)
+	}
+}
+
+func GetMyCertificationsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		l := community.NewGetMyCertificationsLogic(r.Context(), svcCtx)
+		resp, err := l.GetMyCertifications()
+		responsex.Response(w, resp, err)
+	}
+}

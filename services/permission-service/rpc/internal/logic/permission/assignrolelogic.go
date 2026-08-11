@@ -2,7 +2,9 @@ package permission
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"time"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
@@ -22,7 +24,8 @@ func NewAssignRoleLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Assign
 }
 
 // AssignRole 分配角色（spec/permission.md 核心逻辑流 1）
-//   校验角色存在 → 插入 rel_user_role（幂等） → 失效 Redis 权限缓存
+//
+//	校验角色存在 → 插入 rel_user_role（幂等） → 失效 Redis 权限缓存
 func (l *AssignRoleLogic) AssignRole(in *permissionv1.AssignRoleRequest) (*permissionv1.AssignRoleResponse, error) {
 	// 校验角色存在
 	_, err := l.svcCtx.RoleModel.FindOne(l.ctx, in.RoleId)
@@ -32,11 +35,27 @@ func (l *AssignRoleLogic) AssignRole(in *permissionv1.AssignRoleRequest) (*permi
 		}, nil
 	}
 
+	// 解析个体角色生命周期参数（可选）
+	status := int64(0) // 默认未认证
+	if in.Status != nil {
+		status = int64(*in.Status)
+	}
+	var verifiedAt, expiresAt sql.NullTime
+	if in.VerifiedAt != nil && *in.VerifiedAt > 0 {
+		verifiedAt = sql.NullTime{Time: time.Unix(*in.VerifiedAt, 0), Valid: true}
+	}
+	if in.ExpiresAt != nil && *in.ExpiresAt > 0 {
+		expiresAt = sql.NullTime{Time: time.Unix(*in.ExpiresAt, 0), Valid: true}
+	}
+
 	_, err = l.svcCtx.UserRoleModel.Insert(l.ctx, &model.RelUserRole{
-		UserId:    in.UserId,
-		RoleId:    in.RoleId,
-		ScopeType: in.ScopeType,
-		ScopeId:   in.ScopeId,
+		UserId:     in.UserId,
+		RoleId:     in.RoleId,
+		ScopeType:  in.ScopeType,
+		ScopeId:    in.ScopeId,
+		Status:     status,
+		VerifiedAt: verifiedAt,
+		ExpiresAt:  expiresAt,
 	})
 	if err != nil {
 		// 可能的唯一键冲突（已分配），幂等返回成功

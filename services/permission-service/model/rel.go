@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -68,24 +69,30 @@ func (m *defaultRelRolePermissionModel) BatchInsert(ctx context.Context, records
 
 // RelUserRole 用户-角色关联表（含数据范围，spec/permission.md 新增 scope_type + scope_id）
 type RelUserRole struct {
-	Id          int64     `db:"id"`
-	UserId      int64     `db:"user_id"`
-	RoleId      int64     `db:"role_id"`
-	ScopeType   string    `db:"scope_type"` // community/building/unit/grid
-	ScopeId     int64     `db:"scope_id"`   // 对应层级的实体 ID
-	CreatedTime time.Time `db:"created_at"`
+	Id          int64        `db:"id"`
+	UserId      int64        `db:"user_id"`
+	RoleId      int64        `db:"role_id"`
+	ScopeType   string       `db:"scope_type"`  // community/building/unit/grid
+	ScopeId     int64        `db:"scope_id"`    // 对应层级的实体 ID
+	Status      int64        `db:"status"`      // 个体角色生命周期: 0=未认证 1=待审 2=已认证 3=已驳回 4=已过期
+	VerifiedAt  sql.NullTime `db:"verified_at"` // 个体认证通过时间
+	ExpiresAt   sql.NullTime `db:"expires_at"`  // 个体角色到期时间, NULL=永久
+	CreatedTime time.Time    `db:"created_at"`
 }
 
 // UserRoleWithInfo 用户角色详细信息（联表查询结果）
 type UserRoleWithInfo struct {
-	RoleId      int64  `db:"role_id"`
-	RoleCode    string `db:"role_code"`
-	RoleName    string `db:"role_name"`
-	IsSystem    int64  `db:"is_system"`
-	Status      int64  `db:"role_status"`
-	Description string `db:"description"`
-	ScopeType   string `db:"scope_type"`
-	ScopeId     int64  `db:"scope_id"`
+	RoleId      int64        `db:"role_id"`
+	RoleCode    string       `db:"role_code"`
+	RoleName    string       `db:"role_name"`
+	IsSystem    int64        `db:"is_system"`
+	Status      int64        `db:"role_status"` // sys_role.status（角色定义状态）
+	Description string       `db:"description"`
+	ScopeType   string       `db:"scope_type"`
+	ScopeId     int64        `db:"scope_id"`
+	URStatus    int64        `db:"ur_status"` // rel_user_role.status（个体角色生命周期）
+	VerifiedAt  sql.NullTime `db:"verified_at"`
+	ExpiresAt   sql.NullTime `db:"expires_at"`
 }
 
 type RelUserRoleModel interface {
@@ -102,6 +109,10 @@ type RelUserRoleModel interface {
 	BatchInsertUserRoles(ctx context.Context, records []*RelUserRole) error
 	// CountByRoleId 统计角色被分配给多少用户
 	CountByRoleId(ctx context.Context, roleId int64) (int64, error)
+	// UpdateRoleStatus 更新用户角色的生命周期状态（认证通过/驳回/过期）
+	UpdateRoleStatus(ctx context.Context, userId, roleId int64, scopeType string, scopeId, status int64, verifiedAt, expiresAt sql.NullTime) error
+	// FindAllByUserId 联表查询用户所有角色（含个体生命周期状态，不过滤）
+	FindAllByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error)
 }
 
 type defaultRelUserRoleModel struct {
@@ -114,8 +125,8 @@ func NewRelUserRoleModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Opt
 }
 
 func (m *defaultRelUserRoleModel) Insert(ctx context.Context, data *RelUserRole) (int64, error) {
-	query := fmt.Sprintf("insert into %s (user_id, role_id, scope_type, scope_id) values (?, ?, ?, ?)", m.table)
-	res, err := m.conn.ExecCtx(ctx, query, data.UserId, data.RoleId, data.ScopeType, data.ScopeId)
+	query := fmt.Sprintf("insert into %s (user_id, role_id, scope_type, scope_id, status, verified_at, expires_at) values (?, ?, ?, ?, ?, ?, ?)", m.table)
+	res, err := m.conn.ExecCtx(ctx, query, data.UserId, data.RoleId, data.ScopeType, data.ScopeId, data.Status, data.VerifiedAt, data.ExpiresAt)
 	if err != nil {
 		return 0, err
 	}
@@ -129,14 +140,16 @@ func (m *defaultRelUserRoleModel) FindByUserId(ctx context.Context, userId int64
 }
 
 // FindActiveByUserId 联表查询活跃角色（INNER JOIN sys_role）
+// 只返回已认证（status=2）且未过期的个体角色
 func (m *defaultRelUserRoleModel) FindActiveByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error) {
 	var list []*UserRoleWithInfo
 	query := fmt.Sprintf(`
 		SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description,
-		       ur.scope_type, ur.scope_id
+		       ur.scope_type, ur.scope_id, ur.status as ur_status, ur.verified_at, ur.expires_at
 		FROM %s ur
 		INNER JOIN sys_role r ON ur.role_id = r.id
 		WHERE ur.user_id = ? AND r. deleted_at IS NULL AND r.status = 1
+		  AND ur.status = 2 AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
 	`, m.table)
 	err := m.conn.QueryRowsCtx(ctx, &list, query, userId)
 	return list, err
@@ -164,8 +177,8 @@ func (m *defaultRelUserRoleModel) DeleteByUserIdAndRoleId(ctx context.Context, u
 // BatchInsertUserRoles 批量插入（INSERT IGNORE 幂等）
 func (m *defaultRelUserRoleModel) BatchInsertUserRoles(ctx context.Context, records []*RelUserRole) error {
 	for _, r := range records {
-		query := fmt.Sprintf("insert ignore into %s (user_id, role_id, scope_type, scope_id) values (?, ?, ?, ?)", m.table)
-		if _, err := m.conn.ExecCtx(ctx, query, r.UserId, r.RoleId, r.ScopeType, r.ScopeId); err != nil {
+		query := fmt.Sprintf("insert ignore into %s (user_id, role_id, scope_type, scope_id, status, verified_at, expires_at) values (?, ?, ?, ?, ?, ?, ?)", m.table)
+		if _, err := m.conn.ExecCtx(ctx, query, r.UserId, r.RoleId, r.ScopeType, r.ScopeId, r.Status, r.VerifiedAt, r.ExpiresAt); err != nil {
 			return err
 		}
 	}
@@ -188,3 +201,25 @@ func (m *defaultRelUserRoleModel) FindByRoleId(ctx context.Context, roleId int64
 }
 
 var _ = time.Now
+
+// UpdateRoleStatus 更新用户角色的生命周期状态（认证通过/驳回/过期）
+func (m *defaultRelUserRoleModel) UpdateRoleStatus(ctx context.Context, userId, roleId int64, scopeType string, scopeId, status int64, verifiedAt, expiresAt sql.NullTime) error {
+	query := fmt.Sprintf("update %s set status = ?, verified_at = ?, expires_at = ? where user_id = ? and role_id = ? and scope_type = ? and scope_id = ?", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, status, verifiedAt, expiresAt, userId, roleId, scopeType, scopeId)
+	return err
+}
+
+// FindAllByUserId 联表查询用户所有角色（含个体生命周期状态，不过滤 status）
+func (m *defaultRelUserRoleModel) FindAllByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error) {
+	var list []*UserRoleWithInfo
+	query := fmt.Sprintf(`
+		SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description,
+		       ur.scope_type, ur.scope_id, ur.status as ur_status, ur.verified_at, ur.expires_at
+		FROM %s ur
+		INNER JOIN sys_role r ON ur.role_id = r.id
+		WHERE ur.user_id = ? AND r. deleted_at IS NULL
+		ORDER BY ur.id
+	`, m.table)
+	err := m.conn.QueryRowsCtx(ctx, &list, query, userId)
+	return list, err
+}

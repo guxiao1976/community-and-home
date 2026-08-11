@@ -11,6 +11,31 @@ import (
 
 // ==================== Proto Conversion Helpers ====================
 
+// int32Ptr 返回 int32 指针
+func int32Ptr(v int32) *int32 {
+	return &v
+}
+
+// int64Ptr 返回 int64 指针
+func int64Ptr(v int64) *int64 {
+	return &v
+}
+
+// defaultExpiryTime 返回角色的默认过期时间（无 sysconfig 时用硬编码）
+func defaultExpiryTime(roleCode string) sql.NullTime {
+	defaults := map[string]int64{
+		"grid_worker":     8760,
+		"community_admin": 17520,
+		"committee":       17520,
+		"property_admin":  8760,
+		"tenant":          8760,
+	}
+	if hours, ok := defaults[roleCode]; ok {
+		return sql.NullTime{Time: time.Now().Add(time.Duration(hours) * time.Hour), Valid: true}
+	}
+	return sql.NullTime{}
+}
+
 // toProtoUser converts a model.UserBase to a proto User.
 func toProtoUser(u *model.UserBase) *userv1.User {
 	if u == nil {
@@ -21,16 +46,16 @@ func toProtoUser(u *model.UserBase) *userv1.User {
 		phone = decrypted
 	}
 	user := &userv1.User{
-		Id:          u.Id,
-		Phone:       phone,
-		AvatarUrl:   u.AvatarUrl.String,
-		RealName:    u.RealName.String,
+		Id:           u.Id,
+		Phone:        phone,
+		AvatarUrl:    u.AvatarUrl.String,
+		RealName:     u.RealName.String,
 		IdCardNumber: u.IdCardNumber.String,
-		Status:      int32(u.Status),
-		CreditScore: int32(u.CreditScore),
-		Preferences: u.Preferences.String,
-		CreatedAt:   u.CreatedTime.Unix(),
-		UpdatedAt:   u.UpdatedTime.Unix(),
+		Status:       int32(u.Status),
+		CreditScore:  int32(u.CreditScore),
+		Preferences:  u.Preferences.String,
+		CreatedAt:    u.CreatedTime.Unix(),
+		UpdatedAt:    u.UpdatedTime.Unix(),
 	}
 	if u.Nickname.Valid {
 		user.Nickname = u.Nickname.String
@@ -78,39 +103,6 @@ func toProtoMemberships(memberships []*model.UserCommunityMembership) []*userv1.
 	result := make([]*userv1.CommunityMembership, 0, len(memberships))
 	for _, m := range memberships {
 		result = append(result, toProtoMembership(m))
-	}
-	return result
-}
-
-func toProtoRole(r *model.UserMembershipRole) *userv1.MembershipRole {
-	if r == nil {
-		return nil
-	}
-	role := &userv1.MembershipRole{
-		Id:          r.Id,
-		UserId:      r.UserId,
-		CommunityId: r.CommunityId,
-		RoleCode:    r.RoleCode,
-		VerfStatus:  int32(r.VerfStatus),
-		CreatedAt:   r.CreatedTime.Unix(),
-		UpdatedAt:   r.UpdatedTime.Unix(),
-	}
-	if r.MembershipId.Valid {
-		role.MembershipId = r.MembershipId.Int64
-	}
-	if r.VerifiedAt.Valid {
-		role.VerifiedAt = r.VerifiedAt.Time.Unix()
-	}
-	if r.ExpiresAt.Valid {
-		role.ExpiresAt = r.ExpiresAt.Time.Unix()
-	}
-	return role
-}
-
-func toProtoRoles(roles []*model.UserMembershipRole) []*userv1.MembershipRole {
-	result := make([]*userv1.MembershipRole, 0, len(roles))
-	for _, r := range roles {
-		result = append(result, toProtoRole(r))
 	}
 	return result
 }

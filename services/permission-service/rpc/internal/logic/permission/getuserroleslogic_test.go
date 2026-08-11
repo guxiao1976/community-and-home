@@ -15,7 +15,7 @@ import (
 func TestGetUserRoles_Success(t *testing.T) {
 	// Setup
 	mockUserRole := new(MockUserRoleModel)
-	mockUserRole.On("FindActiveByUserId", mock.Anything, int64(1001)).
+	mockUserRole.On("FindAllByUserId", mock.Anything, int64(1001)).
 		Return([]*model.UserRoleWithInfo{
 			{
 				RoleId:      1,
@@ -26,6 +26,7 @@ func TestGetUserRoles_Success(t *testing.T) {
 				Status:      1,
 				ScopeType:   "community",
 				ScopeId:     100,
+				URStatus:    2,
 			},
 			{
 				RoleId:      2,
@@ -36,6 +37,7 @@ func TestGetUserRoles_Success(t *testing.T) {
 				Status:      1,
 				ScopeType:   "building",
 				ScopeId:     200,
+				URStatus:    2,
 			},
 		}, nil)
 
@@ -75,7 +77,7 @@ func TestGetUserRoles_Success(t *testing.T) {
 func TestGetUserRoles_NoRoles(t *testing.T) {
 	// Setup
 	mockUserRole := new(MockUserRoleModel)
-	mockUserRole.On("FindActiveByUserId", mock.Anything, int64(1001)).
+	mockUserRole.On("FindAllByUserId", mock.Anything, int64(1001)).
 		Return([]*model.UserRoleWithInfo{}, nil)
 
 	svcCtx := &svc.ServiceContext{
@@ -102,7 +104,7 @@ func TestGetUserRoles_NoRoles(t *testing.T) {
 func TestGetUserRoles_SystemRole(t *testing.T) {
 	// Setup
 	mockUserRole := new(MockUserRoleModel)
-	mockUserRole.On("FindActiveByUserId", mock.Anything, int64(1001)).
+	mockUserRole.On("FindAllByUserId", mock.Anything, int64(1001)).
 		Return([]*model.UserRoleWithInfo{
 			{
 				RoleId:      999,

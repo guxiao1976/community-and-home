@@ -204,9 +204,12 @@ type RevokeUserRoleReq struct {
 
 // UserRoleInfo 用户角色关联信息（HTTP 响应）
 type UserRoleInfo struct {
-	Role      RoleInfo `json:"role"`
-	ScopeType string   `json:"scopeType"`
-	ScopeId   int64    `json:"scopeId,string"`
+	Role       RoleInfo `json:"role"`
+	ScopeType  string   `json:"scopeType"`
+	ScopeId    int64    `json:"scopeId,string"`
+	Status     int32    `json:"status"`            // 个体角色生命周期: 0=未认证 1=待审 2=已认证 3=已驳回 4=已过期
+	VerifiedAt int64    `json:"verifiedAt,string"` // 认证通过时间
+	ExpiresAt  int64    `json:"expiresAt,string"`  // 到期时间, 0=永久
 }
 
 // GetUserRolesReq 查询用户角色请求（path param）

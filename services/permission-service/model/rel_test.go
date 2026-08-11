@@ -22,7 +22,7 @@ func TestRelUserRoleModel_Insert(t *testing.T) {
 	m := NewRelUserRoleModel(conn, nil)
 
 	mock.ExpectExec("insert into `rel_user_role`").
-		WithArgs(int64(100), int64(1), "community", int64(5001)).
+		WithArgs(int64(100), int64(1), "community", int64(5001), int64(0), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(10, 1))
 
 	rel := &RelUserRole{
@@ -55,12 +55,12 @@ func TestRelUserRoleModel_BatchInsertUserRoles_Idempotent(t *testing.T) {
 
 	// 第一次插入成功
 	mock.ExpectExec("insert ignore into `rel_user_role`").
-		WithArgs(int64(100), int64(1), "community", int64(5001)).
+		WithArgs(int64(100), int64(1), "community", int64(5001), int64(0), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// 第二次插入（重复）返回 0 rows affected，但不报错
 	mock.ExpectExec("insert ignore into `rel_user_role`").
-		WithArgs(int64(100), int64(2), "building", int64(6001)).
+		WithArgs(int64(100), int64(2), "building", int64(6001), int64(0), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 
 	records := []*RelUserRole{
@@ -85,9 +85,9 @@ func TestRelUserRoleModel_FindActiveByUserId(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewRelUserRoleModel(conn, nil)
 
-	rows := sqlmock.NewRows([]string{"role_id", "role_code", "role_name", "is_system", "role_status", "description", "scope_type", "scope_id"}).
-		AddRow(1, "owner", "业主", 0, 1, "业主角色", "community", 5001).
-		AddRow(2, "property_admin", "物业管理员", 1, 1, "系统角色", "community", 5001)
+	rows := sqlmock.NewRows([]string{"role_id", "role_code", "role_name", "is_system", "role_status", "description", "scope_type", "scope_id", "ur_status", "verified_at", "expires_at"}).
+		AddRow(1, "owner", "业主", 0, 1, "业主角色", "community", 5001, 2, nil, nil).
+		AddRow(2, "property_admin", "物业管理员", 1, 1, "系统角色", "community", 5001, 2, nil, nil)
 
 	mock.ExpectQuery("SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description").
 		WithArgs(int64(100)).

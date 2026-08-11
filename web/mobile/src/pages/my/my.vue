@@ -203,12 +203,14 @@ import { useUserStore } from '@/stores/user';
 import { useCommunityStore } from '@/stores/community';
 import { isAuthenticated } from '@common/utils/auth';
 import { getUserProfile } from '@/api/identity';
-import { applyRole, bindResidence, getUserMemberships } from '@/api/user';
+import { applyRole, bindResidence, getUserMemberships, getUserRoles } from '@/api/user';
 
 const userStore = useUserStore();
 const communityStore = useCommunityStore();
 
 const pageLoading = ref(true);
+// 用户已获取的角色列表（含认证状态 status：0未认证/1待审/2已认证/3驳回/4过期）
+const userRoles = ref<any[]>([]);
 
 // Hierarchical menu expansion state: '' | 'community' | 'identity' | 'account'
 const expanded = ref('');
@@ -222,8 +224,8 @@ const bindUnit = ref('');
 const bindRoom = ref('');
 
 const hasOwnerRole = computed(() => {
-  // Placeholder — will be enhanced with API-loaded roles in future iteration
-  return false;
+  // 拥有已认证（status=2）的业主角色
+  return userRoles.value.some(r => r.role_code === 'owner' && r.verf_status === 2);
 });
 
 // Phone display (full number from store, fallback to storage)
@@ -359,6 +361,12 @@ onMounted(async () => {
   }
   if (userStore.isLoggedIn) {
     await communityStore.loadMemberships();
+    // 加载用户角色（用于判断是否已有 owner 角色，决定业委会入口显示）
+    try {
+      userRoles.value = await getUserRoles();
+    } catch (e) {
+      console.warn('[my] Failed to load user roles:', e);
+    }
   }
   pageLoading.value = false;
 });

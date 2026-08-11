@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"time"
 
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
 	"github.com/guxiao1976/community-user/model"
 	"github.com/guxiao1976/community-user/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 )
 
 type ReviewCertificationLogic struct {
@@ -29,7 +30,8 @@ func NewReviewCertificationLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 // ReviewCertification 审核认证（per 设计文档 3.5）
-// 优化：owner/tenant 认证通过后创建 residence；回填 user_base 实名信息
+// 认证通过：调 permission-service UpdateUserRoleStatus(status=2) 激活角色 + 回填实名 + 创建 residence
+// 认证驳回：调 permission-service UpdateUserRoleStatus(status=3)
 func (l *ReviewCertificationLogic) ReviewCertification(in *userv1.ReviewCertificationRequest) (*userv1.ReviewCertificationResponse, error) {
 	// 1. 查 certification
 	cert, err := l.svcCtx.UserCertificationModel.FindOne(l.ctx, in.CertificationId)
@@ -65,10 +67,7 @@ func (l *ReviewCertificationLogic) ReviewCertification(in *userv1.ReviewCertific
 
 	now := time.Now()
 
-	// 3. 角色状态即将变更 → 主动失效 Redis 缓存
-	invalidateRolesCache(l.ctx, l.svcCtx.Redis, cert.UserId)
-
-	// 4. 更新 certification 状态
+	// 3. 更新 certification 状态
 	cert.Status = int64(in.Result)
 	cert.ReviewerId = sql.NullInt64{Int64: in.ReviewerId, Valid: true}
 	cert.ReviewTime = sql.NullTime{Time: now, Valid: true}
@@ -81,29 +80,61 @@ func (l *ReviewCertificationLogic) ReviewCertification(in *userv1.ReviewCertific
 		return nil, err
 	}
 
-	// 4. 查找 role 以确定过期策略
-	role, roleErr := l.svcCtx.UserMembershipRoleModel.FindOne(l.ctx, cert.RoleId)
+	// 4. 确定角色 scope（从 certification 元数据中的 communityId）
+	//    certification.RoleId 关联 rel_user_role 的 role_id
+	scopeType := "community"
+	scopeId := meta.CommunityId
+	if meta.CommunityId == 0 {
+		scopeType = "global"
+	}
+
+	// 5. 调 permission-service 更新角色状态
+	if l.svcCtx.PermissionClient == nil {
+		l.Errorf("ReviewCertification: PermissionClient is nil")
+		return &userv1.ReviewCertificationResponse{
+			Base: responsex.NewBaseRespWithError(50000, "系统繁忙"),
+		}, nil
+	}
+
+	updateReq := &permissionv1.UpdateUserRoleStatusRequest{
+		UserId:    cert.UserId,
+		RoleId:    cert.RoleId,
+		ScopeType: scopeType,
+		ScopeId:   scopeId,
+	}
 
 	if in.Result == int32(model.CertStatusApproved) {
 		// ====== 审核通过 ======
-		verifiedAt := sql.NullTime{Time: now, Valid: true}
-		var expiresAt sql.NullTime
-
-		if roleErr == nil {
-			if in.ExpiresAt != "" {
-				expiresAt = parseDate(in.ExpiresAt)
-			} else if model.RolesWithExpiry[role.RoleCode] {
-				expiresAt = l.defaultExpiry(role.RoleCode)
+		verifiedAt := now.Unix()
+		var expiresAt int64
+		if in.ExpiresAt != "" {
+			if t := parseDate(in.ExpiresAt); t.Valid {
+				expiresAt = t.Time.Unix()
 			}
-
-			err = l.svcCtx.UserMembershipRoleModel.UpdateVerfStatus(l.ctx, cert.RoleId,
-				model.RoleVerfStatusApproved, verifiedAt, expiresAt)
-			if err != nil {
-				l.Errorf("update role verf_status error: %v", err)
-				return nil, err
+		}
+		// 默认有效期（从 meta 中的 role_code 推断）
+		if expiresAt == 0 && meta.RoleCode != "" && model.RolesWithExpiry[meta.RoleCode] {
+			if t := defaultExpiryTime(meta.RoleCode); t.Valid {
+				expiresAt = t.Time.Unix()
 			}
 		}
 
+		updateReq.Status = 2
+		updateReq.VerifiedAt = int64Ptr(verifiedAt)
+		if expiresAt > 0 {
+			updateReq.ExpiresAt = int64Ptr(expiresAt)
+		}
+	} else {
+		// ====== 审核驳回 ======
+		updateReq.Status = 3
+	}
+
+	if _, err := l.svcCtx.PermissionClient.UpdateUserRoleStatus(l.ctx, updateReq); err != nil {
+		l.Errorf("ReviewCertification: UpdateUserRoleStatus failed certId=%d userId=%d err=%v", in.CertificationId, cert.UserId, err)
+		return nil, err
+	}
+
+	if in.Result == int32(model.CertStatusApproved) {
 		// 回填 user_base 实名信息（COALESCE：首次回填，已有不覆盖）
 		if meta.RealName != "" && meta.IdCardNumber != "" {
 			if err := l.svcCtx.UserBaseModel.UpdateRealNameAndIdCard(l.ctx, cert.UserId, meta.RealName, meta.IdCardNumber); err != nil {
@@ -113,13 +144,13 @@ func (l *ReviewCertificationLogic) ReviewCertification(in *userv1.ReviewCertific
 		}
 
 		// owner/tenant：认证通过后创建 residence（房屋归属由房产证/租赁合同证明）
-		if roleErr == nil && model.RolesRequiringResidence[role.RoleCode] && role.MembershipId.Valid {
+		if model.RolesRequiringResidence[meta.RoleCode] && meta.MembershipId > 0 {
 			houseId := buildHouseId(meta.Building, meta.Unit, meta.Room)
-			existing, _ := l.svcCtx.UserResidenceModel.FindByMembershipAndHouse(l.ctx, role.MembershipId.Int64, houseId)
+			existing, _ := l.svcCtx.UserResidenceModel.FindByMembershipAndHouse(l.ctx, meta.MembershipId, houseId)
 			if existing == nil {
 				residence := &model.UserResidence{
 					Id:           snowflake.NextID(),
-					MembershipId: role.MembershipId.Int64,
+					MembershipId: meta.MembershipId,
 					UserId:       cert.UserId,
 					HouseId:      houseId,
 					Building:     meta.Building,
@@ -134,51 +165,9 @@ func (l *ReviewCertificationLogic) ReviewCertification(in *userv1.ReviewCertific
 				}
 			}
 		}
-	} else {
-		// ====== 审核驳回 ======
-		if roleErr == nil {
-			err = l.svcCtx.UserMembershipRoleModel.UpdateVerfStatusOnly(l.ctx, cert.RoleId, model.RoleVerfStatusRejected)
-			if err != nil {
-				l.Errorf("update role verf_status error: %v", err)
-				return nil, err
-			}
-		}
 	}
 
 	l.Infof("ReviewCertification success, certId=%d, result=%d, roleCode=%s",
-		in.CertificationId, in.Result, func() string {
-			if roleErr == nil {
-				return role.RoleCode
-			}
-			return "unknown"
-		}())
+		in.CertificationId, in.Result, meta.RoleCode)
 	return &userv1.ReviewCertificationResponse{Base: responsex.NewBaseResp()}, nil
-}
-
-// getRoleExpiryHours 从 sysconfig 读取角色过期时长（小时），fallback 到硬编码默认值
-func getRoleExpiryHours(ctx context.Context, svcCtx *svc.ServiceContext, roleCode string) int64 {
-	defaults := map[string]int64{
-		"grid_worker":     8760,
-		"community_admin": 17520,
-		"committee":       17520,
-		"property_admin":  8760,
-		"tenant":          8760,
-	}
-	if svcCtx.SysConfig != nil {
-		key := "user.role_expiry_hours." + roleCode
-		if v, err := svcCtx.SysConfig.GetInt(ctx, key); err == nil {
-			return int64(v)
-		}
-	}
-	return defaults[roleCode]
-}
-
-// defaultExpiry 返回角色的默认过期时间
-func (l *ReviewCertificationLogic) defaultExpiry(roleCode string) sql.NullTime {
-	now := time.Now()
-	expiryHours := getRoleExpiryHours(l.ctx, l.svcCtx, roleCode)
-	if expiryHours == 0 {
-		return sql.NullTime{} // 永久
-	}
-	return sql.NullTime{Time: now.Add(time.Duration(expiryHours) * time.Hour), Valid: true}
 }
