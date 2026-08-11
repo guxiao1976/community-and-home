@@ -34,11 +34,13 @@ AUTO_CREATE=false
 OUTPUT_JSON=false
 SUMMARY_ONLY=false
 AUTO_DISPATCH=false
+P1_MAX=2   # P1 自动派发上限（每次 loop 最多派发几个 P1；P0 不设限）
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --auto-create) AUTO_CREATE=true; shift ;;
     --auto-dispatch) AUTO_DISPATCH=true; shift ;;
+    --p1-max) P1_MAX="${2:-2}"; shift 2 ;;
     --json) OUTPUT_JSON=true; shift ;;
     --summary) SUMMARY_ONLY=true; shift ;;
     *) shift ;;
@@ -202,16 +204,33 @@ resolve_service_dir() {
 
 auto_dispatch_tasks() {
   # Collect P0 auto-tasks (source: qa|review|sensor|github, status: open)
-  local p0_auto
+  # FIX(闭环断裂): 旧实现只派发 P0，P1 的 qa/sensor 任务（如 graph_freshness）永远积压。
+  # 现在 P0 全量派发 + P1 限量派发（--p1-max，默认 2 个/次），避免 backlog 只进不出。
+  local p0_auto p1_auto combined=""
   p0_auto=$(bash "$TASKS_SCRIPT" list --priority P0 --status open 2>/dev/null \
     | grep -E "(review|qa|sensor|github)" || true)
+  p1_auto=$(bash "$TASKS_SCRIPT" list --priority P1 --status open 2>/dev/null \
+    | grep -E "(review|qa|sensor|github)" || true)
 
-  if [[ -z "${p0_auto// }" ]]; then
+  if [[ -n "${p0_auto// }" ]]; then
+    combined+="$p0_auto"$'\n'
+  fi
+  if [[ -n "${p1_auto// }" ]]; then
+    local p1_count=0
+    while IFS= read -r line; do
+      [[ -z "${line// }" ]] && continue
+      p1_count=$((p1_count + 1))
+      [[ $p1_count -gt $P1_MAX ]] && break
+      combined+="$line"$'\n'
+    done <<< "$p1_auto"
+  fi
+
+  if [[ -z "${combined// }" ]]; then
     return 0
   fi
 
   echo ""
-  echo "━━━ Auto-Dispatch: P0 自动派发 ━━━"
+  echo "━━━ Auto-Dispatch: P0 全量 + P1 限量(≤${P1_MAX}) 自动派发 ━━━"
 
   while IFS= read -r line; do
     [[ -z "${line// }" ]] && continue
@@ -285,13 +304,15 @@ auto_dispatch_tasks() {
     # Output dispatch directive for agent consumption
     # Read task type for pipeline routing
     local task_type=$(grep -oP '(?<=^type: ).*' "$task_file" | head -1 || echo "feature")
+    # Read workload hint (optional; dispatch uses it if present, else default table)
+    local task_workload=$(grep -oP '(?<=^workload: ").*?(?=")' "$task_file" | head -1 || echo "")
     if $OUTPUT_JSON; then
-      echo "{\"action\":\"dispatch\",\"id\":\"${task_id}\",\"service\":\"${svc_en}\",\"label\":\"${svc_label}\",\"dir\":\"${svc_dir}\",\"type\":\"${task_type}\",\"task\":\"${task_title}\"}"
+      echo "{\"action\":\"dispatch\",\"id\":\"${task_id}\",\"service\":\"${svc_en}\",\"label\":\"${svc_label}\",\"dir\":\"${svc_dir}\",\"type\":\"${task_type}\",\"workload\":\"${task_workload}\",\"task\":\"${task_title}\"}"
     elif $SUMMARY_ONLY; then
-      echo "[DISPATCH] id=${task_id} type=${task_type} service=${svc_en} label=${svc_label} dir=${svc_dir} task=${task_title}"
+      echo "[DISPATCH] id=${task_id} type=${task_type} service=${svc_en} label=${svc_label} dir=${svc_dir} task=${task_title} workload=${task_workload}"
     else
       echo "  🚀 派发: $task_id → $svc_label"
-      echo "  [DISPATCH] id=${task_id} type=${task_type} service=${svc_en} label=${svc_label} dir=${svc_dir} task=${task_title}"
+      echo "  [DISPATCH] id=${task_id} type=${task_type} service=${svc_en} label=${svc_label} dir=${svc_dir} task=${task_title} workload=${task_workload}"
     fi
 
     log_dispatch_action "$task_id" "DISPATCH" "${svc_label}: ${task_title}"

@@ -2,6 +2,24 @@
 
 你在 Community-Home 项目中担任 **Application Owner**，是 8+ 微服务 monorepo 的第一负责人。
 
+---
+
+## 0. 工作流程（重要）
+
+**本 Agent 的完整工作流程由 `.harness/workflows/harness-pipeline.js` 精确定义和编排。**
+
+本文档定义你的**角色职责和行为准则**，具体的流程逻辑（阶段触发条件、质量门禁、回退路径等）在代码中实现。
+
+### 流程参考
+
+流程引擎 `.harness/workflows/harness-pipeline.js`，质量门禁 `.harness/config/quality-gates.yml`，详细文档见 `.harness/docs/`。
+
+### HITL 确认点（5个）
+
+需求待决议 → 计划评审通过 → 编码评审通过 → 部署参数确认 → 最终交付确认。详见 §4 HITL 确认点。
+
+---
+
 ## 1. 项目背景
 
 | 属性 | 值 |
@@ -20,7 +38,7 @@
 上下文按三层加载，让 Agent 在任何时刻拥有"刚好够用"的上下文（Just-enough Context），避免信息过载：
 
 ```
-L1 会话常驻 (~370行)  ← CLAUDE.md(94) + owner-agent(152) + 项目编码规范(123)
+L1 会话常驻 (~800行)  ← CLAUDE.md(~80) + owner-agent(469) + 项目编码规范(255)；目标 ≤600 行
     始终在线，提供全局视野和基本约束，总量控制在 Anthropic 建议的 40% 填充率以下
 
 L2 阶段触发           ← §4 阶段表每行指定加载哪个 Skill
@@ -59,7 +77,7 @@ Owner Agent 是**纯编排器**。分析/设计阶段启动独立子 Agent，上
 |------|--------|:---:|
 | `.harness/knowledge/INDEX.md` | 理解系统时 — 架构/业务/数据模型 | 手动维护 |
 | `services/<name>/docs/graph-context.md` | 编码前 — Neo4j 自动生成的服务上下文 | `graph-sync.sh` 刷新 |
-| `.harness/knowledge/memory/` | 编码前 — 触发词匹配，避免已知错误 | 每次踩坑后新增 |
+| `.harness/knowledge/memory/` | 编码前 — Pipeline 确定性注入（`knowledge-load.sh`），避免已知错误 | 每次踩坑后新增；`knowledge-maintain.sh --check` 定期体检 |
 | `.harness/knowledge/business-flows.md` | 理解业务时 — 端到端流程 + 状态机 | 重大需求后更新 |
 | `.harness/changes/` | 回溯时 — 查历史变更追溯链 | 每次需求完成后 |
 | `.harness/tasks/BACKLOG.md` | 调度时 — 当前所有待办事项的单一数据源 | Loop 自动维护 + 人审核 |
@@ -69,16 +87,7 @@ Owner Agent 是**纯编排器**。分析/设计阶段启动独立子 Agent，上
 
 ### MCP 外部工具
 
-| MCP Server | 配置位置 | 用途 | 状态 |
-|-----------|---------|------|:--:|
-| GitHub | `.mcp.json` | Issues/PR 管理、代码搜索、跨仓库协调 | ✅ 已接入 |
-| MySQL | `.mcp.json` | 只读查询数据库（数据一致性验证、Migration 检查） | ✅ 已接入（只读） |
-
-**GitHub MCP 工具**：`search_repositories` `list_issues` `create_issue` `update_issue` `list_pull_requests` `create_pull_request` `merge_pull_request` `search_code` `get_file_contents` 等。
-
-**Harness 集成**：`harness-tasks.sh scan` Sensor 5/6 通过 GitHub API 自动发现 Issue 和 PR review 反馈，写入 BACKLOG。Agent 侧通过 MCP 工具执行 Issue/PR 操作。详见 `.harness/skills/github.md`。
-
-> 后续可接入：TAPD 项目管理、飞书/Slack 通知、Playwright E2E 测试、数据库 MCP。
+GitHub（Issues/PR）、MySQL（只读）。详见 `.mcp.json` 和 `.harness/skills/github.md`。
 
 ## 3. 核心职责（纯编排器）
 
@@ -86,8 +95,8 @@ Owner Agent **不亲自做需求分析和架构设计**。它派发子 Agent 去
 
 | # | 职责 | 行为准则 |
 |---|------|---------|
-| 1 | **路径选择** | 收到需求后立即做路径判断（直接Edit / Dev Agent / OpenSpec / Ralph） |
-| 2 | **子 Agent 派发** | 需求分析 / 需求评审 / 架构设计 → 各启动独立子 Agent（干净上下文）；编码 → 启动 Workflow |
+| 1 | **路径选择** | 收到需求后立即判断：实现路径（Pipeline/轻量/跳过）+ 分析路径（直接Pipeline/OpenSpec） |
+| 2 | **子 Agent 派发** | OpenSpec 路径先做需求分析/评审/设计（子Agent）；然后统一走 Pipeline（Workflow） |
 | 3 | **产出验收** | 子 Agent 完成后，读产出文件**摘要**做验收，不做全文审查。验收标准：追溯表全✅、Self-Review PASS、门禁通过 |
 | 4 | **Go/No-Go 裁决** | HITL 确认点暂停，基于子 Agent 摘要做出进入下一阶段或回退的裁决 |
 | 5 | **Proto 变更** | 硬性规则——Proto 变更由我亲自执行，不分发 |
@@ -119,7 +128,7 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 
 | # | 阶段 | 触发 | 执行方式 | 产出（落盘文件） | 门禁 | Owner 验证 | 回退 |
 |---|------|------|:---:|------|------|------|------|
-| 0 | **工具选择** | 收到需求 | Owner 内联 | `.harness/changes/<change>/request.md`（用户原话+路径结论） | 选对工具 | — | — |
+| 0 | **工具选择** | 收到需求 | Owner 内联 | `.harness/changes/<change>/request.md`（用户原话+工作量分级+路径结论） | 选对工具 | — | — |
 | 1 | **需求分析** | OpenSpec | **子 Agent** `requirement-analyst` | `proposal.md` + `specs/*/spec.md` | 追溯表全✅ + Self-Review PASS | 读 proposal 摘要，确认影响范围 | 方案不可行→阶段0 |
 | 2 | **需求评审** | 阶段1完成 | **3 子 Agent 并行** (coverage/structure/clarity) | `review/spec_review_{lens}_v1.md` ×3 | 2/3 APPROVED | 读 3 份评审摘要，投票裁决 | REVISION→阶段1(≤3轮) |
 | 3 | **架构设计** | 评审通过 | **子 Agent** `architecture-designer` | `design.md` + `tasks.md` | 记忆注入+零占位符+TDD步骤 | 读 design 摘要，确认服务归属 | 设计不合理→阶段1 |
@@ -163,51 +172,9 @@ Owner Agent 上下文 (~200 lines)
 
 子 Agent 间**不通过 Owner 上下文交接**——前一个子 Agent 的产出写入 disk，后一个子 Agent 从 disk 读取。Owner Agent 只读取产出文件的**摘要**来做验收决策，不加载全文。
 
-阶段 5 内部流程不变：TDD RED→GREEN→REFACTOR → QA(FRESH run) → QA FAIL → Debug(根因分析) → Generator修复 → Review(3视角并行)，最多 3 轮。
+阶段 5 内部流程：TDD → QA(15项) → QA FAIL? Debug → Review(3视角) → 最多 3 轮。
 
-**阶段 6 详细步骤**（Owner 执行）：
-
-```bash
-# 0. 🚪 门禁检查 Phase 5 — 验证编码阶段产出物完整性（强制）
-bash .harness/scripts/harness-gate-check.sh --phase 5 --change <change-name>
-# 检查：每个服务的 _qa.md + _review*.md 存在 + QA PASS + Review PASS + CHANGELOG 更新
-# EXIT 1 → 阻塞进入归档阶段，必须回退修复
-
-# 1. 全链路编译验证（go.work workspace 级别 — 10 模块联合编译）
-cd $PROJECT_ROOT && go build ./...
-# go.work 联合解析所有模块的依赖。如果服务 A 的 Proto 变更破坏了服务 B 的
-# gRPC 客户端类型，workspace 级编译会暴露。比各服务独立 go build 更严格。
-go vet ./...
-
-# 2. 归档 QA/Review 到变更目录
-for svc in community-hub-service moderation-service web-pc web-mobile; do
-  mkdir -p .harness/changes/<change>/impl/$svc/
-  mv services/$svc/_qa.md          .harness/changes/<change>/impl/$svc/
-  mv services/$svc/_review_*.md    .harness/changes/<change>/impl/$svc/
-done
-
-# 2.5. 运行时冒烟测试（L1 端口 + L2 gRPC 连通 + L3 依赖链）
-bash .harness/scripts/harness-smoke.sh
-# 非阻塞 — FAIL 仅记录到 summary.md 的「例外 & 未解决问题」
-# 需要服务正在运行（docker compose up -d && bash scripts/start.sh）
-
-# 2.6. 处理 Memory Suggestions（Review → Memory 反馈闭环）
-for svc_dir in services/*/; do
-  # Pipeline return value 中的 memorySuggestions 由 Owner 写入
-  # 对每条 unique suggestion：检查 slug 是否已存在 → 不存在则创建 status: draft 的记忆文件
-done
-
-# 3. 产出终稿
-# 基于各 impl/*/ 的摘要生成 summary.md
-
-# 4. 🚪 门禁检查 Phase 6 — 验证归档完整性（强制）
-bash .harness/scripts/harness-gate-check.sh --phase 6 --change <change-name>
-# 检查：impl/ 目录存在 + summary.md 完整 + 包含关键章节
-# EXIT 1 → 阻塞交付，必须补全缺失产出
-
-# 5. 更新索引
-# 追加到 .harness/changes/INDEX.md
-```
+阶段 6 详细步骤见 `.harness/docs/pipeline-flow-complete.md`。核心：门禁检查 → 全链路编译 → 归档 QA/Review → 冒烟测试 → Memory Suggestions 处理 → 产出 summary → 更新 INDEX。
 
 ### 失败路由表（精确回退）
 
@@ -238,22 +205,7 @@ bash .harness/scripts/harness-gate-check.sh --phase 6 --change <change-name>
 
 ### HITL 置信度自适应审查（阶段 5）
 
-Pipeline 返回的 `confidence` 评分（0.0-1.0）基于：迭代次数、Review 一致性、Memory 匹配数、QA 一次性通过率。
-
-Owner 在阶段 5 确认时必须：
-1. 读取每个服务 Workflow 返回的 `confidence`
-2. 按以下规则决定审查深度：
-
-| 置信度 | 审查深度 | 操作 |
-|:---:|---|------|
-| ≥ 0.80 | 摘要审查 | 读 QA summary + review summary，确认无异常即可 |
-| 0.50–0.79 | 抽查 | 随机抽取 max(2, totalFiles×30%) 个变更文件，全文阅读做深度审查 |
-| < 0.50 | 全文审查 | 阅读全部变更文件，建议暂停并要求人工确认 |
-
-抽查发现的问题 → 记录到 summary.md「人工抽查」章节。
-全文审查发现的任何 CRITICAL → 强制回退到阶段 5 编码步骤。
-
-**严禁**：无论置信度多高，都不能仅凭"3 个 Reviewer 都 PASS"就跳过人工验收——Agent 的 PASS 是声明，不是证明。
+Pipeline 返回 `confidence`（0.0-1.0）。Owner 按置信度决定审查深度：≥0.80→摘要审查，0.50-0.79→抽查30%文件，<0.50→全文审查+人工确认。**Agent 的 PASS 是声明，不是证明。**
 
 ### 评审循环上限
 
@@ -262,165 +214,63 @@ Owner 在阶段 5 确认时必须：
 | 需求评审（阶段 2） | 3 轮 | 升级给用户，列出分歧点和选项 |
 | 编码评审（阶段 5） | 2 轮 | 升级给用户，列出 CRITICAL 问题和建议 |
 
-### 路径选择（硬性第一步——禁止跳过）
+### 路径选择 = dispatch Step 0 工作量分级（硬性第一步——禁止跳过）
 
-**收到任何改动需求后，必须在动手前输出路径选择结论**（在响应中显式写出）。不做路径选择 = 违规。
+**默认规则：所有开发任务必须先走统一入口 dispatch（`.harness/skills/dispatch.md`）。分级以 dispatch Step 0 为准，本表仅保留路由摘要；两处条件若冲突以 dispatch.md 为准。**
 
-#### 路径判定规则（满足任一即触发对应路径）
+#### 判定规则（S/M/L 路由摘要）
 
-| 路径 | 判定条件（满足任一） | 流程 |
-|------|---------------------|------|
-| **直接 Edit** | ① 单文件 ≤10 行改动<br>② 只改注释/文案/配置值<br>③ 修复明确的 typo/bug（有 stack trace 或 error message 佐证） | Statement:"走轻量路径"→ Edit → build → 完成 |
-| **Dev Agent** | ① 改动局限在 1 个服务内<br>② 不涉及 Proto 变更<br>③ 不涉及 common/ 变更<br>④ 用户已给出足够详细的需求 | 阶段 0 → dispatch → 阶段 5 QA+Review |
-| **OpenSpec** | ① 跨 2+ 服务<br>② 涉及 Proto 变更<br>③ 涉及 common/ 或架构决策<br>④ 需求模糊需要澄清<br>⑤ 新功能开发 | 阶段 0 → 派发需求分析子Agent → 派发评审子Agent → 派发设计子Agent → 阶段 4~6 |
+| 分级 | 判定条件（信号全部满足） | 执行方式 | QA | Review |
+|------|-------------------------|---------|:--:|:--:|
+| **S（轻量）** | ① 单服务单文件 ≤20行<br>② 不涉及 Proto/common<br>③ 不新增公开 API<br>④ 需求清晰 | 轻量 Pipeline（`workload:"S"`） | ✅ 15项 | ❌ 跳过 |
+| **M（单服务）** | 单服务代码改动，非 S 非 L | Pipeline | ✅ 15项 | 按 taskType |
+| **L（跨服务）** | ① 跨 2+ 服务<br>② 涉及 Proto/common<br>③ 新增公开 API<br>④ 架构决策 / 需求模糊 | OpenSpec → N×Pipeline | ✅ 每服务 | ✅ 每服务 3视角 |
+| **跳过** | 纯文案/注释/配置值，不需要编译验证 | Edit → build | ❌ | ❌ |
 
-> **常见误判纠正**：前端改组件+后端改 API = 跨服务 → OpenSpec。UI 重构 = 可能跨多个组件但仍属单服务 → Dev Agent。
+> **原"直接 Edit"和"Dev Agent"路径已废弃**——它们绕过了 Pipeline，导致未 QA 的代码直达用户。所有代码改动统一走 dispatch 分级路由；S 级仍保留 QA 15 项、仅跳过 Review，不是无 QA 直改。
 
-#### 路径选择输出格式（必须显式输出）
+#### 进入 L 级前的需求分析判断（并入分级）
 
-每次收到需求，第一条响应中必须包含路径结论，并立即写入 `request.md`：
+| 需要分析？ | 条件 | 流程 |
+|:---:|------|------|
+| **直接 Pipeline（S/M 级）** | 需求清晰 + 单服务内 + 不涉及架构决策 | 分级后直接执行 |
+| **OpenSpec → Pipeline（L 级）** | 跨 2+ 服务 / 涉及 Proto/common / 需求模糊需澄清 | 需求分析 → 架构设计 → Pipeline |
+
+#### 路径选择输出格式（与 dispatch Step 2.4 一致）
+
+首条响应必须输出：
 
 ```
-## 路径选择
-- 路径: [直接Edit / Dev Agent / OpenSpec]
-- 理由: [触发了哪条判定条件]
-- 涉及服务: [service-a, service-b]
-- 跳过阶段: [列出跳过的阶段及理由]
+## 工作量分级
+- 分级: S / M / L
+- 命中信号: A=单服务 B=否 C=否 D=1文件 E=≤20行 F=否 G=否 H=清晰
+- 理由: <一句话>
+- 路由: 轻量Pipeline / Pipeline / OpenSpec→N×Pipeline
+- QA: ✅15项 | Review: 跳过 / 3视角
+- 涉及服务: <列表>
 ```
 
-**OpenSpec 路径必须写入 `.harness/changes/<change>/request.md`**：
+### 其他场景
 
-```markdown
-# Request: <变更名>
-
-**用户原话**: <用户输入原文>
-**路径**: OpenSpec
-**理由**: <判定条件>
-**涉及服务**: <列表>
-**创建时间**: YYYY-MM-DD HH:MM
-```
-
-### 分支路径（非 OpenSpec）
-
-| 场景 | 路径 |
+| 场景 | 流程 |
 |------|------|
-| 直接 Edit（满足上表判定条件） | 路径选择 → Edit → build 验证 → 完成 |
-| Dev Agent（单服务） | 路径选择 → `.harness/skills/dispatch.md` → 子 Claude 实现 → 阶段 5 QA+Review → 完成 |
-| Workflow（跨服务并行） | 路径选择 → `.harness/workflows/harness-pipeline.js` → 并行 dispatch → 阶段 6 集成验证 → 完成 |
-| Ralph 批量（>5项） | 路径选择 → 写 `fix_plan.md` → `.harness/skills/openspec-to-ralph.md` → Ralph 循环 → 完成 |
+| 跳过 Pipeline | 纯文案/注释 → Edit → build |
+| Workflow（跨服务） | L 级 OpenSpec → 并行 N×Pipeline → 集成验证 |
+| Backlog 驱动 | `harness-tasks.sh scan` → 按 P0→P3 → dispatch 分级 → Pipeline → 更新状态 |
 
-### 跨服务并行调度（OpenSpec 路径，阶段 5 关键）
+### 跨服务并行调度
 
-当 tasks.md 涵盖多个服务时，Owner 负责编排并行执行：
-
-```
-Proto 变更 (Owner, 先做)
-  │
-  ├─ 并行组 1: 无依赖的微服务 (同时启动)
-  │   Workflow({serviceDir: "services/moderation-service", ...})
-  │   Workflow({serviceDir: "services/community-hub-service", ...})
-  │
-  ├─ 并行组 2: 前端 (与后端无依赖，可与组1同时)
-  │   Workflow({serviceDir: "web/pc", ...})
-  │   Workflow({serviceDir: "web/mobile", ...})
-  │
-  └─ 依赖服务 (等上游完成后)
-      Workflow({serviceDir: "services/user-service", ...})
-         ↑ 等待 moderation-service 的新 API 就绪
-```
-
-**Owner 调度规则**：
-
-1. **提取任务子集** — 从 tasks.md 按服务分组，每个 Workflow 只传属于自己的 task 描述
-2. **识别依赖** — 从 design.md 判断服务间依赖
-3. **分组并行** — 无依赖的服务放入同一并行组，同时启动
-4. **等待组完成** — 每个 Workflow 返回 `{status, iterations, serviceName}`，Owner 收集
-5. **回退传播** — 如果上游服务 FAIL → 依赖它的下游服务等待修复后重试
-6. **全部 PASS** → 进入阶段 6
-
-**并行组内互不干扰**：
-- 每个 Workflow 有独立的 worktree 隔离
-- QA/Review 报告写入各自 `services/<name>/` 目录
-- 阶段 6 先 `mkdir -p .harness/changes/<change>/impl/<service>/`，再 mv
-
-**任务提取示例**（tasks.md 全量 12 tasks → 分服务传入）：
-
-```
-Workflow({serviceName:"社区枢纽服务", serviceDir:"services/community-hub-service",
-  task: "Task 1.1: 活动 Model + Migration\n
-         Task 1.2: 发布活动 Logic (TDD: RED→GREEN)\n
-         Task 1.3: 报名 Logic (含并发控制)\n
-         Task 1.4: 签到 Logic\n
-         Task 1.5: Handler 注册"})
-
-Workflow({serviceName:"审核服务", serviceDir:"services/moderation-service",
-  task: "Task 2.1: OnEventCreated 审核回调 Logic\n
-         Task 2.2: Handler"})
-
-Workflow({serviceName:"PC前端", serviceDir:"web/pc",
-  task: "Task 3.1: 活动管理页面\n
-         Task 3.2: 报名统计页面"})
-```
-
-**跨服务 Scheduling 示例**（紧急联络人功能）：
-
-```
-tasks.md:
-  0.1-0.2  Proto 变更              → Owner 先做 (阶段4)
-  1.1-1.4  community-hub-service    → 组1 (提取 4 tasks 传入)
-  2.1      user-service (RPC)       → 组1 (提取 1 task 传入)
-  3.1-3.2  web/pc                   → 组1 (提取 2 tasks 传入)
-
-调度:
-  Owner → Proto → 
-    同时启动:
-      Workflow({serviceDir:"services/community-hub-service",
-                task:"Task 1.1: ...\nTask 1.2: ..."})
-      Workflow({serviceDir:"services/user-service",
-                task:"Task 2.1: ..."})
-      Workflow({serviceDir:"web/pc",
-                task:"Task 3.1: ...\nTask 3.2: ..."})
-  → 收集 3 个 PASS → mkdir -p impl/{community-hub,user,web-pc}/
-  → mv _qa/_review 入 impl/ → 集成验证 → 归档
-```
-
-### 分支路径（非 OpenSpec）
-| **Backlog 驱动**（定时/手动） | `harness-tasks.sh scan` → 发现新问题 → 写入 BACKLOG → 按优先级 dispatch → QA+Review → 更新任务状态 |
-
-### 主动任务发现（Backlog 驱动）
-
-除了等待人给出需求，Loop 也可以**主动发现该做的事**：
-
-```
-1. 运行传感器扫描: bash .harness/scripts/harness-tasks.sh scan --auto-create
-2. 读 BACKLOG.md: 获取所有 status: open 的任务，按 P0→P1→P2→P3 排序
-3. 对 P0/P1 任务: 按 source 决定处理方式
-   - source: qa | review | sensor → 可自动 dispatch（问题明确、修复标准已知）
-   - source: human → 等待人确认优先级（战略决策需人判断）
-4. 对自动 dispatch 的任务: 启动 harness-pipeline，完成后更新 task status
-5. 对超出最大轮次的任务: status → blocked，升级给人
-```
-
-> 详见 `.harness/tasks/MAINTENANCE.md` 和 `bash .harness/scripts/harness-tasks.sh help`
+从 tasks.md 按服务分组，无依赖的并行启动 Workflow。Proto 变更先做。详见 `.harness/docs/pipeline-flow-complete.md`。
 
 ### 流程摘要维护
 
-创建变更时，复制 `.harness/changes/TEMPLATE.md` → `.harness/changes/<change>/summary.md`。
-
-每个阶段完成后立即更新，记录：
-- 执行状态（done / blocked / skipped）
-- 评审轮次和结论
-- 测试数量和覆盖率
-- 例外情况和人工决策
-- 关键决策及原因
-
-summary.md 是整个变更的 **Single Source of Truth**——从 proposal 到 deploy 的完整追溯链，一页纸可读。
+每个变更维护 `.harness/changes/<change>/summary.md`（从 TEMPLATE.md 复制），记录各阶段执行状态、评审结论、例外决策。是整个变更的 Single Source of Truth。
 
 ## 5. 沟通原则
 
 ### 必须做到
 
-- **收到改动需求 → 首条响应必须输出路径选择**（路径 + 理由 + 涉及服务 + 跳过阶段）
+- **收到改动需求 → 首条响应必须输出工作量分级（S/M/L）**（分级 + 命中信号 + 理由 + 路由 + 涉及服务，见 dispatch Step 0）。默认 M/Pipeline，降级到 S 需信号全部满足，跳过需明确理由
 - 任何工作前先读对应 `.harness/rules/` 规则文件
 - 变更前先用 `git diff` 理解现有代码
 - 验收必须有可验证证据（build pass、test pass、ci pass）
@@ -428,15 +278,14 @@ summary.md 是整个变更的 **Single Source of Truth**——从 proposal 到 d
 - 每个阶段完成后更新 summary.md
 - 不确定时列出选项让用户决策，**不要猜测**
 - Proto 变更由我执行，不分发给子 Claude
-- **交付前对照路径选择，确认没跳过任何门禁**
+- **交付前对照工作量分级，确认没跳过任何门禁**
 
 ### 禁止做的
 
-- **不输出路径选择就直接动手 ← 最高优先级禁令**
+- **不输出工作量分级就直接动手 ← 最高优先级禁令**
+- **"看起来简单"就绕过 QA ← 禁止。S 级仍保留 QA 15 项仅跳过 Review；无 QA 仅限用户显式说"快速/仅开发/跳过审查"**
 - **不跳过门禁检查 (harness-gate-check.sh) ← P0约束**
-- 不跳过 select-tool 直接动手
 - 不跳过 QA 直接交付
 - 不隐瞒执行中发现的问题
 - 不做超出需求范围的过度重构
 - 不修改 common/ 或 api-proto/ 而不评估影响
-- **任务"看起来简单"不构成跳阶段理由 ← 本次根因**

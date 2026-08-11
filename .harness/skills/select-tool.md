@@ -1,5 +1,7 @@
 # select-tool
 
+> **直接 Edit / Dev Agent 路径已废弃**，所有代码改动统一走 `dispatch` Skill。本 Skill 只负责判定"是不是开发任务 / 是否批量"，具体工作量分级（S/M/L）与路由见 [dispatch.md Step 0](dispatch.md)。
+
 ## 触发条件
 
 收到任何开发需求时，**在动手之前**必须先执行本 Skill 判断用哪种工具。
@@ -16,68 +18,52 @@
   ├─ 纯问答/咨询/解释？
   │     → 直接回答，不调用任何工具
   │
-  ├─ 单文件、已知原因、改动 < 10 行？
-  │     条件：1-2 个文件、原因明确、不需理解业务逻辑
-  │     示例：字段名修正、路径修正、配置调整、类型修正
-  │     → 直接 Edit，然后 build 验证
-  │     → 完成后记录到 .harness/knowledge/memory/（如踩坑）
+  ├─ 批量修复、已知问题清单、重复性任务（>5 项）？
+  │     → 写 fix_plan.md
+  │     → 启动 Ralph 自主循环逐项执行
+  │     → 每一项仍经 dispatch 分级路由（S 轻量 / M 全流程），Ralph 只做调度不绕过门禁
   │
-  ├─ 单服务、改动明确？
-  │     → 使用 dispatch Skill 派发 Dev Agent 到该服务目录
-  │     → 验证：build 通过
-  │
-  ├─ 单服务、新功能或大改动（>3 文件或需理解业务）？
-  │     → 派发需求分析子 Agent → 派发架构设计子 Agent
-  │     → 派发 Dev Agent → QA Agent → Reviewer
-  │     → 验证：build + test + review
-  │
-  ├─ 跨服务（后端+前端、多个微服务）？
-  │     → 派发需求分析子 Agent → 派发架构设计子 Agent
-  │     → OpenSpec: proposal → design → tasks
-  │     → Proto 变更由全局 Claude 处理（修改 api-proto/ → make generate）
-  │     → 并行派发 Dev Agent 到各服务
-  │     → QA 验证各服务
-  │     → Reviewer 全局审查
-  │     → 集成验证
-  │
-  └─ 批量修复、已知问题清单、重复性任务（>5 项）？
-        → 写 fix_plan.md
-        → 启动 Ralph 自主循环逐项执行
-        → 熔断器保护 + 自动重试
+  └─ 任何代码/配置/文档改动（其余所有）？
+        → 调用 dispatch Skill（统一入口，CLAUDE.md 约束 #7）
+        → dispatch 自动做 S/M/L 工作量分级并路由：
+            S      → 轻量 Pipeline（QA 15项，跳过 Review）
+            M      → Pipeline（默认全流程，QA 15项 + Review 按 taskType）
+            L      → OpenSpec（需求分析 → 架构设计 → 并行 N×Pipeline）
+            跳过级  → 纯文案/配置 → 直接 Edit + build 验证
+        → 用户显式"快速/仅开发/跳过审查" → dispatch 模式二（仅开发，无 QA）
 ```
 
 ## 工具速查
 
 | 工具 | 适用规模 | 触发条件 |
 |------|:---:|------|
-| **直接 Edit** | 极小 | 单文件 <10 行、Bug修复、配置修正 |
-| **Dev Agent** | 小 | 单服务多文件、前端页面、API 端点 |
-| **OpenSpec** | 中 | 新功能、跨层改动、需设计评审 |
-| **Workflow** | 大 | 跨服务并行、前后端同时开发 |
-| **Ralph 循环** | 批量 | 已知清单 >5 项、需自主迭代 |
+| **dispatch（统一入口）** | 全部 | 任何代码/配置/文档改动，内部 S/M/L 分级路由 |
+| **OpenSpec** | L 级 | 跨 2+ 服务 / 涉及 Proto/common / 新增公开 API / 架构决策 |
+| **Workflow** | S/M/L 级 | dispatch 按分级启动 `harness-pipeline.js` |
+| **Ralph 循环** | 批量 | 已知清单 >5 项、需自主迭代（每项仍分级） |
 
 ## 反例（常见误判）
 
 | 需求 | ❌ 错误选择 | ✅ 正确选择 | 原因 |
 |------|-----------|-----------|------|
-| 新增登录页面 | 直接 Edit | Dev Agent | 涉及多文件、需理解业务 |
-| 创建新服务 | Dev Agent | Workflow | 跨多层、需 Proto + 脚手架 |
-| 改一个字段名 | Dev Agent | 直接 Edit | 单文件 <10 行 |
-| 批量迁移错误码 | 逐个 Edit | Ralph 循环 | 重复性任务 >5 项 |
+| 改一个字段名 | 绕过入口直接 Edit | dispatch（分级为 S） | 所有代码改动统一走入口，S 级仍需 QA |
+| 新增登录页面 | 绕过入口派发 Agent | dispatch（分级为 M） | 涉及多文件、需理解业务 |
+| 创建新服务 | 绕过入口 | dispatch（分级为 L） | 跨多层、需 Proto + 脚手架 |
+| 批量迁移错误码 | 逐个 Edit | Ralph 循环 | 重复性任务 >5 项（每项仍分级） |
 | 问"怎么配置 etcd" | 启动 Agent | 直接回答 | 纯咨询 |
 
 ## 下一步
 
-决策完成后，根据选择的结果：
-- **直接 Edit** → 开始修改，build 验证
-- **Dev Agent** → 调用 `dispatch` Skill
-- **OpenSpec** → 派发需求分析子 Agent (`.harness/agents/subagents/requirement-analyst.md`) → 派发架构设计子 Agent (`.harness/agents/subagents/architecture-designer.md`)
-- **Workflow** → 编写并行 Workflow 脚本
-- **Ralph** → 写 fix_plan.md → 启动 Ralph 循环
+决策完成后，根据分级结果：
+- **dispatch（S 级）** → 轻量 Pipeline：`Workflow harness-pipeline.js` args 加 `workload:"S"`
+- **dispatch（M 级）** → Pipeline：`Workflow harness-pipeline.js`（默认全流程）
+- **dispatch（L 级）** → 派发需求分析子 Agent (`.harness/agents/subagents/requirement-analyst.md`) → 派发架构设计子 Agent (`.harness/agents/subagents/architecture-designer.md`) → 并行 N×Workflow
+- **跳过级（纯文案/配置）** → 直接 Edit + build 验证
+- **Ralph** → 写 fix_plan.md → 启动 Ralph 循环（每项仍走 dispatch 分级）
 
 ## 关联资源
 
-- 派发 Skill：`.harness/skills/dispatch.md`
+- 统一入口 / 分级路由：`.harness/skills/dispatch.md`
 - 需求分析子 Agent：`.harness/agents/subagents/requirement-analyst.md`
 - 架构设计子 Agent：`.harness/agents/subagents/architecture-designer.md`
 - Harness Pipeline：`.harness/workflows/harness-pipeline.js`

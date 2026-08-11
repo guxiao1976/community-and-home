@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **本实例不负责单个服务的具体实现**。当需要开发具体功能时，切换到对应服务的子 Claude 实例。
 
-**启动后首先阅读** [`.harness/agents/owner-agent.md`](.harness/agents/owner-agent.md) — 它告诉你收到需求后的完整调度流程、何时加载哪个 Skill、各阶段的门禁条件。
+**启动后首先阅读** [`.harness/agents/owner-agent.md`](.harness/agents/owner-agent.md) — 它告诉你收到需求后的完整调度流程、何时加载哪个 Skill、各阶段的门禁条件。**收到需求后先调 `dispatch` Skill 做入口判定与工作量分级。**
 
 ## 快速索引
 
@@ -28,6 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Proto 管理规则 | [`.harness/rules/Proto管理规范.md`](.harness/rules/Proto管理规范.md) |
 | 踩过的坑 / 经验记忆 | [`.harness/knowledge/memory/MEMORY.md`](.harness/knowledge/memory/MEMORY.md) |
 | 当前待办 | [`.harness/tasks/BACKLOG.md`](.harness/tasks/BACKLOG.md) | |
+| 开发任务入口 / 分级路由 | [`.harness/skills/dispatch.md`](.harness/skills/dispatch.md) | |
 
 ## 子服务
 
@@ -48,7 +49,7 @@ bash .harness/scripts/graph-query.sh <service-name>   # 知识图谱查询
 | 4 | 提交前必须 `bash .harness/skills/qa/scripts/harness-checks.sh --service <name>`，FAIL 不可提交 | [项目编码规范 §6](.harness/rules/项目编码规范.md) |
 | 5 | 密钥在 `.env`，服务入口用 `configx.MustLoad` | [项目编码规范 §7](.harness/rules/项目编码规范.md) |
 | 6 | 修改 `common/` 需全局评估影响 | [项目编码规范 §3](.harness/rules/项目编码规范.md) |
-| 7 | 收到需求后首条响应必须输出路径选择（路径+理由+涉及服务），跨服务需求走 OpenSpec → `.harness/workflows/harness-pipeline.js`，禁止用外部技能替代 | [owner-agent.md §路径选择](.harness/agents/owner-agent.md) |
+| 7 | 所有开发任务必须先走统一入口 dispatch（[`.harness/skills/dispatch.md`](.harness/skills/dispatch.md)），首条响应必须输出**工作量分级（S/M/L）+ 路由 + 理由 + 涉及服务**；S→轻量Pipeline、M→Pipeline、L→OpenSpec → `.harness/workflows/harness-pipeline.js`，禁止用外部技能替代，禁止绕过入口直接开发 | [dispatch.md](.harness/skills/dispatch.md) |
 
 ## 常用命令
 

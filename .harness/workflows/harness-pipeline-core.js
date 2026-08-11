@@ -17,14 +17,40 @@ export const meta = {
 
 // args: { serviceName: "审核服务", serviceDir: "services/moderation-service", task: "实现 gRPC 层" }
 
-// SEE: [[harness-pipeline-undefined-guard]] — 防止 args.serviceDir 未传时字符串化为 "undefined"
-const VALID_SERVICES = [
-  'ai-model-service', 'auth-service', 'community-hub-service',
-  'file-service', 'master-data-service', 'moderation-service',
-  'monitoring-service', 'permission-service', 'user-service',
-]
-const VALID_WEB = ['pc', 'mobile', 'common']
+// ============================================================
+// Service Registry Loader (replaces hardcoded VALID_SERVICES)
+// ============================================================
+const fs = require('fs')
+const path = require('path')
+
+function loadServiceRegistry() {
+  const registryPath = path.join(process.cwd(), '.harness/registry/services.json')
+  if (!fs.existsSync(registryPath)) {
+    throw new Error(`Service registry not found. Run: bash .harness/scripts/build-service-registry.sh`)
+  }
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
+  return {
+    services: registry.services.map(s => s.name),
+    web: registry.web.map(w => w.name),
+    getService: (name) => registry.services.find(s => s.name === name),
+    getServiceModule: (name) => registry.services.find(s => s.name === name)?.module || null,
+  }
+}
+
+const ServiceRegistry = loadServiceRegistry()
+
+// ── Pipeline metrics logger (best-effort, never blocks) ──
+function logMetrics(record) {
+  try {
+    const logDir = path.join(process.cwd(), '.harness/logs/pipeline')
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
+    fs.appendFileSync(path.join(logDir, 'metrics.jsonl'), JSON.stringify(record) + '\n')
+  } catch (e) { /* silent */ }
+}
+const VALID_SERVICES = ServiceRegistry.services
+const VALID_WEB = ServiceRegistry.web
 const ALL_VALID = [...VALID_SERVICES, ...VALID_WEB]
+// ============================================================
 
 const isMissing = (v) => !v || v === 'undefined' || typeof v !== 'string'
 
@@ -142,7 +168,11 @@ function resolveTaskType() {
   // 3. Keyword heuristics (Chinese + English) — order matters: most specific first
 
   // chore: maintenance, ops, no code logic
-  if (/\b(同步|sync|图谱|graph|清理|脚本|脚本|配置|config|docker|deploy|ci|文档|doc|readme|changelog|\.md|\.yml|\.yaml|\.env|依赖|dependency|更新依赖|升级|upgrade)\b/.test(t)) return 'chore'
+  if (/\b(同步|sync|图谱|graph|清理|脚本|脚本|配置|config|docker|deploy|ci|文档|doc|readme|changelog|\.md|\.yml|\.yaml|\.env|依赖|dependency|更新依赖|升级|upgrade)\b/.test(t)) {
+    // chore:ops (docker/deploy/ci/dependency) → needs Review for safety
+    if (/\b(docker|deploy|ci|依赖|dependency|upgrade|升级)\b/.test(t)) return 'chore:ops'
+    return 'chore'
+  }
 
   // bug: broken behavior, crash, data corruption
   if (/\b(bug|fix|修复|broken|crash|panic|竞态|race|nil pointer|空指针|死锁|deadlock|goroutine leak|泄漏|内存|溢出|overflow|数组越界|index out|类型错误|type error|panic|fatal|崩溃|报错|不工作|无效|invalid|丢失|丢失数据|错[误乱]|异常)\b/.test(t)) return 'bug'
@@ -160,11 +190,25 @@ const TASK_TYPE = resolveTaskType()
 log(`任务类型: ${TASK_TYPE} (auto-inferred)`)
 
 // ── Type-based constants ──
-const MAX_ITERATIONS = TASK_TYPE === 'chore' ? 1 : TASK_TYPE === 'debt' ? 2 : 3
-const REVIEW_LENS_COUNT = TASK_TYPE === 'chore' ? 0 : TASK_TYPE === 'debt' ? 1 : 3
-const REVIEW_PASS_THRESHOLD = TASK_TYPE === 'debt' ? 1 : 2  // chore skips review entirely
+// chore:doc → 1 iter, 0 review (skip)
+// chore:ops → 2 iter, 1 review (deploy/ci/docker changes need review)
+// debt       → 2 iter, 1 review
+// feature/bug → 3 iter, 3 review
+const isChoreOps = TASK_TYPE === 'chore:ops'
+const MAX_ITERATIONS = (TASK_TYPE === 'chore') ? 1 : (TASK_TYPE === 'debt' || isChoreOps) ? 2 : 3
+let REVIEW_LENS_COUNT = (TASK_TYPE === 'chore') ? 0 : (TASK_TYPE === 'debt' || isChoreOps) ? 1 : 3
+let REVIEW_PASS_THRESHOLD = (TASK_TYPE === 'debt' || isChoreOps) ? 1 : 2
 const TDD_STRICT = TASK_TYPE === 'feature' || TASK_TYPE === 'bug'
 const NEED_CHANGELOG = TASK_TYPE !== 'chore'
+
+// ── Workload routing（dispatch Step 0 传入）──
+// S(轻量): 保留 QA 15 项，跳过 Review（与 owner-agent 轻量Pipeline 对齐）
+const WORKLOAD = (args.workload || '').toUpperCase()
+if (WORKLOAD === 'S' && REVIEW_LENS_COUNT > 0) {
+  log(`轻量管线（workload=S）— 跳过 Review，保留 QA 15 项`)
+  REVIEW_LENS_COUNT = 0
+  REVIEW_PASS_THRESHOLD = 0
+}
 let qaFirstPass = true  // track whether QA passed on first try
 
 // ── Confidence scoring (for HITL adaptive review depth) ──
@@ -189,12 +233,21 @@ function computeConfidence(iterations, passCount, totalReviews, memoryMatchCount
 let iteration = 1
 let fixContext = ''
 
+// ── 预加载 L3 知识记忆（确定性注入，不依赖 Agent 自觉）──
+// 从任务描述提取关键词，预构建 knowledge-load.sh 调用命令
+// Generator prompt 将此作为必须执行的第一步
+const taskKeywords = (args.task || '').match(/[一-鿿]{2,4}|[a-zA-Z_]{2,}/g) || []
+const knowledgeCmd = taskKeywords.length > 0
+  ? `bash .harness/scripts/knowledge-load.sh --service ${bareName} --keywords "${taskKeywords.join(',').substring(0, 200)}" --top 5`
+  : `bash .harness/scripts/knowledge-load.sh --service ${bareName} --top 5`
+log(`知识预加载: ${knowledgeCmd}`)
+
 while (iteration <= MAX_ITERATIONS) {
   log(`第 ${iteration} 轮`)
 
   // Phase 1: Generator (隔离 worktree，避免并行管线互踩文件)
   phase('Develop')
-  await agent(generatorPrompt(iteration, fixContext, TASK_TYPE), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
+  await agent(generatorPrompt(iteration, fixContext, TASK_TYPE, knowledgeCmd), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
   log(`Generator 完成 (轮次 ${iteration})`)
 
   // Phase 2: QA
@@ -207,7 +260,24 @@ while (iteration <= MAX_ITERATIONS) {
 
   log(`QA VERDICT: ${qaResult.verdict} — ${qaResult.summary}`)
 
-  if (qaResult.verdict === 'FAIL') {
+  // ── QA 门禁（gate-engine，对应 config/quality-gates.yml qa 段）──
+  // 校验 QA 判定结构合法性；畸形判定（agent 输出垃圾 JSON 造成假 PASS）按 FAIL 处理。
+  let qaGateFailures = []
+  try {
+    const gateEngine = require('./gate-engine.js')
+    const qaGate = gateEngine.validateGate('qa', { qaResult, summary: `${args.serviceName} QA 门禁` })
+    qaGateFailures = qaGate.failures
+    if (qaGate.warnings.length > 0) {
+      log(`⚠️ QA 门禁 WARN: ${qaGate.warnings.map(w => w.message).join('; ')}`)
+    }
+  } catch (e) {
+    log(`⚠️ gate-engine 不可用（QA 门禁降级，不阻断）: ${e.message}`)
+  }
+  if (qaGateFailures.length > 0) {
+    log(`⛔ QA 门禁阻断: ${qaGateFailures.map(f => f.message).join('; ')} — 按 QA FAIL 处理`)
+  }
+
+  if (qaResult.verdict === 'FAIL' || qaGateFailures.length > 0) {
     qaFirstPass = false
 
     if (TASK_TYPE === 'feature' || TASK_TYPE === 'bug') {
@@ -247,7 +317,8 @@ while (iteration <= MAX_ITERATIONS) {
       iterations: iteration,
       serviceName: args.serviceName,
       qaSummary: qaResult.summary,
-      reviewSummary: 'skipped (chore)',
+      logMetrics({ timestamp: new Date().toISOString(), service: args.serviceName, taskType: TASK_TYPE, iterations: iteration, status: 'pass', reviewSkipped: true, confidence })
+	    return { status: 'pass', iterations: iteration, serviceName: args.serviceName, qaSummary: qaResult.summary, reviewSummary: 'skipped (chore)',
       memorySuggestions: [],
       confidence,
       notifications: [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过 (${TASK_TYPE}), QA: ${qaResult.summary}` }],
@@ -290,6 +361,17 @@ while (iteration <= MAX_ITERATIONS) {
       log(`⚠️ ${failingLenses}视角有异议，但多数通过 (${passCount}/${validReviews.length})，管线继续`)
     }
     log(`✅ 多视角 Review PASS (${passCount}/${validReviews.length})`)
+
+    // ── Review 门禁记录（gate-engine，对应 quality-gates.yml review 段）──
+    try {
+      const gateEngine = require('./gate-engine.js')
+      const reviewGate = gateEngine.validateGate('review', {
+        passCount, totalReviews: validReviews.length, summary: `${args.serviceName} Review 门禁`,
+      })
+      log(`🛡️ Review 门禁: ${reviewGate.passed ? 'PASS' : `FAIL(${reviewGate.failures.length})`} (${passCount}/${validReviews.length} APPROVED)`)
+    } catch (e) {
+      log(`⚠️ gate-engine 不可用（Review 门禁记录跳过）: ${e.message}`)
+    }
 
     // 汇总所有 WARNING/NOTE 供参考
     const allWarnings = validReviews.reduce((sum, r) => sum + (r.warningCount || 0), 0)

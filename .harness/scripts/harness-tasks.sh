@@ -7,7 +7,7 @@
 #                         [--service <name>] [--source human|qa|review|sensor]
 #   harness-tasks.sh create --title "..." --service <name> --priority P0|P1|P2|P3
 #                           --type feature|bug|debt|chore [--source human|qa|review|sensor]
-#                           [--detail "..."]
+#                           [--detail "..."] [--workload S|M|L]
 #   harness-tasks.sh status --id <task-id> --status open|in_progress|review|closed|blocked
 #   harness-tasks.sh scan  [--service <name>] [--auto-create]
 #   harness-tasks.sh index
@@ -101,7 +101,7 @@ cmd_list() {
 # ─── create ────────────────────────────────────────────────────────────
 
 cmd_create() {
-  local title="" service="" priority="P2" type="feature" source="human" detail="" triage=""
+  local title="" service="" priority="P2" type="feature" source="human" detail="" triage="" workload=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --title)    title="$2"; shift 2 ;;
@@ -111,6 +111,7 @@ cmd_create() {
       --source)   source="$2"; shift 2 ;;
       --detail)   detail="$2"; shift 2 ;;
       --triage)   triage="$2"; shift 2 ;;
+      --workload) workload="$2"; shift 2 ;;
       *) shift ;;
     esac
   done
@@ -139,6 +140,7 @@ assigned_run: ""
 completed: ""
 outcome: ""
 triage: "${triage}"
+workload: "${workload}"
 dispatch_count: 0
 ---
 
@@ -184,6 +186,12 @@ cmd_status() {
   [[ -z "$id" ]] && die "--id is required"
   [[ -z "$new_status" ]] && die "--status is required"
 
+  # Validate status against the canonical enum (fix: completed/other typos were silently accepted before)
+  case "$new_status" in
+    open|in_progress|review|closed|blocked) ;;
+    *) die "invalid status: '$new_status' (allowed: open|in_progress|review|closed|blocked)" ;;
+  esac
+
   local file="$TASKS_DIR/${id}.md"
   [[ -f "$file" ]] || die "task file not found: $file"
 
@@ -202,11 +210,24 @@ cmd_status() {
     sed -i "s/^dispatch_count: .*/dispatch_count: 0/" "$file"
   fi
 
-  # Append execution record
+  # Append execution record to the END of the table.
+  # FIX: old impl used `sed -i "/^|/a..."` which matched EVERY line starting with
+  # "|" (including table header), so each status change multiplied the whole table.
+  # Now: locate the LAST table data row (| line that is not the |---| separator)
+  # and insert the new record right after it.
   local event="状态变更"
   if [[ "$new_status" == "closed" ]]; then event="关闭"; fi
   if [[ "$new_status" == "in_progress" ]]; then event="开始执行"; fi
-  sed -i "/^|/a| $(today) | ${event} | ${old_status} → ${new_status} |" "$file"
+  local record="| $(today) | ${event} | ${old_status} → ${new_status} |"
+  awk -v rec="$record" '
+    { lines[NR] = $0; if ($0 ~ /^\|/ && $0 !~ /^\|---/) last = NR }
+    END {
+      for (i = 1; i <= NR; i++) {
+        print lines[i]
+        if (i == last) print rec
+      }
+    }
+  ' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
 
   echo "Updated: $id status: $old_status → $new_status"
 
@@ -263,9 +284,12 @@ cmd_scan() {
           fi
         fi
 
-        # Dedup: check if task for this check+service already exists
+        # Dedup: check if task for this check+service already exists.
+        # FIX: old key was `qa:${check}` but cmd_create wrote `harness-checks.sh check: ${check}`
+        # into source_detail — the two formats never matched, so dedup silently failed and
+        # every scan created a NEW duplicate task. Now match BOTH formats (legacy + new).
         local svc_key="${svc:-all}"
-        local existing=$(grep -l "qa:${check}" "$TASKS_DIR"/task-*.md 2>/dev/null | xargs grep -l "service: ${svc_key}" 2>/dev/null || true)
+        local existing=$(grep -lE "qa:${check}|harness-checks\.sh check: ${check}" "$TASKS_DIR"/task-*.md 2>/dev/null | xargs grep -l "service: ${svc_key}" 2>/dev/null || true)
         if [[ -n "$existing" ]]; then
           local existing_id=$(basename "$existing" .md)
           # Check if the existing task is still open
@@ -281,7 +305,7 @@ cmd_scan() {
           echo "    NEW: $check — $detail_short"
           if $auto_create; then
             cmd_create --title "QA FAIL: $check — $detail_short" --service "$svc_key" \
-              --priority P1 --type debt --source qa --detail "harness-checks.sh check: $check"
+              --priority P1 --type debt --source qa --detail "qa:${check} (harness-checks.sh check: $check)"
           fi
           new_issues=$((new_issues + 1))
         fi
@@ -346,13 +370,33 @@ cmd_scan() {
     local age=$(( (now - stamp) / 3600 ))
     if [[ $age -gt 24 ]]; then
       echo "  STALE: graph last synced ${age}h ago"
-      local existing=$(grep -l "graph_freshness" "$TASKS_DIR"/task-*.md 2>/dev/null || true)
-      if [[ -z "$existing" ]]; then
-        if $auto_create; then
-          cmd_create --title "同步知识图谱（${age}h 未更新）" --service "global" \
-            --priority P2 --type chore --source sensor --detail "sensor:graph_freshness"
+      # ── Self-heal: try to auto-sync (with 30min cooldown so we don't hammer Neo4j) ──
+      local attempt_file="$PROJECT_ROOT/.harness/.graph_last_attempt"
+      local attempt_ts=0
+      [[ -f "$attempt_file" ]] && attempt_ts=$(cat "$attempt_file" 2>/dev/null || echo 0)
+      if [[ $(( now - attempt_ts )) -gt 1800 ]]; then
+        date +%s > "$attempt_file"
+        echo "    ↻ 尝试自动同步知识图谱（30 分钟冷却内仅一次）..."
+        if bash "$PROJECT_ROOT/.harness/scripts/graph-sync.sh" >/dev/null 2>&1; then
+          echo "    ✅ 图谱自动同步成功"
+          # stamp updated by graph-sync.sh; re-read for accurate reporting below
+          [[ -f "$stamp_file" ]] && age=$(( (now - $(cat "$stamp_file")) / 3600 ))
+        else
+          echo "    ❌ 自动同步失败（Neo4j 不可达或同步错误）— 请手动检查 graph-sync.sh"
         fi
-        new_issues=$((new_issues + 1))
+      fi
+      # Re-check freshness after the sync attempt before creating a task
+      if [[ $age -gt 24 ]]; then
+        local existing=$(grep -l "graph_freshness" "$TASKS_DIR"/task-*.md 2>/dev/null || true)
+        if [[ -z "$existing" ]]; then
+          if $auto_create; then
+            cmd_create --title "同步知识图谱（${age}h 未更新）" --service "global" \
+              --priority P2 --type chore --source sensor --detail "sensor:graph_freshness"
+          fi
+          new_issues=$((new_issues + 1))
+        fi
+      else
+        echo "  ✅ 图谱已通过自动同步恢复 (synced ${age}h ago)"
       fi
     else
       echo "  Fresh (synced ${age}h ago)"
@@ -527,9 +571,10 @@ cmd_index() {
         ;;
     esac
 
-    # Per-service count
-    local cur=${svc_count[$svc]:-0}
-    svc_count[$svc]=$((cur + 1))
+    # Per-service count (guard: some legacy task files may lack a service field)
+    local svc_key2="${svc:-unknown}"
+    local cur=${svc_count[$svc_key2]:-0}
+    svc_count[$svc_key2]=$((cur + 1))
   done
 
   cat > "$BACKLOG" <<BACKLOGEOF
@@ -619,7 +664,7 @@ cmd_stats() {
       blocked) block=$((block+1)) ;;
     esac
 
-    local cs=${svc_count[$svc]:-0}; svc_count[$svc]=$((cs+1))
+    local cs=${svc_count[${svc:-unknown}]:-0}; svc_count[${svc:-unknown}]=$((cs+1))
     local ss=${src_count[$src]:-0}; src_count[$src]=$((ss+1))
   done
 
@@ -697,19 +742,39 @@ cmd_metrics() {
     dispatch_sum=$((dispatch_sum + dp))
   done
 
-  # Task health
+  # Task health + closure metrics (闭环率/生命周期/backlog 年龄)
   local total_tasks=0 zombie_tasks=0 stale_tasks=0 blocked_tasks=0
+  local backlog_gt7=0 backlog_gt30=0
+  local lifecycle_sum=0 lifecycle_n=0
+  declare -A src_total src_closed
   local stale_cutoff=$(date -d "7 days ago" +%Y-%m-%d 2>/dev/null || date -v-7d +%Y-%m-%d 2>/dev/null || echo "")
+  local cutoff7=$(date -d "7 days ago" +%Y-%m-%d 2>/dev/null || date -v-7d +%Y-%m-%d 2>/dev/null || echo "")
+  local cutoff30=$(date -d "30 days ago" +%Y-%m-%d 2>/dev/null || date -v-30d +%Y-%m-%d 2>/dev/null || echo "")
   for tf in "$TASKS_DIR"/task-*.md; do
     [[ -f "$tf" ]] || continue
     local stat=$(get_field "$tf" "status")
     local created=$(get_field "$tf" "created")
+    local src=$(get_field "$tf" "source")
     local dc=$(grep -oP '(?<=^dispatch_count: ).*' "$tf" | head -1 || echo "0")
     total_tasks=$((total_tasks + 1))
     [[ "$stat" == "blocked" ]] && blocked_tasks=$((blocked_tasks + 1))
     [[ "$dc" -ge 3 && "$stat" != "closed" && "$stat" != "blocked" ]] && zombie_tasks=$((zombie_tasks + 1))
     [[ -n "$stale_cutoff" && "$created" < "$stale_cutoff" && "$stat" != "closed" ]] && stale_tasks=$((stale_tasks + 1))
+    # 闭环率：按来源统计 closed/total（qa/review/sensor/github 自动来源尤其重要）
+    src_total[$src]=$((${src_total[$src]:-0} + 1))
+    if [[ "$stat" == "closed" ]]; then
+      src_closed[$src]=$((${src_closed[$src]:-0} + 1))
+      # 生命周期天数（created → completed）
+      local c_ts=$(date -d "$created" +%s 2>/dev/null || echo "0")
+      local d_ts=$(date -d "$(get_field "$tf" "completed" | tr -d '"')" +%s 2>/dev/null || echo "0")
+      [[ $c_ts -gt 0 && $d_ts -gt 0 ]] && { lifecycle_sum=$((lifecycle_sum + (d_ts - c_ts) / 86400)); lifecycle_n=$((lifecycle_n + 1)); }
+    else
+      [[ -n "$cutoff7" && "$created" < "$cutoff7" ]] && backlog_gt7=$((backlog_gt7 + 1))
+      [[ -n "$cutoff30" && "$created" < "$cutoff30" ]] && backlog_gt30=$((backlog_gt30 + 1))
+    fi
   done
+  local avg_lifecycle=0
+  [[ $lifecycle_n -gt 0 ]] && avg_lifecycle=$(( lifecycle_sum / lifecycle_n ))
 
   # Sensor trend arrows
   _trend() {
@@ -719,6 +784,14 @@ cmd_metrics() {
   }
 
   if $output_json; then
+    # 预构建 closureBySource JSON（函数内构建，避免子 shell 丢失关联数组类型）
+    local closure_json=""
+    for s in qa review sensor github human; do
+      local st=${src_total[$s]:-0} sc=${src_closed[$s]:-0}
+      local sr=$(( st > 0 ? sc * 100 / st : 0 ))
+      closure_json+="\"$s\": {\"total\": $st, \"closed\": $sc, \"rate\": $sr}"
+      [[ "$s" != "human" ]] && closure_json+=", "
+    done
     cat <<JSONEOF
 {
   "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
@@ -738,7 +811,12 @@ cmd_metrics() {
     "total": $total_tasks,
     "zombieTasks": $zombie_tasks,
     "staleTasks": $stale_tasks,
-    "blockedTasks": $blocked_tasks
+    "blockedTasks": $blocked_tasks,
+    "avgLifecycleDays": $avg_lifecycle,
+    "backlogAge": { "gt7d": $backlog_gt7, "gt30d": $backlog_gt30 }
+  },
+  "closureBySource": {
+    ${closure_json}
   }
 }
 JSONEOF
@@ -758,6 +836,19 @@ JSONEOF
     echo ""
     echo "━━━ Task Health ━━━"
     echo "  活跃任务: $total_tasks   僵尸(≥3次派发): $zombie_tasks   >7天未关: $stale_tasks   已阻塞: $blocked_tasks"
+    echo ""
+    echo "━━━ 闭环率与 Backlog 健康 ━━━"
+    echo "  平均任务生命周期: ${avg_lifecycle} 天   backlog 年龄: >7天 ${backlog_gt7} 个, >30天 ${backlog_gt30} 个"
+    local closure_line=""
+    for s in qa review sensor github human; do
+      local st=${src_total[$s]:-0} sc=${src_closed[$s]:-0}
+      local sr=$(( st > 0 ? sc * 100 / st : 0 ))
+      closure_line+="${s}=${sc}/${st}(${sr}%)  "
+    done
+    echo "  按来源闭环率: ${closure_line}"
+    if [[ ${src_total[qa]:-0} -gt 0 ]] && [[ ${src_closed[qa]:-0} -lt ${src_total[qa]} ]]; then
+      echo "  ⚠️  QA 传感器任务闭环率 < 100%（${src_closed[qa]:-0}/${src_total[qa]:-0}）— 传感器发现问题未被解决"
+    fi
     echo ""
     if [[ $zombie_tasks -gt 0 ]]; then
       echo "⚠️  $zombie_tasks 个僵尸任务需要人工介入:"
@@ -1068,6 +1159,140 @@ cmd_retrospective() {
   echo "💡 每月运行一次 'harness-tasks.sh retrospective' 跟踪管线健康趋势"
 }
 
+# ─── ingest-memories: Review → Memory 反馈闭环 ─────────────────────────
+# 从 Pipeline Review 阶段收集的 memorySuggestions（JSON 数组），
+# 自动检查是否已有对应记忆文件，未覆盖的创建 BACKLOG 任务供人工审核。
+# 用法：echo '[...]' | harness-tasks.sh ingest-memories --service <name>
+cmd_ingest_memories() {
+  local service_name=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --service) service_name="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  # 从 stdin 读取 JSON
+  local input
+  input=$(cat)
+
+  if [ -z "$input" ] || [ "$input" == "[]" ] || [ "$input" == "null" ]; then
+    echo "ℹ️  无 Memory Suggestions，跳过"
+    return 0
+  fi
+
+  # 解析 JSON 数组
+  if ! echo "$input" | jq -e 'type == "array"' > /dev/null 2>&1; then
+    echo "⚠️  输入不是有效的 JSON 数组，跳过"
+    return 0
+  fi
+
+  local count=$(echo "$input" | jq 'length')
+  echo "🔍 收到 $count 条 Memory Suggestions (Review → Memory 反馈闭环)"
+  echo ""
+
+  local created=0 skipped=0 failed=0
+
+  for i in $(seq 0 $((count - 1))); do
+    local suggestion=$(echo "$input" | jq -r ".[$i]")
+    local slug=$(echo "$suggestion" | jq -r '.slug // ""' 2>/dev/null || true)
+    local title=$(echo "$suggestion" | jq -r '.title // ""' 2>/dev/null || true)
+    local category=$(echo "$suggestion" | jq -r '.category // "guideline"' 2>/dev/null || true)
+    local severity=$(echo "$suggestion" | jq -r '.severity // "should-follow"' 2>/dev/null || true)
+    local triggers=$(echo "$suggestion" | jq -r '.triggers // ""' 2>/dev/null || true)
+    local content=$(echo "$suggestion" | jq -r '.content // ""' 2>/dev/null || true)
+
+    [ -z "$slug" ] && failed=$((failed + 1)) && continue
+
+    # 检查记忆是否已存在
+    local existing=""
+    existing=$(find "$PROJECT_ROOT/.harness/knowledge/memory" -name "${slug}.md" -type f 2>/dev/null | head -1) || true
+    if [ -n "$existing" ]; then
+      echo "  ⏭️  $slug — 记忆已存在，跳过"
+      skipped=$((skipped + 1))
+      continue
+    fi
+
+    # 检查是否已有同名 BACKLOG 任务
+    local dup_task=""
+    dup_task=$(grep -rl "slug:.*${slug}" "$TASKS_DIR"/task-*.md 2>/dev/null | head -1) || true
+    if [ -n "$dup_task" ]; then
+      echo "  ⏭️  $slug — BACKLOG 任务已存在"
+      skipped=$((skipped + 1))
+      continue
+    fi
+
+    # 创建 BACKLOG 任务（P1, triage=pending — 需要人工审核后才能 dispatch）
+    local task_title="[Memory] ${title:-$slug}"
+    local task_detail="## Memory Suggestion (Review → Memory 反馈闭环)
+
+**slug**: \`${slug}\`
+**category**: ${category}
+**severity**: ${severity}
+**triggers**: ${triggers}
+**来源**: Pipeline Review 阶段自动检测
+
+### 建议内容
+
+${content}
+
+---
+> 🤖 此任务由 Pipeline Review 自动生成。Dispatch 前请人工审核建议内容是否准确、是否与已有记忆重复。
+"
+
+    # 直接创建任务文件（避免 cmd_create 内部 shift 参数冲突）
+    local id=$(next_id)
+    local file="$TASKS_DIR/${id}.md"
+    local task_created=$(today)
+
+    cat > "$file" <<TASKEOF
+---
+id: ${id}
+title: "${task_title}"
+service: ${service_name:-all}
+type: memory
+priority: P1
+status: open
+source: review
+source_detail: "Pipeline Review → Memory 反馈闭环"
+created: ${task_created}
+blocks: []
+blocked_by: []
+assigned_run: ""
+completed: ""
+outcome: ""
+triage: "pending"
+dispatch_count: 0
+slug: "${slug}"
+---
+
+# ${task_title}
+
+${task_detail}
+
+## 执行记录
+
+| 日期 | 事件 | 详情 |
+|------|------|------|
+| ${task_created} | 创建 | Pipeline Review 自动生成 → 人工审核后 dispatch |
+
+## 关联
+
+- 来源: Review Memory Suggestion
+- slug: \`${slug}\`
+TASKEOF
+
+    echo "  ✅ $slug → $id (P1, triage=pending)"
+    created=$((created + 1))
+    # 静默更新索引
+    cmd_index --quiet 2>/dev/null || true
+  done
+
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "Memory Suggestions 处理完成: $created 新建, $skipped 跳过, $failed 失败"
+}
+
 # ─── Main ──────────────────────────────────────────────────────────────
 
 case "${1:-}" in
@@ -1080,6 +1305,7 @@ case "${1:-}" in
   metrics)        shift; cmd_metrics "$@" ;;
   memory-health)  shift; cmd_memory_health "$@" ;;
   retrospective)  shift; cmd_retrospective "$@" ;;
+  ingest-memories) shift; cmd_ingest_memories "$@" ;;
   -h|--help|help)
     sed -n '3,17p' "$0" | sed 's/^# //'
     ;;

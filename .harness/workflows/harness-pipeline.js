@@ -23,7 +23,7 @@ var SVC_DIR; // Hoisted — precede function defs that close over it
 // Generator Prompt — Development Agent (TDD + Memory-Driven)
 // ============================================================
 
-function generatorPrompt(iteration, fixContext, taskType) {
+function generatorPrompt(iteration, fixContext, taskType, knowledgeCmd) {
   taskType = taskType || 'feature'
   const isChore = taskType === 'chore'
   const isDebt = taskType === 'debt'
@@ -65,76 +65,21 @@ function generatorPrompt(iteration, fixContext, taskType) {
 - ❌ .harness/rules/项目编码规范.md — QA 机械化检查会保证
 - ❌ 其他服务的 design.md — 你不是那个服务的 Agent
 
-## 记忆驱动编码（编码前必须执行）
+## 记忆驱动编码（⚠️ 第一步，不可跳过）
 
-在开始编写代码之前，你必须完成以下步骤：
+**在阅读任何其他文件之前**，你必须先加载相关知识记忆。Pipeline 已为你预提取了关键词，执行以下命令即可：
 
-### Step A: 搜索相关记忆（索引查询模式）
-1. **提取任务关键词**：从任务描述中提取技术关键词（如 gRPC、Proto、数据库、JWT、Snowflake、测试、前端、API 等）
-
-2. **查询索引**（优先，O(K) 复杂度）：
-   \`\`\`bash
-   # 检查索引文件是否存在
-   INDEX_FILE=".harness/knowledge/memory/.memory-index.json"
-
-   if [ -f "$INDEX_FILE" ]; then
-     # 使用索引查询（快速）
-     bash .harness/scripts/memory-index-query.sh --union <keyword1> <keyword2> <keyword3>
-
-     # 索引返回格式：
-     # [severity] slug
-     #   标题: <title>
-     #   服务: <service> | 类型: <type>
-   else
-     # 降级到旧方式（索引不存在时）
-     # 读取 MEMORY.md 并逐行匹配 triggers
-     grep -i "<keyword>" .harness/knowledge/memory/MEMORY.md
-   fi
-   \`\`\`
-
-3. **结果过滤**：
-   - 优先级排序已由索引查询完成（must-follow > should-follow > info）
-   - 服务范围匹配：\`service: all\` 或 \`service: ${args.serviceDir}\` 的记忆
-   - 如果找到 ≥2 条 must-follow 记忆 → 足够，停止搜索
-   - 如果 <2 条 → 继续查看 should-follow 和 info 级别
-
-4. **读取记忆文件**：只读取命中的记忆文件（不读 MEMORY.md 全文）
-   \`\`\`bash
-   for slug in <matched_slugs>; do
-     cat .harness/knowledge/memory/$slug.md
-   done
-   \`\`\`
-
-5. **输出匹配报告**：
-   \`\`\`
-   搜索关键词: <keyword1>, <keyword2>, <keyword3>
-   命中记忆: N 条
-     - [[slug-1]] (must-follow, pitfall) — <title>
-     - [[slug-2]] (must-follow, guideline) — <title>
-     - [[slug-3]] (should-follow, process) — <title>
-   \`\`\`
-
-### Step B: 应用记忆
-1. 对于每个 must-follow 记忆，确保生成的代码严格遵守其指导
-2. 在应用记忆的代码位置，添加注释标记：
-   \`\`\`
-   // SEE: [[memory-slug]] — <简短说明为什么这条记忆适用于此处>
-   \`\`\`
-   其中 memory-slug 是记忆文件名（不含 .md 扩展名）
-3. 对于 should-follow 记忆，判断是否适用当前任务，适用则同样标记
-
-### Step C: 编码总结
-在编码完成后，输出记忆应用报告：
+\`\`\`bash
+${knowledgeCmd || `bash .harness/scripts/knowledge-load.sh --service ${bareName || (SVC_DIR ? SVC_DIR.split('/').pop() : '')} --top 5`}
 \`\`\`
-### 记忆应用报告
-- 搜索关键词: <关键词列表>
-- 找到相关记忆: <数量>
-- 已应用:
-  - [[memory-slug-1]] — 应用于 <文件名:行号> — <原因>
-  - [[memory-slug-2]] — 应用于 <文件名:行号> — <原因>
-- 未应用（不适用当前任务）:
-  - [[memory-slug-3]] — <不适用的原因>
-\`\`\`
+
+命令会输出 Top-5 最相关记忆（按优先级排序）。**你必须：**
+1. 执行上述命令（不超过 10 秒）
+2. 逐条读取 must-follow 级别的记忆文件（用 Read 工具）
+3. 在代码中用 \`// SEE: [[memory-slug]]\` 注释标记应用了哪些记忆
+4. 如果命令返回空，说明该服务暂无相关记忆，正常继续即可
+
+记忆应用后在代码中标记 `// SEE: [[memory-slug]]`，编码结束后输出记忆应用报告。
 
 ## 编码纪律（任务类型: ${taskType}）
 
@@ -374,37 +319,39 @@ const REVIEW_SCHEMA = {
 
 
 // ── 多视角审查：三个 Lens，并行执行 ──
-
-const isFrontend = (SVC_DIR || '').startsWith('web/')
+//
+// FIX: `isFrontend` was previously computed at module load time (SVC_DIR is
+// still undefined then), so the lens `focus` was ALWAYS the Go variant even
+// for web/ tasks. Now focus is split into focusGo/focusFrontend and selected
+// at call time inside reviewLensPrompt().
 
 const REVIEW_LENSES = [
   {
     key: 'security-arch',
     label: '安全架构',
     dimensions: '架构一致性(#1)、安全性(#5)、变更完整性(#8)',
-    focus: isFrontend
-      ? '你关注前端架构的正确性和安全风险。检查组件分层合理性、API 调用权限校验、Token 存储安全（localStorage/cookie）、XSS 防护（v-html）、CORS 配置、硬编码密钥、敏感信息泄露到前端、CHANGELOG 完整性。'
-      : '你关注架构决策的正确性和安全风险。检查 Proto/gRPC 规范、服务边界、跨服务 DB 访问、硬编码密钥、SQL 注入、输入校验、CHANGELOG 完整性。',
+    focusGo: '你关注架构决策的正确性和安全风险。检查 Proto/gRPC 规范、服务边界、跨服务 DB 访问、硬编码密钥、SQL 注入、输入校验、CHANGELOG 完整性。',
+    focusFrontend: '你关注前端架构的正确性和安全风险。检查组件分层合理性、API 调用权限校验、Token 存储安全（localStorage/cookie）、XSS 防护（v-html）、CORS 配置、硬编码密钥、敏感信息泄露到前端、CHANGELOG 完整性。',
   },
   {
     key: 'standards-eng',
     label: '规范工程',
     dimensions: '规范遵循(#3)、复用性(#6)、测试覆盖(#7)、记忆遵守(#9)',
-    focus: isFrontend
-      ? '你关注前端编码规范和工程质量。检查 Snowflake ID string 类型、no `as any`（type-safety）、no console.log/debugger、hardcoded secrets、web/common/ 复用（勿重复定义类型）、API 响应直接使用（勿 res.data 双解包）、Vue 模板勿嵌套 {{ }}、测试覆盖(新增组件/函数)、记忆遵守(M1-M4)。'
-      : '你关注编码规范和工程质量。检查 Snowflake ID 序列化(jstype/json:\\",string\\")、错误码格式(5位)、API 响应格式、代码复用、测试覆盖(新增函数是否有测试)、记忆遵守(M1-M4)。',
+    focusGo: '你关注编码规范和工程质量。检查 Snowflake ID 序列化(jstype/json:\\",string\\")、错误码格式(5位)、API 响应格式、代码复用、测试覆盖(新增函数是否有测试)、记忆遵守(M1-M4)。',
+    focusFrontend: '你关注前端编码规范和工程质量。检查 Snowflake ID string 类型、no `as any`（type-safety）、no console.log/debugger、hardcoded secrets、web/common/ 复用（勿重复定义类型）、API 响应直接使用（勿 res.data 双解包）、Vue 模板勿嵌套 {{ }}、测试覆盖(新增组件/函数)、记忆遵守(M1-M4)。',
   },
   {
     key: 'design-biz',
     label: '设计业务',
     dimensions: '设计一致性(#2)、代码质量(#4)、Migration(#8部分)',
-    focus: isFrontend
-      ? '你关注前端业务逻辑的正确性和设计一致性。检查与 design.md 一致性、API 字段名与 api-proto 对齐、组件状态管理合理性、边界条件处理(loading/empty/error 状态)、错误处理完善性(ElMessage 用户提示)、表单验证完整性、性能(大列表虚拟滚动/懒加载)。'
-      : '你关注业务逻辑的正确性和设计一致性。检查与 design.md 一致性、数据模型正确性、业务流程正确性、边界条件处理(null/零值/错误路径)、错误处理完善性、资源泄露、Migration 安全性(回滚方案/锁表/影响现有数据)。',
+    focusGo: '你关注业务逻辑的正确性和设计一致性。检查与 design.md 一致性、数据模型正确性、业务流程正确性、边界条件处理(null/零值/错误路径)、错误处理完善性、资源泄露、Migration 安全性(回滚方案/锁表/影响现有数据)。',
+    focusFrontend: '你关注前端业务逻辑的正确性和设计一致性。检查与 design.md 一致性、API 字段名与 api-proto 对齐、组件状态管理合理性、边界条件处理(loading/empty/error 状态)、错误处理完善性(ElMessage 用户提示)、表单验证完整性、性能(大列表虚拟滚动/懒加载)。',
   },
 ]
 
 function reviewLensPrompt(lens) {
+  const isFrontend = (SVC_DIR || '').startsWith('web/')
+  const focus = isFrontend ? lens.focusFrontend : lens.focusGo
   return `你是 Code Reviewer Agent — ${lens.label}视角。
 
 ## 角色定义（必须先读）
@@ -414,7 +361,7 @@ function reviewLensPrompt(lens) {
 从 **${lens.label}** 视角审查 ${SVC_DIR}/ 的代码变更（QA 已通过，_qa.md 可供参考）。
 
 ## 你的审查焦点
-${lens.focus}
+${focus}
 
 ## 审查步骤
 1. 阅读 ${ROOT_CLAUDE} — 全局规则
@@ -587,14 +534,40 @@ NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 
 // args: { serviceName: "审核服务", serviceDir: "services/moderation-service", task: "实现 gRPC 层" }
 
-// SEE: [[harness-pipeline-undefined-guard]] — 防止 args.serviceDir 未传时字符串化为 "undefined"
-const VALID_SERVICES = [
-  'ai-model-service', 'auth-service', 'community-hub-service',
-  'file-service', 'master-data-service', 'moderation-service',
-  'monitoring-service', 'permission-service', 'user-service',
-]
-const VALID_WEB = ['pc', 'mobile', 'common']
+// ============================================================
+// Service Registry Loader (replaces hardcoded VALID_SERVICES)
+// ============================================================
+const fs = require('fs')
+const path = require('path')
+
+function loadServiceRegistry() {
+  const registryPath = path.join(process.cwd(), '.harness/registry/services.json')
+  if (!fs.existsSync(registryPath)) {
+    throw new Error(`Service registry not found. Run: bash .harness/scripts/build-service-registry.sh`)
+  }
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
+  return {
+    services: registry.services.map(s => s.name),
+    web: registry.web.map(w => w.name),
+    getService: (name) => registry.services.find(s => s.name === name),
+    getServiceModule: (name) => registry.services.find(s => s.name === name)?.module || null,
+  }
+}
+
+const ServiceRegistry = loadServiceRegistry()
+
+// ── Pipeline metrics logger (best-effort, never blocks) ──
+function logMetrics(record) {
+  try {
+    const logDir = path.join(process.cwd(), '.harness/logs/pipeline')
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
+    fs.appendFileSync(path.join(logDir, 'metrics.jsonl'), JSON.stringify(record) + '\n')
+  } catch (e) { /* silent */ }
+}
+const VALID_SERVICES = ServiceRegistry.services
+const VALID_WEB = ServiceRegistry.web
 const ALL_VALID = [...VALID_SERVICES, ...VALID_WEB]
+// ============================================================
 
 const isMissing = (v) => !v || v === 'undefined' || typeof v !== 'string'
 
@@ -712,7 +685,11 @@ function resolveTaskType() {
   // 3. Keyword heuristics (Chinese + English) — order matters: most specific first
 
   // chore: maintenance, ops, no code logic
-  if (/\b(同步|sync|图谱|graph|清理|脚本|脚本|配置|config|docker|deploy|ci|文档|doc|readme|changelog|\.md|\.yml|\.yaml|\.env|依赖|dependency|更新依赖|升级|upgrade)\b/.test(t)) return 'chore'
+  if (/\b(同步|sync|图谱|graph|清理|脚本|脚本|配置|config|docker|deploy|ci|文档|doc|readme|changelog|\.md|\.yml|\.yaml|\.env|依赖|dependency|更新依赖|升级|upgrade)\b/.test(t)) {
+    // chore:ops (docker/deploy/ci/dependency) → needs Review for safety
+    if (/\b(docker|deploy|ci|依赖|dependency|upgrade|升级)\b/.test(t)) return 'chore:ops'
+    return 'chore'
+  }
 
   // bug: broken behavior, crash, data corruption
   if (/\b(bug|fix|修复|broken|crash|panic|竞态|race|nil pointer|空指针|死锁|deadlock|goroutine leak|泄漏|内存|溢出|overflow|数组越界|index out|类型错误|type error|panic|fatal|崩溃|报错|不工作|无效|invalid|丢失|丢失数据|错[误乱]|异常)\b/.test(t)) return 'bug'
@@ -730,11 +707,25 @@ const TASK_TYPE = resolveTaskType()
 log(`任务类型: ${TASK_TYPE} (auto-inferred)`)
 
 // ── Type-based constants ──
-const MAX_ITERATIONS = TASK_TYPE === 'chore' ? 1 : TASK_TYPE === 'debt' ? 2 : 3
-const REVIEW_LENS_COUNT = TASK_TYPE === 'chore' ? 0 : TASK_TYPE === 'debt' ? 1 : 3
-const REVIEW_PASS_THRESHOLD = TASK_TYPE === 'debt' ? 1 : 2  // chore skips review entirely
+// chore:doc → 1 iter, 0 review (skip)
+// chore:ops → 2 iter, 1 review (deploy/ci/docker changes need review)
+// debt       → 2 iter, 1 review
+// feature/bug → 3 iter, 3 review
+const isChoreOps = TASK_TYPE === 'chore:ops'
+const MAX_ITERATIONS = (TASK_TYPE === 'chore') ? 1 : (TASK_TYPE === 'debt' || isChoreOps) ? 2 : 3
+let REVIEW_LENS_COUNT = (TASK_TYPE === 'chore') ? 0 : (TASK_TYPE === 'debt' || isChoreOps) ? 1 : 3
+let REVIEW_PASS_THRESHOLD = (TASK_TYPE === 'debt' || isChoreOps) ? 1 : 2
 const TDD_STRICT = TASK_TYPE === 'feature' || TASK_TYPE === 'bug'
 const NEED_CHANGELOG = TASK_TYPE !== 'chore'
+
+// ── Workload routing（dispatch Step 0 传入）──
+// S(轻量): 保留 QA 15 项，跳过 Review（与 owner-agent 轻量Pipeline 对齐）
+const WORKLOAD = (args.workload || '').toUpperCase()
+if (WORKLOAD === 'S' && REVIEW_LENS_COUNT > 0) {
+  log(`轻量管线（workload=S）— 跳过 Review，保留 QA 15 项`)
+  REVIEW_LENS_COUNT = 0
+  REVIEW_PASS_THRESHOLD = 0
+}
 let qaFirstPass = true  // track whether QA passed on first try
 
 // ── Confidence scoring (for HITL adaptive review depth) ──
@@ -759,12 +750,21 @@ function computeConfidence(iterations, passCount, totalReviews, memoryMatchCount
 let iteration = 1
 let fixContext = ''
 
+// ── 预加载 L3 知识记忆（确定性注入，不依赖 Agent 自觉）──
+// 从任务描述提取关键词，预构建 knowledge-load.sh 调用命令
+// Generator prompt 将此作为必须执行的第一步
+const taskKeywords = (args.task || '').match(/[一-鿿]{2,4}|[a-zA-Z_]{2,}/g) || []
+const knowledgeCmd = taskKeywords.length > 0
+  ? `bash .harness/scripts/knowledge-load.sh --service ${bareName} --keywords "${taskKeywords.join(',').substring(0, 200)}" --top 5`
+  : `bash .harness/scripts/knowledge-load.sh --service ${bareName} --top 5`
+log(`知识预加载: ${knowledgeCmd}`)
+
 while (iteration <= MAX_ITERATIONS) {
   log(`第 ${iteration} 轮`)
 
   // Phase 1: Generator (隔离 worktree，避免并行管线互踩文件)
   phase('Develop')
-  await agent(generatorPrompt(iteration, fixContext, TASK_TYPE), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
+  await agent(generatorPrompt(iteration, fixContext, TASK_TYPE, knowledgeCmd), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
   log(`Generator 完成 (轮次 ${iteration})`)
 
   // Phase 2: QA
@@ -777,7 +777,24 @@ while (iteration <= MAX_ITERATIONS) {
 
   log(`QA VERDICT: ${qaResult.verdict} — ${qaResult.summary}`)
 
-  if (qaResult.verdict === 'FAIL') {
+  // ── QA 门禁（gate-engine，对应 config/quality-gates.yml qa 段）──
+  // 校验 QA 判定结构合法性；畸形判定（agent 输出垃圾 JSON 造成假 PASS）按 FAIL 处理。
+  let qaGateFailures = []
+  try {
+    const gateEngine = require('./gate-engine.js')
+    const qaGate = gateEngine.validateGate('qa', { qaResult, summary: `${args.serviceName} QA 门禁` })
+    qaGateFailures = qaGate.failures
+    if (qaGate.warnings.length > 0) {
+      log(`⚠️ QA 门禁 WARN: ${qaGate.warnings.map(w => w.message).join('; ')}`)
+    }
+  } catch (e) {
+    log(`⚠️ gate-engine 不可用（QA 门禁降级，不阻断）: ${e.message}`)
+  }
+  if (qaGateFailures.length > 0) {
+    log(`⛔ QA 门禁阻断: ${qaGateFailures.map(f => f.message).join('; ')} — 按 QA FAIL 处理`)
+  }
+
+  if (qaResult.verdict === 'FAIL' || qaGateFailures.length > 0) {
     qaFirstPass = false
 
     if (TASK_TYPE === 'feature' || TASK_TYPE === 'bug') {
@@ -817,7 +834,8 @@ while (iteration <= MAX_ITERATIONS) {
       iterations: iteration,
       serviceName: args.serviceName,
       qaSummary: qaResult.summary,
-      reviewSummary: 'skipped (chore)',
+      logMetrics({ timestamp: new Date().toISOString(), service: args.serviceName, taskType: TASK_TYPE, iterations: iteration, status: 'pass', reviewSkipped: true, confidence })
+	    return { status: 'pass', iterations: iteration, serviceName: args.serviceName, qaSummary: qaResult.summary, reviewSummary: 'skipped (chore)',
       memorySuggestions: [],
       confidence,
       notifications: [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过 (${TASK_TYPE}), QA: ${qaResult.summary}` }],
@@ -860,6 +878,17 @@ while (iteration <= MAX_ITERATIONS) {
       log(`⚠️ ${failingLenses}视角有异议，但多数通过 (${passCount}/${validReviews.length})，管线继续`)
     }
     log(`✅ 多视角 Review PASS (${passCount}/${validReviews.length})`)
+
+    // ── Review 门禁记录（gate-engine，对应 quality-gates.yml review 段）──
+    try {
+      const gateEngine = require('./gate-engine.js')
+      const reviewGate = gateEngine.validateGate('review', {
+        passCount, totalReviews: validReviews.length, summary: `${args.serviceName} Review 门禁`,
+      })
+      log(`🛡️ Review 门禁: ${reviewGate.passed ? 'PASS' : `FAIL(${reviewGate.failures.length})`} (${passCount}/${validReviews.length} APPROVED)`)
+    } catch (e) {
+      log(`⚠️ gate-engine 不可用（Review 门禁记录跳过）: ${e.message}`)
+    }
 
     // 汇总所有 WARNING/NOTE 供参考
     const allWarnings = validReviews.reduce((sum, r) => sum + (r.warningCount || 0), 0)

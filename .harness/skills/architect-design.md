@@ -220,8 +220,7 @@ CREATE TABLE <table_name> (
 ## 下一步
 
 - 全局 / Proto 任务 → 由全局 Claude 执行
-- 各服务任务 → 用 `dispatch` Skill 派发 Dev Agent
-- 或启动 `harness-pipeline` Workflow 全流程自动化
+- 各服务任务 → 用 `dispatch` Skill（统一入口，自动 S/M/L 分级路由到 `harness-pipeline` Workflow）
 
 ## 关联
 

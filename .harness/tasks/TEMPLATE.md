@@ -14,6 +14,7 @@ assigned_run: ""
 completed: ""
 outcome: ""
 triage: ""
+workload: ""
 dispatch_count: 0
 ---
 
