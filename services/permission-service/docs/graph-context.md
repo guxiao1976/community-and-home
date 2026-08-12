@@ -1,6 +1,6 @@
 # 知识图谱上下文 — permission-service
 
-> 自动生成于 2026-08-11 19:33:32 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-12 15:15:20 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -46,6 +46,7 @@
 
 | RPC 方法 | 输入消息 | 输出消息 |
 |---------|---------|---------|
+| AssertPublishScope | AssertPublishScopeRequest | AssertPublishScopeResponse |
 | AssignRole | AssignRoleRequest | AssignRoleResponse |
 | CheckPermission | CheckPermissionRequest | CheckPermissionResponse |
 | CreateRole | CreateRoleRequest | CreateRoleResponse |
@@ -67,7 +68,7 @@
 | 表名 | 列 |
 |------|-----|
 | rel_role_permission | ur_status (bigint), expires_at (nullable), verified_at (nullable), status (bigint), created_at (datetime), description (varchar), role_status (bigint), is_system (bigint), role_name (varchar), role_code (varchar), scope_id (bigint), scope_type (varchar), user_id (bigint), created_time (datetime), permission_id (bigint) ... |
-| sys_role | deleted_at (nullable), updated_at (datetime), created_at (datetime), icon (nullable), path (nullable), type (bigint), code (varchar), name (varchar), parent_id (nullable), delete_time (nullable), updated_time (datetime), created_time (datetime), created_by (bigint), status (bigint), sort_order (bigint) ... |
+| sys_role | min_verf_level (bigint), deleted_at (nullable), updated_at (datetime), created_at (datetime), icon (nullable), path (nullable), type (bigint), code (varchar), name (varchar), parent_id (nullable), delete_time (nullable), updated_time (datetime), created_time (datetime), created_by (bigint), status (bigint) ... |
 
 ## 前端消费方
 
