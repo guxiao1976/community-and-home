@@ -270,7 +270,8 @@ mobile ──加入/退出小区──▶ user-service ──Assign/RevokeRole�
 mobile ──切换小区──▶ user-service（校验 scope）
 mobile ──发布──▶ community-hub（功能权限→数据权限→配额→落库→审核）
 community-hub ──读当前小区──▶ user-service
-community-hub ──读配额/祖先链──▶ master-data
+community-hub ──读配额──▶ master-data
+community-hub ──AssertPublishScope──▶ permission-service ──ResolveScopeAncestors──▶ master-data
 user-service ──校验 scope──▶ permission-service（已有）
 auth-service ──角色+platforms──▶ permission-service（已有链路扩展）
 ```

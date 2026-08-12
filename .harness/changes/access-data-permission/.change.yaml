@@ -1,0 +1,41 @@
+schema: spec-driven
+created: 2026-08-12
+change: access-data-permission
+title: 数据权限核心（scope 三态 / 能力分层 / registered_user / 加入自动授权 / 发布校验）
+size: L
+route: OpenSpec
+services:
+  - permission-service
+  - user-service
+  - community-hub-service
+  - master-data-service
+design_basis: docs/specs/access-control-design.md
+design_basis_sections:
+  - "§1.4"
+  - "§3"
+  - "§5"
+revises:
+  - docs/specs/rbac-design.md §2.5
+specs:
+  - scope-model
+  - capability-layering
+  - registered-user
+  - join-auto-authorization
+  - publish-validation
+out_of_scope:
+  - "§5.7 同屋互见（变更②）"
+  - "§4 端限制"
+  - "§6 当前小区应用状态"
+  - "§7 板块发布配额"
+  - "§3.5 成员约束反滥用强制检查"
+  - "商户广告实现"
+proto_change_required: true
+proto_changes:
+  - "sys_permission.min_verf_level 透出（列表/详情响应）"
+  - "GetDataScopes 响应支持三态可区分（空/global/限定）"
+  - "新增 ScopeRef message（scope_type + scope_id）"
+  - "新增 AssertPublishScope(userId, repeated ScopeRef targets) RPC"
+  - "master-data 新增 ResolveScopeAncestors RPC（入参 scope 节点 id，出参祖先链 id 列表）"
+  - "user.proto JoinCommunityRequest 新增 ownership 枚举（自有→owner/租住→tenant，CLARIFICATION#2 配套）"
+common_change_required: false
+data_migration_required: false

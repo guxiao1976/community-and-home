@@ -79,6 +79,7 @@ export interface Permission {
   icon: string;
   sortOrder: number;
   status: PermissionStatus;
+  min_verf_level: number;
   created_at: string;
   updated_at: string;
   deleted_at: number;
