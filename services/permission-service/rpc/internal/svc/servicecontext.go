@@ -4,9 +4,9 @@ import (
 	"context"
 
 	masterdatav1 "github.com/guxiao1976/api-proto/gen/go/masterdata/v1"
+	sysconfig "github.com/guxiao1976/community-common/v2/pkg/sysconfig"
 	"github.com/guxiao1976/community-permission/model"
 	"github.com/guxiao1976/community-permission/rpc/internal/config"
-	sysconfig "github.com/guxiao1976/community-common/v2/pkg/sysconfig"
 	"github.com/redis/go-redis/v9"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/zrpc"
@@ -23,6 +23,9 @@ type ServiceContext struct {
 	UserRoleModel       model.RelUserRoleModel
 	// Redis（权限缓存）
 	RedisClient *redis.Client
+	// MasterDataClient master-data gRPC 客户端（AssertPublishScope 祖先链解析，T1.7）
+	// SEE: [[grpc-timeout-layers]] — 三层超时对齐（≤500ms）
+	MasterDataClient masterdatav1.MasterdataServiceClient
 }
 
 // NewServiceContext 创建服务上下文
@@ -53,6 +56,10 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		}, nil
 	})
 
+	// master-data gRPC 客户端（T1.7 AssertPublishScope 祖先链解析）
+	// 与 sysconfig fallback 共用 MasterDataRpc 配置
+	masterDataClient := zrpc.MustNewClient(c.MasterDataRpc)
+
 	return &ServiceContext{
 		Config:              c,
 		SysConfig:           sysCfg,
@@ -61,5 +68,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		RolePermissionModel: model.NewRelRolePermissionModel(conn, c.Cache),
 		UserRoleModel:       model.NewRelUserRoleModel(conn, c.Cache),
 		RedisClient:         redisClient,
+		MasterDataClient:    masterdatav1.NewMasterdataServiceClient(masterDataClient.Conn()),
 	}
 }

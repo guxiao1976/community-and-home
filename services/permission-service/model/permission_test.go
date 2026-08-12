@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"testing"
 	"time"
 
@@ -269,8 +270,8 @@ func TestSysPermissionModel_FindWithFilter_NoFilter(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewSysPermissionModel(conn, nil)
 
-	rows := sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "created_at", "updated_at"}).
-		AddRow(1, sql.NullInt64{}, "用户管理", "user:read", 1, sql.NullString{String: "/api/user", Valid: true}, sql.NullString{}, 1, 1, time.Now(), time.Now())
+	rows := sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "min_verf_level", "created_at", "updated_at"}).
+		AddRow(1, sql.NullInt64{}, "用户管理", "user:read", 1, sql.NullString{String: "/api/user", Valid: true}, sql.NullString{}, 1, 1, 0, time.Now(), time.Now())
 
 	mock.ExpectQuery("select \\* from `sys_permission` where 1=1 order by sort_order asc").
 		WillReturnRows(rows)
@@ -297,8 +298,8 @@ func TestSysPermissionModel_FindWithFilter_TypeFilter(t *testing.T) {
 
 	typeFilter := int64(3) // API 类型
 
-	rows := sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "created_at", "updated_at"}).
-		AddRow(1, sql.NullInt64{}, "API权限", "api:test", 3, sql.NullString{String: "/api/test", Valid: true}, sql.NullString{}, 1, 1, time.Now(), time.Now())
+	rows := sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "min_verf_level", "created_at", "updated_at"}).
+		AddRow(1, sql.NullInt64{}, "API权限", "api:test", 3, sql.NullString{String: "/api/test", Valid: true}, sql.NullString{}, 1, 1, 2, time.Now(), time.Now())
 
 	mock.ExpectQuery("select \\* from `sys_permission` where 1=1 and type = \\? order by sort_order asc").
 		WithArgs(typeFilter).
@@ -314,5 +315,95 @@ func TestSysPermissionModel_FindWithFilter_TypeFilter(t *testing.T) {
 	}
 	if result[0].Type != 3 {
 		t.Errorf("expected type 3, got %d", result[0].Type)
+	}
+}
+
+// ==================== FindByPath（T1.5 perm:def 缓存回源） ====================
+// SEE: [[tdd-red-evidence-requires-fail-excerpt]] — QA 补测，RED 摘录见 CHANGELOG 2026-08-12 补测节
+
+// TestSysPermissionModel_FindByPath_Hit — status=1 命中返回（SQL `where path = ? and status = 1 limit 1` 正确性）
+// SEE: [[permission-seed-api-path-must-match-routes]] — path 含 METHOD 前缀，与 REST 路由一致
+func TestSysPermissionModel_FindByPath_Hit(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	conn := sqlx.NewSqlConnFromDB(db)
+	m := NewSysPermissionModel(conn, nil)
+
+	rows := sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "min_verf_level", "created_at", "updated_at"}).
+		AddRow(435, sql.NullInt64{}, "发布-寻物启事", "community:lostfound:create-api", 3,
+			sql.NullString{String: "POST:/api/community/lostfound", Valid: true}, sql.NullString{}, 1, 1, 0, time.Now(), time.Now())
+
+	// GREEN：断言 SQL 含 status 过滤（`where path = ? and status = 1 limit 1`）
+	mock.ExpectQuery("select \\* from `sys_permission` where path = \\? and status = 1 limit 1").
+		WithArgs("POST:/api/community/lostfound").
+		WillReturnRows(rows)
+
+	result, err := m.FindByPath(context.Background(), "POST:/api/community/lostfound")
+
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if result == nil {
+		t.Fatalf("expected a permission, got nil")
+	}
+	if result.Code != "community:lostfound:create-api" {
+		t.Errorf("expected code 'community:lostfound:create-api', got '%s'", result.Code)
+	}
+	if result.MinVerfLevel != 0 {
+		t.Errorf("expected min_verf_level 0, got %d", result.MinVerfLevel)
+	}
+}
+
+// TestSysPermissionModel_FindByPath_Miss — 未命中返回 sql.ErrNoRows
+func TestSysPermissionModel_FindByPath_Miss(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	conn := sqlx.NewSqlConnFromDB(db)
+	m := NewSysPermissionModel(conn, nil)
+
+	mock.ExpectQuery("select \\* from `sys_permission` where path = \\? and status = 1 limit 1").
+		WithArgs("GET:/api/community/nonexistent").
+		WillReturnError(sql.ErrNoRows)
+
+	_, err = m.FindByPath(context.Background(), "GET:/api/community/nonexistent")
+
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("expected sql.ErrNoRows, got %v", err)
+	}
+}
+
+// TestSysPermissionModel_FindByPath_StatusFiltered — status=0 行被 SQL 过滤（`and status = 1` 由 regex 断言）
+// 若实现回退为 `where path = ? limit 1`（不带 status 过滤），本测试将 FAIL
+func TestSysPermissionModel_FindByPath_StatusFiltered(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	conn := sqlx.NewSqlConnFromDB(db)
+	m := NewSysPermissionModel(conn, nil)
+
+	// 断言 SQL 必须含 `and status = 1`（禁用的 status=0 权限不可被 FindByPath 命中）
+	mock.ExpectQuery("and status = 1 limit 1").
+		WithArgs("POST:/api/community/lostfound").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "parent_id", "name", "code", "type", "path", "icon", "sort_order", "status", "min_verf_level", "created_at", "updated_at"}).
+			AddRow(435, sql.NullInt64{}, "发布-寻物启事", "community:lostfound:create-api", 3,
+				sql.NullString{String: "POST:/api/community/lostfound", Valid: true}, sql.NullString{}, 1, 1, 0, time.Now(), time.Now()))
+
+	result, err := m.FindByPath(context.Background(), "POST:/api/community/lostfound")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if result == nil || result.Status != 1 {
+		t.Errorf("expected status=1 permission, got %v", result)
 	}
 }

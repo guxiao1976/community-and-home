@@ -2,190 +2,132 @@ package permission
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	"github.com/guxiao1976/community-permission/model"
 	"github.com/guxiao1976/community-permission/rpc/internal/svc"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-// TestGetDataScopes_Success 测试成功获取数据范围
-func TestGetDataScopes_Success(t *testing.T) {
-	// Setup
+// SEE: [[redis-cache-soft-delete]] — GetDataScopes 读穿缓存：HIT 直接返回，MISS 计算后写 JSON + EXPIRE
+
+func TestGetDataScopes_Limited(t *testing.T) {
 	mr := miniredis.RunT(t)
 	defer mr.Close()
-
-	mockUserRole := new(MockUserRoleModel)
-	mockUserRole.On("FindScopesByUserId", mock.Anything, int64(1001), "community").
-		Return([]int64{100, 200, 300}, nil)
-
-	svcCtx := &svc.ServiceContext{
-		UserRoleModel: mockUserRole,
-		RedisClient:   redis.NewClient(&redis.Options{Addr: mr.Addr()}),
-	}
-
-	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
-
-	// Execute
-	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{
-		UserId:    1001,
-		ScopeType: "community",
-	})
-
-	// Assert
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.Equal(t, int32(0), resp.Base.Code)
-	assert.Len(t, resp.ScopeIds, 3)
-	assert.Contains(t, resp.ScopeIds, int64(100))
-	assert.Contains(t, resp.ScopeIds, int64(200))
-	assert.Contains(t, resp.ScopeIds, int64(300))
-
-	mockUserRole.AssertExpectations(t)
-}
-
-// TestGetDataScopes_EmptyResult 测试用户无数据范围
-func TestGetDataScopes_EmptyResult(t *testing.T) {
-	// Setup
-	mr := miniredis.RunT(t)
-	defer mr.Close()
-
-	mockUserRole := new(MockUserRoleModel)
-	mockUserRole.On("FindScopesByUserId", mock.Anything, int64(1001), "building").
-		Return([]int64{}, nil)
-
-	svcCtx := &svc.ServiceContext{
-		UserRoleModel: mockUserRole,
-		RedisClient:   redis.NewClient(&redis.Options{Addr: mr.Addr()}),
-	}
-
-	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
-
-	// Execute
-	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{
-		UserId:    1001,
-		ScopeType: "building",
-	})
-
-	// Assert
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.Equal(t, int32(0), resp.Base.Code)
-	assert.Empty(t, resp.ScopeIds)
-
-	mockUserRole.AssertExpectations(t)
-}
-
-// TestGetDataScopes_MultipleScopeTypes 测试不同的 scope_type
-func TestGetDataScopes_MultipleScopeTypes(t *testing.T) {
-	testCases := []struct {
-		name      string
-		userId    int64
-		scopeType string
-		scopeIds  []int64
-	}{
-		{
-			name:      "Community scope",
-			userId:    1001,
-			scopeType: "community",
-			scopeIds:  []int64{100},
-		},
-		{
-			name:      "Building scope",
-			userId:    1002,
-			scopeType: "building",
-			scopeIds:  []int64{201, 202},
-		},
-		{
-			name:      "Unit scope",
-			userId:    1003,
-			scopeType: "unit",
-			scopeIds:  []int64{301, 302, 303},
-		},
-		{
-			name:      "Grid scope",
-			userId:    1004,
-			scopeType: "grid",
-			scopeIds:  []int64{401},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Setup
-			mr := miniredis.RunT(t)
-			defer mr.Close()
-
-			mockUserRole := new(MockUserRoleModel)
-			mockUserRole.On("FindScopesByUserId", mock.Anything, tc.userId, tc.scopeType).
-				Return(tc.scopeIds, nil)
-
-			svcCtx := &svc.ServiceContext{
-				UserRoleModel: mockUserRole,
-				RedisClient:   redis.NewClient(&redis.Options{Addr: mr.Addr()}),
-			}
-
-			logic := NewGetDataScopesLogic(context.Background(), svcCtx)
-
-			// Execute
-			resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{
-				UserId:    tc.userId,
-				ScopeType: tc.scopeType,
-			})
-
-			// Assert
-			assert.NoError(t, err)
-			assert.NotNil(t, resp)
-			assert.Equal(t, int32(0), resp.Base.Code)
-			assert.Equal(t, tc.scopeIds, resp.ScopeIds)
-
-			mockUserRole.AssertExpectations(t)
-		})
-	}
-}
-
-// TestGetDataScopes_CacheWritten 测试缓存是否正确写入 Redis
-func TestGetDataScopes_CacheWritten(t *testing.T) {
-	// Setup
-	mr := miniredis.RunT(t)
-	defer mr.Close()
-
-	mockUserRole := new(MockUserRoleModel)
-	mockUserRole.On("FindScopesByUserId", mock.Anything, int64(1001), "community").
-		Return([]int64{100, 200}, nil)
-
 	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	svcCtx := &svc.ServiceContext{
-		UserRoleModel: mockUserRole,
-		RedisClient:   redisClient,
-	}
 
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(1001)).Return([]*model.UserRoleWithInfo{
+		{RoleId: 1, ScopeType: model.ScopeTypeCommunity, ScopeId: 100, URStatus: 0},
+		{RoleId: 1, ScopeType: model.ScopeTypeCommunity, ScopeId: 200, URStatus: 1},
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole, RedisClient: redisClient}
 	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
 
-	// Execute
-	_, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{
-		UserId:    1001,
-		ScopeType: "community",
-	})
+	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1001, ScopeType: model.ScopeTypeCommunity})
+	assert.NoError(t, err)
+	assert.Equal(t, permissionv1.DataScopeState_DATA_SCOPE_STATE_LIMITED, resp.State)
+	assert.ElementsMatch(t, []int64{100, 200}, resp.ScopeIds)
+	mockUserRole.AssertExpectations(t)
 
-	// Assert
+	// 缓存已写入 JSON
+	raw, err := redisClient.Get(context.Background(), "perm:scopes:1001:community").Result()
+	assert.NoError(t, err)
+	var cached struct {
+		State string  `json:"state"`
+		Ids   []int64 `json:"ids"`
+	}
+	assert.NoError(t, json.Unmarshal([]byte(raw), &cached))
+	assert.Equal(t, "limited", cached.State)
+	assert.ElementsMatch(t, []int64{100, 200}, cached.Ids)
+}
+
+func TestGetDataScopes_Empty(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(1002)).Return([]*model.UserRoleWithInfo{
+		{RoleId: 9, ScopeType: model.ScopeTypeEmpty, ScopeId: 0, URStatus: 2},
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole, RedisClient: redisClient}
+	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1002, ScopeType: model.ScopeTypeCommunity})
+	assert.NoError(t, err)
+	assert.Equal(t, permissionv1.DataScopeState_DATA_SCOPE_STATE_EMPTY, resp.State)
+	assert.Empty(t, resp.ScopeIds)
+	mockUserRole.AssertExpectations(t)
+}
+
+func TestGetDataScopes_Global(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(1003)).Return([]*model.UserRoleWithInfo{
+		{RoleId: 8, ScopeType: model.ScopeTypeGlobal, ScopeId: 0, URStatus: 2},
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole, RedisClient: redisClient}
+	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1003, ScopeType: model.ScopeTypeCommunity})
+	assert.NoError(t, err)
+	assert.Equal(t, permissionv1.DataScopeState_DATA_SCOPE_STATE_GLOBAL, resp.State)
+	assert.Empty(t, resp.ScopeIds)
+	mockUserRole.AssertExpectations(t)
+}
+
+func TestGetDataScopes_CacheHitNoDB(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	// 预先写入缓存（JSON）
+	cached := `{"state":"limited","ids":[100,200]}`
+	assert.NoError(t, redisClient.Set(context.Background(), "perm:scopes:1004:community", cached, 0).Err())
+
+	mockUserRole := new(MockUserRoleModel) // 不设任何 expectation：若命中缓存不应查 DB
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole, RedisClient: redisClient}
+	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1004, ScopeType: model.ScopeTypeCommunity})
+	assert.NoError(t, err)
+	assert.Equal(t, permissionv1.DataScopeState_DATA_SCOPE_STATE_LIMITED, resp.State)
+	assert.ElementsMatch(t, []int64{100, 200}, resp.ScopeIds)
+	mockUserRole.AssertExpectations(t) // 无 expectation → 任何对 mock 的调用都会失败
+}
+
+func TestGetDataScopes_CacheMissWritesCache(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(1005)).Return([]*model.UserRoleWithInfo{
+		{RoleId: 1, ScopeType: model.ScopeTypeCommunity, ScopeId: 500, URStatus: 0},
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole, RedisClient: redisClient}
+	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
+
+	_, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1005, ScopeType: model.ScopeTypeCommunity})
 	assert.NoError(t, err)
 
-	// 验证 Redis 缓存
-	cacheKey := "perm:scopes:1001:community"
-	members, err := redisClient.SMembers(context.Background(), cacheKey).Result()
-	assert.NoError(t, err)
-	assert.Len(t, members, 2)
-	assert.Contains(t, members, "100")
-	assert.Contains(t, members, "200")
-
-	// 验证 TTL 设置
-	ttl, err := redisClient.TTL(context.Background(), cacheKey).Result()
+	// 缓存存在且带 TTL
+	ttl, err := redisClient.TTL(context.Background(), "perm:scopes:1005:community").Result()
 	assert.NoError(t, err)
 	assert.Greater(t, ttl.Seconds(), float64(0))
-
 	mockUserRole.AssertExpectations(t)
 }

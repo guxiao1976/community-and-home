@@ -2,7 +2,6 @@ package permission
 
 import (
 	"context"
-	"fmt"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
@@ -37,14 +36,8 @@ func (l *RevokeRoleLogic) RevokeRole(in *permissionv1.RevokeRoleRequest) (*permi
 		return nil, err
 	}
 
-	// 失效缓存
-	l.svcCtx.RedisClient.Del(l.ctx,
-		fmt.Sprintf("perm:user:%d", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:community", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:building", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:unit", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:grid", in.UserId),
-	)
+	// 失效缓存（收敛到本处理器，不依赖调用方）
+	invalidateUserCaches(l.ctx, l.svcCtx.RedisClient, in.UserId)
 
 	l.Infof("RevokeRole success: userId=%d, roleId=%d, scope=%s:%d", in.UserId, in.RoleId, scopeType, scopeId)
 

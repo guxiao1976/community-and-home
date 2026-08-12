@@ -27,16 +27,17 @@ func toRoleInfo(r *permissionv1.Role) types.RoleInfo {
 // toPermissionInfo 将 proto Permission 转换为 HTTP PermissionInfo（含子节点递归）
 func toPermissionInfo(p *permissionv1.Permission) types.PermissionInfo {
 	info := types.PermissionInfo{
-		Id:        p.Id,
-		ParentId:  p.ParentId,
-		Code:      p.Code,
-		Name:      p.Name,
-		Type:      p.Type,
-		Path:      p.Path,
-		Icon:      p.Icon,
-		SortOrder: p.SortOrder,
-		Status:    p.Status,
-		Children:  toPermissionInfoList(p.Children),
+		Id:           p.Id,
+		ParentId:     p.ParentId,
+		Code:         p.Code,
+		Name:         p.Name,
+		Type:         p.Type,
+		Path:         p.Path,
+		Icon:         p.Icon,
+		SortOrder:    p.SortOrder,
+		Status:       p.Status,
+		MinVerfLevel: p.MinVerfLevel,
+		Children:     toPermissionInfoList(p.Children),
 	}
 	if p.Timestamps != nil {
 		info.CreatedAt = p.Timestamps.CreatedAt

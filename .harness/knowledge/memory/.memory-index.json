@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated_at": "2026-08-11T11:51:59Z",
-  "total_memories": 33,
+  "generated_at": "2026-08-12T10:06:19Z",
+  "total_memories": 39,
   "index": {
     "模板": [
       "ai-model-template-variable-content"
@@ -235,6 +235,37 @@
     "TS": [
       "edit-form-data-integrity"
     ],
+    "错误码": [
+      "error-code-collision-and-namespace-alignment"
+    ],
+    "error code": [
+      "error-code-collision-and-namespace-alignment"
+    ],
+    "60006": [
+      "error-code-collision-and-namespace-alignment"
+    ],
+    "060007": [
+      "error-code-collision-and-namespace-alignment"
+    ],
+    "冲突": [
+      "error-code-collision-and-namespace-alignment",
+      "monorepo-port-management"
+    ],
+    "复用": [
+      "error-code-collision-and-namespace-alignment"
+    ],
+    "语义": [
+      "error-code-collision-and-namespace-alignment"
+    ],
+    "NewBaseRespWithError": [
+      "error-code-collision-and-namespace-alignment"
+    ],
+    "同码异义": [
+      "error-code-collision-and-namespace-alignment"
+    ],
+    "namespace": [
+      "error-code-collision-and-namespace-alignment"
+    ],
     "前端": [
       "frontend-pipeline-integration-pattern"
     ],
@@ -304,7 +335,8 @@
       "goctl-logic-stubs"
     ],
     "假成功": [
-      "goctl-logic-stubs"
+      "goctl-logic-stubs",
+      "insert-ignore-swallows-errors"
     ],
     "gRPC": [
       "grpc-max-msg-size-sensitive-words",
@@ -362,7 +394,8 @@
       "harness-architecture-decisions"
     ],
     "undefined": [
-      "harness-pipeline-undefined-guard"
+      "harness-pipeline-undefined-guard",
+      "tdd-red-evidence-requires-fail-excerpt"
     ],
     "harness-pipeline": [
       "harness-pipeline-undefined-guard"
@@ -375,6 +408,27 @@
     ],
     "参数校验": [
       "harness-pipeline-undefined-guard"
+    ],
+    "INSERT IGNORE": [
+      "insert-ignore-swallows-errors"
+    ],
+    "幂等": [
+      "insert-ignore-swallows-errors"
+    ],
+    "唯一键": [
+      "insert-ignore-swallows-errors"
+    ],
+    "静默": [
+      "insert-ignore-swallows-errors"
+    ],
+    "RowsAffected": [
+      "insert-ignore-swallows-errors"
+    ],
+    "ON DUPLICATE KEY": [
+      "insert-ignore-swallows-errors"
+    ],
+    "AssignRole": [
+      "insert-ignore-swallows-errors"
     ],
     "migration": [
       "migration-must-execute"
@@ -398,7 +452,8 @@
       "migration-must-execute"
     ],
     "1054": [
-      "migration-must-execute"
+      "migration-must-execute",
+      "need-human-findbyroleid-assign_time"
     ],
     "unknown column": [
       "migration-must-execute"
@@ -419,9 +474,6 @@
       "moderation-submodule-broken"
     ],
     "端口": [
-      "monorepo-port-management"
-    ],
-    "冲突": [
       "monorepo-port-management"
     ],
     "port": [
@@ -453,6 +505,38 @@
     ],
     "yaml": [
       "monorepo-port-management"
+    ],
+    "缓存": [
+      "notfound-cache-sentinel-vs-transient-error",
+      "redis-cache-soft-delete"
+    ],
+    "not-found": [
+      "notfound-cache-sentinel-vs-transient-error"
+    ],
+    "sentinel": [
+      "notfound-cache-sentinel-vs-transient-error"
+    ],
+    "ErrNoRows": [
+      "notfound-cache-sentinel-vs-transient-error"
+    ],
+    "瞬时错误": [
+      "notfound-cache-sentinel-vs-transient-error"
+    ],
+    "缓存失效": [
+      "need-human-findbyroleid-assign_time",
+      "notfound-cache-sentinel-vs-transient-error"
+    ],
+    "DB抖动": [
+      "notfound-cache-sentinel-vs-transient-error"
+    ],
+    "30分钟": [
+      "notfound-cache-sentinel-vs-transient-error"
+    ],
+    "min_verf_level": [
+      "notfound-cache-sentinel-vs-transient-error"
+    ],
+    "冷缓存": [
+      "notfound-cache-sentinel-vs-transient-error"
     ],
     "手机号": [
       "phone-encryption"
@@ -541,9 +625,6 @@
     "Redis cache": [
       "redis-cache-soft-delete"
     ],
-    "缓存": [
-      "redis-cache-soft-delete"
-    ],
     "soft delete": [
       "redis-cache-soft-delete"
     ],
@@ -554,7 +635,8 @@
       "redis-cache-soft-delete"
     ],
     "唯一索引": [
-      "redis-cache-soft-delete"
+      "redis-cache-soft-delete",
+      "unique-index-migration-dup-precheck"
     ],
     "stale cache": [
       "redis-cache-soft-delete"
@@ -586,10 +668,32 @@
     "secret": [
       "service-api-jwt-env"
     ],
-    "测试": [
+    "TDD": [
+      "tdd-red-evidence-requires-fail-excerpt",
       "testing-discipline"
     ],
-    "TDD": [
+    "RED": [
+      "tdd-red-evidence-requires-fail-excerpt"
+    ],
+    "GREEN": [
+      "tdd-red-evidence-requires-fail-excerpt"
+    ],
+    "测试未提交": [
+      "tdd-red-evidence-requires-fail-excerpt"
+    ],
+    "测试证据": [
+      "tdd-red-evidence-requires-fail-excerpt"
+    ],
+    "编译失败": [
+      "tdd-red-evidence-requires-fail-excerpt"
+    ],
+    "QA FAIL": [
+      "tdd-red-evidence-requires-fail-excerpt"
+    ],
+    "证据摘录": [
+      "tdd-red-evidence-requires-fail-excerpt"
+    ],
+    "测试": [
       "testing-discipline"
     ],
     "unit test": [
@@ -600,6 +704,27 @@
     ],
     "改动": [
       "testing-discipline"
+    ],
+    "迁移": [
+      "unique-index-migration-dup-precheck"
+    ],
+    "ALTER": [
+      "unique-index-migration-dup-precheck"
+    ],
+    "duplicate": [
+      "unique-index-migration-dup-precheck"
+    ],
+    "重复数据": [
+      "unique-index-migration-dup-precheck"
+    ],
+    "阻塞部署": [
+      "unique-index-migration-dup-precheck"
+    ],
+    "ADD UNIQUE": [
+      "unique-index-migration-dup-precheck"
+    ],
+    "uk_user_role_scope": [
+      "unique-index-migration-dup-precheck"
     ],
     "API路由": [
       "verify-api-before-calling"
@@ -692,6 +817,30 @@
     ],
     "RBAC": [
       "is-system-no-permission-shortcut"
+    ],
+    "FindByRoleId": [
+      "need-human-findbyroleid-assign_time"
+    ],
+    "assign_time": [
+      "need-human-findbyroleid-assign_time"
+    ],
+    "rel_user_role": [
+      "need-human-findbyroleid-assign_time"
+    ],
+    "Unknown column": [
+      "need-human-findbyroleid-assign_time"
+    ],
+    "select *": [
+      "need-human-findbyroleid-assign_time"
+    ],
+    "need_human": [
+      "need-human-findbyroleid-assign_time"
+    ],
+    "列不存在": [
+      "need-human-findbyroleid-assign_time"
+    ],
+    "invalidateRoleCache": [
+      "need-human-findbyroleid-assign_time"
     ],
     "seed": [
       "permission-seed-api-path-must-match-routes"
@@ -937,6 +1086,25 @@
         "TS"
       ]
     },
+    "error-code-collision-and-namespace-alignment": {
+      "title": "错误码必须语义唯一，禁止同码异义；新增 RPC 错误码需跨服务对齐命名空间",
+      "file": "global/error-code-collision-and-namespace-alignment.md",
+      "severity": "should-follow",
+      "type": "guideline",
+      "service": "all",
+      "triggers": [
+        "错误码",
+        "error code",
+        "60006",
+        "060007",
+        "冲突",
+        "复用",
+        "语义",
+        "NewBaseRespWithError",
+        "同码异义",
+        "namespace"
+      ]
+    },
     "frontend-pipeline-integration-pattern": {
       "title": "前端管线接入模式：条件分支而非独立文件",
       "file": "global/frontend-pipeline-integration-pattern.md",
@@ -1036,6 +1204,23 @@
         "参数校验"
       ]
     },
+    "insert-ignore-swallows-errors": {
+      "title": "INSERT IGNORE 静默吞掉非唯一键错误导致假成功",
+      "file": "global/insert-ignore-swallows-errors.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "INSERT IGNORE",
+        "幂等",
+        "唯一键",
+        "静默",
+        "假成功",
+        "RowsAffected",
+        "ON DUPLICATE KEY",
+        "AssignRole"
+      ]
+    },
     "migration-must-execute": {
       "title": "Migration 文件提交后必须执行",
       "file": "global/migration-must-execute.md",
@@ -1087,6 +1272,25 @@
         "smoketest",
         "ListenOn",
         "yaml"
+      ]
+    },
+    "notfound-cache-sentinel-vs-transient-error": {
+      "title": "缓存 not-found sentinel 前必须区分 ErrNoRows 与瞬时 DB 错误",
+      "file": "global/notfound-cache-sentinel-vs-transient-error.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "缓存",
+        "not-found",
+        "sentinel",
+        "ErrNoRows",
+        "瞬时错误",
+        "缓存失效",
+        "DB抖动",
+        "30分钟",
+        "min_verf_level",
+        "冷缓存"
       ]
     },
     "phone-encryption": {
@@ -1191,6 +1395,24 @@
         "secret"
       ]
     },
+    "tdd-red-evidence-requires-fail-excerpt": {
+      "title": "QA 的 TDD RED 证据必须包含实际 FAIL 输出摘录",
+      "file": "global/tdd-red-evidence-requires-fail-excerpt.md",
+      "severity": "must-follow",
+      "type": "process",
+      "service": "all",
+      "triggers": [
+        "TDD",
+        "RED",
+        "GREEN",
+        "测试未提交",
+        "测试证据",
+        "undefined",
+        "编译失败",
+        "QA FAIL",
+        "证据摘录"
+      ]
+    },
     "testing-discipline": {
       "title": "",
       "file": "global/testing-discipline.md",
@@ -1205,6 +1427,23 @@
         "PR",
         "提交",
         "改动"
+      ]
+    },
+    "unique-index-migration-dup-precheck": {
+      "title": "对既有数据加唯一索引必须先查重，否则 ALTER 失败阻塞部署",
+      "file": "global/unique-index-migration-dup-precheck.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "唯一索引",
+        "迁移",
+        "ALTER",
+        "duplicate",
+        "重复数据",
+        "阻塞部署",
+        "ADD UNIQUE",
+        "uk_user_role_scope"
       ]
     },
     "verify-api-before-calling": {
@@ -1274,6 +1513,25 @@
         "CheckPermission",
         "短路",
         "RBAC"
+      ]
+    },
+    "need-human-findbyroleid-assign_time": {
+      "title": "FindByRoleId 查询不存在的 assign_time 列 → MySQL 1054（need_human 修复）",
+      "file": "permission-service/need-human-findbyroleid-assign_time.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "permission-service",
+      "triggers": [
+        "FindByRoleId",
+        "assign_time",
+        "rel_user_role",
+        "1054",
+        "Unknown column",
+        "select *",
+        "need_human",
+        "列不存在",
+        "缓存失效",
+        "invalidateRoleCache"
       ]
     },
     "permission-seed-api-path-must-match-routes": {

@@ -26,9 +26,11 @@ L 变更①:数据权限统一模型落地。覆盖:
 ## 阶段状态
 
 - [x] 0 工具选择(request.md)
-- [ ] 1 需求分析(requirement-analyst)
-- [ ] 2 需求评审(3 视角)
-- [ ] 3 架构设计(architecture-designer)
-- [ ] 4 Proto 变更(Owner 执行)
-- [ ] 5 编码 N×Workflow
-- [ ] 6 集成归档
+- [x] 1 需求分析(requirement-analyst)
+- [x] 2 需求评审(3 视角)
+- [x] 3 架构设计(architecture-designer)
+- [x] 4 Proto 变更(Owner 执行)
+- [x] 5 编码 N×Workflow（阶段① Wave 1：permission T1.1-T1.8 + master-data T2.1-T2.3）
+- [x] 6 集成归档（门禁全绿 + summary.md + INDEX 更新）
+
+> Wave 1 = 阶段① 数据权限核心。阶段 3(user-service T3.x)、阶段 4(community-hub T4.x)、阶段 5(web/mobile)、阶段 6 跨服务集成验收 待后续 Wave 执行。

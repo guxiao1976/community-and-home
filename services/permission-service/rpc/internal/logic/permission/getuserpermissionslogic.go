@@ -21,10 +21,10 @@ func NewGetUserPermissionsLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 
 // GetUserPermissions 获取用户的所有权限编码列表
 //
-//	查询用户活跃角色 → 收集角色关联的权限 ID → 查询权限编码 → 去重返回
+//	查询用户活跃 grants（status∈{0,1,2}，含未认证业主发布权限码）→ 收集角色关联的权限 ID → 去重返回
 func (l *GetUserPermissionsLogic) GetUserPermissions(in *permissionv1.GetUserPermissionsRequest) (*permissionv1.GetUserPermissionsResponse, error) {
-	// 查询用户活跃角色
-	roles, err := l.svcCtx.UserRoleModel.FindActiveByUserId(l.ctx, in.UserId)
+	// 查询用户活跃 grants（T1.5：不再只取 status=2，保证未认证业主的发布权限码在列）
+	roles, err := l.svcCtx.UserRoleModel.FindActiveRolesByUserId(l.ctx, in.UserId)
 	if err != nil || len(roles) == 0 {
 		return &permissionv1.GetUserPermissionsResponse{
 			Base:            responsex.NewBaseResp(),

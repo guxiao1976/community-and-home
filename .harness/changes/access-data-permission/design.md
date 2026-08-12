@@ -164,7 +164,7 @@ message JoinCommunityRequest {
 | 场景 | 错误码 | 归属 | 说明 |
 |------|:---:|------|------|
 | 数据权限拒绝（API 面） | **080006** | community-hub | 「目标小区超出发布者数据范围，无发布权限」。沿用 08xxxx 命名空间（设计文档 `80006` 即 `08 0006`） |
-| 数据权限拒绝（RPC 面） | **060006** | permission-service | AssertPublishScope 内部拒绝；community-hub 映射 `060006 → 080006` |
+| 数据权限拒绝（RPC 面） | **060007** | permission-service | AssertPublishScope 内部拒绝；community-hub 映射 `060007 → 080006`（060006 已登记「角色编码已存在」，避免契约冲突） |
 | 参数校验（ownership 缺失） | 10040 | user-service | 复用现有 |
 | 无发布权限（功能权限） | 080002 | community-hub | 复用现有 |
 
@@ -192,13 +192,13 @@ message AssertPublishScopeRequest {
 }
 message AssertPublishScopeResponse {
   common.v1.BaseResp base = 1;
-  bool allowed = 2; // false = 无数据权限（060006）
+  bool allowed = 2; // false = 无数据权限（060007）
 }
 ```
 **逻辑**（统一判据封装，消费方不再重复实现祖先链规则）：
 1. 解析用户 community scope → `{state, ids}`（复用 §4.4 判定函数）。
 2. `state==GLOBAL` → allowed。
-3. `state==EMPTY` → denied（060006）。
+3. `state==EMPTY` → denied（060007）。
 4. `LIMITED`：逐 target——
    - `target.scope_type != "community"` → denied（060005 不支持的类型）；
    - 调 master-data `ResolveScopeAncestors(target.scope_id)`，`found==false` → denied（**安全拒绝**未知节点）；
@@ -317,7 +317,7 @@ community-hub 写接口（8 个）：功能权限(PermMiddleware) → 数据权�
 - targets = [{scope_type:'community', scope_id: 内容 community_id}]
 - userId / publisher_id：一律取 JWT 认证身份（REST API 层从 ctx 提取 user_id，
   覆盖写入 gRPC 请求的 publisher_id 与 AssertPublishScope.userId，忽略客户端 body 传值）
-- 校验顺序错误码：功能失败 080002；数据失败 060006→080006
+- 校验顺序错误码：功能失败 080002；数据失败 060007→080006
 ```
 - 涉及写接口（REQ-5.3 全量）：`CreateNotice`/`UpdateNotice`/`DeleteNotice`/`UpdateNoticeModerationStatus`/`CreateLostFound`/`ResolveLostFound`/`UpdateLostFoundModerationStatus`/`UpsertContacts`。
 
@@ -368,7 +368,7 @@ user-service ──Assign/Revoke/CheckPermission──▶ permission-service（�
 | 错误码 | 含义 | 归属 | 状态 |
 |:---:|------|------|:---:|
 | 060005 | 不支持的 scope_type（AssertPublishScope target） | permission-service | 复用 |
-| 060006 | 无数据范围权限（AssertPublishScope 拒绝） | permission-service | **新增** |
+| 060007 | 无数据范围权限（AssertPublishScope 拒绝） | permission-service | **新增** |
 | 080006 | 目标小区超出发布者数据范围（API 面） | community-hub | **新增** |
 | 080002 / 080003 / 080001 / 080005 | 无发布权限 / 超限 / 不存在 / 参数无效 | community-hub | 复用 |
 | 10040 / 10001 / 10006 / 10007 / 10011-10013 | Join 校验 | user-service | 复用 |

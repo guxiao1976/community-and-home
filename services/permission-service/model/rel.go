@@ -67,6 +67,21 @@ func (m *defaultRelRolePermissionModel) BatchInsert(ctx context.Context, records
 
 // ==================== RelUserRole ====================
 
+// scope 三态语义常量（access-data-permission 阶段①）
+//
+//	三态：global（全局放行）/ limited（限定节点）/ empty（无数据范围）
+//	scope_id=0 约定为「非实体占位」：empty 行（scope_type=''）零贡献；global 行全放行
+//
+// SEE: [[is-system-no-permission-shortcut]] — 空(empty) ≠ global，杜绝「空当 global」灾难
+const (
+	ScopeTypeGlobal    = "global"    // 全局放行（审核员 / sys_admin / moderation 系统身份）
+	ScopeTypeEmpty     = ""          // 空数据范围（仅 registered_user 基角色）
+	ScopeTypeCommunity = "community" // 限定：小区
+	ScopeTypeBuilding  = "building"  // 限定：楼栋
+	ScopeTypeUnit      = "unit"      // 限定：单元
+	ScopeTypeGrid      = "grid"      // 限定：网格
+)
+
 // RelUserRole 用户-角色关联表（含数据范围，spec/permission.md 新增 scope_type + scope_id）
 type RelUserRole struct {
 	Id          int64        `db:"id"`
@@ -97,10 +112,15 @@ type UserRoleWithInfo struct {
 
 type RelUserRoleModel interface {
 	Insert(ctx context.Context, data *RelUserRole) (int64, error)
+	// InsertIgnore 幂等插入（INSERT IGNORE）：唯一键冲突不报错（T1.6）
+	InsertIgnore(ctx context.Context, data *RelUserRole) error
 	FindByUserId(ctx context.Context, userId int64) ([]*RelUserRole, error)
 	FindByRoleId(ctx context.Context, roleId int64) ([]*RelUserRole, error)
-	// FindActiveByUserId 联表查询返回角色完整信息
+	// FindActiveByUserId 联表查询返回角色完整信息（仅已认证 status=2）
 	FindActiveByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error)
+	// FindActiveRolesByUserId 联表查询活跃 grants（status IN (0,1,2) 且未过期）
+	// 返回含 scope_type/scope_id/verified_at/ur_status，供能力分层聚合
+	FindActiveRolesByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error)
 	// FindScopesByUserId 根据 user_id + scope_type 返回 scope_ids
 	FindScopesByUserId(ctx context.Context, userId int64, scopeType string) ([]int64, error)
 	// DeleteByUserIdAndRoleId 删除用户指定角色
@@ -133,6 +153,14 @@ func (m *defaultRelUserRoleModel) Insert(ctx context.Context, data *RelUserRole)
 	return res.LastInsertId()
 }
 
+// InsertIgnore 幂等插入（INSERT IGNORE，T1.6）
+// uk_user_role_scope 唯一键冲突时静默跳过（不报错），支撑注册自动分配/Join 自动授权幂等
+func (m *defaultRelUserRoleModel) InsertIgnore(ctx context.Context, data *RelUserRole) error {
+	query := fmt.Sprintf("insert ignore into %s (user_id, role_id, scope_type, scope_id, status, verified_at, expires_at) values (?, ?, ?, ?, ?, ?, ?)", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, data.UserId, data.RoleId, data.ScopeType, data.ScopeId, data.Status, data.VerifiedAt, data.ExpiresAt)
+	return err
+}
+
 func (m *defaultRelUserRoleModel) FindByUserId(ctx context.Context, userId int64) ([]*RelUserRole, error) {
 	var list []*RelUserRole
 	err := m.conn.QueryRowsCtx(ctx, &list, fmt.Sprintf("select * from %s where user_id = ?", m.table), userId)
@@ -156,15 +184,37 @@ func (m *defaultRelUserRoleModel) FindActiveByUserId(ctx context.Context, userId
 }
 
 // FindScopesByUserId 查询用户在某 scope_type 下的所有 scope_id（spec/permission.md GetDataScopes）
+// T1.2 三态语义：仅取 status IN (0,1,2) 且 scope_id != 0 的 limited 并集
+//
+//	scope_id=0 是 empty/global 占位，不进并集（REQ-A / REQ-1.2）
 func (m *defaultRelUserRoleModel) FindScopesByUserId(ctx context.Context, userId int64, scopeType string) ([]int64, error) {
 	var scopeIds []int64
 	query := fmt.Sprintf(`
 		SELECT DISTINCT ur.scope_id FROM %s ur
 		INNER JOIN sys_role r ON ur.role_id = r.id
-		WHERE ur.user_id = ? AND ur.scope_type = ? AND r. deleted_at IS NULL AND r.status = 1
+		WHERE ur.user_id = ? AND ur.scope_type = ? AND r.deleted_at IS NULL AND r.status = 1
+		  AND ur.status IN (0,1,2) AND ur.scope_id != 0
 	`, m.table)
 	err := m.conn.QueryRowsCtx(ctx, &scopeIds, query, userId, scopeType)
 	return scopeIds, err
+}
+
+// FindActiveRolesByUserId 联表查询活跃 grants（T1.2 新增）
+// 返回 status IN (0,1,2) 且未过期（expires_at IS NULL OR > NOW()）的 grants
+// 含 scope_type/scope_id/verified_at/ur_status，供 CheckPermission 能力分层聚合（T1.5）
+func (m *defaultRelUserRoleModel) FindActiveRolesByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error) {
+	var list []*UserRoleWithInfo
+	query := fmt.Sprintf(`
+		SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description,
+		       ur.scope_type, ur.scope_id, ur.status as ur_status, ur.verified_at, ur.expires_at
+		FROM %s ur
+		INNER JOIN sys_role r ON ur.role_id = r.id
+		WHERE ur.user_id = ? AND r.deleted_at IS NULL AND r.status = 1
+		  AND ur.status IN (0,1,2) AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
+		ORDER BY ur.id
+	`, m.table)
+	err := m.conn.QueryRowsCtx(ctx, &list, query, userId)
+	return list, err
 }
 
 // DeleteByUserIdAndRoleId 删除用户指定角色+作用域
@@ -193,9 +243,13 @@ func (m *defaultRelUserRoleModel) CountByRoleId(ctx context.Context, roleId int6
 }
 
 // FindByRoleId 查询持有指定角色的所有用户角色记录
+// need_human 修复：原 SQL 显式列清单引用了 rel_user_role 不存在的 assign_time 列（live 库仅
+// id/user_id/role_id/scope_type/scope_id/status/verified_at/expires_at/created_at）→ MySQL 1054
+// 阻断 updaterolelogic.invalidateRoleCache 缓存失效（安全漏洞）。改用 `select *`（与 FindByUserId 一致，
+// RelUserRole 以 db tag 映射，go-zero sqlx 支持），不再引用不存在的列。
 func (m *defaultRelUserRoleModel) FindByRoleId(ctx context.Context, roleId int64) ([]*RelUserRole, error) {
 	var list []*RelUserRole
-	query := fmt.Sprintf("SELECT id, user_id, role_id, scope_type, scope_id, assign_time FROM %s WHERE role_id = ?", m.table)
+	query := fmt.Sprintf("select * from %s where role_id = ?", m.table)
 	err := m.conn.QueryRowsCtx(ctx, &list, query, roleId)
 	return list, err
 }

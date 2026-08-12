@@ -20,7 +20,8 @@ func NewListPermissionsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *L
 }
 
 // ListPermissions 查询权限树
-//   查 sys_permission 全表 → 按 parent_id 构建树形结构
+//
+//	查 sys_permission 全表 → 按 parent_id 构建树形结构
 func (l *ListPermissionsLogic) ListPermissions(in *permissionv1.ListPermissionsRequest) (*permissionv1.ListPermissionsResponse, error) {
 	// 转换请求中的可选筛选参数（int32 → int64）
 	var typeFilter, statusFilter *int64
@@ -42,15 +43,16 @@ func (l *ListPermissionsLogic) ListPermissions(in *permissionv1.ListPermissionsR
 	permMap := make(map[int64]*permissionv1.Permission)
 	for _, p := range perms {
 		permMap[p.Id] = &permissionv1.Permission{
-			Id:        p.Id,
-			ParentId:  p.ParentId.Int64,
-			Code:      p.Code,
-			Name:      p.Name,
-			Type:      int32(p.Type),
-			Path:      p.Path.String,
-			Icon:      p.Icon.String,
-			SortOrder: int32(p.SortOrder),
-			Status:    int32(p.Status),
+			Id:           p.Id,
+			ParentId:     p.ParentId.Int64,
+			Code:         p.Code,
+			Name:         p.Name,
+			Type:         int32(p.Type),
+			Path:         p.Path.String,
+			Icon:         p.Icon.String,
+			SortOrder:    int32(p.SortOrder),
+			Status:       int32(p.Status),
+			MinVerfLevel: int32(p.MinVerfLevel),
 		}
 	}
 

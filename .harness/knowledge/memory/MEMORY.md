@@ -6,6 +6,7 @@
 - [测试纪律](global/testing-discipline.md) — 所有代码改动, 硬性约束, 流程, 测试/PR/提交/改动
 - [is_system 不再授予全权限](permission-service/is-system-no-permission-shortcut.md) — permission-service, must-follow, `decision`, `is_system CheckPermission RBAC 系统角色 短路`
 - [种子数据 API path 必须匹配实际路由](permission-service/permission-seed-api-path-must-match-routes.md) — permission-service, must-follow, `pitfall`, `seed path 前缀 CheckPermission 匹配 路由`
+- [FindByRoleId 查询不存在的 assign_time 列 → MySQL 1054](permission-service/need-human-findbyroleid-assign_time.md) — permission-service, must-follow, `pitfall`, `FindByRoleId assign_time rel_user_role 1054 Unknown column select * need_human 缓存失效`
 >
 > 类型说明：`pitfall`=踩过的坑 | `guideline`=编码/架构规范 | `process`=流程约束 | `decision`=技术决策 | `model`=数据模型
 
@@ -37,10 +38,15 @@
 - [管线数据可信度：模拟数据 ≠ 真实数据严重性](global/pipeline-data-trust-simulated-vs-real.md) — all, must-follow, `pitfall`, `模拟数据 测试数据 管线 数据可信度 63次 时间戳 数据质量`
 - [Monorepo 端口冲突检测与启动顺序](global/monorepo-port-management.md) — all, must-follow, `pitfall`, `端口 冲突 port monorepo 8087 8088 start.sh stop.sh smoketest`
 - [TypeScript erasableSyntaxOnly 与 enum 冲突](web/typescript-erasable-syntax-enum-conflict.md) — web, must-follow, `pitfall`, `TypeScript erasableSyntaxOnly enum TS1294 npm run build vue-tsc 编译失败`
+- [QA 的 TDD RED 证据必须包含实际 FAIL 输出摘录](global/tdd-red-evidence-requires-fail-excerpt.md) — all, must-follow, `process`, `TDD RED GREEN 测试未提交 证据摘录 undefined 编译失败 QA FAIL`
 
 ## 应该遵守 (should-follow)
 
 - [前端管线接入模式：条件分支而非独立文件](global/frontend-pipeline-integration-pattern.md) — all, should-follow, `guideline`, `前端 管线 pipeline Vue TypeScript isFrontend vitest npm`
+- [错误码必须语义唯一，禁止同码异义](global/error-code-collision-and-namespace-alignment.md) — all, should-follow, `guideline`, `错误码 error code 60006 060007 冲突 复用 语义 NewBaseRespWithError 同码异义 namespace`
+- [INSERT IGNORE 静默吞掉非唯一键错误导致假成功](global/insert-ignore-swallows-errors.md) — all, should-follow, `pitfall`, `INSERT IGNORE 幂等 唯一键 静默 假成功 RowsAffected ON DUPLICATE KEY AssignRole`
+- [缓存 not-found sentinel 前必须区分 ErrNoRows 与瞬时 DB 错误](global/notfound-cache-sentinel-vs-transient-error.md) — all, should-follow, `pitfall`, `缓存 not-found sentinel ErrNoRows 瞬时错误 DB抖动 30分钟 min_verf_level 冷缓存`
+- [对既有数据加唯一索引必须先查重](global/unique-index-migration-dup-precheck.md) — all, should-follow, `pitfall`, `唯一索引 迁移 ALTER duplicate 重复数据 阻塞部署 ADD UNIQUE uk_user_role_scope`
 
 - [前端可视化开发流程](web/frontend-visual-development-workflow.md) — web/mobile, should-follow, `process`, `UI 页面 设计 样式 视觉`
 - [Harness 架构决策记录](global/harness-architecture-decisions.md) — all, should-follow, `decision`, `harness .harness 驾驭工程 目录结构 架构决策 四支柱`

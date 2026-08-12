@@ -3,11 +3,64 @@ package permission
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-permission/model"
 )
+
+// grantSatisfiedLevel 计算单个 grant 满足的能力层级（T1.5 §5.1.1 数据驱动聚合规则）
+//
+//	level-2 = status==2 AND verified_at NOT NULL AND 未过期
+//	level-0 = status∈{0,1} AND 未过期；或 status==2 AND verified_at NULL（registered_user 恒 level-0，S2）
+//	status∈{3,4} / 已过期 → 不计（-1）
+//
+// 返回 -1 表示该 grant 不满足任何层级（不进并集）。
+func grantSatisfiedLevel(g *model.UserRoleWithInfo) int {
+	if !grantActive(g) {
+		return -1
+	}
+	// 过期防御（SQL 已过滤，这里双保险）
+	if g.ExpiresAt.Valid && !g.ExpiresAt.Time.After(time.Now()) {
+		return -1
+	}
+	if g.URStatus == 2 && g.VerifiedAt.Valid {
+		return 2
+	}
+	return 0
+}
+
+// scopeCacheData 读穿缓存 JSON 结构（key: perm:scopes:{userId}:{scopeType}）
+// 设计 §4.1：{"state":"empty|global|limited","ids":[int64]}
+type scopeCacheData struct {
+	State string  `json:"state"`
+	Ids   []int64 `json:"ids"`
+}
+
+// scopeStateString 将三态枚举映射为缓存字符串（empty|limited|global）
+func scopeStateString(s permissionv1.DataScopeState) string {
+	switch s {
+	case permissionv1.DataScopeState_DATA_SCOPE_STATE_GLOBAL:
+		return "global"
+	case permissionv1.DataScopeState_DATA_SCOPE_STATE_LIMITED:
+		return "limited"
+	default:
+		return "empty"
+	}
+}
+
+// scopeStateFromString 将缓存字符串映射回三态枚举（未知/空串 → EMPTY，安全默认）
+func scopeStateFromString(s string) permissionv1.DataScopeState {
+	switch s {
+	case "global":
+		return permissionv1.DataScopeState_DATA_SCOPE_STATE_GLOBAL
+	case "limited":
+		return permissionv1.DataScopeState_DATA_SCOPE_STATE_LIMITED
+	default:
+		return permissionv1.DataScopeState_DATA_SCOPE_STATE_EMPTY
+	}
+}
 
 // sqlNullString converts a string to sql.NullString (empty string → NULL)
 func sqlNullString(s string) sql.NullString {
@@ -51,15 +104,16 @@ func roleToPbWithPermissions(ctx context.Context, r *model.SysRole, permIds []in
 	var pbPerms []*permissionv1.Permission
 	for _, p := range perms {
 		pbPerms = append(pbPerms, &permissionv1.Permission{
-			Id:        p.Id,
-			ParentId:  p.ParentId.Int64,
-			Code:      p.Code,
-			Name:      p.Name,
-			Type:      int32(p.Type),
-			Path:      p.Path.String,
-			Icon:      p.Icon.String,
-			SortOrder: int32(p.SortOrder),
-			Status:    int32(p.Status),
+			Id:           p.Id,
+			ParentId:     p.ParentId.Int64,
+			Code:         p.Code,
+			Name:         p.Name,
+			Type:         int32(p.Type),
+			Path:         p.Path.String,
+			Icon:         p.Icon.String,
+			SortOrder:    int32(p.SortOrder),
+			Status:       int32(p.Status),
+			MinVerfLevel: int32(p.MinVerfLevel),
 			Timestamps: &commonv1.Timestamps{
 				CreatedAt: p.CreatedTime.Unix(),
 				UpdatedAt: p.UpdatedTime.Unix(),

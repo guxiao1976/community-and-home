@@ -3,7 +3,6 @@ package permission
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
@@ -48,7 +47,8 @@ func (l *AssignRoleLogic) AssignRole(in *permissionv1.AssignRoleRequest) (*permi
 		expiresAt = sql.NullTime{Time: time.Unix(*in.ExpiresAt, 0), Valid: true}
 	}
 
-	_, err = l.svcCtx.UserRoleModel.Insert(l.ctx, &model.RelUserRole{
+	// INSERT IGNORE 幂等：uk_user_role_scope 唯一键冲突静默跳过（不报错）
+	err = l.svcCtx.UserRoleModel.InsertIgnore(l.ctx, &model.RelUserRole{
 		UserId:     in.UserId,
 		RoleId:     in.RoleId,
 		ScopeType:  in.ScopeType,
@@ -58,24 +58,14 @@ func (l *AssignRoleLogic) AssignRole(in *permissionv1.AssignRoleRequest) (*permi
 		ExpiresAt:  expiresAt,
 	})
 	if err != nil {
-		// 可能的唯一键冲突（已分配），幂等返回成功
-		l.Infof("AssignRole: insert (may be duplicate) userId=%d, roleId=%d: %v", in.UserId, in.RoleId, err)
+		l.Errorf("AssignRole: insert failed userId=%d, roleId=%d: %v", in.UserId, in.RoleId, err)
+		return nil, err
 	}
 
-	// 失效缓存
-	l.invalidateCache(in.UserId)
+	// 失效缓存（收敛到本处理器，不依赖调用方）
+	invalidateUserCaches(l.ctx, l.svcCtx.RedisClient, in.UserId)
 
 	l.Infof("AssignRole success: userId=%d, roleId=%d, scope=%s:%d", in.UserId, in.RoleId, in.ScopeType, in.ScopeId)
 
 	return &permissionv1.AssignRoleResponse{Base: responsex.NewBaseResp()}, nil
-}
-
-func (l *AssignRoleLogic) invalidateCache(userId int64) {
-	l.svcCtx.RedisClient.Del(l.ctx,
-		fmt.Sprintf("perm:user:%d", userId),
-		fmt.Sprintf("perm:scopes:%d:community", userId),
-		fmt.Sprintf("perm:scopes:%d:building", userId),
-		fmt.Sprintf("perm:scopes:%d:unit", userId),
-		fmt.Sprintf("perm:scopes:%d:grid", userId),
-	)
 }

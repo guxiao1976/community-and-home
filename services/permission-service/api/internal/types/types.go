@@ -147,18 +147,19 @@ type ListRoleUsersResp struct {
 
 // PermissionInfo 权限信息（HTTP 响应，支持树形结构）
 type PermissionInfo struct {
-	Id        int64            `json:"id,string"`
-	ParentId  int64            `json:"parentId,string"`
-	Code      string           `json:"code"`
-	Name      string           `json:"name"`
-	Type      int32            `json:"type"`
-	Path      string           `json:"path"`
-	Icon      string           `json:"icon"`
-	SortOrder int32            `json:"sortOrder"`
-	Status    int32            `json:"status"`
-	Children  []PermissionInfo `json:"children,omitempty"`
-	CreatedAt int64            `json:"createdAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
-	UpdatedAt int64            `json:"updatedAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
+	Id           int64            `json:"id,string"`
+	ParentId     int64            `json:"parentId,string"`
+	Code         string           `json:"code"`
+	Name         string           `json:"name"`
+	Type         int32            `json:"type"`
+	Path         string           `json:"path"`
+	Icon         string           `json:"icon"`
+	SortOrder    int32            `json:"sortOrder"`
+	Status       int32            `json:"status"`
+	MinVerfLevel int32            `json:"minVerfLevel"` // T1.1 能力层级透出：0=持角色+数据范围即可, 2=需已认证
+	Children     []PermissionInfo `json:"children,omitempty"`
+	CreatedAt    int64            `json:"createdAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
+	UpdatedAt    int64            `json:"updatedAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
 }
 
 // ListPermissionsReq 权限列表请求

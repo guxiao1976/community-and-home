@@ -6,6 +6,7 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	"github.com/guxiao1976/community-permission/model"
 	"github.com/guxiao1976/community-permission/rpc/internal/svc"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
@@ -130,6 +131,82 @@ func TestRevokeRole_CacheInvalidated(t *testing.T) {
 	assert.Empty(t, val)
 
 	mockUserRole.AssertExpectations(t)
+}
+
+// TestRevokeRole_ScopesCacheInvalidated_GetDataScopesEmpty
+// T1.6: Revoke 后 perm:scopes 缓存 DEL 生效 → GetDataScopes 立即重算为 EMPTY
+// SEE: [[redis-cache-soft-delete]] — 失效收敛到 grant 变更处理器
+func TestRevokeRole_ScopesCacheInvalidated_GetDataScopesEmpty(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	ctx := context.Background()
+
+	// 预先写入「旧」缓存（LIMITED），验证 Revoke 后会被清掉而非命中旧值
+	redisClient.Set(ctx, "perm:scopes:1001:community", `{"state":"limited","ids":[100]}`, 0)
+	redisClient.Set(ctx, "perm:user:1001", "stale", 0)
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("DeleteByUserIdAndRoleId", mock.Anything, int64(1001), int64(1), "community", int64(100)).
+		Return(nil)
+
+	svcCtx := &svc.ServiceContext{
+		UserRoleModel: mockUserRole,
+		RedisClient:   redisClient,
+	}
+
+	// Revoke 触发缓存失效
+	logic := NewRevokeRoleLogic(ctx, svcCtx)
+	scopeType := "community"
+	scopeId := int64(100)
+	_, err := logic.RevokeRole(&permissionv1.RevokeRoleRequest{
+		UserId:    1001,
+		RoleId:    1,
+		ScopeType: &scopeType,
+		ScopeId:   &scopeId,
+	})
+	assert.NoError(t, err)
+
+	// 缓存已 DEL → GetDataScopes MISS → 重算
+	mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(1001)).Return([]*model.UserRoleWithInfo{}, nil)
+	gd := NewGetDataScopesLogic(ctx, svcCtx)
+	resp, err := gd.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1001, ScopeType: "community"})
+	assert.NoError(t, err)
+	assert.Equal(t, permissionv1.DataScopeState_DATA_SCOPE_STATE_EMPTY, resp.State, "Revoke 后应立即 EMPTY（缓存 DEL 生效）")
+	assert.Empty(t, resp.ScopeIds)
+
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestInvalidateUserCaches_ScanDelete — invalidateUserCaches 共享 helper：DEL perm:user + SCAN-DEL perm:scopes:{userId}:*
+func TestInvalidateUserCaches_ScanDelete(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	ctx := context.Background()
+
+	// 预置多 scopeType 缓存 + 用户权限 Hash
+	redisClient.Set(ctx, "perm:user:777", "stale", 0)
+	redisClient.Set(ctx, "perm:scopes:777:community", `{"state":"limited","ids":[100]}`, 0)
+	redisClient.Set(ctx, "perm:scopes:777:building", `{"state":"limited","ids":[200]}`, 0)
+	redisClient.Set(ctx, "perm:scopes:778:community", "other-user-should-survive", 0) // 其他用户不删
+
+	invalidateUserCaches(ctx, redisClient, 777)
+
+	// perm:user 已删
+	_, err := redisClient.Get(ctx, "perm:user:777").Result()
+	assert.ErrorIs(t, err, redis.Nil)
+
+	// 本用户所有 perm:scopes 已删（SCAN-DEL）
+	_, err = redisClient.Get(ctx, "perm:scopes:777:community").Result()
+	assert.ErrorIs(t, err, redis.Nil)
+	_, err = redisClient.Get(ctx, "perm:scopes:777:building").Result()
+	assert.ErrorIs(t, err, redis.Nil)
+
+	// 其他用户缓存不受影响
+	v, err := redisClient.Get(ctx, "perm:scopes:778:community").Result()
+	assert.NoError(t, err)
+	assert.Equal(t, "other-user-should-survive", v)
 }
 
 // TestRevokeRole_DifferentScopes 测试不同 scope 类型的撤销

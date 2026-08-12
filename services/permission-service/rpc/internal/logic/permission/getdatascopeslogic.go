@@ -2,7 +2,9 @@ package permission
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
@@ -20,28 +22,40 @@ func NewGetDataScopesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Get
 	return &GetDataScopesLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
-// GetDataScopes 获取数据范围（spec/permission.md 核心逻辑流 2）
-//   查 rel_user_role → 根据 user_id + scope_type 返回 scope_ids
-//   先查 Redis 缓存，未命中则查 DB
+// GetDataScopes 获取数据范围（三态重写，T1.4）
+//
+//	统一经 resolveUserScope 判定（global 支配 → limited 并集 → empty，REQ-A）
+//	读穿缓存：perm:scopes:{userId}:{scopeType} JSON {"state","ids"}
+//	  HIT 解析返回；MISS 计算后 SET + EXPIRE 30min
+//
+// SEE: [[redis-cache-soft-delete]] — 失效收敛到 grant 变更处理器（T1.6）
 func (l *GetDataScopesLogic) GetDataScopes(in *permissionv1.GetDataScopesRequest) (*permissionv1.GetDataScopesResponse, error) {
-	// 查 DB
-	scopeIds, err := l.svcCtx.UserRoleModel.FindScopesByUserId(l.ctx, in.UserId, in.ScopeType)
-	if err != nil || len(scopeIds) == 0 {
-		return &permissionv1.GetDataScopesResponse{
-			Base:     responsex.NewBaseResp(),
-			ScopeIds: []int64{},
-		}, nil
+	cacheKey := fmt.Sprintf("perm:scopes:%d:%s", in.UserId, in.ScopeType)
+
+	// 读穿缓存 HIT → 直接返回（不查 DB）
+	if raw, err := l.svcCtx.RedisClient.Get(l.ctx, cacheKey).Result(); err == nil && raw != "" {
+		var data scopeCacheData
+		if json.Unmarshal([]byte(raw), &data) == nil {
+			return &permissionv1.GetDataScopesResponse{
+				Base:     responsex.NewBaseResp(),
+				ScopeIds: data.Ids,
+				State:    scopeStateFromString(data.State),
+			}, nil
+		}
 	}
 
-	// 回填 Redis 缓存
-	cacheKey := fmt.Sprintf("perm:scopes:%d:%s", in.UserId, in.ScopeType)
-	for _, id := range scopeIds {
-		l.svcCtx.RedisClient.SAdd(l.ctx, cacheKey, fmt.Sprintf("%d", id))
+	// MISS → 计算 + 写缓存
+	state, ids := resolveUserScope(l.ctx, l.svcCtx.UserRoleModel, in.UserId, in.ScopeType)
+	if ids == nil {
+		ids = []int64{}
 	}
-	l.svcCtx.RedisClient.Expire(l.ctx, cacheKey, 30*60*1e9)
+	if b, err := json.Marshal(scopeCacheData{State: scopeStateString(state), Ids: ids}); err == nil {
+		l.svcCtx.RedisClient.Set(l.ctx, cacheKey, string(b), 30*time.Minute)
+	}
 
 	return &permissionv1.GetDataScopesResponse{
 		Base:     responsex.NewBaseResp(),
-		ScopeIds: scopeIds,
+		ScopeIds: ids,
+		State:    state,
 	}, nil
 }

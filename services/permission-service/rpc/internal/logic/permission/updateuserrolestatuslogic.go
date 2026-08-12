@@ -3,7 +3,6 @@ package permission
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
@@ -45,14 +44,8 @@ func (l *UpdateUserRoleStatusLogic) UpdateUserRoleStatus(in *permissionv1.Update
 		return nil, err
 	}
 
-	// 失效权限缓存
-	l.svcCtx.RedisClient.Del(l.ctx,
-		fmt.Sprintf("perm:user:%d", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:community", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:building", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:unit", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:grid", in.UserId),
-	)
+	// 失效权限缓存（收敛到本处理器，不依赖调用方）
+	invalidateUserCaches(l.ctx, l.svcCtx.RedisClient, in.UserId)
 
 	l.Infof("UpdateUserRoleStatus: userId=%d roleId=%d status=%d", in.UserId, in.RoleId, in.Status)
 

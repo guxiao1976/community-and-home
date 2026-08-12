@@ -107,3 +107,9 @@ func (s *PermissionServiceServer) UpdateUserRoleStatus(ctx context.Context, in *
 	l := permission.NewUpdateUserRoleStatusLogic(ctx, s.svcCtx)
 	return l.UpdateUserRoleStatus(in)
 }
+
+// AssertPublishScope 发布数据权限校验（T1.7）
+func (s *PermissionServiceServer) AssertPublishScope(ctx context.Context, in *permissionv1.AssertPublishScopeRequest) (*permissionv1.AssertPublishScopeResponse, error) {
+	l := permission.NewAssertPublishScopeLogic(ctx, s.svcCtx)
+	return l.AssertPublishScope(in)
+}

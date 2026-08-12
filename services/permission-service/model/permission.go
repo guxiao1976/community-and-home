@@ -118,23 +118,27 @@ func (m *defaultSysRoleModel) SoftDelete(ctx context.Context, id int64) error {
 
 // SysPermission 权限定义表（树形结构）
 type SysPermission struct {
-	Id          int64          `db:"id"`
-	ParentId    sql.NullInt64  `db:"parent_id"`
-	Name        string         `db:"name"`
-	Code        string         `db:"code"` // 全局唯一：user:read, user:write
-	Type        int64          `db:"type"` // 1=菜单 2=按钮 3=API
-	Path        sql.NullString `db:"path"` // API 路径
-	Icon        sql.NullString `db:"icon"`
-	SortOrder   int64          `db:"sort_order"`
-	Status      int64          `db:"status"` // 1=启用 0=禁用
-	CreatedTime time.Time      `db:"created_at"`
-	UpdatedTime time.Time      `db:"updated_at"`
+	Id        int64          `db:"id"`
+	ParentId  sql.NullInt64  `db:"parent_id"`
+	Name      string         `db:"name"`
+	Code      string         `db:"code"` // 全局唯一：user:read, user:write
+	Type      int64          `db:"type"` // 1=菜单 2=按钮 3=API
+	Path      sql.NullString `db:"path"` // API 路径
+	Icon      sql.NullString `db:"icon"`
+	SortOrder int64          `db:"sort_order"`
+	Status    int64          `db:"status"` // 1=启用 0=禁用
+	// MinVerfLevel 能力层级（T1.1 迁移）：0=持角色+数据范围即可, 2=需已认证(默认0)
+	MinVerfLevel int64     `db:"min_verf_level"`
+	CreatedTime  time.Time `db:"created_at"`
+	UpdatedTime  time.Time `db:"updated_at"`
 }
 
 type SysPermissionModel interface {
 	FindAll(ctx context.Context) ([]*SysPermission, error)
 	FindByIds(ctx context.Context, ids []int64) ([]*SysPermission, error)
 	FindByCode(ctx context.Context, code string) (*SysPermission, error)
+	// FindByPath 按 API path（含 METHOD 前缀，如 "GET:/api/users"）查权限定义
+	FindByPath(ctx context.Context, path string) (*SysPermission, error)
 	FindWithFilter(ctx context.Context, typeFilter, statusFilter *int64) ([]*SysPermission, error)
 }
 
@@ -172,6 +176,13 @@ func (m *defaultSysPermissionModel) FindByIds(ctx context.Context, ids []int64) 
 func (m *defaultSysPermissionModel) FindByCode(ctx context.Context, code string) (*SysPermission, error) {
 	var v SysPermission
 	err := m.conn.QueryRowCtx(ctx, &v, fmt.Sprintf("select * from %s where code = ? and status = 1 limit 1", m.table), code)
+	return &v, err
+}
+
+// FindByPath 按 API path（含 METHOD 前缀）查权限定义（T1.5 能力分层 perm:def 缓存回源）
+func (m *defaultSysPermissionModel) FindByPath(ctx context.Context, path string) (*SysPermission, error) {
+	var v SysPermission
+	err := m.conn.QueryRowCtx(ctx, &v, fmt.Sprintf("select * from %s where path = ? and status = 1 limit 1", m.table), path)
 	return &v, err
 }
 

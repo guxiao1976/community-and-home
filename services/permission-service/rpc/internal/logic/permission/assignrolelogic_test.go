@@ -90,9 +90,9 @@ func TestAssignRole_Success(t *testing.T) {
 		Return(&model.SysRole{Id: 1, RoleName: "owner"}, nil)
 
 	mockUserRole := new(MockUserRoleModel)
-	mockUserRole.On("Insert", mock.Anything, mock.MatchedBy(func(ur *model.RelUserRole) bool {
+	mockUserRole.On("InsertIgnore", mock.Anything, mock.MatchedBy(func(ur *model.RelUserRole) bool {
 		return ur.UserId == 1001 && ur.RoleId == 1 && ur.ScopeType == "community" && ur.ScopeId == 100
-	})).Return(int64(1), nil)
+	})).Return(nil)
 
 	svcCtx := &svc.ServiceContext{
 		RoleModel:     mockRole,
@@ -153,7 +153,7 @@ func TestAssignRole_RoleNotFound(t *testing.T) {
 	mockRole.AssertExpectations(t)
 }
 
-// TestAssignRole_Idempotent 测试幂等性（重复分配）
+// TestAssignRole_Idempotent 测试幂等性（重复分配只一条：INSERT IGNORE 唯一键冲突静默成功）
 func TestAssignRole_Idempotent(t *testing.T) {
 	// Setup
 	mr := miniredis.RunT(t)
@@ -164,9 +164,9 @@ func TestAssignRole_Idempotent(t *testing.T) {
 		Return(&model.SysRole{Id: 1, RoleName: "owner"}, nil)
 
 	mockUserRole := new(MockUserRoleModel)
-	// 模拟唯一键冲突（已存在）
-	mockUserRole.On("Insert", mock.Anything, mock.Anything).
-		Return(int64(0), sql.ErrNoRows) // 实际项目中可能是 duplicate key error
+	// INSERT IGNORE：即使已存在（uk_user_role_scope 冲突）也不报错（重复 Assign 只一条）
+	mockUserRole.On("InsertIgnore", mock.Anything, mock.Anything).
+		Return(nil)
 
 	svcCtx := &svc.ServiceContext{
 		RoleModel:     mockRole,
@@ -176,21 +176,23 @@ func TestAssignRole_Idempotent(t *testing.T) {
 
 	logic := NewAssignRoleLogic(context.Background(), svcCtx)
 
-	// Execute
-	resp, err := logic.AssignRole(&permissionv1.AssignRoleRequest{
-		UserId:    1001,
-		RoleId:    1,
-		ScopeType: "community",
-		ScopeId:   100,
-	})
+	// Execute（连续两次重复分配）
+	for i := 0; i < 2; i++ {
+		resp, err := logic.AssignRole(&permissionv1.AssignRoleRequest{
+			UserId:    1001,
+			RoleId:    1,
+			ScopeType: "community",
+			ScopeId:   100,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, int32(0), resp.Base.Code)
+	}
 
-	// Assert - 幂等返回成功
-	assert.NoError(t, err)
-	assert.NotNil(t, resp)
-	assert.Equal(t, int32(0), resp.Base.Code)
-
+	// Assert - 幂等：InsertIgnore 恰好被调用两次且均成功（底层 INSERT IGNORE 保证只落一条）
 	mockRole.AssertExpectations(t)
 	mockUserRole.AssertExpectations(t)
+	mockUserRole.AssertNumberOfCalls(t, "InsertIgnore", 2)
 }
 
 // TestAssignRole_CacheInvalidated 测试缓存失效
@@ -210,8 +212,8 @@ func TestAssignRole_CacheInvalidated(t *testing.T) {
 		Return(&model.SysRole{Id: 1, RoleName: "owner"}, nil)
 
 	mockUserRole := new(MockUserRoleModel)
-	mockUserRole.On("Insert", mock.Anything, mock.Anything).
-		Return(int64(1), nil)
+	mockUserRole.On("InsertIgnore", mock.Anything, mock.Anything).
+		Return(nil)
 
 	svcCtx := &svc.ServiceContext{
 		RoleModel:     mockRole,

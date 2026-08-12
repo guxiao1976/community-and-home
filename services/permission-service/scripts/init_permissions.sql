@@ -180,6 +180,65 @@ INSERT IGNORE INTO rel_role_permission (role_id, permission_id)
 SELECT 8, id FROM sys_permission WHERE status = 1;
 
 -- ============================================================================
+-- 4. 迁移段：数据权限核心 (access-data-permission 阶段① Wave1)
+--    -- 目标：能力分层（min_verf_level）+ 注册用户基角色 + 系统审核身份
+--    -- 幂等：guard + INSERT IGNORE，可重复执行
+-- ============================================================================
+
+-- 4.1 sys_permission.min_verf_level 列（MySQL 8.0 不支持 ADD COLUMN IF NOT EXISTS，用 guard）
+-- SEE: [[migration-must-execute]]
+SET @min_verf_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_permission' AND COLUMN_NAME = 'min_verf_level');
+SET @min_verf_ddl := IF(@min_verf_col = 0,
+  'ALTER TABLE sys_permission ADD COLUMN min_verf_level TINYINT NOT NULL DEFAULT 0 COMMENT ''能力层级: 0=持角色+数据范围即可, 2=需已认证(默认0)''',
+  'SELECT ''min_verf_level column already exists''');
+PREPARE min_verf_stmt FROM @min_verf_ddl;
+EXECUTE min_verf_stmt;
+DEALLOCATE PREPARE min_verf_stmt;
+
+-- 4.2 发布类权限置 min_verf_level=0（默认即为 0，显式标注便于审计）
+-- SEE: [[permission-seed-api-path-must-match-routes]] — path 必须与实际 REST 路由一致
+UPDATE sys_permission SET min_verf_level = 0
+WHERE code IN ('community:notice:create-api', 'community:lostfound:create-api');
+
+-- 4.3 选举类权限（committee:election:vote）min_verf_level=2（需已认证）
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
+VALUES (600, 0, '业委会选举投票', 'committee:election:vote', 2, NULL, NULL, 80, 1, NOW(), NOW());
+UPDATE sys_permission SET min_verf_level = 2 WHERE code = 'committee:election:vote';
+
+-- 4.3.1 敏感权限置 min_verf_level=2（需已认证）——security-arch 评审 CRITICAL
+--   能力分层语义下 level-0=「持角色+数据范围即可」，未认证（status∈{0,1}）持角色即可访问；
+--   既有敏感权限（user:read=全量用户PII、moderation:read/review=审核数据）必须需已认证，否则未认证用户可 GET /api/users 枚举全部用户。
+--   SEE: [[is-system-no-permission-shortcut]] — 权限经 rel_role_permission 配置，认证要求经 min_verf_level 数据驱动
+UPDATE sys_permission SET min_verf_level = 2
+WHERE code IN ('user:read', 'user:read:list-api', 'user:read:detail-api',
+               'moderation:read', 'moderation:read:list-api',
+               'moderation:review', 'moderation:review:approve-api', 'moderation:review:reject-api');
+
+-- 4.4 注册用户 browse 权限（registered_user → 读 only）
+--    path 与实际 REST 路由一致（[[permission-seed-api-path-must-match-routes]]）
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
+VALUES
+(422, 410, 'GET /api/community/notices', 'community:notice:read-list-api', 3, 'GET:/api/community/notices', NULL, 15, 1, NOW(), NOW()),
+(433, 430, 'GET /api/community/lostfound', 'community:lostfound:read-list-api', 3, 'GET:/api/community/lostfound', NULL, 15, 1, NOW(), NOW()),
+(434, 430, 'GET /api/community/contacts', 'community:contact:read-list-api', 3, 'GET:/api/community/contacts', NULL, 15, 1, NOW(), NOW());
+
+-- 4.5 registered_user 基角色（id=9，is_system=1 仅保护，权限经 rel_role_permission 配置）
+-- SEE: [[is-system-no-permission-shortcut]]
+INSERT IGNORE INTO sys_role (id, role_code, role_name, description, is_system, status, sort_order, created_by, created_at, updated_at)
+VALUES (9, 'registered_user', '注册用户', '注册即自动分配的基角色：browse-only、空数据范围、永久有效', 1, 1, 5, 0, NOW(), NOW());
+
+-- 4.6 registered_user → browse 权限关联（仅读，无发布/选举）
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(9, 422), (9, 433), (9, 434);
+
+-- 4.7 预留系统审核身份（moderation 回调）：sys_admin + global scope
+--    scope_type='global' + scope_id=0 + status=2（verified_at=NULL，走 grant 判定路径）
+-- SEE: [[is-system-no-permission-shortcut]] — 无代码级 userId==0 短路
+INSERT IGNORE INTO rel_user_role (user_id, role_id, scope_type, scope_id, status) VALUES
+(0, 8, 'global', 0, 2);
+
+-- ============================================================================
 -- 数据验证查询
 -- ============================================================================
 

@@ -2,7 +2,6 @@ package permission
 
 import (
 	"context"
-	"fmt"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
@@ -30,25 +29,12 @@ func (l *InvalidateUserCacheLogic) InvalidateUserCache(in *permissionv1.Invalida
 		}, nil
 	}
 
-	// 构建所有可能存在的缓存 key
-	keys := []string{
-		fmt.Sprintf("perm:user:%d", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:community", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:building", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:unit", in.UserId),
-		fmt.Sprintf("perm:scopes:%d:grid", in.UserId),
-	}
+	// 统一失效收敛（DEL perm:user:{userId} + SCAN-DEL perm:scopes:{userId}:*）
+	invalidateUserCaches(l.ctx, l.svcCtx.RedisClient, in.UserId)
 
-	deleted, err := l.svcCtx.RedisClient.Del(l.ctx, keys...).Result()
-	if err != nil {
-		l.Errorf("InvalidateUserCache: DEL keys failed for user=%d: %v", in.UserId, err)
-		return nil, err
-	}
-
-	l.Infof("InvalidateUserCache: user=%d deleted %d keys", in.UserId, deleted)
+	l.Infof("InvalidateUserCache: user=%d caches invalidated", in.UserId)
 
 	return &permissionv1.InvalidateUserCacheResponse{
-		Base:    responsex.NewBaseResp(),
-		Deleted: deleted,
+		Base: responsex.NewBaseResp(),
 	}, nil
 }

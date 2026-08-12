@@ -19,6 +19,19 @@
 
 ---
 
+## 2026-08-12 — 数据权限核心（access-data-permission）
+
+**路径**: OpenSpec → 2×Workflow
+**状态**: 🟡 Wave 1 完成（阶段① permission + master-data），阶段 3/4/5 待后续 Wave
+**涉及服务**: permission-service, master-data-service（后续 user/community-hub/web-mobile）
+**关联**: proto commit 031f4e4
+
+数据权限统一模型落地 Wave 1：scope 三态 + 能力分层(min_verf_level) + registered_user 基角色 + 祖先链解析 + 发布校验。permission T1.1-T1.8 全量实现、master-data T2.1-T2.3 复用+补齐，4 个 need_human/Review CRITICAL 全修复。
+
+详见: [.harness/changes/access-data-permission/](./access-data-permission/)
+
+---
+
 ## 2026-06-18 — 审核服务管线配置化
 
 **路径**: OpenSpec
