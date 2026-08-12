@@ -1,5 +1,9 @@
 Name: community-hub.rpc
-ListenOn: 0.0.0.0:8088
+# 安全：数据权限身份经 gRPC metadata 传输（scope.UserIDFromCtx），RPC 必须绑定回环，
+# 仅信任宿主机上的调用方（API 网关 / moderation-service 回调），阻断局域网与 Docker 桥接网络对端
+# 伪造 user_id 注入身份（评审 CRITICAL：RPC 数据权限安全前提 = 网络隔离）。等所有服务统一 mTLS 前，
+# 此回环绑定 + 文档化是 fail-closed 的落地手段。
+ListenOn: 127.0.0.1:8088
 Timeout: 30000
 
 Etcd:
@@ -30,3 +34,10 @@ ModerationRpc:
 ModerationRedis:
   Host: localhost:6379
   Pass: "${REDIS_PASSWORD}"
+
+# permission-service gRPC 客户端（数据权限：AssertPublishScope / GetDataScopes）
+PermissionRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: permission.rpc

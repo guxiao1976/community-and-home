@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-user/model"
 	"github.com/stretchr/testify/assert"
@@ -12,19 +14,24 @@ import (
 
 // =============================================================================
 // §3.1 加入小区 (JoinCommunity) 测试
+// ownership 已加入（必填）：OWNED→owner / RENTED→tenant 自动授权
 // =============================================================================
 
 func TestJoinCommunity_Success_FirstTime(t *testing.T) {
-	// U-J-01: 正常首次加入小区
-	svc := testSvc(t)
+	// U-J-01: 正常首次加入小区（自有 → owner 自动授权）
+	svc, permMock := certTestSvc(t)
 	ub := userBaseModel(svc)
 	mm := membershipModel(svc)
 
 	createTestUser(t, ub, 1001, "encrypted_phone_1001")
+	expectNoVerifiedRoles(permMock)
+	permMock.EXPECT().ListRoles(gomock.Any(), gomock.Any()).Return(mockJoinRoles(), nil).AnyTimes()
+	permMock.EXPECT().AssignRole(gomock.Any(), gomock.Any()).Return(&permissionv1.AssignRoleResponse{}, nil).Times(1)
 
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1001, CommunityId: 2001,
+		UserId: 1001, CommunityId: 2001, Building: 1, Unit: 2, Room: 301,
+		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
 	})
 
 	require.NoError(t, err)
@@ -44,7 +51,7 @@ func TestJoinCommunity_Success_FirstTime(t *testing.T) {
 }
 
 func TestJoinCommunity_Idempotent(t *testing.T) {
-	// U-J-02: 已加入同一小区 — 幂等
+	// U-J-02: 已加入同一小区 — 幂等（返回 10007，不重复授权）
 	svc := testSvc(t)
 	ub := userBaseModel(svc)
 	mm := membershipModel(svc)
@@ -55,6 +62,7 @@ func TestJoinCommunity_Idempotent(t *testing.T) {
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
 		UserId: 1002, CommunityId: 2001,
+		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
 	})
 
 	require.NoError(t, err)
@@ -67,26 +75,36 @@ func TestJoinCommunity_Idempotent(t *testing.T) {
 }
 
 func TestJoinCommunity_Rejoin(t *testing.T) {
-	// U-J-03: 退出后重新加入
-	svc := testSvc(t)
+	// U-J-03: 退出后重新加入（重新激活 membership 并重新授权）
+	svc, permMock := certTestSvc(t)
 	ub := userBaseModel(svc)
 	mm := membershipModel(svc)
 
 	createTestUser(t, ub, 1003, "phone_1003")
 	ms := createTestMembership(t, mm, 5002, 1003, 2001)
 
+	expectNoVerifiedRoles(permMock)
+	permMock.EXPECT().ListRoles(gomock.Any(), gomock.Any()).Return(mockJoinRoles(), nil).AnyTimes()
+	// 退出：撤销 owner+tenant 双调
+	permMock.EXPECT().RevokeRole(gomock.Any(), gomock.Any()).
+		Return(&permissionv1.RevokeRoleResponse{}, nil).Times(2)
+	// 重新加入：重新授权 owner
+	permMock.EXPECT().AssignRole(gomock.Any(), gomock.Any()).Return(&permissionv1.AssignRoleResponse{}, nil).Times(1)
+
 	// 先退出
 	leaveLogic := NewLeaveCommunityLogic(context.Background(), svc)
-	lResp, _ := leaveLogic.LeaveCommunity(&userv1.LeaveCommunityRequest{
+	lResp, lerr := leaveLogic.LeaveCommunity(&userv1.LeaveCommunityRequest{
 		UserId: 1003, CommunityId: 2001,
 	})
+	require.NoError(t, lerr)
 	assert.Equal(t, int32(0), lResp.Base.Code)
 	assert.Equal(t, int64(0), ms.BindStatus)
 
 	// 再重新加入
 	joinLogic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := joinLogic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1003, CommunityId: 2001,
+		UserId: 1003, CommunityId: 2001, Building: 1, Unit: 0, Room: 202,
+		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
 	})
 
 	require.NoError(t, err)
@@ -109,6 +127,7 @@ func TestJoinCommunity_MaxFive(t *testing.T) {
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
 		UserId: 1004, CommunityId: 2006,
+		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
 	})
 
 	require.NoError(t, err)
@@ -117,7 +136,7 @@ func TestJoinCommunity_MaxFive(t *testing.T) {
 
 func TestJoinCommunity_DefaultCommunityNotOverwritten(t *testing.T) {
 	// U-J-06: 已有 default_community_id 不覆盖
-	svc := testSvc(t)
+	svc, permMock := certTestSvc(t)
 	ub := userBaseModel(svc)
 	mm := membershipModel(svc)
 
@@ -127,9 +146,14 @@ func TestJoinCommunity_DefaultCommunityNotOverwritten(t *testing.T) {
 
 	createTestMembership(t, mm, 5010, 1005, 2001)
 
+	expectNoVerifiedRoles(permMock)
+	permMock.EXPECT().ListRoles(gomock.Any(), gomock.Any()).Return(mockJoinRoles(), nil).AnyTimes()
+	permMock.EXPECT().AssignRole(gomock.Any(), gomock.Any()).Return(&permissionv1.AssignRoleResponse{}, nil).Times(1)
+
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	_, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1005, CommunityId: 2002,
+		UserId: 1005, CommunityId: 2002, Building: 2, Unit: 0, Room: 305,
+		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_RENTED,
 	})
 	require.NoError(t, err)
 

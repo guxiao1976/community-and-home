@@ -39,6 +39,7 @@
 - [Monorepo 端口冲突检测与启动顺序](global/monorepo-port-management.md) — all, must-follow, `pitfall`, `端口 冲突 port monorepo 8087 8088 start.sh stop.sh smoketest`
 - [TypeScript erasableSyntaxOnly 与 enum 冲突](web/typescript-erasable-syntax-enum-conflict.md) — web, must-follow, `pitfall`, `TypeScript erasableSyntaxOnly enum TS1294 npm run build vue-tsc 编译失败`
 - [QA 的 TDD RED 证据必须包含实际 FAIL 输出摘录](global/tdd-red-evidence-requires-fail-excerpt.md) — all, must-follow, `process`, `TDD RED GREEN 测试未提交 证据摘录 undefined 编译失败 QA FAIL`
+- [status=0 未认证 grant 立即生效：数据范围+level-0 能力](global/auto-grant-unverified-grant-confers-scope-level0.md) — all, must-follow, `pitfall`, `自动授权 加入小区 JoinCommunity AssignRole status=0 未认证 grant 数据范围 scope level-0 min_verf_level 认证绕过 权限种子`
 
 ## 应该遵守 (should-follow)
 
@@ -47,6 +48,22 @@
 - [INSERT IGNORE 静默吞掉非唯一键错误导致假成功](global/insert-ignore-swallows-errors.md) — all, should-follow, `pitfall`, `INSERT IGNORE 幂等 唯一键 静默 假成功 RowsAffected ON DUPLICATE KEY AssignRole`
 - [缓存 not-found sentinel 前必须区分 ErrNoRows 与瞬时 DB 错误](global/notfound-cache-sentinel-vs-transient-error.md) — all, should-follow, `pitfall`, `缓存 not-found sentinel ErrNoRows 瞬时错误 DB抖动 30分钟 min_verf_level 冷缓存`
 - [对既有数据加唯一索引必须先查重](global/unique-index-migration-dup-precheck.md) — all, should-follow, `pitfall`, `唯一索引 迁移 ALTER duplicate 重复数据 阻塞部署 ADD UNIQUE uk_user_role_scope`
+- [加密落库的敏感字段禁止明文打日志](global/pii-plaintext-logging.md) — all, should-follow, `pitfall`, `日志 手机号 phone PII 明文 脱敏 Infof 加密 AES`
+- [API 层必填字段禁止误标 ,optional](global/api-required-field-marked-optional.md) — all, should-follow, `guideline`, `optional goctl 必填 参数校验 边界 10040 ownership JoinCommunity types.go json tag`
+- [多步写操作的补偿错误不可静默丢弃](global/best-effort-compensation-must-log.md) — all, should-follow, `pitfall`, `补偿 rollback 静默 _ = UpdateBindStatus 有成员无scope 幂等 补偿恢复`
+- [补偿/恢复路径严禁用 time.Time{} 零值写 MySQL DATETIME](global/restore-compensation-zero-time.md) — all, should-follow, `pitfall`, `补偿恢复 回滚恢复 UpdateBindStatus time.Time{} 零值 DATETIME strict 模式`
+- [非阻塞跨服务授权写入必须有重试/对账](global/non-blocking-grant-requires-reconciliation.md) — all, should-follow, `pitfall`, `非阻塞 仅告警 不阻塞 registered_user 授权 grant 对账 backfill 重试 不变量`
+- [前端硬编码业务规则区间易与 proto/后端漂移](global/frontend-business-rule-hardcode.md) — all, should-follow, `pitfall`, `前端 校验 业务规则 区间 building unit room ownership 硬编码 proto 漂移 表单校验`
+- [前端禁止重复定义 web/common 已有类型，枚举上移共享层](global/web-common-type-reuse-no-redefine.md) — all, should-follow, `guideline`, `web/common 复用 重复定义 CommunityMembership 枚举 enums.ts OWNERSHIP_OPTIONS 权属 共享层 @common`
+- [axios 泛型与拦截器解包不符导致逐处双断言](global/axios-interceptor-unwrap-typing-mismatch.md) — all, should-follow, `pitfall`, `axios AxiosResponse 拦截器 解包 as unknown as any request.get request.post 装饰性泛型 双断言`
+- [异步表单提交必须加防重复保护](global/async-submit-double-guard.md) — all, should-follow, `pitfall`, `提交 防重 双击 double submit submitting loading mask showLoading 异步 表单 幂等`
+- [axios 网络错误英文 message 覆盖友好中文提示](global/axios-network-error-raw-message-toast.md) — all, should-follow, `pitfall`, `axios 网络错误 Network Error 错误提示 toast error.message 拦截器 离线`
+- [审核状态写入但读路径未过滤，审核流水线无强制执行效果](global/moderation-status-write-without-read-gating.md) — all, should-follow, `pitfall`, `moderation_status 审核状态 回调 审核可见性 读路径过滤 已拒绝内容可见`
+- [QA FAIL 修复后必须重跑并刷新 _qa.md](global/review-artifact-freshness.md) — all, should-follow, `process`, `_qa.md 过时 QA FAIL TDD 修复后 测试补齐 QA 报告未刷新 交付物`
+- [QA 错误码门禁盲区：responsex 裸数字可绕过](global/error-code-literal-bypasses-qa-gate.md) — all, should-follow, `pitfall`, `错误码 门禁 harness-checks errx NewBaseRespWithError 魔数 裸数字 080006`
+- [服务间回调只查 gRPC err 忽略响应 Base → 业务错误静默吞掉](global/rpc-callback-must-check-response-base.md) — all, should-follow, `pitfall`, `回调 callback 服务间调用 Base ToError 审核状态 静默 业务错误 gRPC err`
+- [消费方依赖生产方脚本种子必须纳入部署编排](global/cross-service-seed-deployment-order.md) — all, should-follow, `pitfall`, `种子 seed init_permissions 部署顺序 依赖 rel_user_role 系统身份 静默失败 migration`
+- [RPC 身份伪造风险：metadata 盲信 + 0.0.0.0 无鉴权（仓库级）](global/rpc-identity-spoofing-loopback-isolation.md) — all, should-follow, `pitfall`, `RPC 身份伪造 0.0.0.0 无鉴权 mTLS user_id metadata 数据权限 网络隔离 回环 8088 ListenOn 服务凭据 拦截器`
 
 - [前端可视化开发流程](web/frontend-visual-development-workflow.md) — web/mobile, should-follow, `process`, `UI 页面 设计 样式 视觉`
 - [Harness 架构决策记录](global/harness-architecture-decisions.md) — all, should-follow, `decision`, `harness .harness 驾驭工程 目录结构 架构决策 四支柱`

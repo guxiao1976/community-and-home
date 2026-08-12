@@ -22,6 +22,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# TypeScript incremental build info (composite project)
+*.tsbuildinfo
+
 # Zone.Identifier (Windows WSL)
 *:Zone.Identifier
 

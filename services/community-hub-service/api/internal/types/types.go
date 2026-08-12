@@ -1,6 +1,27 @@
 package types
 
 // =============================================================================
+// 业务错误码（08xxxx 命名空间，access-data-permission 阶段④ 注册）
+// =============================================================================
+//
+// 错误码分层语义：
+//   - 080002 无发布权限（功能权限）：由 PermMiddleware → permission CheckPermission 产出，
+//     与具体数据范围无关，表示角色/能力不足；
+//   - 080006 目标小区超出发布者数据范围（数据权限）：由 rpc 层落库前 AssertPublishScope 产出，
+//     permission 侧为 060007（RPC 面），community-hub 统一映射为 080006（API 面）。
+//
+// 功能权限先于数据权限执行：中间件链（WithJwt → PermMiddleware）先于 handler → rpc 逻辑。
+// 常量定义在 rpc/internal/logic/scope.CodePublishScopeDenied（=80006），本文件仅登记语义。
+const (
+	CodeNoticeNotFound = 80001 // 通知不存在
+	CodePublishDenied  = 80002 // 无发布权限（功能权限，复用）
+	CodeOverLimit      = 80003 // 超限（复用）
+	CodeLostFoundMiss  = 80004 // 寻失记录不存在（复用）
+	CodeInvalidParam   = 80005 // 参数无效（复用）
+	CodeScopeDenied    = 80006 // 目标小区超出发布者数据范围（数据权限，新增）
+)
+
+// =============================================================================
 // 通知公告
 // =============================================================================
 
@@ -118,18 +139,18 @@ type ResolveLostFoundReq struct {
 // =============================================================================
 
 type NoticeInfo struct {
-	Id          int64                      `json:"id,string"`
-	CommunityId int64                      `json:"community_id,string"`
-	Title       string                     `json:"title"`
-	Content     string                     `json:"content"`
-	Role        int32                      `json:"role"`
-	Publisher   string                     `json:"publisher"`
-	PublisherId int64                      `json:"publisher_id,string"`
-	IsPinned    bool                       `json:"is_pinned"`
-	PublishedAt int64                      `json:"published_at"`
-	CreatedAt   int64                      `json:"created_at"`
-	UpdatedAt   int64                      `json:"updated_at"`
-	Attachments []NoticeAttachmentInfo     `json:"attachments"`
+	Id          int64                  `json:"id,string"`
+	CommunityId int64                  `json:"community_id,string"`
+	Title       string                 `json:"title"`
+	Content     string                 `json:"content"`
+	Role        int32                  `json:"role"`
+	Publisher   string                 `json:"publisher"`
+	PublisherId int64                  `json:"publisher_id,string"`
+	IsPinned    bool                   `json:"is_pinned"`
+	PublishedAt int64                  `json:"published_at"`
+	CreatedAt   int64                  `json:"created_at"`
+	UpdatedAt   int64                  `json:"updated_at"`
+	Attachments []NoticeAttachmentInfo `json:"attachments"`
 }
 
 type NoticeAttachmentInfo struct {

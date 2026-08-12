@@ -4,7 +4,7 @@ title: "access-data-permission 后续 Wave：user/community-hub/web-mobile/集�
 service: multi
 type: feature
 priority: P0
-status: open
+status: completed
 computed_score: 100.00
 source: human
 source_detail: "Wave 1 完成交接，阶段 3/4/5/6 待执行（见 .harness/changes/access-data-permission/HANDOFF-NEXT-WAVE.md）"
@@ -12,8 +12,8 @@ created: 2026-08-12
 blocks: []
 blocked_by: []
 assigned_run: ""
-completed: ""
-outcome: ""
+completed: "2026-08-12"
+outcome: "阶段③④⑤⑥ 全部完成，T6.1 九项验收矩阵全绿"
 ---
 
 # access-data-permission 后续 Wave：阶段 3/4/5/6

@@ -1,5 +1,35 @@
 # CHANGELOG — user-service
 
+## 2026-08-12 — 数据权限核心编排（阶段③：注册自动授权 / 加入授权 / 退出撤销）
+
+### 做了什么
+- **Task 3.1 — CreateUser 自动分配 registered_user**：DB 落库成功后（moderation 回调前）同步 `AssignRole(userId, role_id(registered_user=9), scope_type='', scope_id=0, status=2)`；role_id 经既有 `roleMapper` 解析；**失败仅告警不阻塞注册**；重复注册（手机号已注册）不重复分配
+- **Task 3.2 — JoinCommunity ownership + 自动授权**：校验 `ownership ∈ {OWNED, RENTED}`，UNSPECIFIED → 10040；membership 落库后同步 `AssignRole(user_id, roleIDByCode(owner|tenant), 'community', community_id, status=0)`；**授权失败 → 补偿恢复 membership（置 left）并返回失败**（不留「有成员无 scope」）
+- **Task 3.3 — LeaveCommunity 撤销授权**：membership 置 left 后双调 `RevokeRole(owner_role_id + tenant_role_id, 'community', community_id)`（幂等）；**失败 → 恢复 bind_status=active 并返回失败**
+- **Task 3.4 — 门禁**：`go build ./...` + `go test ./...` + `harness-checks.sh` **16 PASS / 0 FAIL**
+- REST API 层（api/internal）`JoinCommunity` 透传 ownership + building/unit/room（供移动端加入流程）
+- 修复 gate 阻塞：`submit_certification_logic.go` certMetadata.MembershipId/CommunityId 补 `json:",string"`（Snowflake 硬约束 #3，pre-existing 违规）
+- 新增 model 常量：`RoleCodeRegisteredUser`、`ScopeTypeGlobal/Empty/Community`；helper 新增 `assignRoleToUser`/`stringPtr`
+
+### 测试（TDD，RED→GREEN）
+| 测试文件 | 用例 | RED 摘录 | GREEN |
+|---|---|---|---|
+| `create_user_logic_test.go` | 注册成功→registered_user grant / 重复注册幂等 / AssignRole 失败不阻塞 | `controller.go:137: missing call(s) to ...AssignRole` ×3 | PASS |
+| `join_community_ownership_test.go` | OWNED→owner / RENTED→tenant / 授权失败补偿 / 缺 ownership→10040 / 重复加入幂等 | `missing call(s) to ...AssignRole` + 10040 断言失败 | PASS |
+| `leave_community_revoke_test.go` | 双调撤销 owner+tenant / 其他小区保留 / 撤销失败恢复 / 重复 leave→10005 | `missing call(s) to ...RevokeRole` ×3 | PASS |
+| `join_community_logic_test.go`（更新） | 既有 5 用例补 ownership + permission mock | — | PASS |
+
+### 为什么
+permission-service 成为角色唯一权威；加入小区=自动授权（owner/tenant + community scope），退出=撤销，保证「有成员必有 scope」不变量（REQ-4.1/4.2/4.3，design.md §5.3/5.4）。
+
+### 影响
+- Proto: 无（复用 AssignRole/RevokeRole/ListRoles）
+- 调用方: auth-service（CreateUser 幂等语义不变）、移动端（JoinCommunity 需携带 ownership，Task 5.1 跟进）
+- 数据库: 无表结构变更（membership 不落权属）
+- 备注: 为解除测试编译阻塞，用 mockgen 重新生成了 stale 的 permission/masterdata gRPC mock（gen/go 为未跟踪生成物，含新 RPC AssertPublishScope/ResolveScopeAncestors），未改动任何 proto 契约
+
+---
+
 ## 2026-08-11 — RBAC 角色体系合并 + 认证 REST API
 
 ### 做了什么

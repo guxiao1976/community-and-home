@@ -1,12 +1,17 @@
 package user
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	"github.com/guxiao1976/community-user/model"
+	"github.com/guxiao1976/community-user/rpc/internal/svc"
+	"github.com/zeromicro/go-zero/core/logx"
 )
 
 // ==================== Proto Conversion Helpers ====================
@@ -19,6 +24,34 @@ func int32Ptr(v int32) *int32 {
 // int64Ptr 返回 int64 指针
 func int64Ptr(v int64) *int64 {
 	return &v
+}
+
+// stringPtr 返回 string 指针
+func stringPtr(v string) *string {
+	return &v
+}
+
+// assignRoleToUser 调用 permission-service 同步分配角色 grant。
+// 幂等由 permission-service rel_user_role 唯一索引 uk_user_role_scope 保证（重复分配不产生重复行）。
+// // SEE: [[testing-discipline]] — 与 ApplyRole 共享同一 AssignRole 通道
+func assignRoleToUser(ctx context.Context, svcCtx *svc.ServiceContext, logger logx.Logger, userId, roleID int64, scopeType string, scopeId int64, status *int32) error {
+	if svcCtx.PermissionClient == nil {
+		logger.Errorf("assignRoleToUser: PermissionClient is nil, userId=%d roleId=%d", userId, roleID)
+		return fmt.Errorf("permission client unavailable")
+	}
+	_, err := svcCtx.PermissionClient.AssignRole(ctx, &permissionv1.AssignRoleRequest{
+		UserId:    userId,
+		RoleId:    roleID,
+		ScopeType: scopeType,
+		ScopeId:   scopeId,
+		Status:    status,
+	})
+	if err != nil {
+		logger.Errorf("assignRoleToUser: AssignRole failed userId=%d roleId=%d scopeType=%s scopeId=%d err=%v",
+			userId, roleID, scopeType, scopeId, err)
+		return err
+	}
+	return nil
 }
 
 // defaultExpiryTime 返回角色的默认过期时间（无 sysconfig 时用硬编码）

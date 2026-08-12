@@ -23,10 +23,10 @@ import (
 type certMetadata struct {
 	Urls         []string `json:"urls"`
 	RealName     string   `json:"real_name"`
-	IdCardNumber string   `json:"id_card_number"`          // AES 加密
-	RoleCode     string   `json:"role_code,omitempty"`     // 申请的角色编码
-	MembershipId int64    `json:"membership_id,omitempty"` // 小区成员关系ID（merchant 为 0）
-	CommunityId  int64    `json:"community_id,omitempty"`  // 小区ID（merchant 为 0）
+	IdCardNumber string   `json:"id_card_number"`                 // AES 加密
+	RoleCode     string   `json:"role_code,omitempty"`            // 申请的角色编码
+	MembershipId int64    `json:"membership_id,string,omitempty"` // 小区成员关系ID（merchant 为 0）— Snowflake 需 string
+	CommunityId  int64    `json:"community_id,string,omitempty"`  // 小区ID（merchant 为 0）— Snowflake 需 string
 	Building     string   `json:"building,omitempty"`
 	Unit         string   `json:"unit,omitempty"`
 	Room         string   `json:"room,omitempty"`

@@ -11,6 +11,7 @@ import (
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
 	"github.com/guxiao1976/community-hub/model"
+	"github.com/guxiao1976/community-hub/rpc/internal/logic/scope"
 	"github.com/guxiao1976/community-hub/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -34,6 +35,16 @@ func (l *CreateNoticeLogic) CreateNotice(in *communityv1.CreateNoticeRequest) (*
 		return &communityv1.CreateNoticeResponse{
 			Base: responsex.NewBaseRespWithError(80005, "标题和内容不能为空"),
 		}, nil
+	}
+
+	// 数据权限（T4.3）：落库前 AssertPublishScope(目标 community_id)。
+	denyResp, err := scope.CheckPublishScope(l.ctx, l.svcCtx.PermissionClient, in.GetCommunityId())
+	if err != nil {
+		l.Errorf("CreateNotice: assert publish scope failed: %v", err)
+		return nil, err
+	}
+	if denyResp != nil {
+		return &communityv1.CreateNoticeResponse{Base: denyResp}, nil
 	}
 
 	noticeRole := roleToString(in.Role)

@@ -238,6 +238,32 @@ INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
 INSERT IGNORE INTO rel_user_role (user_id, role_id, scope_type, scope_id, status) VALUES
 (0, 8, 'global', 0, 2);
 
+-- 4.8 业主/租户发布权限（access-data-permission 阶段⑥ 集成验收修复）
+--   设计 §3.2/§3.4：未认证业主/租户即可发布（min_verf_level=0 = 持角色+数据范围即可）。
+--   Wave 1 种子遗漏 owner/tenant 的发布类权限绑定，导致功能权限层（PermMiddleware）
+--   先于数据范围检查拒绝，owner@A 发布/owner@A发B→080006 无法触达数据范围判定。
+--   补齐 owner(1)/tenant(5)：发布通知(421) + 发布失物招领(435) + 联系方式维护(436)。
+-- SEE: [[permission-seed-api-path-must-match-routes]] — path 与实际 REST 路由一致
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
+VALUES (436, 430, 'POST /api/community/contacts', 'community:contact:upsert-api', 3, 'POST:/api/community/contacts', NULL, 15, 1, NOW(), NOW());
+UPDATE sys_permission SET min_verf_level = 0 WHERE code = 'community:contact:upsert-api';
+
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(1, 421), (1, 435), (1, 436),
+(5, 421), (5, 435), (5, 436);
+
+-- 4.8.1 业主/租户读列表权限（与 registered_user browse 对齐，保证「读列表按 scope 过滤」可测）
+--   owner/tenant 为高于 registered_user 的社区角色，须能读所属小区内容（读列表 + scope 过滤）
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(1, 422), (1, 433), (1, 434),
+(5, 422), (5, 433), (5, 434);
+
+-- 4.8.2 选举权限（committee:election:vote, min_verf_level=2）绑定
+--   sys_admin 的「全权限」绑定在 permission 600 创建之前执行，缺 600；committee(6) 为业委会角色须可投票。
+--   集成验收 T6.1：未认证(status=0)用户选举❌，已认证(status=2)用户选举✅ 依赖此绑定。
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(6, 600), (8, 600);
+
 -- ============================================================================
 -- 数据验证查询
 -- ============================================================================

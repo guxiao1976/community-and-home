@@ -4,13 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-user/model"
 	"github.com/guxiao1976/community-user/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
-	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 )
 
 type LeaveCommunityLogic struct {
@@ -54,6 +56,13 @@ func (l *LeaveCommunityLogic) LeaveCommunity(in *userv1.LeaveCommunityRequest) (
 		return nil, err
 	}
 
+	// 2.5. 同步撤销授权（owner + tenant 双调 RevokeRole，幂等：只撤销存在的）
+	//     失败 → 补偿恢复 bind_status=active 并返回失败（不留「有成员无 scope」）
+	if err := l.revokeCommunityRoles(in.UserId, in.CommunityId); err != nil {
+		_ = l.svcCtx.UserCommunityMembershipModel.UpdateBindStatus(l.ctx, membership.Id, model.MembershipBindStatusActive, time.Time{})
+		return nil, err
+	}
+
 	// 3. 如果 preferences.default_community_id 是此小区，清空或更新为其他小区
 	l.updateDefaultCommunityOnLeave(in.UserId, in.CommunityId)
 
@@ -61,6 +70,39 @@ func (l *LeaveCommunityLogic) LeaveCommunity(in *userv1.LeaveCommunityRequest) (
 	return &userv1.LeaveCommunityResponse{
 		Base: responsex.NewBaseResp(),
 	}, nil
+}
+
+// revokeCommunityRoles 退出小区后同步撤销 owner/tenant 授权（双调 RevokeRole，幂等）。
+// role_id 经 roleMapper 解析；任一撤销失败则返回错误（由调用方补偿恢复 membership）。
+func (l *LeaveCommunityLogic) revokeCommunityRoles(userId, communityId int64) error {
+	if l.svcCtx.PermissionClient == nil {
+		l.Errorf("LeaveCommunity: PermissionClient is nil")
+		return fmt.Errorf("permission client unavailable")
+	}
+	ownerID, ok := roleIDByCode(l.ctx, l.svcCtx, l.Logger, model.RoleCodeOwner)
+	if !ok {
+		l.Errorf("LeaveCommunity: role owner not found in permission-service")
+		return fmt.Errorf("role owner not found")
+	}
+	tenantID, ok := roleIDByCode(l.ctx, l.svcCtx, l.Logger, model.RoleCodeTenant)
+	if !ok {
+		l.Errorf("LeaveCommunity: role tenant not found in permission-service")
+		return fmt.Errorf("role tenant not found")
+	}
+
+	reqs := []*permissionv1.RevokeRoleRequest{
+		{UserId: userId, RoleId: ownerID, ScopeType: stringPtr(model.ScopeTypeCommunity), ScopeId: int64Ptr(communityId)},
+		{UserId: userId, RoleId: tenantID, ScopeType: stringPtr(model.ScopeTypeCommunity), ScopeId: int64Ptr(communityId)},
+	}
+	for _, req := range reqs {
+		if _, err := l.svcCtx.PermissionClient.RevokeRole(l.ctx, req); err != nil {
+			l.Errorf("LeaveCommunity: RevokeRole failed userId=%d roleId=%d scope=%s:%d err=%v",
+				userId, req.RoleId, model.ScopeTypeCommunity, communityId, err)
+			return err
+		}
+	}
+	l.Infof("LeaveCommunity: roles owner+tenant revoked, userId=%d communityId=%d", userId, communityId)
+	return nil
 }
 
 func (l *LeaveCommunityLogic) updateDefaultCommunityOnLeave(userId, communityId int64) {

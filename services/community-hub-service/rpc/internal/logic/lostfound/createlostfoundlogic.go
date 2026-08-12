@@ -11,6 +11,7 @@ import (
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
 	"github.com/guxiao1976/community-hub/model"
+	"github.com/guxiao1976/community-hub/rpc/internal/logic/scope"
 	"github.com/guxiao1976/community-hub/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -34,6 +35,17 @@ func (l *CreateLostFoundLogic) CreateLostFound(in *communityv1.CreateLostFoundRe
 		return &communityv1.CreateLostFoundResponse{
 			Base: responsex.NewBaseRespWithError(80005, "标题不能为空"),
 		}, nil
+	}
+
+	// 数据权限（T4.2）：落库前 AssertPublishScope，校验顺序：功能权限 → 数据权限 → 落库。
+	// 身份仅取调用方 JWT（API 层经 gRPC metadata 注入），不信任 body publisher_id（防伪造）。
+	denyResp, err := scope.CheckPublishScope(l.ctx, l.svcCtx.PermissionClient, in.GetCommunityId())
+	if err != nil {
+		l.Errorf("CreateLostFound: assert publish scope failed: %v", err)
+		return nil, err
+	}
+	if denyResp != nil {
+		return &communityv1.CreateLostFoundResponse{Base: denyResp}, nil
 	}
 
 	imageUrlsJSON := "[]"

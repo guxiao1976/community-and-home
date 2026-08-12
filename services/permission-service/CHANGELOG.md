@@ -1,5 +1,22 @@
 # CHANGELOG — permission-service
 
+## 2026-08-12 — 集成验收种子补齐：owner/tenant 发布+读权限 + 选举权限绑定
+
+### 背景
+access-data-permission 阶段⑥ 集成验收（T6.1 端到端矩阵）发现 `init_permissions.sql` 种子 3 处缺口，导致真实端到端链路在功能权限层被阻断：
+
+1. **owner/tenant 缺发布权限**：owner(1)/tenant(5) 仅绑定查看权限，`community:notice:create-api`(421)、`community:lostfound:create-api`(435) 只绑给了 sys_admin(8)。设计 §3.2「未认证业主/租户即可发布」要求 owner/tenant 可发布，否则数据范围检查（080006）永远触达不到（在 PermMiddleware 先被 99401 拦）。→ 种子段 4.8 补齐 `(1,421),(1,435),(1,436),(5,421),(5,435),(5,436)`。
+2. **contact upsert 权限缺失**：`POST:/api/community/contacts`（UpsertContacts 写接口）无对应 `sys_permission` 行，任何角色（含 sys_admin）都无法通过功能门。→ 新增 `community:contact:upsert-api`(436, path=`POST:/api/community/contacts`, min_verf_level=0)。
+3. **owner/tenant 缺读列表权限**：`community:notice:read-list-api`(422)/`lostfound:read-list-api`(433)/`contact:read-list-api`(434) 只绑 registered_user(9)，owner/tenant 无法读所属小区内容，「读列表按 scope 过滤」不可测。→ 种子段 4.8.1 补齐。
+4. **选举权限未绑定**：`committee:election:vote`(600, min_verf_level=2) 创建于 sys_admin「全权限」绑定（`SELECT 8, id FROM sys_permission`）之后，sys_admin 漏绑；committee(6) 也未绑。→ 种子段 4.8.2 补齐 `(6,600),(8,600)`。
+
+### 修复
+`scripts/init_permissions.sql` 新增迁移段 4.8 / 4.8.1 / 4.8.2（幂等 INSERT IGNORE），已执行到真库验证（owner/tenant 三写权限 + 三读权限、sys_admin/committee 选举权限全部生效），并清 `perm:*` 缓存后复验 T6.1 全绿。
+
+### 影响
+- 功能权限层正确放行 owner/tenant 的发布/读取，数据范围层（AssertPublishScope/GetDataScopes）真正接管越权判定
+- 「读列表按 scope 过滤」「owner@A 发 B → 080006」「未认证选举❌/认证后✅」验收项落地
+
 ## 2026-08-12 — Review CRITICAL 修复：能力分层敏感权限越权 + 错误码 060007 契约对齐 + 悬空记忆引用
 
 ### 1. security-arch CRITICAL — 敏感权限未标 level-2，未认证用户可越权读 PII

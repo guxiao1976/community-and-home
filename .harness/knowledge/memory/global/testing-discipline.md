@@ -5,9 +5,26 @@ severity: must-follow
 service: all
 status: active
 created: 2026-06-17
-updated: 2026-08-09
+updated: 2026-08-12
 apply_count: 0
 ---
+
+## 复现场景（2026-08-12，community-hub-service FIX 多视角评审修复轮）
+
+**现象**：管线 Generator 直接改主树未提交，QA 基于工作树 diff 校验。FIX 轮次核心函数（GetNotice/GetLostFound scope 过滤、API CallCtx+ToError、回环绑定）全部有测试且 RED 摘录留档完整，但**同一工作树中 8 个被修改的包装函数无测试**：
+- RPC `ListLostFoundLogic.ListLostFound` / `ListContactsLogic.ListContacts`（新增 scope 过滤，同构于已有测试的 ListNotices）
+- API `ListNotices/ListLostFound/ListContactsLogic`（新增 CallCtx 注入）
+- API `UpdateNotice/DeleteNotice/ResolveLostFoundLogic`（新增 CallCtx+ToError）
+
+`git diff` 证明这些文件在工作树被 `+` 修改，但 `grep -rln NewListLostFoundLogic/NewListContactsLogic/NewUpdateNoticeLogic -- '*_test.go'` 全仓无命中 → 修改函数无测试 → 违反本文件"修改函数需确认 cover 不下降"规则 → QA TDD FAIL。
+
+**根因**：
+1. Generator 只给**变更的 headline 函数**写测试（本轮=Get-by-ID 数据范围），遗漏**同批被连带修改的包装函数**（挂 scope/CallCtx/ToError 的列表/更新/删除/解决逻辑）。
+2. 同构测试未复用：ListNotices 有 `listnotices_filter_test.go` 可作模板，但 ListLostFound/ListContacts 未照抄；Get handler 有 `InjectsIdentity/SurfacesScopeDenied` 测试，但 API list/update/delete/resolve 未照抄。
+
+**QA 判定**：TDD 证据表 8 行"是否有测试 ❌" → QA FAIL（TDD 证据不足）。机械门禁 16/16 PASS + build/vet/test 全绿 + 覆盖率合理均不改变该判定。
+
+**补救**：管线轮次中**凡被 `+` 修改的函数**（含连带包装函数）都须有测试；同构模式直接照抄已验证的模板（listnotices_filter_test → ListLostFound/ListContacts；getnoticelogic_test → API list/update/delete/resolve）。QA 检查时应 `git diff -U0` 列全新增/修改函数，逐一对照测试命中。
 ## 测试纪律（硬性约束）
 
 采用 **Testing Trophy** (Kent C. Dodds) + **Honeycomb** (Spotify) 混合模型，适配本项目的微服务 monorepo 架构。

@@ -88,6 +88,11 @@ type PageInfo struct {
 
 type JoinCommunityReq struct {
 	CommunityId int64 `json:"community_id,string"`
+	Building    int32 `json:"building,optional"`
+	Unit        int32 `json:"unit,optional"`
+	Room        int32 `json:"room,optional"`
+	// Ownership 权属：1=自有(owner) 2=租住(tenant)，必填（permission 数据权限自动授权）
+	Ownership int32 `json:"ownership,optional"`
 }
 
 type JoinCommunityResp struct {

@@ -65,6 +65,16 @@ const (
 	RoleCodePropertyAdmin  = "property_admin"
 	RoleCodeCommittee      = "committee"
 	RoleCodeMerchant       = "merchant"
+	// RoleCodeRegisteredUser 注册即自动分配的基角色（permission-service sys_role id=9，browse-only、空数据范围、永久有效）
+	RoleCodeRegisteredUser = "registered_user"
+)
+
+// ==================== 权限 scope 类型（permission-service rel_user_role scope_type） ====================
+
+const (
+	ScopeTypeGlobal    = "global"    // 全局范围（审核员 / sys_admin / moderation 系统身份）
+	ScopeTypeEmpty     = ""          // 空范围（仅 registered_user 基角色，对任何查询零贡献）
+	ScopeTypeCommunity = "community" // 限定节点（小区，scope_id=community_id）
 )
 
 // ==================== 最大小区数 ====================
@@ -78,6 +88,7 @@ const MaxCommunities = 3
 // MaxNewCommunitiesPerYear 每年最多首次加入 3 个新小区
 // TODO: 可通过 sysconfig 动态配置（key: user.max_new_communities_per_year）
 const MaxNewCommunitiesPerYear = 3
+
 // MaxTotalCommunitiesLifetime 终身最多首次加入 12 个不同小区
 // TODO: 可通过 sysconfig 动态配置（key: user.max_total_communities_lifetime）
 const MaxTotalCommunitiesLifetime = 12

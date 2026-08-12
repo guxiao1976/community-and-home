@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated_at": "2026-08-12T10:06:19Z",
-  "total_memories": 39,
+  "generated_at": "2026-08-12T11:57:07Z",
+  "total_memories": 56,
   "index": {
     "模板": [
       "ai-model-template-variable-content"
@@ -103,6 +103,7 @@
     ],
     "proto": [
       "edit-form-data-integrity",
+      "frontend-business-rule-hardcode",
       "proto-jstype"
     ],
     "int64": [
@@ -125,6 +126,41 @@
     ],
     "序列化": [
       "proto-jstype"
+    ],
+    "optional": [
+      "api-required-field-marked-optional"
+    ],
+    "goctl": [
+      "api-required-field-marked-optional",
+      "goctl-logic-stubs"
+    ],
+    "必填": [
+      "api-required-field-marked-optional"
+    ],
+    "参数校验": [
+      "api-required-field-marked-optional",
+      "harness-pipeline-undefined-guard"
+    ],
+    "边界": [
+      "api-required-field-marked-optional"
+    ],
+    "10040": [
+      "api-required-field-marked-optional"
+    ],
+    "ownership": [
+      "api-required-field-marked-optional",
+      "frontend-business-rule-hardcode"
+    ],
+    "JoinCommunity": [
+      "api-required-field-marked-optional",
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "types.go": [
+      "api-required-field-marked-optional",
+      "edit-form-data-integrity"
+    ],
+    "json tag": [
+      "api-required-field-marked-optional"
     ],
     "API 响应": [
       "api-response-single-wrap"
@@ -149,6 +185,153 @@
     ],
     "Logic 返回": [
       "api-response-single-wrap"
+    ],
+    "提交": [
+      "async-submit-double-guard",
+      "change-verification-checklist",
+      "pre-commit-checks",
+      "testing-discipline"
+    ],
+    "防重": [
+      "async-submit-double-guard"
+    ],
+    "双击": [
+      "async-submit-double-guard"
+    ],
+    "double submit": [
+      "async-submit-double-guard"
+    ],
+    "submitting": [
+      "async-submit-double-guard"
+    ],
+    "loading mask": [
+      "async-submit-double-guard"
+    ],
+    "showLoading": [
+      "async-submit-double-guard"
+    ],
+    "异步": [
+      "async-submit-double-guard"
+    ],
+    "表单": [
+      "async-submit-double-guard",
+      "edit-form-data-integrity"
+    ],
+    "幂等": [
+      "async-submit-double-guard",
+      "best-effort-compensation-must-log",
+      "insert-ignore-swallows-errors"
+    ],
+    "自动授权": [
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "加入小区": [
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "AssignRole": [
+      "auto-grant-unverified-grant-confers-scope-level0",
+      "insert-ignore-swallows-errors"
+    ],
+    "status=0": [
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "未认证 grant": [
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "数据范围": [
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "scope": [
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "level-0": [
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "min_verf_level": [
+      "auto-grant-unverified-grant-confers-scope-level0",
+      "notfound-cache-sentinel-vs-transient-error"
+    ],
+    "认证绕过": [
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "权限种子": [
+      "auto-grant-unverified-grant-confers-scope-level0"
+    ],
+    "axios": [
+      "axios-interceptor-unwrap-typing-mismatch",
+      "axios-network-error-raw-message-toast"
+    ],
+    "AxiosResponse": [
+      "axios-interceptor-unwrap-typing-mismatch"
+    ],
+    "拦截器": [
+      "axios-interceptor-unwrap-typing-mismatch",
+      "axios-network-error-raw-message-toast",
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "解包": [
+      "axios-interceptor-unwrap-typing-mismatch"
+    ],
+    "as unknown as any": [
+      "axios-interceptor-unwrap-typing-mismatch"
+    ],
+    "request.get": [
+      "axios-interceptor-unwrap-typing-mismatch"
+    ],
+    "request.post": [
+      "axios-interceptor-unwrap-typing-mismatch"
+    ],
+    "装饰性泛型": [
+      "axios-interceptor-unwrap-typing-mismatch"
+    ],
+    "type-safety": [
+      "axios-interceptor-unwrap-typing-mismatch"
+    ],
+    "双断言": [
+      "axios-interceptor-unwrap-typing-mismatch"
+    ],
+    "网络错误": [
+      "axios-network-error-raw-message-toast"
+    ],
+    "Network Error": [
+      "axios-network-error-raw-message-toast"
+    ],
+    "错误提示": [
+      "axios-network-error-raw-message-toast"
+    ],
+    "toast": [
+      "axios-network-error-raw-message-toast"
+    ],
+    "error.message": [
+      "axios-network-error-raw-message-toast"
+    ],
+    "离线": [
+      "axios-network-error-raw-message-toast"
+    ],
+    "补偿": [
+      "best-effort-compensation-must-log"
+    ],
+    "rollback": [
+      "best-effort-compensation-must-log"
+    ],
+    "静默": [
+      "best-effort-compensation-must-log",
+      "insert-ignore-swallows-errors",
+      "rpc-callback-must-check-response-base"
+    ],
+    "_ =": [
+      "best-effort-compensation-must-log"
+    ],
+    "UpdateBindStatus": [
+      "best-effort-compensation-must-log",
+      "restore-compensation-zero-time"
+    ],
+    "有成员无scope": [
+      "best-effort-compensation-must-log"
+    ],
+    "补偿恢复": [
+      "best-effort-compensation-must-log",
+      "restore-compensation-zero-time"
     ],
     "改了": [
       "change-verification-checklist"
@@ -189,11 +372,6 @@
     "完成": [
       "change-verification-checklist"
     ],
-    "提交": [
-      "change-verification-checklist",
-      "pre-commit-checks",
-      "testing-discipline"
-    ],
     "commit": [
       "change-verification-checklist",
       "pre-commit-checks"
@@ -211,13 +389,44 @@
     "忘了": [
       "change-verification-checklist"
     ],
+    "种子": [
+      "cross-service-seed-deployment-order"
+    ],
+    "seed": [
+      "cross-service-seed-deployment-order",
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "init_permissions": [
+      "cross-service-seed-deployment-order",
+      "permission-seed-api-path-must-match-routes"
+    ],
+    "部署顺序": [
+      "cross-service-seed-deployment-order"
+    ],
+    "依赖": [
+      "cross-service-seed-deployment-order"
+    ],
+    "rel_user_role": [
+      "cross-service-seed-deployment-order",
+      "need-human-findbyroleid-assign_time"
+    ],
+    "系统身份": [
+      "cross-service-seed-deployment-order"
+    ],
+    "静默失败": [
+      "cross-service-seed-deployment-order"
+    ],
+    "migration": [
+      "cross-service-seed-deployment-order",
+      "migration-must-execute"
+    ],
+    "脚本": [
+      "cross-service-seed-deployment-order"
+    ],
     "编辑": [
       "edit-form-data-integrity"
     ],
     "回显": [
-      "edit-form-data-integrity"
-    ],
-    "表单": [
       "edit-form-data-integrity"
     ],
     "下拉框": [
@@ -229,14 +438,12 @@
     "数据丢失": [
       "edit-form-data-integrity"
     ],
-    "types.go": [
-      "edit-form-data-integrity"
-    ],
     "TS": [
       "edit-form-data-integrity"
     ],
     "错误码": [
-      "error-code-collision-and-namespace-alignment"
+      "error-code-collision-and-namespace-alignment",
+      "error-code-literal-bypasses-qa-gate"
     ],
     "error code": [
       "error-code-collision-and-namespace-alignment"
@@ -245,20 +452,23 @@
       "error-code-collision-and-namespace-alignment"
     ],
     "060007": [
-      "error-code-collision-and-namespace-alignment"
+      "error-code-collision-and-namespace-alignment",
+      "rpc-callback-must-check-response-base"
     ],
     "冲突": [
       "error-code-collision-and-namespace-alignment",
       "monorepo-port-management"
     ],
     "复用": [
-      "error-code-collision-and-namespace-alignment"
+      "error-code-collision-and-namespace-alignment",
+      "web-common-type-reuse-no-redefine"
     ],
     "语义": [
       "error-code-collision-and-namespace-alignment"
     ],
     "NewBaseRespWithError": [
-      "error-code-collision-and-namespace-alignment"
+      "error-code-collision-and-namespace-alignment",
+      "error-code-literal-bypasses-qa-gate"
     ],
     "同码异义": [
       "error-code-collision-and-namespace-alignment"
@@ -266,8 +476,63 @@
     "namespace": [
       "error-code-collision-and-namespace-alignment"
     ],
+    "门禁": [
+      "error-code-literal-bypasses-qa-gate",
+      "pre-commit-checks"
+    ],
+    "harness-checks": [
+      "error-code-literal-bypasses-qa-gate",
+      "pre-commit-checks"
+    ],
+    "errx": [
+      "error-code-literal-bypasses-qa-gate"
+    ],
+    "魔数": [
+      "error-code-literal-bypasses-qa-gate"
+    ],
+    "magic number": [
+      "error-code-literal-bypasses-qa-gate"
+    ],
+    "裸数字": [
+      "error-code-literal-bypasses-qa-gate"
+    ],
+    "080006": [
+      "error-code-literal-bypasses-qa-gate",
+      "rpc-callback-must-check-response-base"
+    ],
+    "80001": [
+      "error-code-literal-bypasses-qa-gate"
+    ],
     "前端": [
+      "frontend-business-rule-hardcode",
       "frontend-pipeline-integration-pattern"
+    ],
+    "校验": [
+      "frontend-business-rule-hardcode"
+    ],
+    "业务规则": [
+      "frontend-business-rule-hardcode"
+    ],
+    "区间": [
+      "frontend-business-rule-hardcode"
+    ],
+    "building": [
+      "frontend-business-rule-hardcode"
+    ],
+    "unit": [
+      "frontend-business-rule-hardcode"
+    ],
+    "room": [
+      "frontend-business-rule-hardcode"
+    ],
+    "硬编码": [
+      "frontend-business-rule-hardcode"
+    ],
+    "漂移": [
+      "frontend-business-rule-hardcode"
+    ],
+    "表单校验": [
+      "frontend-business-rule-hardcode"
     ],
     "管线": [
       "frontend-pipeline-integration-pattern",
@@ -311,9 +576,6 @@
       "goctl-logic-stubs"
     ],
     "空壳": [
-      "goctl-logic-stubs"
-    ],
-    "goctl": [
       "goctl-logic-stubs"
     ],
     "logic stub": [
@@ -406,19 +668,10 @@
     "serviceName": [
       "harness-pipeline-undefined-guard"
     ],
-    "参数校验": [
-      "harness-pipeline-undefined-guard"
-    ],
     "INSERT IGNORE": [
       "insert-ignore-swallows-errors"
     ],
-    "幂等": [
-      "insert-ignore-swallows-errors"
-    ],
     "唯一键": [
-      "insert-ignore-swallows-errors"
-    ],
-    "静默": [
       "insert-ignore-swallows-errors"
     ],
     "RowsAffected": [
@@ -426,12 +679,6 @@
     ],
     "ON DUPLICATE KEY": [
       "insert-ignore-swallows-errors"
-    ],
-    "AssignRole": [
-      "insert-ignore-swallows-errors"
-    ],
-    "migration": [
-      "migration-must-execute"
     ],
     "数据库变更": [
       "migration-must-execute"
@@ -457,6 +704,35 @@
     ],
     "unknown column": [
       "migration-must-execute"
+    ],
+    "moderation_status": [
+      "moderation-status-write-without-read-gating"
+    ],
+    "审核状态": [
+      "moderation-status-write-without-read-gating",
+      "rpc-callback-must-check-response-base"
+    ],
+    "回调": [
+      "moderation-status-write-without-read-gating",
+      "rpc-callback-must-check-response-base"
+    ],
+    "审核可见性": [
+      "moderation-status-write-without-read-gating"
+    ],
+    "读路径过滤": [
+      "moderation-status-write-without-read-gating"
+    ],
+    "审核门禁": [
+      "moderation-status-write-without-read-gating"
+    ],
+    "已拒绝内容可见": [
+      "moderation-status-write-without-read-gating"
+    ],
+    "审核管线": [
+      "moderation-status-write-without-read-gating"
+    ],
+    "不生效": [
+      "moderation-status-write-without-read-gating"
     ],
     "submodule": [
       "moderation-submodule-broken"
@@ -486,7 +762,8 @@
       "monorepo-port-management"
     ],
     "8088": [
-      "monorepo-port-management"
+      "monorepo-port-management",
+      "rpc-identity-spoofing-loopback-isolation"
     ],
     "start.sh": [
       "monorepo-port-management"
@@ -501,10 +778,41 @@
       "monorepo-port-management"
     ],
     "ListenOn": [
-      "monorepo-port-management"
+      "monorepo-port-management",
+      "rpc-identity-spoofing-loopback-isolation"
     ],
     "yaml": [
       "monorepo-port-management"
+    ],
+    "非阻塞": [
+      "non-blocking-grant-requires-reconciliation"
+    ],
+    "仅告警": [
+      "non-blocking-grant-requires-reconciliation"
+    ],
+    "不阻塞": [
+      "non-blocking-grant-requires-reconciliation"
+    ],
+    "registered_user": [
+      "non-blocking-grant-requires-reconciliation"
+    ],
+    "授权": [
+      "non-blocking-grant-requires-reconciliation"
+    ],
+    "grant": [
+      "non-blocking-grant-requires-reconciliation"
+    ],
+    "对账": [
+      "non-blocking-grant-requires-reconciliation"
+    ],
+    "backfill": [
+      "non-blocking-grant-requires-reconciliation"
+    ],
+    "重试": [
+      "non-blocking-grant-requires-reconciliation"
+    ],
+    "不变量": [
+      "non-blocking-grant-requires-reconciliation"
     ],
     "缓存": [
       "notfound-cache-sentinel-vs-transient-error",
@@ -532,23 +840,24 @@
     "30分钟": [
       "notfound-cache-sentinel-vs-transient-error"
     ],
-    "min_verf_level": [
-      "notfound-cache-sentinel-vs-transient-error"
-    ],
     "冷缓存": [
       "notfound-cache-sentinel-vs-transient-error"
     ],
     "手机号": [
-      "phone-encryption"
+      "phone-encryption",
+      "pii-plaintext-logging"
     ],
     "phone": [
-      "phone-encryption"
+      "phone-encryption",
+      "pii-plaintext-logging"
     ],
     "加密": [
-      "phone-encryption"
+      "phone-encryption",
+      "pii-plaintext-logging"
     ],
     "AES": [
-      "phone-encryption"
+      "phone-encryption",
+      "pii-plaintext-logging"
     ],
     "解密": [
       "phone-encryption"
@@ -561,6 +870,21 @@
     ],
     "乱码": [
       "phone-encryption"
+    ],
+    "日志": [
+      "pii-plaintext-logging"
+    ],
+    "PII": [
+      "pii-plaintext-logging"
+    ],
+    "明文": [
+      "pii-plaintext-logging"
+    ],
+    "脱敏": [
+      "pii-plaintext-logging"
+    ],
+    "Infof": [
+      "pii-plaintext-logging"
     ],
     "模拟数据": [
       "pipeline-data-trust-simulated-vs-real"
@@ -587,12 +911,6 @@
       "pipeline-data-trust-simulated-vs-real"
     ],
     "代码变更": [
-      "pre-commit-checks"
-    ],
-    "harness-checks": [
-      "pre-commit-checks"
-    ],
-    "门禁": [
       "pre-commit-checks"
     ],
     "gate": [
@@ -650,6 +968,100 @@
     "go-zero": [
       "redis-cache-soft-delete"
     ],
+    "回滚恢复": [
+      "restore-compensation-zero-time"
+    ],
+    "time.Time{}": [
+      "restore-compensation-zero-time"
+    ],
+    "零值": [
+      "restore-compensation-zero-time"
+    ],
+    "DATETIME": [
+      "restore-compensation-zero-time"
+    ],
+    "strict 模式": [
+      "restore-compensation-zero-time"
+    ],
+    "_qa.md": [
+      "review-artifact-freshness"
+    ],
+    "过时": [
+      "review-artifact-freshness"
+    ],
+    "QA FAIL": [
+      "review-artifact-freshness",
+      "tdd-red-evidence-requires-fail-excerpt"
+    ],
+    "TDD 修复后": [
+      "review-artifact-freshness"
+    ],
+    "测试补齐": [
+      "review-artifact-freshness"
+    ],
+    "QA 报告未刷新": [
+      "review-artifact-freshness"
+    ],
+    "评审输入": [
+      "review-artifact-freshness"
+    ],
+    "状态不一致": [
+      "review-artifact-freshness"
+    ],
+    "交付物": [
+      "review-artifact-freshness"
+    ],
+    "callback": [
+      "rpc-callback-must-check-response-base"
+    ],
+    "服务间调用": [
+      "rpc-callback-must-check-response-base"
+    ],
+    "Base": [
+      "rpc-callback-must-check-response-base"
+    ],
+    "ToError": [
+      "rpc-callback-must-check-response-base"
+    ],
+    "业务错误": [
+      "rpc-callback-must-check-response-base"
+    ],
+    "gRPC err": [
+      "rpc-callback-must-check-response-base"
+    ],
+    "RPC": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "身份伪造": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "0.0.0.0": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "无鉴权": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "mTLS": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "user_id": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "metadata": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "数据权限": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "网络隔离": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "回环": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
+    "服务凭据": [
+      "rpc-identity-spoofing-loopback-isolation"
+    ],
     "JWT_ACCESS_SECRET": [
       "service-api-jwt-env"
     ],
@@ -685,9 +1097,6 @@
       "tdd-red-evidence-requires-fail-excerpt"
     ],
     "编译失败": [
-      "tdd-red-evidence-requires-fail-excerpt"
-    ],
-    "QA FAIL": [
       "tdd-red-evidence-requires-fail-excerpt"
     ],
     "证据摘录": [
@@ -749,6 +1158,39 @@
     ],
     "HTTP 404": [
       "verify-api-before-calling"
+    ],
+    "web/common": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "重复定义": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "CommunityMembership": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "joinCommunity": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "类型": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "枚举": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "enums.ts": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "OWNERSHIP_OPTIONS": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "权属": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "共享层": [
+      "web-common-type-reuse-no-redefine"
+    ],
+    "@common": [
+      "web-common-type-reuse-no-redefine"
     ],
     "ResourceExhausted": [
       "grpc-max-msg-size-sensitive-words"
@@ -824,9 +1266,6 @@
     "assign_time": [
       "need-human-findbyroleid-assign_time"
     ],
-    "rel_user_role": [
-      "need-human-findbyroleid-assign_time"
-    ],
     "Unknown column": [
       "need-human-findbyroleid-assign_time"
     ],
@@ -841,12 +1280,6 @@
     ],
     "invalidateRoleCache": [
       "need-human-findbyroleid-assign_time"
-    ],
-    "seed": [
-      "permission-seed-api-path-must-match-routes"
-    ],
-    "init_permissions": [
-      "permission-seed-api-path-must-match-routes"
     ],
     "权限路径": [
       "permission-seed-api-path-must-match-routes"
@@ -1023,6 +1456,25 @@
         "序列化"
       ]
     },
+    "api-required-field-marked-optional": {
+      "title": "API 层必填字段禁止误标 `,optional`",
+      "file": "global/api-required-field-marked-optional.md",
+      "severity": "should-follow",
+      "type": "guideline",
+      "service": "all",
+      "triggers": [
+        "optional",
+        "goctl",
+        "必填",
+        "参数校验",
+        "边界",
+        "10040",
+        "ownership",
+        "JoinCommunity",
+        "types.go",
+        "json tag"
+      ]
+    },
     "api-response-single-wrap": {
       "title": "API 响应必须单层包装",
       "file": "global/api-response-single-wrap.md",
@@ -1038,6 +1490,99 @@
         "axios 拦截器",
         "response format",
         "Logic 返回"
+      ]
+    },
+    "async-submit-double-guard": {
+      "title": "异步表单提交必须加防重复保护（loading mask 未渲染前的双击窗口）",
+      "file": "global/async-submit-double-guard.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "提交",
+        "防重",
+        "双击",
+        "double submit",
+        "submitting",
+        "loading mask",
+        "showLoading",
+        "异步",
+        "表单",
+        "幂等"
+      ]
+    },
+    "auto-grant-unverified-grant-confers-scope-level0": {
+      "title": "status=0 未认证 grant 立即生效：数据范围 + level-0 能力",
+      "file": "global/auto-grant-unverified-grant-confers-scope-level0.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "自动授权",
+        "加入小区",
+        "JoinCommunity",
+        "AssignRole",
+        "status=0",
+        "未认证 grant",
+        "数据范围",
+        "scope",
+        "level-0",
+        "min_verf_level",
+        "认证绕过",
+        "权限种子"
+      ]
+    },
+    "axios-interceptor-unwrap-typing-mismatch": {
+      "title": "axios 泛型(AxiosResponse)与拦截器解包(data)不符导致逐处双断言",
+      "file": "global/axios-interceptor-unwrap-typing-mismatch.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "axios",
+        "AxiosResponse",
+        "拦截器",
+        "解包",
+        "as unknown as any",
+        "request.get",
+        "request.post",
+        "装饰性泛型",
+        "type-safety",
+        "双断言"
+      ]
+    },
+    "axios-network-error-raw-message-toast": {
+      "title": "axios 网络错误 e.message 为英文 'Network Error'，直接展示会覆盖拦截器友好中文提示",
+      "file": "global/axios-network-error-raw-message-toast.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "axios",
+        "网络错误",
+        "Network Error",
+        "错误提示",
+        "toast",
+        "error.message",
+        "拦截器",
+        "离线"
+      ]
+    },
+    "best-effort-compensation-must-log": {
+      "title": "多步写操作的补偿错误不可静默丢弃（`_ =` 必须记日志）",
+      "file": "global/best-effort-compensation-must-log.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "补偿",
+        "rollback",
+        "静默",
+        "_ =",
+        "UpdateBindStatus",
+        "有成员无scope",
+        "幂等",
+        "补偿恢复"
       ]
     },
     "change-verification-checklist": {
@@ -1066,6 +1611,25 @@
         "前后端",
         "漏了",
         "忘了"
+      ]
+    },
+    "cross-service-seed-deployment-order": {
+      "title": "消费方业务流依赖生产方脚本种子（非 migration）必须纳入部署编排",
+      "file": "global/cross-service-seed-deployment-order.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "种子",
+        "seed",
+        "init_permissions",
+        "部署顺序",
+        "依赖",
+        "rel_user_role",
+        "系统身份",
+        "静默失败",
+        "migration",
+        "脚本"
       ]
     },
     "edit-form-data-integrity": {
@@ -1103,6 +1667,46 @@
         "NewBaseRespWithError",
         "同码异义",
         "namespace"
+      ]
+    },
+    "error-code-literal-bypasses-qa-gate": {
+      "title": "QA 错误码门禁盲区：responsex 包装的错误码裸字面量不被检测",
+      "file": "global/error-code-literal-bypasses-qa-gate.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "错误码",
+        "门禁",
+        "harness-checks",
+        "errx",
+        "NewBaseRespWithError",
+        "魔数",
+        "magic number",
+        "裸数字",
+        "080006",
+        "80001"
+      ]
+    },
+    "frontend-business-rule-hardcode": {
+      "title": "前端硬编码业务规则区间易与 proto/后端漂移",
+      "file": "global/frontend-business-rule-hardcode.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "前端",
+        "校验",
+        "业务规则",
+        "区间",
+        "building",
+        "unit",
+        "room",
+        "ownership",
+        "硬编码",
+        "proto",
+        "漂移",
+        "表单校验"
       ]
     },
     "frontend-pipeline-integration-pattern": {
@@ -1239,6 +1843,24 @@
         "unknown column"
       ]
     },
+    "moderation-status-write-without-read-gating": {
+      "title": "审核状态写入但读路径未按状态过滤，审核流水线无强制执行效果",
+      "file": "global/moderation-status-write-without-read-gating.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "moderation_status",
+        "审核状态",
+        "回调",
+        "审核可见性",
+        "读路径过滤",
+        "审核门禁",
+        "已拒绝内容可见",
+        "审核管线",
+        "不生效"
+      ]
+    },
     "moderation-submodule-broken": {
       "title": "",
       "file": "global/moderation-submodule-broken.md",
@@ -1272,6 +1894,25 @@
         "smoketest",
         "ListenOn",
         "yaml"
+      ]
+    },
+    "non-blocking-grant-requires-reconciliation": {
+      "title": "非阻塞（仅告警）的跨服务授权写入必须有重试/对账",
+      "file": "global/non-blocking-grant-requires-reconciliation.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "非阻塞",
+        "仅告警",
+        "不阻塞",
+        "registered_user",
+        "授权",
+        "grant",
+        "对账",
+        "backfill",
+        "重试",
+        "不变量"
       ]
     },
     "notfound-cache-sentinel-vs-transient-error": {
@@ -1308,6 +1949,24 @@
         "EncryptedString",
         "显示",
         "乱码"
+      ]
+    },
+    "pii-plaintext-logging": {
+      "title": "加密落库的敏感字段禁止明文打日志",
+      "file": "global/pii-plaintext-logging.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "日志",
+        "手机号",
+        "phone",
+        "PII",
+        "明文",
+        "脱敏",
+        "Infof",
+        "加密",
+        "AES"
       ]
     },
     "pipeline-data-trust-simulated-vs-real": {
@@ -1378,6 +2037,83 @@
         "QueryRowIndexCtx",
         "CachedConn",
         "go-zero"
+      ]
+    },
+    "restore-compensation-zero-time": {
+      "title": "补偿/恢复路径严禁用 time.Time{} 零值写入 MySQL DATETIME",
+      "file": "global/restore-compensation-zero-time.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "补偿恢复",
+        "回滚恢复",
+        "UpdateBindStatus",
+        "time.Time{}",
+        "零值",
+        "DATETIME",
+        "strict 模式"
+      ]
+    },
+    "review-artifact-freshness": {
+      "title": "QA FAIL 修复后必须重跑并刷新 _qa.md，否则交付物含过时 FAIL 报告",
+      "file": "global/review-artifact-freshness.md",
+      "severity": "should-follow",
+      "type": "process",
+      "service": "all",
+      "triggers": [
+        "_qa.md",
+        "过时",
+        "QA FAIL",
+        "TDD 修复后",
+        "测试补齐",
+        "QA 报告未刷新",
+        "评审输入",
+        "状态不一致",
+        "交付物"
+      ]
+    },
+    "rpc-callback-must-check-response-base": {
+      "title": "服务间回调只查 gRPC err 而忽略响应 Base → 业务错误静默吞掉",
+      "file": "global/rpc-callback-must-check-response-base.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "回调",
+        "callback",
+        "服务间调用",
+        "Base",
+        "ToError",
+        "审核状态",
+        "静默",
+        "业务错误",
+        "gRPC err",
+        "080006",
+        "060007"
+      ]
+    },
+    "rpc-identity-spoofing-loopback-isolation": {
+      "title": "RPC 身份伪造风险：metadata 盲信 + 0.0.0.0 无鉴权（仓库级模式）",
+      "file": "global/rpc-identity-spoofing-loopback-isolation.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "RPC",
+        "身份伪造",
+        "0.0.0.0",
+        "无鉴权",
+        "mTLS",
+        "user_id",
+        "metadata",
+        "数据权限",
+        "网络隔离",
+        "回环",
+        "8088",
+        "ListenOn",
+        "服务凭据",
+        "拦截器"
       ]
     },
     "service-api-jwt-env": {
@@ -1461,6 +2197,27 @@
         "routes.go",
         "端点验证",
         "HTTP 404"
+      ]
+    },
+    "web-common-type-reuse-no-redefine": {
+      "title": "前端禁止重复定义 web/common 已有类型，新业务枚举应上移共享层",
+      "file": "global/web-common-type-reuse-no-redefine.md",
+      "severity": "should-follow",
+      "type": "guideline",
+      "service": "all",
+      "triggers": [
+        "web/common",
+        "复用",
+        "重复定义",
+        "CommunityMembership",
+        "joinCommunity",
+        "类型",
+        "枚举",
+        "enums.ts",
+        "OWNERSHIP_OPTIONS",
+        "权属",
+        "共享层",
+        "@common"
       ]
     },
     "grpc-max-msg-size-sensitive-words": {

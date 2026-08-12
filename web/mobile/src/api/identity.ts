@@ -130,7 +130,7 @@ export async function refreshToken(
  * Get current user profile.
  */
 export async function getUserProfile(): Promise<User> {
-  const res = await request.get<any>('/api/users/profile');
+  const res = (await request.get<any>('/api/users/profile')) as unknown as any;
   // Backend wraps in { user: {...} }, extract the user object
   return (res?.user || res) as User;
 }

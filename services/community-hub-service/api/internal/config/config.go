@@ -15,3 +15,11 @@ type Config struct {
 	CommunityHubRpc zrpc.RpcClientConf
 	PermissionRpc   zrpc.RpcClientConf
 }
+
+// JWT claim 契约（auth-service 签发，access-data-permission 阶段③④ 消费侧统一）：
+//   - claim 键统一为 "user_id"，值经 go-zero rest.WithJwt 注入 ctx（json.Number 形态）；
+//   - REST 层消费用 api/internal/util.JWTUserID(ctx) 提取；
+//   - API → RPC 跨层传播复用同一键作为 gRPC outgoing metadata（util.WithUserID）。
+//
+// 键名常量定义在 api/internal/util.UserIDClaimKey，本文件仅记录契约约定。
+// SEE: [[verify-api-before-calling]] — publisher_id/userId 取自 JWT 前先确认 claims 结构

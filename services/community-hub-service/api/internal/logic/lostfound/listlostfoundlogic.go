@@ -20,7 +20,13 @@ func NewListLostFoundLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Lis
 }
 
 func (l *ListLostFoundLogic) ListLostFound(req *types.ListLostFoundReq) (*types.ListLostFoundResp, error) {
-	resp, err := l.svcCtx.LostFoundServiceRpc.ListLostFound(l.ctx, &communityv1.ListLostFoundRequest{
+	// 注入 JWT 身份 metadata，供 rpc 层 GetDataScopes 读过滤（T4.6）
+	callCtx, _, err := l.svcCtx.CallCtx(l.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := l.svcCtx.LostFoundServiceRpc.ListLostFound(callCtx, &communityv1.ListLostFoundRequest{
 		CommunityId: req.CommunityId,
 		Type:        communityv1.LostFoundType(req.Type),
 		Page:        req.Page,

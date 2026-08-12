@@ -1,5 +1,47 @@
 # CHANGELOG — web/mobile
 
+## 2026-08-12 — 加入小区流程携带 ownership（access-data-permission 阶段⑤ T5.1）
+
+### 做了什么
+- `src/api/user.ts` — `joinCommunity` 签名改为 `(communityId, building, unit, room, ownership)`，载荷传 `{community_id, building, unit, room, ownership}`
+  - ownership 与 user.proto `CommunityOwnership` 对齐：`OWNED=1` / `RENTED=2`（前端仅传 1/2，后端 10040 拒绝 UNSPECIFIED）
+  - building/unit/room 与 proto `JoinCommunityRequest` 注释对齐（楼号 1-150 / 单元 1-5 / 房号 3位数字）
+- `src/pages/join-community/join-community.vue` — 点击「加入」弹出加入表单，收集「自有/租住」选择（必填）+ 楼/单元/房号输入
+  - 校验通过后调用更新后的 `joinCommunity(target.id, building, unit, room, ownership)`；校验失败阻止提交并展示错误提示
+  - 取消/遮罩点击关闭表单；加入成功关闭表单并展示成功卡片
+- 新增 `src/pages/join-community/join-form.ts` — 纯函数：`OWNERSHIP_OPTIONS` / `validateJoinForm`（权属必填 + 楼/单元/房号区间校验，兼容 string|number 输入）/ `joinFormToPayload`
+- 新增 TDD 测试（17 cases）：`src/api/user.spec.ts`（joinCommunity 载荷）、`src/pages/join-community/join-form.spec.ts`（校验全路径）、`src/pages/join-community/join-community.spec.ts`（表单交互流程）
+- 新增测试基础设施：`vitest.config.ts`（happy-dom + vue 插件 + @/@common 别名）、`vitest.setup.ts`（uni 全局 stub）、`.gitignore` 忽略 `*.tsbuildinfo`
+
+### 基础设施修复（为通过既有门禁，未改动业务行为）
+- `package.json` — `type-check` 改为 `vue-tsc --noEmit -p tsconfig.app.json`（vue-tsc 1.0.24 不支持 solution-style tsconfig 的编译器选项透传）
+- `tsconfig.app.json` — `moduleResolution: "node"`（"bundler" 是 TS5.0 特性，与 TS 4.9/vue-tsc 1.x 不兼容）；新增 `skipLibCheck`、`esModuleInterop`；include 补充移动端实际依赖的 3 个 common 文件（identity.ts/auth.ts/config.ts）
+- `src/api/identity.ts` — `getUserProfile` 响应类型断言 `as unknown as any`（axios 类型为 AxiosResponse 而拦截器已解包 data，属既有潜在类型错误）
+- 依赖环境：`npm install --no-save --no-package-lock` 安装 vitest@4.1.10 / @vue/test-utils / happy-dom，并将 vue 家族统一到 3.4.21 + pinia@2.1.7（与 uni 工具链 compiler-sfc 3.4.21 对齐、TS 4.9 可编译；pinia 2.3.x 要求 vue^3.5 会 ERESOLVE）
+
+### 为什么
+后端阶段3 user-service T3.2：`JoinCommunityRequest.ownership` 必填，决定 owner/tenant 角色授权。前端必须携带权属加入，否则后端返回 10040。
+
+### 影响
+- Proto: 无变更（契约已在 api-proto 阶段0 提交，子 Agent 无权限）
+- 调用方: `join-community.vue` 是 `joinCommunity` 唯一调用方，已同步更新
+- 数据库: 无
+- 关联: 依赖 user-service JoinCommunity ownership 校验 + AssignRole(owner|tenant)（阶段3 T3.2 已完成）
+
+### 门禁
+- `npm run type-check` → PASS（0 errors）
+- `npm run test:unit` → PASS（3 files / 17 tests）
+- `npm run build` → PASS
+
+### TDD RED 证据（修复轮 2026-08-12）
+- 上一轮 QA 判定 TDD RED 证据不足（RED 列无实际 FAIL 输出摘录，仅注释口头描述并错误指向 CHANGELOG）。本轮按 must-follow 记忆 `tdd-red-evidence-requires-fail-excerpt.md` 真实重放 RED 并持久化：
+  - `joinCommunity`：临时回退 `src/api/user.ts` 至 HEAD 1 参签名 → vitest 捕获真实 `AssertionError: expected "vi.fn()" to be called with arguments: [ '/api/users/communities/join', …(1) ]`（Received 仅 `{community_id}`，缺 building/unit/room/ownership），2 tests FAIL
+  - `validateJoinForm`/`joinFormToPayload`/`OWNERSHIP_OPTIONS`：临时移除 `join-form.ts` → vitest 捕获真实 `Error: Failed to resolve import "./join-form" ... Does the file exist?`，0 tests
+  - `confirmJoin`/`openJoinForm`/`closeJoinForm`：`join-form.ts` 缺失时组件挂载失败 `Failed to resolve import "./join-form" from "join-community.vue"`；恢复 `join-form.ts` 后回退 `confirmJoin` 至 HEAD 行为 → vitest 捕获真实 `AssertionError: expected "vi.fn()" to be called with arguments: [ 'c1', 3, 1, 502, 1/2 ]`（Received 仅 `["c1"]`），3 tests FAIL
+  - 全部摘录为 vitest 实际输出（`AssertionError` / `Failed to resolve import`），持久化于 `_tdd_evidence.md`（本服务首个 TDD 证据文件）；随后恢复实现，确认 17/17 GREEN + type-check + build 全 PASS
+
+---
+
 ## 2026-06-06 — 验证码登录/注册页面 + RSA 加密
 
 ### 做了什么

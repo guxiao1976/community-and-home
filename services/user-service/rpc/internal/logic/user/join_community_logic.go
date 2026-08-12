@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
@@ -31,7 +32,15 @@ func NewJoinCommunityLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Joi
 
 // JoinCommunity 加入小区（per 设计文档 3.2）
 func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*userv1.JoinCommunityResponse, error) {
-	// 0. 校验用户存在
+	// 0. 校验 ownership ∈ {OWNED, RENTED}，UNSPECIFIED → 10040（参数校验失败）
+	if in.Ownership != userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED &&
+		in.Ownership != userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_RENTED {
+		return &userv1.JoinCommunityResponse{
+			Base: responsex.NewBaseRespWithError(10040, "ownership 必须为自有或租住"),
+		}, nil
+	}
+
+	// 0.1. 校验用户存在
 	if _, err := l.svcCtx.UserBaseModel.FindOne(l.ctx, in.UserId); err != nil {
 		if err == model.ErrNotFound {
 			return &userv1.JoinCommunityResponse{
@@ -141,6 +150,12 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 		existing.LeaveTime = sql.NullTime{}
 		existing.UpdatedTime = now
 
+		// 同步自动授权（ownership → owner/tenant）；失败补偿恢复为 left 并返回失败
+		if err := l.assignCommunityRole(in.UserId, in.CommunityId, ownershipRoleCode(in.Ownership)); err != nil {
+			_ = l.svcCtx.UserCommunityMembershipModel.UpdateBindStatus(l.ctx, existing.Id, model.MembershipBindStatusLeft, now)
+			return nil, err
+		}
+
 		// 更新 preferences
 		l.updateDefaultCommunity(in.UserId, in.CommunityId)
 
@@ -166,6 +181,12 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 	_, err = l.svcCtx.UserCommunityMembershipModel.Insert(l.ctx, membership)
 	if err != nil {
 		l.Errorf("insert membership error: %v", err)
+		return nil, err
+	}
+
+	// 同步自动授权（ownership → owner/tenant）；失败补偿删除/恢复 membership 并返回失败（不留「有成员无 scope」）
+	if err := l.assignCommunityRole(in.UserId, in.CommunityId, ownershipRoleCode(in.Ownership)); err != nil {
+		_ = l.svcCtx.UserCommunityMembershipModel.UpdateBindStatus(l.ctx, membership.Id, model.MembershipBindStatusLeft, time.Now())
 		return nil, err
 	}
 
@@ -198,6 +219,30 @@ func (l *JoinCommunityLogic) isVerifiedOwnerOrTenant(userId int64) bool {
 		}
 	}
 	return false
+}
+
+// ownershipRoleCode 映射权属枚举到角色编码（自有→owner，租住→tenant）
+func ownershipRoleCode(o userv1.CommunityOwnership) string {
+	if o == userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_RENTED {
+		return model.RoleCodeTenant
+	}
+	return model.RoleCodeOwner
+}
+
+// assignCommunityRole 加入小区后同步自动授权（owner/tenant, scope_type='community', scope_id=community_id, status=0）。
+// role_id 经 roleMapper 解析；失败由调用方补偿 membership。
+func (l *JoinCommunityLogic) assignCommunityRole(userId, communityId int64, roleCode string) error {
+	roleID, ok := roleIDByCode(l.ctx, l.svcCtx, l.Logger, roleCode)
+	if !ok {
+		l.Errorf("JoinCommunity: role code %s not found in permission-service", roleCode)
+		return fmt.Errorf("role code %s not found", roleCode)
+	}
+	if err := assignRoleToUser(l.ctx, l.svcCtx, l.Logger, userId, roleID,
+		model.ScopeTypeCommunity, communityId, int32Ptr(0)); err != nil {
+		return err
+	}
+	l.Infof("JoinCommunity: role %s granted, userId=%d communityId=%d roleId=%d", roleCode, userId, communityId, roleID)
+	return nil
 }
 
 // updateDefaultCommunity 首次加入小区时设置默认小区偏好

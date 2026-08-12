@@ -20,7 +20,13 @@ func NewListContactsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *List
 }
 
 func (l *ListContactsLogic) ListContacts(req *types.ListContactsReq) (*types.ListContactsResp, error) {
-	resp, err := l.svcCtx.ContactServiceRpc.ListContacts(l.ctx, &communityv1.ListContactsRequest{
+	// 注入 JWT 身份 metadata，供 rpc 层 GetDataScopes 读过滤（T4.6）
+	callCtx, _, err := l.svcCtx.CallCtx(l.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := l.svcCtx.ContactServiceRpc.ListContacts(callCtx, &communityv1.ListContactsRequest{
 		CommunityId: req.CommunityId,
 	})
 	if err != nil {

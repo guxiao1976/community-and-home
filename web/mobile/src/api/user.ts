@@ -36,11 +36,25 @@ export interface ResidentialArea {
 
 /**
  * Join a community. Requires JWT.
+ * ownership 与 user.proto CommunityOwnership 对齐：1=OWNED(自有)→owner / 2=RENTED(租住)→tenant，必填。
+ * building/unit/room 与 proto JoinCommunityRequest 对齐（building 1-150 / unit 1-5 / room 3位数字）。
  */
-export async function joinCommunity(communityId: string): Promise<CommunityMembership> {
+export async function joinCommunity(
+  communityId: string,
+  building: number,
+  unit: number,
+  room: number,
+  ownership: number,
+): Promise<CommunityMembership> {
   const res = await request.post<CommunityMembership>(
     '/api/users/communities/join',
-    { community_id: communityId },
+    {
+      community_id: communityId,
+      building,
+      unit,
+      room,
+      ownership,
+    },
   );
   return res as unknown as CommunityMembership;
 }

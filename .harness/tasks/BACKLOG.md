@@ -9,7 +9,7 @@
 
 ## P0 — 立即处理（阻塞性问题）
 
-- [access-data-permission 后续 Wave：user/community-hub/web-mobile/集成验收](task-2026-08-12-nextwave.md) — multi, P0, open, human
+- [access-data-permission 后续 Wave：user/community-hub/web-mobile/集成验收](task-2026-08-12-nextwave.md) — multi, P0, completed, 2026-08-12（阶段③④⑤⑥ 全部完成，T6.1 九项矩阵全绿）
 - [PipelineId path 参数解析修复（json tag → path tag）](task-2026-06-16-002.md) — moderation-service, P0, closed, review
 - [update_pipeline_logic 恒真条件修复（空字符串意外覆盖已有值）](task-2026-06-16-003.md) — moderation-service, P0, closed, review
 - [activate_pipeline 竞态修复（事务 + 批量更新替代逐条循环）](task-2026-06-16-004.md) — moderation-service, P0, closed, review
@@ -50,7 +50,7 @@
 
 ## 进行中
 
-- [access-data-permission 后续 Wave：user/community-hub/web-mobile/集成验收](task-2026-08-12-nextwave.md) — multi, P0, open, human（Wave 1 已完成，阶段 3/4/5/6 待执行）
+
 
 ## 已阻塞
 

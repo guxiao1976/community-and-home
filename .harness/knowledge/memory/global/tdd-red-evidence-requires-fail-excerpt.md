@@ -6,7 +6,7 @@ service: all
 status: active
 created: 2026-08-12
 updated: 2026-08-12
-apply_count: 1
+apply_count: 2
 ---
 # QA 的 TDD RED 证据必须包含实际 FAIL 输出摘录
 
@@ -40,3 +40,15 @@ apply_count: 1
 **QA 判定**：restore 行 RED 无摘录 → ❌ → QA FAIL（与 T2.2 同一失败类，证明未根治）。
 
 **补救**：行为型断言 RED 也必须在 RED 阶段实际跑一次测试并持久化失败文本（含 `Error Trace` / `Error:` / `Test:` 行）；`_tdd_evidence.md` 须覆盖**全部**新增测试文件，不能只覆盖编译错误类。
+
+## 复现场景（2026-08-12，web/mobile 阶段⑤ T5.1 加入小区携带 ownership）
+
+**现象**：`web/mobile/src/pages/join-community/join-form.ts`（validateJoinForm/joinFormToPayload/OWNERSHIP_OPTIONS）+ `joinCommunity` 签名改 5 参 + 3 个 spec 测试文件全部为工作树未提交/未跟踪状态。`user.spec.ts` 注释声称"RED 阶段捕获了真实 FAIL 摘录（request.post 仅收到 {community_id}，缺 building/unit/room/ownership），见 CHANGELOG"——**但 CHANGELOG 没有任何实际 FAIL 输出文本**（仅"新增 TDD 测试（17 cases）"一行）。全仓 grep（CHANGELOG/request.md/loop-runs/work-records/_tdd_evidence.md）均无 vitest 断言失败文本（如 `AssertionError` / `expected spy to have been called with`）。
+
+**结构性佐证（成立但不够）**：`git show HEAD:web/mobile/src/pages/join-community/join-form.ts` → `fatal: path exists on disk, but not in 'HEAD'`；`git show HEAD:web/mobile/src/api/user.ts` 旧签名 `joinCommunity(communityId)` 仅传 `{community_id}`。证明 RED 是真实失败，但无摘录。
+
+**根因**：与 T2.2/restore 用例同一失败类——Generator 把 RED 失败"口头描述进注释/CHANGELOG"（此处写进 `user.spec.ts` 顶部注释并指向不存在的 CHANGELOG 摘录），未实际跑一次修复前测试并持久化失败文本；`_tdd_evidence.md` 仍只存在于 master-data-service，mobile 未创建。修复目标 #4（"TDD 证据强制捕获"）**第 3 次未闭环**。
+
+**QA 判定**：TDD 证据表 RED 列全部 ❌（无 FAIL 摘录）→ QA FAIL（TDD 证据不足）。机械门禁全 PASS（build/type-check/test 17/17 exit 0）+ 结构性 RED 成立均不改变该判定。
+
+**补救**：mobile 也须按本记忆做法——RED 阶段把真实 vitest 断言失败输出（`AssertionError:` / `- Expected` / `+ Received` / `Test:` 行）写入 CHANGELOG 或新建 `_tdd_evidence.md`；TDD 证据表 RED 列必须贴摘录原文。

@@ -134,7 +134,7 @@
       <!-- Results -->
       <view v-if="searching" class="loading-text">搜索中...</view>
       <scroll-view v-else-if="areas.length > 0" class="list" scroll-y>
-        <view v-for="area in areas" :key="area.id" class="list-item" @click="joinSelectedCommunity(area)">
+        <view v-for="area in areas" :key="area.id" class="list-item" @click="openJoinForm(area)">
           <view class="item-content">
             <text class="item-name">{{ area.name }}</text>
             <text v-if="area.address" class="item-addr">{{ area.address }}</text>
@@ -161,6 +161,44 @@
 
     <!-- Max Warning -->
     <view v-if="showMaxWarning" class="max-warning"><text>最多加入 3 个小区</text></view>
+
+    <!-- Join Form Modal: ownership (自有/租住, required) + building/unit/room -->
+    <view v-if="showJoinForm && joinTarget" class="join-form-mask" @click.self="closeJoinForm">
+      <view class="join-form-card">
+        <view class="join-form-title">加入 {{ joinTarget.name }}</view>
+
+        <view class="join-form-label">房屋权属 <text class="required">*</text></view>
+        <view class="ownership-row">
+          <view
+            v-for="opt in OWNERSHIP_OPTIONS"
+            :key="opt.value"
+            class="ownership-option"
+            :class="{ selected: joinForm.ownership === opt.value }"
+            @click="joinForm.ownership = opt.value"
+          >
+            {{ opt.label }}
+          </view>
+        </view>
+        <text v-if="joinFormErrors.ownership" class="field-error">{{ joinFormErrors.ownership }}</text>
+
+        <view class="join-form-label">楼号 <text class="required">*</text></view>
+        <input class="join-form-input" v-model="joinForm.building" type="number" placeholder="如 3" />
+        <text v-if="joinFormErrors.building" class="field-error">{{ joinFormErrors.building }}</text>
+
+        <view class="join-form-label">单元号 <text class="required">*</text></view>
+        <input class="join-form-input" v-model="joinForm.unit" type="number" placeholder="如 1" />
+        <text v-if="joinFormErrors.unit" class="field-error">{{ joinFormErrors.unit }}</text>
+
+        <view class="join-form-label">房号 <text class="required">*</text></view>
+        <input class="join-form-input" v-model="joinForm.room" type="number" placeholder="如 502" />
+        <text v-if="joinFormErrors.room" class="field-error">{{ joinFormErrors.room }}</text>
+
+        <view class="join-form-actions">
+          <view class="join-form-cancel" @click="closeJoinForm">取消</view>
+          <view class="confirm-join-btn" @click="confirmJoin">确认加入</view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -172,6 +210,10 @@ import {
   joinCommunity,
 } from '@/api/user';
 import { useCommunityStore } from '@/stores/community';
+import {
+  OWNERSHIP_OPTIONS, validateJoinForm, joinFormToPayload,
+  type JoinFormErrors, type JoinFormState,
+} from './join-form';
 
 const communityStore = useCommunityStore();
 
@@ -261,24 +303,57 @@ async function doSearch() {
 
 const joinedArea = ref<ResidentialArea | null>(null);
 
-async function joinSelectedCommunity(area: ResidentialArea) {
+// --- Join form (ownership + building/unit/room) ---
+const showJoinForm = ref(false);
+const joinTarget = ref<ResidentialArea | null>(null);
+const joinForm = ref<JoinFormState>({
+  building: '',
+  unit: '',
+  room: '',
+  ownership: null,
+});
+const joinFormErrors = ref<JoinFormErrors>({});
+
+function openJoinForm(area: ResidentialArea) {
   if (maxReached.value) {
     showMaxWarning.value = true;
     setTimeout(() => { showMaxWarning.value = false; }, 2000);
     return;
   }
   if (isJoined(area.id)) return;
+  joinTarget.value = area;
+  joinForm.value = { building: '', unit: '', room: '', ownership: null };
+  joinFormErrors.value = {};
+  showJoinForm.value = true;
+}
+
+function closeJoinForm() {
+  showJoinForm.value = false;
+  joinTarget.value = null;
+}
+
+async function confirmJoin() {
+  const target = joinTarget.value;
+  if (!target) return;
+
+  // 加入前收集「自有/租住」选择（必填）+ 楼/单元/房号输入
+  const result = validateJoinForm(joinForm.value);
+  joinFormErrors.value = result.errors;
+  if (!result.valid) return;
 
   try {
     uni.hideLoading(); // clear any lingering loading state
     uni.showLoading({ title: '加入中...', mask: true });
-    await joinCommunity(area.id);
+    const { building, unit, room, ownership } = joinFormToPayload(joinForm.value);
+    await joinCommunity(target.id, building, unit, room, ownership);
     communityStore.addCommunity({
-      communityId: area.id,
-      communityName: area.name,
-      address: area.address,
+      communityId: target.id,
+      communityName: target.name,
+      address: target.address,
     });
-    joinedArea.value = area;
+    showJoinForm.value = false;
+    joinedArea.value = target;
+    joinTarget.value = null;
   } catch (e: any) {
     const msg = e?.message || e?.msg || '加入失败，请稍后重试';
     uni.showToast({ title: msg, icon: 'none', duration: 3000 });
@@ -368,6 +443,24 @@ function isJoined(id: string): boolean {
 
 .max-warning { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.75); padding: 24rpx 40rpx; border-radius: 12rpx;
   text { color: #fff; font-size: 28rpx; }
+}
+
+.join-form-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 0 40rpx; }
+.join-form-card { background: #FFFFFF; border-radius: 24rpx; padding: 40rpx 32rpx; width: 100%; max-width: 600rpx; box-shadow: $uni-shadow-base; }
+.join-form-title { font-size: 34rpx; font-weight: 700; color: $uni-text-color; text-align: center; margin-bottom: 32rpx; }
+.join-form-label { font-size: 26rpx; color: $uni-text-color; margin-bottom: 12rpx;
+  .required { color: $uni-color-error; }
+}
+.ownership-row { display: flex; gap: 20rpx; margin-bottom: 8rpx;
+  .ownership-option { flex: 1; text-align: center; padding: 20rpx 0; border-radius: 12rpx; background: $uni-bg-color-input; color: $uni-text-color-grey; font-size: 28rpx; border: 2rpx solid transparent;
+    &.selected { background: rgba(184, 149, 106, 0.12); color: $uni-color-primary; border-color: $uni-color-primary; font-weight: 600; }
+  }
+}
+.join-form-input { width: 100%; height: 80rpx; background: $uni-bg-color-input; border-radius: 12rpx; padding: 0 20rpx; font-size: 28rpx; color: $uni-text-color; box-sizing: border-box; margin-bottom: 8rpx; }
+.field-error { display: block; font-size: 22rpx; color: $uni-color-error; margin-bottom: 16rpx; }
+.join-form-actions { display: flex; gap: 24rpx; margin-top: 32rpx;
+  .join-form-cancel { flex: 1; text-align: center; padding: 20rpx 0; border-radius: 44rpx; border: 2rpx solid #E8E0D5; color: $uni-text-color-grey; font-size: 28rpx; }
+  .confirm-join-btn { flex: 1; text-align: center; padding: 20rpx 0; border-radius: 44rpx; background: linear-gradient(135deg, #B8956A, #D4B896); color: #fff; font-size: 28rpx; font-weight: 600; }
 }
 
 .success-card { background: #FAF8F5; border-radius: 16rpx; padding: 48rpx 32rpx; text-align: center; box-shadow: $uni-shadow-base; margin-top: 32rpx;

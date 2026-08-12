@@ -6,9 +6,10 @@ import (
 
 	masterdatav1 "github.com/guxiao1976/api-proto/gen/go/masterdata/v1"
 	moderationv1 "github.com/guxiao1976/api-proto/gen/go/moderation/v1"
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	sysconfig "github.com/guxiao1976/community-common/v2/pkg/sysconfig"
 	"github.com/guxiao1976/community-hub/model"
 	"github.com/guxiao1976/community-hub/rpc/internal/config"
-	sysconfig "github.com/guxiao1976/community-common/v2/pkg/sysconfig"
 	"github.com/zeromicro/go-zero/core/stores/redis"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/zrpc"
@@ -16,14 +17,15 @@ import (
 
 // ServiceContext 社区枢纽 RPC 服务上下文
 type ServiceContext struct {
-	Config       config.Config
-	SysConfig    *sysconfig.Client
-	NoticeModel            model.NoticeModel
-	NoticeAttachmentModel  model.NoticeAttachmentModel
-	CommunityContactModel  model.CommunityContactModel
-	LostFoundItemModel     model.LostFoundItemModel
-	ModerationClient moderationv1.ModerationServiceClient
-	RedisClient      *redis.Redis
+	Config                config.Config
+	SysConfig             *sysconfig.Client
+	NoticeModel           model.NoticeModel
+	NoticeAttachmentModel model.NoticeAttachmentModel
+	CommunityContactModel model.CommunityContactModel
+	LostFoundItemModel    model.LostFoundItemModel
+	ModerationClient      moderationv1.ModerationServiceClient
+	RedisClient           *redis.Redis
+	PermissionClient      permissionv1.PermissionServiceClient // 数据权限（AssertPublishScope/GetDataScopes）
 }
 
 // NewServiceContext 创建服务上下文，初始化所有数据库模型
@@ -61,6 +63,13 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		r.Pass = c.ModerationRedis.Pass
 	})
 
+	// Initialize permission-service client (data scope: AssertPublishScope / GetDataScopes)
+	permConn, err := zrpc.NewClient(c.PermissionRpc)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create permission client: %v", err))
+	}
+	permClient := permissionv1.NewPermissionServiceClient(permConn.Conn())
+
 	return &ServiceContext{
 		Config:                c,
 		SysConfig:             sysCfg,
@@ -70,5 +79,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		LostFoundItemModel:    model.NewLostFoundItemModel(conn),
 		ModerationClient:      modClient,
 		RedisClient:           redisClient,
+		PermissionClient:      permClient,
 	}
 }

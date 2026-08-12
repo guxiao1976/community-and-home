@@ -82,7 +82,12 @@ func (l *CreateUserLogic) CreateUser(in *userv1.CreateUserRequest) (*userv1.Crea
 
 	l.Infof("CreateUser success, userId=%d, phone=%s", userId, in.Phone)
 
-	// 6. Submit nickname to moderation (if provided and moderation client configured)
+	// 6. 自动分配 registered_user 基角色（scope_type='', scope_id=0, status=2，permanent）
+	//    失败仅告警不阻塞注册；重复注册由 permission uk_user_role_scope 唯一索引保证幂等
+	//    // SEE: [[testing-discipline]]
+	l.assignRegisteredUser(userId)
+
+	// 7. Submit nickname to moderation (if provided and moderation client configured)
 	if in.Nickname != "" && l.svcCtx.ModerationClient != nil {
 		contentSummary := in.Nickname
 		if len([]rune(contentSummary)) > 100 {
@@ -121,4 +126,21 @@ func (l *CreateUserLogic) CreateUser(in *userv1.CreateUserRequest) (*userv1.Crea
 		Base:   responsex.NewBaseResp(),
 		UserId: userId,
 	}, nil
+}
+
+// assignRegisteredUser 注册成功后同步分配 registered_user 基角色。
+// role_id 经 roleMapper 解析（permission-service ListRoles 缓存）；失败仅告警，不阻塞注册。
+func (l *CreateUserLogic) assignRegisteredUser(userId int64) {
+	roleID, ok := roleIDByCode(l.ctx, l.svcCtx, l.Logger, model.RoleCodeRegisteredUser)
+	if !ok {
+		l.Errorf("CreateUser: role registered_user not found in permission-service, userId=%d", userId)
+		return
+	}
+	if err := assignRoleToUser(l.ctx, l.svcCtx, l.Logger, userId, roleID,
+		model.ScopeTypeEmpty, 0, int32Ptr(2)); err != nil {
+		// 仅告警，不阻塞注册（后续可补）
+		l.Errorf("CreateUser: assign registered_user failed (non-blocking), userId=%d err=%v", userId, err)
+		return
+	}
+	l.Infof("CreateUser: registered_user granted, userId=%d roleId=%d", userId, roleID)
 }

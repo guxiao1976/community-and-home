@@ -20,7 +20,13 @@ func NewListNoticesLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ListN
 }
 
 func (l *ListNoticesLogic) ListNotices(req *types.ListNoticesReq) (*types.ListNoticesResp, error) {
-	resp, err := l.svcCtx.NoticeServiceRpc.ListNotices(l.ctx, &communityv1.ListNoticesRequest{
+	// 注入 JWT 身份 metadata，供 rpc 层 GetDataScopes 读过滤（T4.6）
+	callCtx, _, err := l.svcCtx.CallCtx(l.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := l.svcCtx.NoticeServiceRpc.ListNotices(callCtx, &communityv1.ListNoticesRequest{
 		CommunityId: req.CommunityId,
 		Role:        communityv1.NoticeRole(req.Role),
 		Page:        req.Page,
