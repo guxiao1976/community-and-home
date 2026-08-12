@@ -9,6 +9,7 @@
 | 文件 | 内容 | 读者 |
 |------|------|------|
 | [`rbac-design.md`](rbac-design.md) | RBAC 权限体系完整方案：数据模型、权限校验链路、缓存策略、前端对接、验收清单 | 所有服务 + 前端 |
+| [`access-control-design.md`](access-control-design.md) | 访问控制与数据权限：端限制、数据权限统一模型（祖先链命中）、当前小区应用状态、板块配额 | 所有服务 + 前端 |
 | [`common-technical-spec.md`](common-technical-spec.md) | Community Common 库技术规范：错误码、HTTP/gRPC 响应格式、Proto 管理、测试规范 | 所有 Go 服务 |
 | [`ai-dev-team-design.md`](ai-dev-team-design.md) | AI 软件开发团队三层架构、角色化 Agent 设计、知识持久化 | 全局 Claude |
 | [`harness-construction-guide.md`](harness-construction-guide.md) | Harness Engineering 方法论：Rules/Skills/Knowledge/Changes 四支柱 | 全局 Claude |
