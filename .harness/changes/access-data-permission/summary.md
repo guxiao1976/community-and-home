@@ -46,7 +46,7 @@
 | master-data REST 无 JWT 历史遗留 | WARN | 管线已补 `rest.WithJwt`(10 路由组)；完整认证评估待后续 |
 | ListPermissions/InvalidateUserCache 透传无直接单测 | WARN | QA WARNING，非阻塞，记 BACKLOG |
 | master-data 管线超轮次(TDD 证据占位符) | WARN | 手工补 RED 摘录(CHANGELOG + _tdd_evidence.md)后验收 |
-| 阶段 3/4(user/community-hub)+ 阶段 5 前端 + 阶段 6 集成 | — | 后续 Wave 执行 |
+| 阶段 3/4(user/community-hub)+ 阶段 5 前端 + 阶段 6 集成 | — | 后续 Wave 执行（见 HANDOFF-NEXT-WAVE.md + BACKLOG task-2026-08-12-nextwave） |
 
 ## 产物索引
 
@@ -62,3 +62,4 @@
 | Review | `.harness/changes/access-data-permission/impl/permission-service/_review_{design-biz,security-arch,standards-eng}.md` |
 | TDD 证据 | `.harness/changes/access-data-permission/impl/master-data-service/_tdd_evidence.md` |
 | CHANGELOG | `services/permission-service/CHANGELOG.md`、`services/master-data-service/CHANGELOG.md`、`api-proto/CHANGELOG.md` |
+| 交接 | `.harness/changes/access-data-permission/HANDOFF-NEXT-WAVE.md` |
