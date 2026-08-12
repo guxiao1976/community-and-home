@@ -59,6 +59,11 @@ function qaPrompt() {
 ## 验证目标
 验证 ${SVC_DIR}/ 的${isFrontend ? '前端' : ''}代码质量。
 
+## 范围（FIX: 管线修复后新增）
+- **本次变更 = 当前工作树的未提交改动 + 未跟踪文件**（Generator 直接改主树、未提交；管线 QA 基于工作树 diff 校验）。
+- TDD 证据检查只看**本次工作树新增/修改的函数**，不要用 git log 历史 commit 当范围（那会导致审到旧代码，如旧提交 54e1a60）。
+- 机械化检查（harness-checks.sh）已按工作树 diff 判定新增文件。
+
 ## 验证步骤
 1. 阅读 ${SVC_DIR}/CLAUDE.md — 服务规则
 2. 阅读 ${SVC_DIR}/CHANGELOG.md — 变更历史

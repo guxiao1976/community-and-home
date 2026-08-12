@@ -50,6 +50,9 @@ target/
 # Ralph backup directories (created by migration)
 .ralph_backup_*
 
+# Harness residue backups (created during cleanup)
+.harness/backups/
+
 # Graph sync runtime state
 .claude/.graph_last_sync
 data/

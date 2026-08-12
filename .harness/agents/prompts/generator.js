@@ -58,7 +58,7 @@ ${knowledgeCmd || `bash .harness/scripts/knowledge-load.sh --service ${bareName 
 3. 在代码中用 \`// SEE: [[memory-slug]]\` 注释标记应用了哪些记忆
 4. 如果命令返回空，说明该服务暂无相关记忆，正常继续即可
 
-记忆应用后在代码中标记 `// SEE: [[memory-slug]]`，编码结束后输出记忆应用报告。
+记忆应用后在代码中标记 \`// SEE: [[memory-slug]]\`，编码结束后输出记忆应用报告。
 
 ## 编码纪律（任务类型: ${taskType}）
 
@@ -120,6 +120,11 @@ ${isFrontend ? `
 - 服务间通信仅通过 gRPC — 不直连其他服务数据库
 - 其他规范（Snowflake ID/json_string/错误码格式）由 QA 机械化检查保证，信任它
 `}
+
+### 任务执行铁律（管线修复后新增）
+- **严格按 tasks.md 逐任务实现**，只做任务清单内的工作，不擅自扩范围
+- **改动直接落在当前工作树，禁止 \`git commit\`**——管线 QA 基于工作树 diff（未提交改动 + 未跟踪文件）校验；提交由管线完成
+- 每个新增函数必须**先写失败测试（RED 摘录）→ 实现（GREEN）**，测试与实现同时产出，留 TDD 证据
 
 ## 任务`
 

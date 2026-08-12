@@ -36,16 +36,24 @@ if [ ! -f "$AST_CHECKER" ]; then
   echo "✅ AST checker built successfully" >&2
 fi
 
+# Resolve service dir: harness-checks.sh passes absolute paths, but support relative too.
+# (FIX: previously $PROJECT_ROOT/$SERVICE_DIR doubled when SERVICE_DIR was already absolute.)
+if [[ "$SERVICE_DIR" = /* ]]; then
+  ABS_SERVICE_DIR="$SERVICE_DIR"
+else
+  ABS_SERVICE_DIR="$PROJECT_ROOT/$SERVICE_DIR"
+fi
+
 # Run AST checks with absolute paths
 if [ "$JSON_OUTPUT" = "true" ]; then
   "$AST_CHECKER" \
-    -service-dir "$PROJECT_ROOT/$SERVICE_DIR" \
+    -service-dir "$ABS_SERVICE_DIR" \
     -service-name "$SERVICE_NAME" \
     -registry "$REGISTRY" \
     -json
 else
   "$AST_CHECKER" \
-    -service-dir "$PROJECT_ROOT/$SERVICE_DIR" \
+    -service-dir "$ABS_SERVICE_DIR" \
     -service-name "$SERVICE_NAME" \
     -registry "$REGISTRY"
 fi

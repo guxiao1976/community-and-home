@@ -256,11 +256,13 @@ check_go_test() {
     return
   fi
 
-  # Recent-package test gap: find packages added in last 7 days that lack tests
+  # New-package test gap: find packages with NEW non-test Go files in THIS change that lack tests.
+  # FIX: scope = 本次工作树实际改动（generator 直接改主树后 QA 能看见），
+  # 不再用 --since="7 days ago"（时间窗口会把历史 commit 的老代码也算进"本次新增"，导致 QA 审错范围）。
   local new_pkgs_no_test=()
   if [[ -n "$SERVICE_NAME" ]] && git -C "$TARGET_DIR" rev-parse --git-dir >/dev/null 2>&1; then
     local new_go_files
-    new_go_files=$(git -C "$TARGET_DIR" log --diff-filter=A --name-only --since="7 days ago" --pretty=format: 2>/dev/null | grep '\.go$' | grep -v '_test\.go$' | sort -u || true)
+    new_go_files=$(cd "$PROJECT_ROOT" && changed_files 'go' | grep "^services/$SERVICE_NAME/" | grep -v '_test\.go$' | sed "s|^services/$SERVICE_NAME/||" || true)
     if [[ -n "$new_go_files" ]]; then
       local new_dirs
       new_dirs=$(echo "$new_go_files" | while read -r f; do [[ -n "$f" ]] && dirname "$f"; done | sort -u || true)
@@ -379,12 +381,14 @@ check_json_string() {
   if [[ -f "$ast_checker" ]] && [[ -n "$SERVICE_NAME" ]]; then
     echo "  (using AST checker)" >&2
 
-    # Run AST checks and capture JSON output
-    local ast_output
+    # Run AST checks and capture JSON output.
+    # FIX(管线健壮性): 外层 set -eu 下, ast-checks 返回 FAIL(exit 1)会让本命令替换
+    # 直接终止脚本, 连 if 判断都到不了。用 `|| ast_rc=$?` 捕获退出码并继续解析。
+    local ast_output ast_rc
     ast_output=$(bash "$PROJECT_ROOT/.harness/skills/qa/scripts/ast-checks.sh" \
-      "$search_dir" "$SERVICE_NAME" "true" 2>/dev/null)
+      "$search_dir" "$SERVICE_NAME" "true" 2>/dev/null) || ast_rc=$?
 
-    if [[ $? -eq 0 ]]; then
+    if [[ ${ast_rc:-0} -eq 0 ]]; then
       log_pass "ast_json_string" "all int64 ID fields have json:\",string\" (AST verified)"
       return
     else

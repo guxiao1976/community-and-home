@@ -79,7 +79,7 @@ ${knowledgeCmd || `bash .harness/scripts/knowledge-load.sh --service ${bareName 
 3. 在代码中用 \`// SEE: [[memory-slug]]\` 注释标记应用了哪些记忆
 4. 如果命令返回空，说明该服务暂无相关记忆，正常继续即可
 
-记忆应用后在代码中标记 `// SEE: [[memory-slug]]`，编码结束后输出记忆应用报告。
+记忆应用后在代码中标记 \`// SEE: [[memory-slug]]\`，编码结束后输出记忆应用报告。
 
 ## 编码纪律（任务类型: ${taskType}）
 
@@ -141,6 +141,11 @@ ${isFrontend ? `
 - 服务间通信仅通过 gRPC — 不直连其他服务数据库
 - 其他规范（Snowflake ID/json_string/错误码格式）由 QA 机械化检查保证，信任它
 `}
+
+### 任务执行铁律（管线修复后新增）
+- **严格按 tasks.md 逐任务实现**，只做任务清单内的工作，不擅自扩范围
+- **改动直接落在当前工作树，禁止 \`git commit\`**——管线 QA 基于工作树 diff（未提交改动 + 未跟踪文件）校验；提交由管线完成
+- 每个新增函数必须**先写失败测试（RED 摘录）→ 实现（GREEN）**，测试与实现同时产出，留 TDD 证据
 
 ## 任务`
 
@@ -226,6 +231,11 @@ function qaPrompt() {
 
 ## 验证目标
 验证 ${SVC_DIR}/ 的${isFrontend ? '前端' : ''}代码质量。
+
+## 范围（FIX: 管线修复后新增）
+- **本次变更 = 当前工作树的未提交改动 + 未跟踪文件**（Generator 直接改主树、未提交；管线 QA 基于工作树 diff 校验）。
+- TDD 证据检查只看**本次工作树新增/修改的函数**，不要用 git log 历史 commit 当范围（那会导致审到旧代码，如旧提交 54e1a60）。
+- 机械化检查（harness-checks.sh）已按工作树 diff 判定新增文件。
 
 ## 验证步骤
 1. 阅读 ${SVC_DIR}/CLAUDE.md — 服务规则
@@ -537,20 +547,39 @@ NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 // ============================================================
 // Service Registry Loader (replaces hardcoded VALID_SERVICES)
 // ============================================================
-const fs = require('fs')
-const path = require('path')
+// Sandbox-compat: the Workflow runtime provides no Node.js API (no require/fs/path/process).
+// Guard all Node API usage so the pipeline degrades to args-driven mode instead of dying at load.
+let fs = null, path = null
+try { fs = require('fs'); path = require('path') } catch (e) { /* sandbox: no Node API */ }
 
 function loadServiceRegistry() {
-  const registryPath = path.join(process.cwd(), '.harness/registry/services.json')
-  if (!fs.existsSync(registryPath)) {
-    throw new Error(`Service registry not found. Run: bash .harness/scripts/build-service-registry.sh`)
+  // Fallback for sandboxed runs (no fs/process): derive a minimal registry from args,
+  // so Step-C validation accepts the explicitly-passed service. Full-Node runs load services.json.
+  const sandbox = () => {
+    const bare = (typeof args !== 'undefined' && args && args.serviceDir) ? String(args.serviceDir).split('/').pop() : ''
+    const name = (typeof args !== 'undefined' && args && args.serviceName) || ''
+    return {
+      services: bare ? [bare] : [],
+      web: [],
+      getService: () => (bare ? { name: bare, module: bare } : null),
+      getServiceModule: () => bare || null,
+    }
   }
-  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
-  return {
-    services: registry.services.map(s => s.name),
-    web: registry.web.map(w => w.name),
-    getService: (name) => registry.services.find(s => s.name === name),
-    getServiceModule: (name) => registry.services.find(s => s.name === name)?.module || null,
+  try {
+    if (!fs || !path) return sandbox()
+    const registryPath = path.join(process.cwd(), '.harness/registry/services.json')
+    if (!fs.existsSync(registryPath)) {
+      throw new Error(`Service registry not found. Run: bash .harness/scripts/build-service-registry.sh`)
+    }
+    const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
+    return {
+      services: registry.services.map(s => s.name),
+      web: registry.web.map(w => w.name),
+      getService: (name) => registry.services.find(s => s.name === name),
+      getServiceModule: (name) => registry.services.find(s => s.name === name)?.module || null,
+    }
+  } catch (e) {
+    return sandbox()
   }
 }
 
@@ -762,9 +791,12 @@ log(`知识预加载: ${knowledgeCmd}`)
 while (iteration <= MAX_ITERATIONS) {
   log(`第 ${iteration} 轮`)
 
-  // Phase 1: Generator (隔离 worktree，避免并行管线互踩文件)
+  // Phase 1: Generator — 直接在主工作树实现并提交到当前分支。
+  // FIX: 之前用 isolation:'worktree'，实现+测试滞留隔离 worktree、无合并回主树的步骤，
+  // 导致 QA 在主树看不到任何改动、TDD 检查只能退回 7 天窗口审旧代码。
+  // 并行管线若目标服务不同，主树直接编辑天然互不冲突。
   phase('Develop')
-  await agent(generatorPrompt(iteration, fixContext, TASK_TYPE, knowledgeCmd), { label: `${args.serviceName}: 开发/修复`, isolation: 'worktree' })
+  await agent(generatorPrompt(iteration, fixContext, TASK_TYPE, knowledgeCmd), { label: `${args.serviceName}: 开发/修复` })
   log(`Generator 完成 (轮次 ${iteration})`)
 
   // Phase 2: QA
@@ -829,13 +861,13 @@ while (iteration <= MAX_ITERATIONS) {
     log(`⏭️ Review 跳过（${TASK_TYPE} 任务）`)
     const confidence = computeConfidence(iteration, 3, 3, 0, qaFirstPass)
     log(`✅ Harness 管线完成！${args.serviceName} (${iteration} 轮, confidence: ${confidence})`)
+    logMetrics({ timestamp: args.timestamp || 'na', service: args.serviceName, taskType: TASK_TYPE, iterations: iteration, status: 'pass', reviewSkipped: true, confidence })
     return {
       status: 'pass',
       iterations: iteration,
       serviceName: args.serviceName,
       qaSummary: qaResult.summary,
-      logMetrics({ timestamp: new Date().toISOString(), service: args.serviceName, taskType: TASK_TYPE, iterations: iteration, status: 'pass', reviewSkipped: true, confidence })
-	    return { status: 'pass', iterations: iteration, serviceName: args.serviceName, qaSummary: qaResult.summary, reviewSummary: 'skipped (chore)',
+      reviewSummary: 'skipped (chore)',
       memorySuggestions: [],
       confidence,
       notifications: [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过 (${TASK_TYPE}), QA: ${qaResult.summary}` }],
@@ -872,9 +904,9 @@ while (iteration <= MAX_ITERATIONS) {
   }
 
   // 投票判定 — type-aware threshold
+  const failingLenses = validReviews.filter(r => r.verdict === 'FAIL').map(r => r.label).join('、')
   if (passCount >= REVIEW_PASS_THRESHOLD) {
     if (failCount > 0) {
-      const failingLenses = validReviews.filter(r => r.verdict === 'FAIL').map(r => r.label).join('、')
       log(`⚠️ ${failingLenses}视角有异议，但多数通过 (${passCount}/${validReviews.length})，管线继续`)
     }
     log(`✅ 多视角 Review PASS (${passCount}/${validReviews.length})`)
