@@ -63,3 +63,4 @@
 | TDD 证据 | `.harness/changes/access-data-permission/impl/master-data-service/_tdd_evidence.md` |
 | CHANGELOG | `services/permission-service/CHANGELOG.md`、`services/master-data-service/CHANGELOG.md`、`api-proto/CHANGELOG.md` |
 | 交接 | `.harness/changes/access-data-permission/HANDOFF-NEXT-WAVE.md` |
+| 新会话安排 | `.harness/changes/access-data-permission/SESSION-START-NEXT-WAVE.md` |
