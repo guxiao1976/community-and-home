@@ -1,7 +1,7 @@
 // Community Pinia Store — manages user community memberships and current active community
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { getUserMemberships } from '@/api/user';
+import { getUserMemberships, setCurrentCommunity } from '@/api/user';
 import type { CommunityMembership } from '@/api/user';
 
 export interface CommunityInfo {
@@ -91,9 +91,13 @@ export const useCommunityStore = defineStore('community', () => {
     }
   }
 
-  function switchCommunity(id: string): void {
+  async function switchCommunity(id: string): Promise<void> {
     const exists = communities.value.some(c => c.communityId === id);
     if (!exists) return;
+    // 后端持久化当前小区（并校验数据范围）；失败（如 10015 不在数据范围）抛错，
+    // 由调用方提示，本地 currentCommunityId 保持不变。
+    // SEE: [[frontend-business-rule-hardcode]]
+    await setCurrentCommunity(id);
     currentCommunityId.value = id;
     saveStoredCommunityId(id);
   }

@@ -1,5 +1,64 @@
 # CHANGELOG — web/mobile
 
+## 2026-08-13 — access-control 前端 TDD 缺口修复（Task 7.1-7.3 补测）
+
+### 分诊纠正
+上一轮将 4 个「有逻辑函数」误标为「字段映射/纯接线」而漏测、漏 RED。本轮逐一分诊纠正：
+- `switchCommunity`（`stores/community.ts`）：async + 后端持久化失败抛错 + 本地 `currentCommunityId` 不变 → 有逻辑函数
+- `onCommunitySwitch`（`pages/notice/notice.vue`）：`e?.code === 10015` 条件分支 toast 提示 → 有逻辑函数
+- `request.ts` 响应拦截器：业务错误 `code` 附加 + 成功解包 / 无 code 透传 → 有逻辑函数
+- `validateJoinForm`（`join-form.ts`）：去硬编码区间的校验逻辑 → 有逻辑函数
+
+### 新增测试（RED → GREEN）
+- `src/stores/community.spec.ts`（3 用例）：成功后持久化+更新本地+落 storage / 失败 10015 本地不变 / 非成员 no-op
+- `src/pages/notice/notice.spec.ts`（3 用例）：10015 专属 toast / 非 10015 不 toast / 成功不 toast 且更新
+- `src/utils/request.spec.ts`（5 用例）：code===0 解包 / 无 code 透传 / 业务错误 code 附加+toast / 非数字 code 置 undefined
+- `join-form.spec.ts` 已有 10 用例，本轮补 RED 摘录
+
+### TDD RED 证据
+4 个函数均按 must-follow 记忆 `tdd-red-evidence-requires-fail-excerpt` 真实重放 RED（临时回退实现到 HEAD 基线 → vitest 捕获真实 `AssertionError` / `TypeError` / `expected` / `Received` → 恢复实现），持久化于 `_tdd_evidence.md` §1-§4。
+
+### 记忆应用
+- `[[tdd-red-evidence-requires-fail-excerpt]]` — RED 摘录为 vitest 实际输出
+- `[[testing-discipline]]` — 有逻辑函数按正常/空值/边界/错误路径覆盖
+- `[[frontend-business-rule-hardcode]]` — 切换校验/区间权威在后端，前端仅 UX 提示
+
+### 门禁
+- `npx vitest run` → 6 files / 28 tests PASS
+- `npm run type-check` → PASS（0 errors）
+- `npm run build` → PASS
+
+> 关于「50007 跳过 toast」：该行为归属 web/pc 登录/注册页（design §7「端限制登录引导」），移动端 `request.ts` 不消费 50007，不在本服务 7.1-7.3 范围。移动端响应拦截器「有逻辑」部分为业务错误 `code` 附加 + 成功解包 / 无 code 透传，均已测试。
+
+---
+
+## 2026-08-13 — access-control 前端（Task 7.1-7.3）
+
+### 做了什么
+- **7.1 加入小区楼/单元/房号必填**（`src/pages/join-community/join-form.ts`）
+  - `validateJoinForm` 去除硬编码区间（楼号 1-150 / 单元 1-5 / 房号 100-999），改为仅「必填 + 正整数」UX 提示，权威校验对齐后端（JoinCommunity 拒绝 `<=0` → 10040）
+  - `join-form.spec.ts` 同步更新（区间用例改为 `<=0` 拒绝 / 正数放行），17/17 GREEN
+- **7.2 当前小区切换 UI**（`src/api/user.ts` + `src/stores/community.ts` + `src/pages/notice/notice.vue` + `src/utils/request.ts`）
+  - 新增 `getAppState()` / `setCurrentCommunity(communityId)` API 封装（GET `/api/users/me/app-state` / PUT `/api/users/me/current-community`）
+  - `communityStore.switchCommunity` 改为 async：先调后端 `setCurrentCommunity` 持久化（跨设备一致），成功才更新本地；失败抛错、本地不变
+  - `notice.vue onCommunitySwitch` 捕获 `code===10015` → toast「目标小区不在你的数据范围」；切换后首页上下文经既有 watch 刷新
+  - `request.ts` 业务错误对象附加 `code` 字段（向后兼容），供调用方分支
+- **7.3 同屋互见用户详情**（`src/api/user.ts` + `src/pages/user-detail/user-detail.vue`）
+  - 新增 `SameHouseInfo` / `GetUserDetailResult` 类型 + `getUser(id, viewerId)` API（GET `/api/users/:id?viewer_id=xxx`）
+  - 新增用户详情页：消费 `same_house`，`same_house=true` 展示楼栋房屋号；手机号由后端按 viewer 上下文决定明文/脱敏，前端仅展示、不做二次脱敏（权威在后端）
+  - `pages.json` 注册 `pages/user-detail/user-detail`
+
+### 类型标注
+- 原标注「均为字段映射/纯接线、无 RED 摘录」**有误**——`switchCommunity` / `onCommunitySwitch` / `request.ts` 拦截器 / `validateJoinForm` 为有逻辑函数，已在上方「TDD 缺口修复」条目纠正并补齐测试与 RED 证据。
+- 记忆应用：`[[frontend-business-rule-hardcode]]`（去硬编码区间 / 切换校验权威在后端）、`[[web-common-type-reuse-no-redefine]]`（用户详情类型复用，不重复定义共享层）
+
+### 门禁
+- `npm run type-check` → PASS（0 errors）
+- `npm run test:unit` → PASS（3 files / 17 tests）
+- `npm run build` → PASS
+
+---
+
 ## 2026-08-12 — 加入小区流程携带 ownership（access-data-permission 阶段⑤ T5.1）
 
 ### 做了什么

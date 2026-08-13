@@ -97,7 +97,10 @@ request.interceptors.response.use(
       icon: 'none',
       duration: 2000,
     });
-    return Promise.reject(new Error(errorMessage || `Business error code: ${code}`));
+    // Attach code so callers can branch on specific error codes (e.g. 10015).
+    const err = new Error(errorMessage || `Business error code: ${code}`) as Error & { code?: number };
+    err.code = typeof code === 'number' ? code : undefined;
+    return Promise.reject(err);
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };

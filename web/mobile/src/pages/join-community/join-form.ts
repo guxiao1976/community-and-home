@@ -27,7 +27,9 @@ export interface JoinFormResult {
   errors: JoinFormErrors;
 }
 
-// 楼号/单元号/房号区间与 user.proto JoinCommunityRequest 注释对齐（building 1-150 / unit 1-5 / room 3位数字）。
+// 楼/单元/房号仅做「必填 + 正整数」的 UX 提示校验，权威校验在后端（JoinCommunity 拒绝 <=0 → 10040）。
+// 不硬编码区间（1-150 / 1-5 / 100-999），避免与后端范围漂移。
+// SEE: [[frontend-business-rule-hardcode]]
 export function validateJoinForm(form: JoinFormState): JoinFormResult {
   const errors: JoinFormErrors = {};
 
@@ -36,18 +38,18 @@ export function validateJoinForm(form: JoinFormState): JoinFormResult {
   }
 
   const building = Number(form.building);
-  if (!String(form.building).trim() || !Number.isInteger(building) || building < 1 || building > 150) {
-    errors.building = '请输入楼号（1-150）';
+  if (!String(form.building).trim() || !Number.isInteger(building) || building < 1) {
+    errors.building = '请输入楼号';
   }
 
   const unit = Number(form.unit);
-  if (!String(form.unit).trim() || !Number.isInteger(unit) || unit < 1 || unit > 5) {
-    errors.unit = '请输入单元号（1-5）';
+  if (!String(form.unit).trim() || !Number.isInteger(unit) || unit < 1) {
+    errors.unit = '请输入单元号';
   }
 
   const room = Number(form.room);
-  if (!String(form.room).trim() || !Number.isInteger(room) || room < 100 || room > 999) {
-    errors.room = '请输入3位房号（如301）';
+  if (!String(form.room).trim() || !Number.isInteger(room) || room < 1) {
+    errors.room = '请输入房号';
   }
 
   return { valid: Object.keys(errors).length === 0, errors };

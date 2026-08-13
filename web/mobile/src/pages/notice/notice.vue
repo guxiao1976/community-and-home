@@ -308,8 +308,15 @@ function onAdClick(_type: string) {
   // 广告点击预留，暂不跳转
 }
 
-function onCommunitySwitch(id: string) {
-  communityStore.switchCommunity(id);
+async function onCommunitySwitch(id: string) {
+  try {
+    await communityStore.switchCommunity(id);
+  } catch (e: any) {
+    // 10015 目标小区不在数据范围：明确提示，当前小区保持不变
+    if (e?.code === 10015) {
+      uni.showToast({ title: '目标小区不在你的数据范围', icon: 'none', duration: 2500 });
+    }
+  }
 }
 
 function goJoinCommunity() {

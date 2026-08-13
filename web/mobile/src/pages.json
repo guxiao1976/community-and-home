@@ -67,6 +67,12 @@
       "style": {
         "navigationBarTitleText": "通知公告"
       }
+    },
+    {
+      "path": "pages/user-detail/user-detail",
+      "style": {
+        "navigationBarTitleText": "用户详情"
+      }
     }
   ],
   "globalStyle": {

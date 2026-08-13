@@ -157,3 +157,55 @@ export async function getUserRoles(): Promise<any[]> {
   const data = res as unknown as { roles?: any[] };
   return data.roles || [];
 }
+
+// 同屋互见信息 — matches proto SameHouseInfo（snake_case over the wire）。
+// same_house=true 时后端返回真实手机号 + 楼/单元/房号；否则手机号脱敏且不返回房屋号。
+export interface SameHouseInfo {
+  same_house: boolean;
+  building: number;
+  unit: number;
+  room: number;
+}
+
+// GetUser 响应（同屋互见）— matches proto GetUserResponse。
+// phone 已由后端按 viewer 上下文决定明文/脱敏，前端仅展示、不做二次脱敏（权威在后端）。
+export interface GetUserDetailResult {
+  user: {
+    id: string;
+    phone: string;
+    nickname: string;
+  };
+  same_house?: SameHouseInfo;
+}
+
+/**
+ * Get a user detail with viewer context (同屋互见).
+ * viewer_id 缺省（0/不传）→ 后端对手机号脱敏、无房屋号。
+ * 后端: GET /api/users/:id?viewer_id=xxx
+ */
+export async function getUser(id: string, viewerId?: string): Promise<GetUserDetailResult> {
+  const query = viewerId ? `?viewer_id=${viewerId}` : '';
+  const res = await request.get<any>(`/api/users/${id}${query}`);
+  return res as unknown as GetUserDetailResult;
+}
+
+/**
+ * Get current community app state (跨设备一致).
+ * 后端: GET /api/users/me/app-state
+ * Response: { current_community_id, updated_at }（未设置 current_community_id="0"）
+ */
+export async function getAppState(): Promise<{
+  current_community_id: string;
+  updated_at: number;
+}> {
+  const res = await request.get<any>('/api/users/me/app-state');
+  return res as unknown as { current_community_id: string; updated_at: number };
+}
+
+/**
+ * Switch current community (跨设备持久化).
+ * 后端: PUT /api/users/me/current-community，失败 10015（目标小区不在数据范围）。
+ */
+export async function setCurrentCommunity(communityId: string): Promise<void> {
+  await request.put('/api/users/me/current-community', { community_id: communityId });
+}

@@ -26,21 +26,21 @@ describe('validateJoinForm', () => {
     expect(r.errors.ownership).toBeTruthy();
   });
 
-  it('rejects building outside 1-150', () => {
+  it('rejects building <= 0 (positive required, no hardcoded range)', () => {
     expect(validateJoinForm({ building: '0', unit: '2', room: '301', ownership: 1 }).valid).toBe(false);
-    expect(validateJoinForm({ building: '151', unit: '2', room: '301', ownership: 1 }).valid).toBe(false);
+    expect(validateJoinForm({ building: '-3', unit: '2', room: '301', ownership: 1 }).valid).toBe(false);
     expect(validateJoinForm({ building: '12', unit: '2', room: '301', ownership: 1 }).valid).toBe(true);
   });
 
-  it('rejects unit outside 1-5', () => {
+  it('rejects unit <= 0 (positive required, no hardcoded range)', () => {
     expect(validateJoinForm({ building: '1', unit: '0', room: '301', ownership: 1 }).valid).toBe(false);
-    expect(validateJoinForm({ building: '1', unit: '6', room: '301', ownership: 1 }).valid).toBe(false);
+    expect(validateJoinForm({ building: '1', unit: '-1', room: '301', ownership: 1 }).valid).toBe(false);
     expect(validateJoinForm({ building: '1', unit: '4', room: '301', ownership: 1 }).valid).toBe(true);
   });
 
-  it('rejects room that is not a 3-digit number', () => {
-    expect(validateJoinForm({ building: '1', unit: '2', room: '30', ownership: 1 }).valid).toBe(false);
-    expect(validateJoinForm({ building: '1', unit: '2', room: '100', ownership: 1 }).valid).toBe(true);
+  it('rejects room <= 0 (positive required, no hardcoded 3-digit range)', () => {
+    expect(validateJoinForm({ building: '1', unit: '2', room: '0', ownership: 1 }).valid).toBe(false);
+    expect(validateJoinForm({ building: '1', unit: '2', room: '30', ownership: 1 }).valid).toBe(true);
     expect(validateJoinForm({ building: '1', unit: '2', room: '999', ownership: 1 }).valid).toBe(true);
   });
 

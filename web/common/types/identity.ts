@@ -41,6 +41,7 @@ export interface Role {
   status: RoleStatus;
   sortOrder: number;
   permissions: Permission[];
+  platforms: string[];
   created_at: string;
   updated_at: string;
   deleted_at: number;
@@ -60,6 +61,7 @@ export interface UserRole {
     isSystem: boolean;
     status: number;
     sortOrder: number;
+    platforms: string[];
   };
   scopeType: string;
   scopeId: string;
