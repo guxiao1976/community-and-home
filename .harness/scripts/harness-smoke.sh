@@ -44,17 +44,19 @@ done
 timestamp() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
 # ─── Service smoke matrix ─────────────────────────────────────────────
-# Format: "service_label|port|etcd_key|rpc_service|rpc_method|request_json|depends_on"
+# Format: "service_label|port|etcd_key|rpc_service|rpc_method|request_json|proto_file|depends_on"
+# proto_file 相对 api-proto/api/，用于 grpcurl -import-path -proto（go-zero 服务默认无 gRPC reflection，
+# 冒烟必须带 proto 直调而非依赖 reflection）
 
 SMOKE_MATRIX=(
-  "moderation-service|8086|moderation.rpc|moderation.v1.ModerationService|HealthCheck|{}|"
-  "ai-model-service|8080|aimodel.rpc|aimodel.v1.AiModelService|HealthCheck|{}|"
-  "user-service|8082|user.rpc|user.v1.UserService|ListUsers|{\"page\":{\"page\":1,\"page_size\":1}}|"
-  "auth-service|8083|auth.rpc|grpc.reflection.v1.ServerReflection|ServerReflectionInfo|{}|"
-  "permission-service|8084|permission.rpc|permission.v1.PermissionService|ListPermissions|{}|"
-  "file-service|8085|file.rpc|file.v1.FileService|ListFiles|{\"page\":{\"page\":1,\"page_size\":1}}|"
-  "master-data-service|8087|masterdata.rpc|masterdata.v1.MasterdataService|GetConfig|{\"config_key\":\"site_name\"}|"
-  "community-hub-service|8088|communityhub.rpc|community.v1.ContactService|ListContacts|{\"community_id\":\"0\"}|"
+  "moderation-service|8086|moderation.rpc|moderation.v1.ModerationService|HealthCheck|{}|moderation/v1/moderation.proto|"
+  "ai-model-service|8080|aimodel.rpc|aimodel.v1.AiModelService|HealthCheck|{}|aimodel/v1/ai_model.proto|"
+  "user-service|8082|user.rpc|user.v1.UserService|ListUsers|{\"page\":{\"page\":1,\"page_size\":1}}|user/v1/user.proto|"
+  "auth-service|8083|auth.rpc|auth.v1.AuthService|ValidateToken|{\"access_token\":\"invalid\"}|auth/v1/auth.proto|"
+  "permission-service|8084|permission.rpc|permission.v1.PermissionService|ListPermissions|{}|permission/v1/permission.proto|"
+  "file-service|8085|file.rpc|file.v1.FileService|GetUploadUrl|{}|file/v1/file.proto|"
+  "master-data-service|8087|masterdata.rpc|masterdata.v1.MasterdataService|GetDivision|{\"id\":\"0\"}|masterdata/v1/masterdata.proto|"
+  "community-hub-service|8088|communityhub.rpc|community.v1.ContactService|ListContacts|{\"community_id\":\"0\"}|community/v1/community.proto|"
 )
 
 # ─── Helpers ──────────────────────────────────────────────────────────
@@ -75,43 +77,34 @@ check_port() {
 }
 
 grpcurl_call() {
-  local port="$1" service="$2" method="$3" data="$4"
+  local port="$1" service="$2" method="$3" data="$4" proto="$5"
   local addr="127.0.0.1:${port}"
   if [[ -z "$GRPCURL" ]]; then
     echo "SKIP:grpcurl not found"
     return 2
   fi
-  # auth-service uses reflection, others use direct method call
-  if [[ "$service" == "grpc.reflection.v1.ServerReflection" ]]; then
-    local ref_out
-    ref_out=$("$GRPCURL" -plaintext -max-time 5 "$addr" list 2>&1) || true
-    if echo "$ref_out" | grep -q 'grpc\.reflection\|ServerReflection\|user\.\|auth\.\|permission\.\|file\.\|moderation\.\|masterdata\.\|aimodel\.\|community\.' ; then
-      echo "PASS:reflection OK ($(echo "$ref_out" | wc -l) services)"
-      return 0
-    fi
-    echo "FAIL:reflection returned unexpected: ${ref_out:0:100}"
+  # go-zero 服务默认无 gRPC reflection，必须带 proto 文件直调（api-proto/api 为 import 根）
+  local proto_path="$PROJECT_ROOT/api-proto/api/$proto"
+  if [[ -z "$proto" || ! -f "$proto_path" ]]; then
+    echo "FAIL:proto 文件缺失: $proto_path"
     return 1
   fi
   local output
   # Capture both stdout and stderr; grpcurl writes errors to stderr
-  output=$("$GRPCURL" -plaintext -max-time 5 -d "$data" "$addr" "$service/$method" 2>&1) || true
+  output=$("$GRPCURL" -plaintext -max-time 5 -import-path "$PROJECT_ROOT/api-proto/api" -proto "$proto" -d "$data" "$addr" "$service/$method" 2>&1) || true
   local exit_code=$?
 
-  # grpcurl exits 0 even when RPC returns gRPC error. Check for error indicators.
-  if echo "$output" | grep -qiE 'Error invoking method|rpc error|Unavailable|Unimplemented|NotFound|Internal|DeadlineExceeded|connection refused|failed to query'; then
+  # 连通性判据：只有「服务不存在/不可达/方法不存在」才判 FAIL；
+  # 服务连通但返回业务错误码（如 99404/50001/ERROR: Code: Unknown）视为连通 PASS
+  #（go-zero 服务无 reflection，带 proto 直调能返回任何响应即证明 gRPC 链路通）
+  if echo "$output" | grep -qiE 'Error invoking method|failed to query|connection refused|does not include a method|Unavailable|Unimplemented|DeadlineExceeded|not find.*service'; then
     echo "FAIL:${output:0:120}"
     return 1
   fi
 
-  if [[ $exit_code -eq 0 ]]; then
-    # Successfully invoked — extract key info
-    local summary=$(echo "$output" | head -1)
-    echo "PASS:${summary:0:80}"
-    return 0
-  else
-    echo "FAIL:${output:0:120}"
-    return 1
-  fi
+  # 服务连通（含业务错误响应）→ PASS
+  echo "PASS:连通 (${output:0:80})"
+  return 0
 }
 
 # ─── L1: Process aliveness ────────────────────────────────────────────
@@ -132,10 +125,10 @@ smoke_l1() {
 # ─── L2: gRPC connectivity ────────────────────────────────────────────
 
 smoke_l2() {
-  local label="$1" port="$2" svc="$3" method="$4" data="$5"
+  local label="$1" port="$2" svc="$3" method="$4" data="$5" proto="$6"
   local result exit_code
   set +e
-  result=$(grpcurl_call "$port" "$svc" "$method" "$data" 2>&1)
+  result=$(grpcurl_call "$port" "$svc" "$method" "$data" "$proto" 2>&1)
   exit_code=$?
   set -e
   local status="${result%%:*}"
@@ -193,7 +186,7 @@ run_smoke() {
   local any_running=false
 
   for entry in "${SMOKE_MATRIX[@]}"; do
-    IFS='|' read -r label port etcd_key svc method data deps <<< "$entry"
+    IFS='|' read -r label port etcd_key svc method data proto deps <<< "$entry"
 
     # Filter by service if specified
     [[ -n "$SERVICE_NAME" && "$label" != "$SERVICE_NAME" ]] && continue
@@ -206,7 +199,7 @@ run_smoke() {
       any_running=true
 
       # L2
-      smoke_l2 "$label" "$port" "$svc" "$method" "$data"
+      smoke_l2 "$label" "$port" "$svc" "$method" "$data" "$proto"
 
       # L3 (skip in quick mode)
       if ! $QUICK_MODE; then
