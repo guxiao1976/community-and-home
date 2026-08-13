@@ -55,6 +55,7 @@ L3 按需查询           ← knowledge/INDEX.md → design.md / graph-context.m
 | `.harness/rules/项目编码规范.md` | 编码前 | 很少变 |
 | `.harness/rules/Proto管理规范.md` | 涉及 Proto 变更时 | 很少变 |
 | `.harness/rules/工程结构.md` | 涉及架构决策时 | 很少变 |
+| `.harness/rules/Git治理规范.md` | 涉及分支/子模块/仓库操作时 | 很少变 |
 
 ### 技能与子 Agent（L2 — 阶段触发）
 

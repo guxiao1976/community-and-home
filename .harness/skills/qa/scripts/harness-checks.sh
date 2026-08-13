@@ -28,6 +28,8 @@
 #  13. Response single-wrap — detect Logic functions returning types with embedded BaseResponse
 #  14. Benchmark regression — compare go test -bench against stored baselines
 #  15. API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
+#  16. Memory index freshness — memory 索引与记忆文件保持同步
+#  17. Git hygiene — gitlink/.gitmodules 一致、无孤儿 worktree 分支
 #
 # ─── 项目策略 vs 通用引擎 边界 ────────────────────────────────────────
 # 以下检查为 Community-Home 项目特有策略（非通用引擎逻辑），迁移本脚本到
@@ -178,7 +180,7 @@ fi
 # ─── Check 1: go build ───────────────────────────────────────────────
 
 check_go_build() {
-  echo "[1/16] go build ./..." >&2
+  echo "[1/17] go build ./..." >&2
   local out err rc
   cd "$TARGET_DIR"
   set +e
@@ -201,7 +203,7 @@ check_go_build() {
 # ─── Check 2: go vet ─────────────────────────────────────────────────
 
 check_go_vet() {
-  echo "[2/16] go vet ./..." >&2
+  echo "[2/17] go vet ./..." >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -224,7 +226,7 @@ check_go_vet() {
 # ─── Check 3: go test (with 0/0 detection) ───────────────────────────
 
 check_go_test() {
-  echo "[3/16] go test ./... (with 0/0 + new-package detection)" >&2
+  echo "[3/17] go test ./... (with 0/0 + new-package detection)" >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -319,7 +321,7 @@ check_go_test() {
 # ─── Check 4: Proto int64 jstype ─────────────────────────────────────
 
 check_proto_jstype() {
-  echo "[4/16] Proto int64 jstype" >&2
+  echo "[4/17] Proto int64 jstype" >&2
   local proto_dir="$PROJECT_ROOT/api-proto/api"
   local violations=()
 
@@ -379,7 +381,7 @@ check_proto_jstype() {
 # ─── Check 5: Go json:",string" (AST-based with regex fallback) ─────
 
 check_json_string() {
-  echo "[5/16] Go json:\",string\" (AST)" >&2
+  echo "[5/17] Go json:\",string\" (AST)" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -494,7 +496,7 @@ check_json_string() {
 # ─── Check 6: Cross-service DB import ────────────────────────────────
 
 check_cross_service_import() {
-  echo "[6/16] Cross-service DB import" >&2
+  echo "[6/17] Cross-service DB import" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -562,7 +564,7 @@ check_cross_service_import() {
 # ─── Check 7: Error code format ──────────────────────────────────────
 
 check_error_codes() {
-  echo "[7/16] Error code format" >&2
+  echo "[7/17] Error code format" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -604,7 +606,7 @@ check_error_codes() {
 # ─── Check 8: Hardcoded secrets ──────────────────────────────────────
 
 check_hardcoded_secrets() {
-  echo "[8/16] Hardcoded secrets" >&2
+  echo "[8/17] Hardcoded secrets" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -662,7 +664,7 @@ check_hardcoded_secrets() {
 # ─── Check 9: Knowledge graph freshness ───────────────────────────────
 
 check_graph_freshness() {
-  echo "[9/16] Knowledge graph freshness" >&2
+  echo "[9/17] Knowledge graph freshness" >&2
   local stamp_file="$PROJECT_ROOT/.harness/.graph_last_sync"
 
   if [[ ! -f "$stamp_file" ]]; then
@@ -712,7 +714,7 @@ check_graph_freshness() {
 # ─── Check 10: CLAUDE.md structural data ──────────────────────────
 
 check_claude_structural_data() {
-  echo "[10/16] CLAUDE.md structural data check" >&2
+  echo "[10/17] CLAUDE.md structural data check" >&2
   local violations=()
 
   # Determine which CLAUDE.md files to scan
@@ -789,7 +791,7 @@ check_claude_structural_data() {
 # ─── Check 11: Proto→TypeScript alignment ─────────────────────────
 
 check_proto_ts_align() {
-  echo "[11/16] Proto→TypeScript alignment" >&2
+  echo "[11/17] Proto→TypeScript alignment" >&2
   local check_script="$PROJECT_ROOT/.harness/skills/qa/scripts/check-proto-ts-align.sh"
 
   if [[ ! -f "$check_script" ]]; then
@@ -820,7 +822,7 @@ check_proto_ts_align() {
 # {code:0, data:null} — a "silent success" that masks missing functionality.
 
 check_api_stubs() {
-  echo "[12/16] API logic TODO stubs" >&2
+  echo "[12/17] API logic TODO stubs" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -856,7 +858,7 @@ check_api_stubs() {
 # (goctl Response types embed BaseResponse). These should return raw data instead.
 
 check_response_wrap() {
-  echo "[13/16] Response single-wrap" >&2
+  echo "[13/17] Response single-wrap" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -887,7 +889,7 @@ check_response_wrap() {
 
 # Check 14: Benchmark regression — compare against stored baselines (non-blocking)
 check_bench_regression() {
-  echo "[14/16] Benchmark regression" >&2
+  echo "[14/17] Benchmark regression" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -959,7 +961,7 @@ check_bench_regression() {
 
 # Check 15: API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
 check_api_smoke() {
-  echo "[15/16] API smoke test" >&2
+  echo "[15/17] API smoke test" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -1038,7 +1040,7 @@ check_api_smoke() {
 # ─── Check 16: Memory Index Freshness ────────────────────────────────
 
 check_memory_index() {
-  echo "[16/16] Memory Index Freshness" >&2
+  echo "[16/17] Memory Index Freshness" >&2
 
   local index_file="$PROJECT_ROOT/.harness/knowledge/memory/.memory-index.json"
   local memory_dir="$PROJECT_ROOT/.harness/knowledge/memory"
@@ -1107,6 +1109,42 @@ check_memory_index() {
   fi
 }
 
+# ─── Check 17: Git hygiene ─────────────────────────────────────────
+
+check_git_hygiene() {
+  echo "[17/17] Git hygiene" >&2
+  local violations=()
+
+  # 1. gitlink ↔ .gitmodules 一致性
+  if [ -f "$PROJECT_ROOT/.gitmodules" ]; then
+    while IFS= read -r gl; do
+      [ -z "$gl" ] && continue
+      if ! grep -qF "path = $gl" "$PROJECT_ROOT/.gitmodules" 2>/dev/null; then
+        violations+=("gitlink 无 .gitmodules 条目: $gl")
+      fi
+    done < <(git -C "$PROJECT_ROOT" ls-files -s 2>/dev/null | grep '^160000' | awk '{print $4}')
+  fi
+
+  # 2. 孤儿 worktree 分支
+  local orphans
+  orphans=$(git -C "$PROJECT_ROOT" branch --format='%(refname:short)' 2>/dev/null | grep -c '^worktree-wf_' || true)
+  if [[ "${orphans:-0}" -gt 0 ]]; then
+    violations+=("${orphans} 个孤儿 worktree-wf_* 分支未清理")
+  fi
+
+  if [[ ${#violations[@]} -eq 0 ]]; then
+    log_pass "git_hygiene" "gitlink/.gitmodules 一致，无孤儿 worktree 分支"
+  else
+    local detail
+    detail="$(printf '%s; ' "${violations[@]}")"
+    detail="$(json_escape "$detail")"
+    local why="git 治理漂移：子模块未登记或临时分支残留，破坏环境一致性。"
+    local fix="补 .gitmodules 条目，删除孤儿 worktree 分支。详见 .harness/rules/Git治理规范.md"
+    local reference=".harness/rules/Git治理规范.md"
+    log_warn "git_hygiene" "$detail" "$why" "$fix" "" "$reference"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -1133,6 +1171,7 @@ main() {
   check_bench_regression
   check_api_smoke
   check_memory_index
+  check_git_hygiene
   # Note: frontend checks use separate script: harness-checks-frontend.sh
 
   # Count results
@@ -1165,7 +1204,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness")
+    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "git hygiene")
     for result in "${RESULTS[@]}"; do
       local status label detail why fix example reference
       status=$(echo "$result" | grep -oP '"status":"\K\w+')
