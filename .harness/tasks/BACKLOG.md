@@ -5,14 +5,14 @@
 >
 > 来源类型：`human`=人安排的战略任务 | `qa`=QA 传感器检测 | `review`=Review 发现 | `sensor`=自动传感器
 >
-> 最后更新：2026-08-09
+> 最后更新：2026-08-13
 
 ## P0 — 立即处理（阻塞性问题）
 
-- [access-data-permission 后续 Wave：user/community-hub/web-mobile/集成验收](task-2026-08-12-nextwave.md) — multi, P0, completed, 2026-08-12（阶段③④⑤⑥ 全部完成，T6.1 九项矩阵全绿）
 - [PipelineId path 参数解析修复（json tag → path tag）](task-2026-06-16-002.md) — moderation-service, P0, closed, review
 - [update_pipeline_logic 恒真条件修复（空字符串意外覆盖已有值）](task-2026-06-16-003.md) — moderation-service, P0, closed, review
 - [activate_pipeline 竞态修复（事务 + 批量更新替代逐条循环）](task-2026-06-16-004.md) — moderation-service, P0, closed, review
+- [access-data-permission 后续 Wave：user/community-hub/web-mobile/集成验收](task-2026-08-12-nextwave.md) — multi, P0, completed, human
 
 
 ## P1 — 本周
@@ -23,16 +23,16 @@
 - [REST API int64 ID 添加 json:\",string\" 标签](task-2026-06-16-007.md) — ai-model-service, P1, closed, review
 - [软删除后清除 ModelManager adapter 缓存](task-2026-06-16-008.md) — ai-model-service, P1, closed, review
 - [QA FAIL: response_wrap](task-2026-06-16-011.md) — all, P1, closed, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 69h ago, latest commit is newer)](task-2026-07-11-001.md) — all, P1, open, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 97h ago, latest commit is newer)](task-2026-07-12-001.md) — all, P1, open, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 645h ago, latest commit is newer)](task-2026-08-04-001.md) — all, P1, open, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 645h ago, latest commit is newer)](task-2026-08-04-002.md) — all, P1, open, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 645h ago, latest commit is newer)](task-2026-08-04-003.md) — all, P1, open, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 645h ago, latest commit is newer)](task-2026-08-04-004.md) — all, P1, open, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-005.md) — all, P1, open, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-006.md) — all, P1, open, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-007.md) — all, P1, open, qa
-- [QA FAIL: graph_freshness — graph is stale (last sync: 648h ago, latest commit is newer)](task-2026-08-04-008.md) — all, P1, open, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 69h ago, latest commit is newer)](task-2026-07-11-001.md) — all, P1, closed, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 97h ago, latest commit is newer)](task-2026-07-12-001.md) — all, P1, closed, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 645h ago, latest commit is newer)](task-2026-08-04-001.md) — all, P1, closed, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 645h ago, latest commit is newer)](task-2026-08-04-002.md) — all, P1, closed, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 645h ago, latest commit is newer)](task-2026-08-04-003.md) — all, P1, closed, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 645h ago, latest commit is newer)](task-2026-08-04-004.md) — all, P1, closed, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-005.md) — all, P1, closed, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-006.md) — all, P1, closed, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-007.md) — all, P1, closed, qa
+- [QA FAIL: graph_freshness — graph is stale (last sync: 648h ago, latest commit is newer)](task-2026-08-04-008.md) — all, P1, closed, qa
 
 
 ## P2 — 本月
@@ -50,7 +50,7 @@
 
 ## 进行中
 
-
+（暂无）
 
 ## 已阻塞
 
@@ -62,13 +62,13 @@
 
 | 优先级 | 数量 |
 |:------:|:----:|
-| P0 | 3 |
+| P0 | 4 |
 | P1 | 16 |
 | P2 | 5 |
 | P3 | 0 |
 | 进行中 | 0 |
 | 已阻塞 | 0 |
-| **合计** | **24** |
+| **合计** | **25** |
 
 | 服务 | 数量 |
 |------|:----:|
@@ -78,4 +78,5 @@
 | master-data-service | 2 |
 | global | 1 |
 | ai-model-service | 4 |
+| multi | 1 |
 
