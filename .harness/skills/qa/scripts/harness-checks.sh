@@ -667,12 +667,20 @@ check_graph_freshness() {
   now=$(date +%s)
   local age=$(( (now - stamp) / 3600 ))
 
-  # Check if any changes since last sync
+  # Check if any *substantive code* changes since last sync.
+  # 只关注会改变 Neo4j 图内容的文件（proto/go/ts/vue/yaml/yml），排除：
+  #   - *_test.go（测试，graph-sync 的 CHANGED 检测同样排除）
+  #   - **/graph-context.md（图导出产物，其提交是 graph-sync 的结果，非「图过期」信号）
+  # 否则 graph-sync 自身产物（graph-context.md）的提交会形成「同步→提交→又 stale」死循环。
   local latest_commit=0
   for repo in "$PROJECT_ROOT" "$PROJECT_ROOT"/services/*/ "$PROJECT_ROOT"/api-proto/; do
     if [[ -d "$repo/.git" ]]; then
       local ts
-      ts=$(git -C "$repo" log -1 --format=%ct 2>/dev/null || echo 0)
+      ts=$(git -C "$repo" log -1 --format=%ct -- \
+        '*.proto' '*.go' '*.ts' '*.vue' '*.yaml' '*.yml' \
+        ':(exclude,glob)**/*_test.go' \
+        ':(exclude,glob)**/graph-context.md' \
+        2>/dev/null || echo 0)
       if [[ $ts -gt $latest_commit ]]; then
         latest_commit=$ts
       fi
