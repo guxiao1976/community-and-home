@@ -44,8 +44,8 @@ func TestSysRoleModel_FindByIds_SingleId(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewSysRoleModel(conn, nil)
 
-	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_at", "updated_at", "deleted_at"}).
-		AddRow(1, "owner", "业主", sql.NullString{String: "业主角色", Valid: true}, 0, 1, 1, 100, time.Now(), time.Now(), sql.NullTime{})
+	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "platforms", "created_by", "created_at", "updated_at", "deleted_at"}).
+		AddRow(1, "owner", "业主", sql.NullString{String: "业主角色", Valid: true}, 0, 1, 1, "", 100, time.Now(), time.Now(), sql.NullTime{})
 
 	mock.ExpectQuery("select \\* from `sys_role` where id in \\(\\?\\) and deleted_at is null").
 		WithArgs(int64(1)).
@@ -74,9 +74,9 @@ func TestSysRoleModel_FindByIds_MultipleIds(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewSysRoleModel(conn, nil)
 
-	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_at", "updated_at", "deleted_at"}).
-		AddRow(1, "owner", "业主", sql.NullString{}, 0, 1, 1, 100, time.Now(), time.Now(), sql.NullTime{}).
-		AddRow(2, "property_admin", "物业管理员", sql.NullString{}, 0, 2, 1, 100, time.Now(), time.Now(), sql.NullTime{})
+	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "platforms", "created_by", "created_at", "updated_at", "deleted_at"}).
+		AddRow(1, "owner", "业主", sql.NullString{}, 0, 1, 1, "", 100, time.Now(), time.Now(), sql.NullTime{}).
+		AddRow(2, "property_admin", "物业管理员", sql.NullString{}, 0, 2, 1, "", 100, time.Now(), time.Now(), sql.NullTime{})
 
 	mock.ExpectQuery("select \\* from `sys_role` where id in \\(\\?,\\?\\) and deleted_at is null").
 		WithArgs(int64(1), int64(2)).
@@ -122,9 +122,9 @@ func TestSysRoleModel_FindList_Pagination(t *testing.T) {
 				WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(tt.total))
 
 			// Mock data query
-			rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_at", "updated_at", "deleted_at"})
+			rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "platforms", "created_by", "created_at", "updated_at", "deleted_at"})
 			for i := 0; i < tt.wantRows; i++ {
-				rows.AddRow(int64(i+1), "code", "name", sql.NullString{}, 0, 1, 1, 100, time.Now(), time.Now(), sql.NullTime{})
+				rows.AddRow(int64(i+1), "code", "name", sql.NullString{}, 0, 1, 1, "", 100, time.Now(), time.Now(), sql.NullTime{})
 			}
 			mock.ExpectQuery("select \\* from `sys_role` where deleted_at is null order by sort_order asc limit .* offset .*").
 				WillReturnRows(rows)
@@ -160,8 +160,8 @@ func TestSysRoleModel_FindList_WithStatusFilter(t *testing.T) {
 		WithArgs(status).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(5))
 
-	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "created_by", "created_at", "updated_at", "deleted_at"}).
-		AddRow(1, "owner", "业主", sql.NullString{}, 0, 1, 1, 100, time.Now(), time.Now(), sql.NullTime{})
+	rows := sqlmock.NewRows([]string{"id", "role_code", "role_name", "description", "is_system", "sort_order", "status", "platforms", "created_by", "created_at", "updated_at", "deleted_at"}).
+		AddRow(1, "owner", "业主", sql.NullString{}, 0, 1, 1, "", 100, time.Now(), time.Now(), sql.NullTime{})
 
 	mock.ExpectQuery("select \\* from `sys_role` where deleted_at is null and status = \\? order by sort_order asc limit .* offset .*").
 		WithArgs(status).
@@ -194,7 +194,7 @@ func TestSysRoleModel_Insert(t *testing.T) {
 	m := NewSysRoleModel(conn, nil)
 
 	mock.ExpectExec("insert into `sys_role`").
-		WithArgs("test_code", "测试角色", sql.NullString{String: "描述", Valid: true}, int64(0), int64(10), int64(1), int64(100)).
+		WithArgs("test_code", "测试角色", sql.NullString{String: "描述", Valid: true}, int64(0), int64(10), int64(1), "", int64(100)).
 		WillReturnResult(sqlmock.NewResult(123, 1))
 
 	role := &SysRole{

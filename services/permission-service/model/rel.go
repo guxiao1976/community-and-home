@@ -103,6 +103,7 @@ type UserRoleWithInfo struct {
 	IsSystem    int64        `db:"is_system"`
 	Status      int64        `db:"role_status"` // sys_role.status（角色定义状态）
 	Description string       `db:"description"`
+	Platforms   string       `db:"platforms"` // 允许登录的端，逗号分隔：pc,mobile；空=未声明（fail-open）
 	ScopeType   string       `db:"scope_type"`
 	ScopeId     int64        `db:"scope_id"`
 	URStatus    int64        `db:"ur_status"` // rel_user_role.status（个体角色生命周期）
@@ -172,7 +173,7 @@ func (m *defaultRelUserRoleModel) FindByUserId(ctx context.Context, userId int64
 func (m *defaultRelUserRoleModel) FindActiveByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error) {
 	var list []*UserRoleWithInfo
 	query := fmt.Sprintf(`
-		SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description,
+		SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description, r.platforms,
 		       ur.scope_type, ur.scope_id, ur.status as ur_status, ur.verified_at, ur.expires_at
 		FROM %s ur
 		INNER JOIN sys_role r ON ur.role_id = r.id
@@ -205,7 +206,7 @@ func (m *defaultRelUserRoleModel) FindScopesByUserId(ctx context.Context, userId
 func (m *defaultRelUserRoleModel) FindActiveRolesByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error) {
 	var list []*UserRoleWithInfo
 	query := fmt.Sprintf(`
-		SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description,
+		SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description, r.platforms,
 		       ur.scope_type, ur.scope_id, ur.status as ur_status, ur.verified_at, ur.expires_at
 		FROM %s ur
 		INNER JOIN sys_role r ON ur.role_id = r.id
@@ -267,7 +268,7 @@ func (m *defaultRelUserRoleModel) UpdateRoleStatus(ctx context.Context, userId, 
 func (m *defaultRelUserRoleModel) FindAllByUserId(ctx context.Context, userId int64) ([]*UserRoleWithInfo, error) {
 	var list []*UserRoleWithInfo
 	query := fmt.Sprintf(`
-		SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description,
+		SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description, r.platforms,
 		       ur.scope_type, ur.scope_id, ur.status as ur_status, ur.verified_at, ur.expires_at
 		FROM %s ur
 		INNER JOIN sys_role r ON ur.role_id = r.id

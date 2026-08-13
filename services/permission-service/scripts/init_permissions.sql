@@ -265,6 +265,44 @@ INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
 (6, 600), (8, 600);
 
 -- ============================================================================
+-- 5. 访问控制（access-control）：内置角色 platforms 种子 + 当前小区/应用状态接口权限码
+-- ============================================================================
+
+-- 5.1 内置角色 platforms 种子初值（design §4.1；运行时空值 fail-open）
+--   sys_admin=pc、community_admin=pc,mobile、property_admin=pc、
+--   owner/tenant/grid_worker/committee/merchant/registered_user=mobile
+-- SEE: [[is-system-no-permission-shortcut]] — platforms 为配置属性，不参与权限短路
+UPDATE sys_role SET platforms = 'pc'        WHERE role_code = 'sys_admin';
+UPDATE sys_role SET platforms = 'pc,mobile' WHERE role_code = 'community_admin';
+UPDATE sys_role SET platforms = 'pc'        WHERE role_code = 'property_admin';
+UPDATE sys_role SET platforms = 'mobile'    WHERE role_code = 'owner';
+UPDATE sys_role SET platforms = 'mobile'    WHERE role_code = 'tenant';
+UPDATE sys_role SET platforms = 'mobile'    WHERE role_code = 'grid_worker';
+UPDATE sys_role SET platforms = 'mobile'    WHERE role_code = 'committee';
+UPDATE sys_role SET platforms = 'mobile'    WHERE role_code = 'merchant';
+UPDATE sys_role SET platforms = 'mobile'    WHERE role_code = 'registered_user';
+
+-- 5.2 当前小区 / 应用状态接口权限码（type=3）
+--   path 必须与实际 REST 路由一致（user-service Task 3.7 注册的
+--   GET /api/users/me/app-state、PUT /api/users/me/current-community）
+-- SEE: [[permission-seed-api-path-must-match-routes]]
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
+VALUES
+(700, 100, 'GET /api/users/me/app-state', 'user:appstate:read-api', 3, 'GET:/api/users/me/app-state', NULL, 60, 1, NOW(), NOW()),
+(701, 100, 'PUT /api/users/me/current-community', 'user:currentcommunity:write-api', 3, 'PUT:/api/users/me/current-community', NULL, 70, 1, NOW(), NOW());
+
+-- 5.3 挂载到 mobile 社区角色（registered_user/owner/tenant/grid_worker/committee/merchant）
+--   sys_admin 的「全权限」绑定在 700/701 创建之前执行（见 3.），此处补挂保持全权限语义
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(9, 700), (9, 701),   -- registered_user（基角色，注册即分配）
+(1, 700), (1, 701),   -- owner
+(4, 700), (4, 701),   -- grid_worker
+(5, 700), (5, 701),   -- tenant
+(6, 700), (6, 701),   -- committee
+(7, 700), (7, 701),   -- merchant
+(8, 700), (8, 701);   -- sys_admin（全权限语义）
+
+-- ============================================================================
 -- 数据验证查询
 -- ============================================================================
 

@@ -53,6 +53,7 @@ func (l *ListRolesLogic) ListRoles(in *permissionv1.ListRolesRequest) (*permissi
 			IsSystem:    r.IsSystem == 1,
 			Status:      int32(r.Status),
 			SortOrder:   int32(r.SortOrder),
+			Platforms:   splitPlatforms(r.Platforms),
 		})
 	}
 

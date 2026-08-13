@@ -3,6 +3,7 @@ package permission
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
@@ -70,6 +71,29 @@ func sqlNullString(s string) sql.NullString {
 	return sql.NullString{String: s, Valid: true}
 }
 
+// splitPlatforms 将逗号分隔的 platforms 字符串切分为切片（空串 → 空切片，非 nil）
+//
+//	platforms 为配置属性（pc/mobile），与权限 path 匹配无关，仅透出给 auth-service 端准入判定。
+//	SEE: [[is-system-no-permission-shortcut]] — platforms 不参与权限短路，空值运行时 fail-open
+func splitPlatforms(s string) []string {
+	if s == "" {
+		return []string{}
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, raw := range parts {
+		if p := strings.TrimSpace(raw); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// joinPlatforms 将切片合并为逗号分隔字符串（写回存储时使用，与 splitPlatforms 互为逆操作）
+func joinPlatforms(ps []string) string {
+	return strings.Join(ps, ",")
+}
+
 // toRolePb 将 model.SysRole 转换为 proto Role（不含权限）
 func toRolePb(r *model.SysRole) *permissionv1.Role {
 	return &permissionv1.Role{
@@ -80,6 +104,7 @@ func toRolePb(r *model.SysRole) *permissionv1.Role {
 		IsSystem:    r.IsSystem == 1,
 		Status:      int32(r.Status),
 		SortOrder:   int32(r.SortOrder),
+		Platforms:   splitPlatforms(r.Platforms),
 		Timestamps: &commonv1.Timestamps{
 			CreatedAt: r.CreatedTime.Unix(),
 			UpdatedAt: r.UpdatedTime.Unix(),

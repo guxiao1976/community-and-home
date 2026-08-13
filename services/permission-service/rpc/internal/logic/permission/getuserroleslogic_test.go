@@ -24,6 +24,7 @@ func TestGetUserRoles_Success(t *testing.T) {
 				Description: "小区业主",
 				IsSystem:    0,
 				Status:      1,
+				Platforms:   "pc,mobile",
 				ScopeType:   "community",
 				ScopeId:     100,
 				URStatus:    2,
@@ -35,6 +36,7 @@ func TestGetUserRoles_Success(t *testing.T) {
 				Description: "物业管理人员",
 				IsSystem:    0,
 				Status:      1,
+				Platforms:   "pc",
 				ScopeType:   "building",
 				ScopeId:     200,
 				URStatus:    2,
@@ -64,11 +66,16 @@ func TestGetUserRoles_Success(t *testing.T) {
 	assert.Equal(t, "业主", resp.Roles[0].Role.Name)
 	assert.Equal(t, "community", resp.Roles[0].ScopeType)
 	assert.Equal(t, int64(100), resp.Roles[0].ScopeId)
+	// Platforms 透出断言：owner 双端 → ["pc","mobile"]
+	// SEE: [[is-system-no-permission-shortcut]] — platforms 为配置属性，仅透出供 auth 端准入判定
+	assert.Equal(t, []string{"pc", "mobile"}, resp.Roles[0].Role.Platforms)
 
 	// 验证第二个角色
 	assert.Equal(t, int64(2), resp.Roles[1].Role.Id)
 	assert.Equal(t, "property_admin", resp.Roles[1].Role.Code)
 	assert.Equal(t, "building", resp.Roles[1].ScopeType)
+	// Platforms 透出断言：property_admin 单端 → ["pc"]
+	assert.Equal(t, []string{"pc"}, resp.Roles[1].Role.Platforms)
 
 	mockUserRole.AssertExpectations(t)
 }

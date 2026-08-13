@@ -22,7 +22,8 @@ type SysRole struct {
 	Description sql.NullString `db:"description"`
 	IsSystem    int64          `db:"is_system"` // 1=系统角色，不可删除
 	SortOrder   int64          `db:"sort_order"`
-	Status      int64          `db:"status"` // 1=启用 0=禁用
+	Status      int64          `db:"status"`    // 1=启用 0=禁用
+	Platforms   string         `db:"platforms"` // 允许登录的端，逗号分隔：pc,mobile；空=未声明（fail-open）
 	CreatedBy   int64          `db:"created_by"`
 	CreatedTime time.Time      `db:"created_at"`
 	UpdatedTime time.Time      `db:"updated_at"`
@@ -49,8 +50,8 @@ func NewSysRoleModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option)
 }
 
 func (m *defaultSysRoleModel) Insert(ctx context.Context, data *SysRole) (int64, error) {
-	query := fmt.Sprintf("insert into %s (role_code, role_name, description, is_system, sort_order, status, created_by) values (?, ?, ?, ?, ?, ?, ?)", m.table)
-	res, err := m.conn.ExecCtx(ctx, query, data.RoleCode, data.RoleName, data.Description, data.IsSystem, data.SortOrder, data.Status, data.CreatedBy)
+	query := fmt.Sprintf("insert into %s (role_code, role_name, description, is_system, sort_order, status, platforms, created_by) values (?, ?, ?, ?, ?, ?, ?, ?)", m.table)
+	res, err := m.conn.ExecCtx(ctx, query, data.RoleCode, data.RoleName, data.Description, data.IsSystem, data.SortOrder, data.Status, data.Platforms, data.CreatedBy)
 	if err != nil {
 		return 0, err
 	}
@@ -104,8 +105,8 @@ func (m *defaultSysRoleModel) FindList(ctx context.Context, status *int64, page,
 }
 
 func (m *defaultSysRoleModel) Update(ctx context.Context, data *SysRole) error {
-	_, err := m.conn.ExecCtx(ctx, fmt.Sprintf("update %s set role_name = ?, description = ?, status = ?, updated_at = now() where id = ?", m.table),
-		data.RoleName, data.Description, data.Status, data.Id)
+	_, err := m.conn.ExecCtx(ctx, fmt.Sprintf("update %s set role_name = ?, description = ?, status = ?, platforms = ?, updated_at = now() where id = ?", m.table),
+		data.RoleName, data.Description, data.Status, data.Platforms, data.Id)
 	return err
 }
 

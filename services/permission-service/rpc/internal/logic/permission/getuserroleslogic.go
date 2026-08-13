@@ -48,6 +48,7 @@ func (l *GetUserRolesLogic) GetUserRoles(in *permissionv1.GetUserRolesRequest) (
 				Description: r.Description,
 				IsSystem:    r.IsSystem == 1,
 				Status:      int32(r.Status),
+				Platforms:   splitPlatforms(r.Platforms),
 			},
 			ScopeType:  r.ScopeType,
 			ScopeId:    r.ScopeId,

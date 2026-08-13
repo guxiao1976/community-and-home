@@ -1,5 +1,43 @@
 # CHANGELOG — permission-service
 
+## 2026-08-13 — access-control：sys_role.platforms 存储/透出 + 当前小区接口权限码（Task 1.1-1.4）
+
+### 类型
+分诊：字段映射类（SQL 加列 + struct 加字段 + proto 字段透出 + seed）免 RED；`splitPlatforms` 属有逻辑函数（含 TrimSpace + 空元素过滤），需 RED 摘录。
+
+### TDD 证据（splitPlatforms RED→GREEN）
+RED（临时去掉 TrimSpace 制造失败，`go test -run TestSplitPlatforms -v`）：
+```
+--- FAIL: TestSplitPlatforms/含空格清理
+    helpers_test.go:29:
+        Error Trace:  helpers_test.go:29
+        Error:        Not equal:
+                      expected: []string{"pc", "mobile"}
+                      actual:   []string{"pc", " mobile"}
+        Test:         TestSplitPlatforms/含空格清理
+FAIL
+```
+GREEN（恢复 TrimSpace 后 `go test -run TestSplitPlatforms`）：`ok`，7 table cases 全 PASS
+
+### 做了什么
+- **T1.1 Migration**：`migration/002_add_role_platforms.sql` — `sys_role` 增 `platforms VARCHAR(32) NOT NULL DEFAULT ''`（逗号分隔 pc/mobile；空=未声明，运行时 fail-open），幂等 guard（information_schema）。已执行到真库并 `SHOW COLUMNS` 验证。
+- **T1.2 Model**：`model/permission.go` `SysRole` 增 `Platforms string \`db:"platforms"\``；`Insert`/`Update` SQL 补 `platforms` 列；`select *` 查询自动覆盖新列；`model/rel.go` `UserRoleWithInfo` 增 `Platforms` + 3 处 JOIN 查询补 `r.platforms`。
+- **T1.3 Proto 透出**：`rpc/internal/logic/permission/helpers.go` 增 `splitPlatforms`（空串→空切片、去空白、滤空元素）与 `joinPlatforms`（互为逆操作）；`toRolePb` 填充 `Platforms: splitPlatforms(r.Platforms)`；`listroleslogic.go`/`getuserroleslogic.go` 透出 platforms。TDD：`helpers_test.go`/`listroleslogic_test.go`/`getuserroleslogic_test.go` table-driven 覆盖空串/单端/双端/含空格/尾逗号。
+- **T1.4 Seed**：`scripts/init_permissions.sql` 段 5 — 9 内置角色 `platforms` 初值（sys_admin=pc、community_admin=pc,mobile、property_admin=pc、owner/tenant/grid_worker/committee/merchant/registered_user=mobile）；新增权限码 `user:appstate:read-api`(700, `GET:/api/users/me/app-state`)、`user:currentcommunity:write-api`(701, `PUT:/api/users/me/current-community`)，挂 registered_user/owner/grid_worker/tenant/committee/merchant/sys_admin（PC-only 的 property_admin/community_admin 不挂移动端接口）。已执行到真库验证（platforms 9 角色、权限码 path、rel 绑定）。
+
+### 影响
+- Proto: 无（`permission.proto` Role.platforms=10 由 Owner 在 Task 0.2 交付，本次仅消费）
+- 调用方: auth-service（GetUserRoles → role.platforms 端准入判定，Task 2.x）
+- 数据库: `sys_role.platforms` 列 + 9 角色 platforms 值 + 2 权限码 + rel 绑定
+- 缓存: platforms 属角色字段，无额外缓存键（随既有 UpdateRole 失效）
+
+### 应用的记忆
+- [[migration-must-execute]] (must-follow) — migration 提交后已执行到真库并验证
+- [[permission-seed-api-path-must-match-routes]] (must-follow) — 700/701 path 与 user-service 实际 REST 路由一致
+- [[is-system-no-permission-shortcut]] (must-follow) — platforms 为配置属性，不参与权限短路，空值运行时 fail-open
+
+---
+
 ## 2026-08-12 — 集成验收种子补齐：owner/tenant 发布+读权限 + 选举权限绑定
 
 ### 背景

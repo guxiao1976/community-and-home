@@ -85,9 +85,9 @@ func TestRelUserRoleModel_FindActiveByUserId(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewRelUserRoleModel(conn, nil)
 
-	rows := sqlmock.NewRows([]string{"role_id", "role_code", "role_name", "is_system", "role_status", "description", "scope_type", "scope_id", "ur_status", "verified_at", "expires_at"}).
-		AddRow(1, "owner", "业主", 0, 1, "业主角色", "community", 5001, 2, nil, nil).
-		AddRow(2, "property_admin", "物业管理员", 1, 1, "系统角色", "community", 5001, 2, nil, nil)
+	rows := sqlmock.NewRows([]string{"role_id", "role_code", "role_name", "is_system", "role_status", "description", "platforms", "scope_type", "scope_id", "ur_status", "verified_at", "expires_at"}).
+		AddRow(1, "owner", "业主", 0, 1, "业主角色", "pc,mobile", "community", 5001, 2, nil, nil).
+		AddRow(2, "property_admin", "物业管理员", 1, 1, "系统角色", "pc", "community", 5001, 2, nil, nil)
 
 	mock.ExpectQuery("SELECT ur.role_id, r.role_code, r.role_name, r.is_system, r.status as role_status, r.description").
 		WithArgs(int64(100)).
@@ -259,9 +259,9 @@ func TestRelUserRoleModel_FindActiveRolesByUserId(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewRelUserRoleModel(conn, nil)
 
-	rows := sqlmock.NewRows([]string{"role_id", "role_code", "role_name", "is_system", "role_status", "description", "scope_type", "scope_id", "ur_status", "verified_at", "expires_at"}).
-		AddRow(1, "owner", "业主", 0, 1, "业主角色", "community", 5001, 0, nil, nil).
-		AddRow(9, "registered_user", "注册用户", 1, 1, "基角色", "", 0, 2, nil, nil)
+	rows := sqlmock.NewRows([]string{"role_id", "role_code", "role_name", "is_system", "role_status", "description", "platforms", "scope_type", "scope_id", "ur_status", "verified_at", "expires_at"}).
+		AddRow(1, "owner", "业主", 0, 1, "业主角色", "mobile", "community", 5001, 0, nil, nil).
+		AddRow(9, "registered_user", "注册用户", 1, 1, "基角色", "mobile", "", 0, 2, nil, nil)
 
 	// 断言 query 含 status IN (0,1,2) 与过期过滤
 	mock.ExpectQuery("ur.status IN \\(0,1,2\\)").
@@ -300,7 +300,7 @@ func TestRelUserRoleModel_FindActiveRolesByUserId_ExpiredExcluded(t *testing.T) 
 
 	mock.ExpectQuery("expires_at IS NULL OR ur.expires_at > NOW").
 		WithArgs(int64(100)).
-		WillReturnRows(sqlmock.NewRows([]string{"role_id", "role_code", "role_name", "is_system", "role_status", "description", "scope_type", "scope_id", "ur_status", "verified_at", "expires_at"}))
+		WillReturnRows(sqlmock.NewRows([]string{"role_id", "role_code", "role_name", "is_system", "role_status", "description", "platforms", "scope_type", "scope_id", "ur_status", "verified_at", "expires_at"}))
 
 	result, err := m.FindActiveRolesByUserId(context.Background(), 100)
 	if err != nil {
