@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-auth/rpc/internal/svc"
 	"github.com/guxiao1976/community-common/v2/pkg/errx"
@@ -93,6 +94,31 @@ func TestCheckPlatformAccess(t *testing.T) {
 		{"多角色其一含当前端→放行", "web", []*permissionv1.UserRoleInfo{role("mobile"), role("pc")}, nil, 0},
 		{"GetUserRoles失败→放行", "web", nil, grpc.ErrClientConnClosing, 0},
 	}
+
+	// 补充：resp 业务错误（code != 0）→ fail-open 放行（杀 L60 的 ||→&&）
+	t.Run("resp业务错误code非0→放行", func(t *testing.T) {
+		perm := &mockPermissionServiceClient{
+			GetUserRolesFn: func(ctx context.Context, in *permissionv1.GetUserRolesRequest, opts ...grpc.CallOption) (*permissionv1.GetUserRolesResponse, error) {
+				return &permissionv1.GetUserRolesResponse{Base: &commonv1.BaseResp{Code: 12345}, Roles: nil}, nil
+			},
+		}
+		svcCtx := &svc.ServiceContext{PermissionClient: perm}
+		assert.NoError(t, checkPlatformAccess(context.Background(), svcCtx, 1001, "web"))
+	})
+
+	// 补充：info 非 nil 但 Role nil → fail-open（杀 L72 的 ||→&&）
+	t.Run("role信息nil→放行", func(t *testing.T) {
+		perm := &mockPermissionServiceClient{
+			GetUserRolesFn: func(ctx context.Context, in *permissionv1.GetUserRolesRequest, opts ...grpc.CallOption) (*permissionv1.GetUserRolesResponse, error) {
+				return &permissionv1.GetUserRolesResponse{
+					Base:  okResp(),
+					Roles: []*permissionv1.UserRoleInfo{{Role: nil}},
+				}, nil
+			},
+		}
+		svcCtx := &svc.ServiceContext{PermissionClient: perm}
+		assert.NoError(t, checkPlatformAccess(context.Background(), svcCtx, 1001, "web"))
+	})
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
