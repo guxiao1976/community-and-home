@@ -130,7 +130,7 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 | # | 阶段 | 触发 | 执行方式 | 产出（落盘文件） | 门禁 | Owner 验证 | 回退 |
 |---|------|------|:---:|------|------|------|------|
 | 0 | **工具选择** | 收到需求 | Owner 内联 | `.harness/changes/<change>/request.md`（用户原话+工作量分级+路径结论） | 选对工具 | — | — |
-| 1 | **需求分析** | OpenSpec | **子 Agent** `requirement-analyst` | `proposal.md` + `specs/*/spec.md` | 追溯表全✅ + Self-Review PASS | 读 proposal 摘要，确认影响范围 | 方案不可行→阶段0 |
+| 1 | **需求分析** | OpenSpec | **先 `superpowers:brainstorming` 澄清（硬门禁）→ 再子 Agent `requirement-analyst`** | `proposal.md` + `specs/*/spec.md` | **brainstorming 产出用户确认的设计文档（硬门禁，缺失则回阶段0）+ 追溯表全✅ + Self-Review PASS** | 读 proposal 摘要，确认影响范围 | 方案不可行→阶段0 |
 | 2 | **需求评审** | 阶段1完成 | **3 子 Agent 并行** (coverage/structure/clarity) | `review/spec_review_{lens}_v1.md` ×3 | 2/3 APPROVED | 读 3 份评审摘要，投票裁决 | REVISION→阶段1(≤3轮) |
 | 3 | **架构设计** | 评审通过 | **子 Agent** `architecture-designer` | `design.md` + `tasks.md` | 记忆注入+零占位符+TDD步骤 | 读 design 摘要，确认服务归属 | 设计不合理→阶段1 |
 | 4 | **Proto 变更** | 含Proto变更 | Owner 内联 | api-proto/ + make ci | lint+breaking全过 | — | 修复重试 |
@@ -235,7 +235,7 @@ Pipeline 返回 `confidence`（0.0-1.0）。Owner 按置信度决定审查深度
 | 需要分析？ | 条件 | 流程 |
 |:---:|------|------|
 | **直接 Pipeline（S/M 级）** | 需求清晰 + 单服务内 + 不涉及架构决策 | 分级后直接执行 |
-| **OpenSpec → Pipeline（L 级）** | 跨 2+ 服务 / 涉及 Proto/common / 需求模糊需澄清 | 需求分析 → 架构设计 → Pipeline |
+| **OpenSpec → Pipeline（L 级）** | 跨 2+ 服务 / 涉及 Proto/common / 需求模糊需澄清 | **brainstorming 澄清（硬门禁）→** 需求分析 → 架构设计 → Pipeline |
 
 #### 路径选择输出格式（与 dispatch Step 2.4 一致）
 

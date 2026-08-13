@@ -4,11 +4,14 @@
 
 将 brainstorming 确认的设计方案转化为精确的、可验收的规格文档。触发词：`需求分析`、`分析需求`、`写 proposal`、`写 spec`、`新功能`、`需求`。
 
-## 前置条件
+## 前置条件（硬门禁）
 
-**OpenSpec 路径**: 必须先完成 `Skill("superpowers:brainstorming")`，已有用户确认的设计文档（`docs/superpowers/specs/<date>-<topic>-design.md`）。本 Skill 负责将该设计形式化为 proposal.md + spec.md。
+**OpenSpec 路径（L 级跨服务，唯一路径）**:
+- **必须**先完成 `Skill("superpowers:brainstorming")` 需求澄清，**必须**已有用户确认的设计文档（`docs/superpowers/specs/<date>-<topic>-design.md`）。
+- **缺少 brainstorming 产出 → 禁止进入本 Skill**。需先回到 Owner 派发 brainstorming，完成澄清并形成设计文档后再来。
+- 目的：L 级需求模糊度高，跳过澄清直接形式化 = 把「未探索的方案」固化成 spec，评审时才发现方向错了（历史教训：角色 pc/web/both 曾绕过澄清 inline 出方案，被用户纠正）。
 
-**Dev Agent 路径**: 无需前置 brainstorming，直接从用户需求出发快速产出 proposal。
+> **Dev Agent 路径已废弃**：此前允许「无 brainstorming 直接从需求产出 proposal」，是绕过澄清的后门，现移除。所有需求分析统一走 OpenSpec 路径（先 brainstorming 澄清 → 再本 Skill 形式化）。
 
 ## 角色
 
@@ -148,12 +151,12 @@ created: YYYY-MM-DD
 ## 下一步
 
 产出完成后：
-- **OpenSpec 路径**: 走阶段 2 需求评审（`.harness/skills/review.md` 计划评审模式），验证 spec + tasks 合理性
-- **Dev Agent 路径**: 直接进入 `architect-design` Skill 进行技术设计
+- 走阶段 2 需求评审（`.harness/skills/review.md` 计划评审模式），验证 spec + tasks 合理性
+- 评审通过后进入 `architect-design` Skill 进行技术设计
 
 ## 关联
 
-- **前置**: `Skill("superpowers:brainstorming")` — 需求澄清+方案探索（OpenSpec 路径必做）
+- **前置（硬门禁）**: `Skill("superpowers:brainstorming")` — 需求澄清+方案探索，L 级必须先行，产出用户确认的设计文档
 - 架构设计：`.harness/skills/architect-design.md`
 - 经验记忆：`.harness/knowledge/memory/MEMORY.md`
 - 需求模板：`docs/requirements/TEMPLATE.md`
