@@ -60,3 +60,6 @@ api-proto/
 
 # 本地个人实验项目（非项目服务，勿提交）
 my-ralph-project/
+
+# gomu 变异测试缓存
+.gomu_history.json
