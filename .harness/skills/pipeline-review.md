@@ -13,19 +13,21 @@ description: 流水线检视与完善 —— 定期或按需检查开发流水�
 
 ## Step 2: 检视 5 个维度
 
-### 维度 1 · 文档新鲜度（相对判定，非绝对阈值）
+### 维度 1 · 文档新鲜度（提示性检查，人工判断）
 
 ```bash
-# 最近流水线代码改动时间（workflows/scripts/skills 的最近 commit）
-code_ts=$(git log -1 --format=%ct -- .harness/workflows .harness/scripts .harness/skills)
-# 各 harness 文档最后更新时间
+# 列出各 harness 文档最后更新时间 + 最近引擎实质改动，供人工判断。
+# 注：设计先行原则（第15条，文档先提交）使「文档与代码同批交付」时文档时间必然早于代码，
+# 故本维度不自动 FAIL，改为列出信息由人工判断「哪些实质改动改变了文档描述的内容却未同步」。
 for f in .harness/docs/pipeline-*.md .harness/docs/harness-design-principles.md .harness/agents/owner-agent.md; do
-  doc_ts=$(git log -1 --format=%ct -- "$f")
-  [ "$doc_ts" -lt "$code_ts" ] && echo "滞后: $f"
+  echo "--- $f"
+  git log -1 --format='  最后更新: %cd  %s' --date=format:'%F %T' -- "$f" 2>/dev/null
 done
+echo "--- 最近引擎实质改动（workflows/scripts，供对比）"
+git log -10 --format='  %cd  %s' --date=format:'%F %T' -- .harness/workflows .harness/scripts 2>/dev/null
 ```
 
-判定：任何文档 `doc_ts < code_ts` → FAIL（代码改了文档没跟上）；无输出 → PASS。
+判定：人工判断「文档最后更新后，是否有实质引擎改动改变了文档描述的内容却未同步」→ 是 = FAIL；否 = PASS。
 
 ### 维度 2 · 应用率
 
