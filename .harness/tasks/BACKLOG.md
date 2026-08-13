@@ -33,6 +33,7 @@
 - [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-006.md) — all, P1, closed, qa
 - [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-007.md) — all, P1, closed, qa
 - [QA FAIL: graph_freshness — graph is stale (last sync: 648h ago, latest commit is newer)](task-2026-08-04-008.md) — all, P1, closed, qa
+- [harness-pipeline 与 superpowers 流程衔接规则待收敛](task-2026-08-13-001.md) — global, P1, open, human
 
 
 ## P2 — 本月
@@ -63,12 +64,12 @@
 | 优先级 | 数量 |
 |:------:|:----:|
 | P0 | 4 |
-| P1 | 16 |
+| P1 | 17 |
 | P2 | 5 |
 | P3 | 0 |
 | 进行中 | 0 |
 | 已阻塞 | 0 |
-| **合计** | **25** |
+| **合计** | **26** |
 
 | 服务 | 数量 |
 |------|:----:|
@@ -76,7 +77,7 @@
 | all | 11 |
 | all | 3 |
 | master-data-service | 2 |
-| global | 1 |
+| global | 2 |
 | ai-model-service | 4 |
 | multi | 1 |
 
