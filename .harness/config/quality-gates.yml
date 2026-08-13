@@ -4,12 +4,20 @@
 # 设计理念：
 # "If it can't be mechanically enforced, the agent will drift."
 # 所有门禁条件必须可程序化验证
+#
+# 实现状态说明（对齐 gate-engine.js）：
+#   本配置是「OpenSpec 全流程」设计预留，但当前 harness-pipeline workflow 只执行
+#   Generator→QA→Review 循环。gate-engine.js 实际落地 8 个 gate（qa×2 / review×1 /
+#   verify×5）。各阶段按实现状态标注（见下方 banner）：
+#
+#     [未接入]   阶段未接入当前 workflow，规则未被执行
+#     [部分接入] 阶段内仅部分规则接入 gate-engine.js
 
 version: 1.0
 
 gates:
   # ============================================================================
-  # 阶段 1: 需求分析
+  # 阶段 1: 需求分析  [status: not-implemented] 阶段不在当前 workflow，规则未接入
   # ============================================================================
   requirement_analysis:
     - type: file_exists
@@ -42,7 +50,7 @@ gates:
       error: "specs 目录至少需要一个服务的 spec 文件"
 
   # ============================================================================
-  # 阶段 2: 架构设计
+  # 阶段 2: 架构设计  [status: not-implemented] 阶段不在当前 workflow，规则未接入
   # ============================================================================
   architecture_design:
     - type: file_exists
@@ -81,7 +89,7 @@ gates:
       expected_format: "checkbox_list"  # - [ ] Task description
 
   # ============================================================================
-  # 阶段 3: 编码实现
+  # 阶段 3: 编码实现  [status: not-implemented] 编译/AST 由 harness-checks.sh 执行，不经 validateGate
   # ============================================================================
   coding:
     - type: compilation
@@ -114,7 +122,7 @@ gates:
       warning: "建议生成编码报告记录实现细节"
 
   # ============================================================================
-  # 阶段 4: QA 验证
+  # 阶段 4: QA 验证  [status: partially-implemented] ci_check.status→qa_verdict_enum；file_exists(_qa.md)、no_test_skip 未接入
   # ============================================================================
   qa:
     - type: ci_check
@@ -152,7 +160,7 @@ gates:
       max_skipped: 0
 
   # ============================================================================
-  # 阶段 5: 代码评审
+  # 阶段 5: 代码评审  [status: partially-implemented] review_verdict→review_min_approved、iteration_limit→core.js；其余未接入
   # ============================================================================
   review:
     - type: file_exists
@@ -179,7 +187,7 @@ gates:
       action_on_exceed: "ESCALATE_TO_HUMAN"
 
   # ============================================================================
-  # 阶段 7: CI 验证（外部）
+  # 阶段 7: CI 验证（外部）  [status: not-implemented] 外部 CI 未接入当前 workflow
   # ============================================================================
   ci:
     - type: external_ci
@@ -194,7 +202,7 @@ gates:
         - security_scan
 
   # ============================================================================
-  # 阶段 8: 部署验证
+  # 阶段 8: 部署验证  [status: not-implemented] 部署阶段未接入当前 workflow
   # ============================================================================
   deployment:
     - type: smoke_test
@@ -209,7 +217,7 @@ gates:
       error: "缺少回滚计划"
 
   # ============================================================================
-  # 阶段 9: 文档交付
+  # 阶段 9: 文档交付  [status: not-implemented] 文档交付阶段未接入当前 workflow
   # ============================================================================
   documentation:
     - type: file_exists
