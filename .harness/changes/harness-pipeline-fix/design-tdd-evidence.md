@@ -105,7 +105,9 @@ git stash 实现（保留测试）→ go test（必然 FAIL）→ 捕获输出 �
 | T3 | 引入 go-mutesting + 加 `check_mutation_testing` | `harness-checks.sh`、`go.mod` | T1 |
 | T4 | 变异存活率阈值 + 报告存活突变体 | `check_mutation_testing` | T3 |
 
-> ⚠️ **T3/T4 受阻（2026-08-13 实测）**：Go 变异测试工具不成熟——`zimmski/go-mutesting` 与 Go 1.25 不兼容（`go/types` panic 崩溃），`avito-tech/go-mutesting` fork 可用但每个变异重跑全包测试、单函数 `--match` 仍 >180s 超时，无法用于 CI 门禁。故 `check_mutation_testing` 保持非阻塞 WARN，测试有效性暂由「TDD 分诊 + RED 摘录（结构性不能替代）」兜底。待 Go 变异测试工具成熟（或改用增量变异/缓存）后再激活为阻塞门禁。
+> ⚠️ **T3/T4 原受阻，已解决（2026-08-13）**：`zimmski/go-mutesting` 与 Go 1.25 不兼容（panic）、`avito-tech` fork 极慢（>180s）。**改用 `gomu`（github.com/sivchari/gomu，v0.2.1）**——Go1.25 兼容、增量分析、CI 门禁、并行、JSON 输出。实测单文件 37s（helpers.go 62 变异），go-mutesting 完全不可用。
+> **落地**：`check_mutation_testing` 已用 gomu 完整实现（`0aa1c89`）——diff .go 文件范围 + `--threshold 80 --ci-mode --fail-on-gate`；解析输出 score/gate 标志判定（gomu 退出码被 pipe 吞不可靠）。注意：`--incremental` 对 monorepo/go.work 挂起，用 `--incremental=false` + diff 文件范围；目录级太慢，只跑 diff 文件。
+> **实测暴露**：permission helpers.go 变异分数仅 48-51%（<80%）——RED 证据通过的测试（7 table 用例）实际未覆盖关键分支，变异测试抓到了 RED 抓不到的「测试不够狠」。
 | T5 | 改写 `tdd-red-evidence-requires-fail-excerpt` 记忆为变异测试语义 | memory 文件 | T3 |
 | T6 | （可选 P1）`_tdd_evidence.md` 机械门禁 | `harness-checks.sh` | 无 |
 | T7 | （可选 P2）stash/pop 回溯捕获脚本 | `scripts/` | 无 |
