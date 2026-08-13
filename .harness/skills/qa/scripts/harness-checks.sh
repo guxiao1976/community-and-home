@@ -1162,9 +1162,11 @@ check_git_hygiene() {
 check_mutation_testing() {
   echo "[18/18] Mutation testing" >&2
   # 变异测试：对「有逻辑函数」验证测试有效性（替代 RED 证据，见 harness-pipeline-fix/design-tdd-evidence.md T3/T4）
-  # 工具未安装时 SKIP（可选门禁）；安装 go-mutesting 后对 diff 有逻辑函数所在 package 跑变异，存活率 >20% 判 FAIL
-  if ! command -v go-mutesting >/dev/null 2>&1; then
-    log_pass "mutation_testing" "go-mutesting 未安装，跳过（可选门禁；安装后对 diff 有逻辑函数跑变异，存活率>20%判FAIL）"
+  # 用 gomu（github.com/sivchari/gomu，现代变异测试工具，增量/门禁/并行/JSON）。
+  # 注意：gomu --incremental 对 monorepo/go.work 挂起，用 --incremental=false + diff .go 文件范围；
+  #      目录级太慢（全包变异），只对 diff 的非测试 .go 文件跑。
+  if ! command -v gomu >/dev/null 2>&1; then
+    log_pass "mutation_testing" "gomu 未安装，跳过（可选门禁；安装: go install github.com/sivchari/gomu/cmd/gomu@latest）"
     return
   fi
   local go_files
@@ -1173,7 +1175,41 @@ check_mutation_testing() {
     log_pass "mutation_testing" "无 Go 逻辑变更，跳过"
     return
   fi
-  log_warn "mutation_testing" "变异测试工具不可用：zimmski/go-mutesting 与 Go 1.25 不兼容（go/types panic），avito-tech fork 极慢（单函数>180s）。暂不纳入阻塞门禁，测试有效性由 TDD 分诊 + RED 摘录兜底（见 design-tdd-evidence.md）"
+  # 限制目标数，避免太慢（最多 3 个 diff 文件；单文件 ~30-60s）
+  local targets=()
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    [ -f "$f" ] || continue
+    targets+=("$f")
+    [[ ${#targets[@]} -ge 3 ]] && break
+  done <<< "$go_files"
+  if [[ ${#targets[@]} -eq 0 ]]; then
+    log_pass "mutation_testing" "diff 无现存 Go 文件，跳过"
+    return
+  fi
+  local out rc
+  set +e
+  out=$(cd "$PROJECT_ROOT" && timeout 180 gomu run --incremental=false --threshold 80 --ci-mode --fail-on-gate --timeout 15 --workers 4 --output console "${targets[@]}" 2>&1)
+  rc=$?
+  set -e
+  # gomu 的 gate 失败退出码不可靠（pipe 吞码），须解析输出：score 或「below minimum threshold」标志
+  local score gate_failed below_threshold
+  score=$(echo "$out" | grep -oE 'Mutation Score: [0-9.]+%' | tail -1 | grep -oE '[0-9.]+' | tail -1)
+  gate_failed=$(echo "$out" | grep -cE 'below minimum threshold|quality gate failed' || true)
+  below_threshold=false
+  if [[ -n "$score" ]]; then
+    awk -v s="$score" 'BEGIN{exit !(s < 80)}' && below_threshold=true
+  fi
+  if [[ "${gate_failed:-0}" -gt 0 ]] || $below_threshold; then
+    local why="变异存活率高=测试未覆盖关键分支（gomu 实测 permission helpers.go 仅 48-51%）。"
+    local fix="为 diff 有逻辑函数补断言覆盖未被变异杀死的分支，或降低阈值（默认 80）。详见 .harness/changes/harness-pipeline-fix/design-tdd-evidence.md"
+    local reference=".harness/changes/harness-pipeline-fix/design-tdd-evidence.md"
+    log_warn "mutation_testing" "变异分数不足: ${score}%（<80%）" "$why" "$fix" "" "$reference"
+  elif [[ $rc -eq 124 ]]; then
+    log_warn "mutation_testing" "变异测试超时（180s），跳过"
+  else
+    log_pass "mutation_testing" "变异分数 ${score:-?}%（≥80% 或未解析到分数）"
+  fi
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────
