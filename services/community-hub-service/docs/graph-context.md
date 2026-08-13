@@ -1,6 +1,6 @@
 # 知识图谱上下文 — community-hub-service
 
-> 自动生成于 2026-08-13 07:57:07 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-13 08:31:21 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -66,7 +66,7 @@
 | community_contacts | updated_at (datetime), created_at (datetime), sort_order (bigint), phone (varchar), name (varchar), category (varchar), community_id (bigint), id (bigint) |
 | lost_found_items | moderation_time (nullable), moderation_status (bigint), deleted_at (datetime), updated_at (datetime), created_at (datetime), publisher_id (bigint), status (varchar), contact_phone (varchar), image_urls (varchar), description (varchar), title (varchar), type (varchar), community_id (bigint), id (bigint) |
 | notice_attachments | created_at (datetime), file_size (bigint), file_url (varchar), file_name (varchar), notice_id (bigint), id (bigint) |
-| notices | moderation_time (nullable), moderation_status (bigint), deleted_at (datetime), updated_at (datetime), created_at (datetime), published_at (datetime), is_pinned (bigint), publisher (varchar), role (varchar), content (varchar), title (varchar), community_id (bigint), id (bigint) |
+| notices | publisher_id (bigint), moderation_time (nullable), moderation_status (bigint), deleted_at (datetime), updated_at (datetime), created_at (datetime), published_at (datetime), is_pinned (bigint), publisher (varchar), role (varchar), content (varchar), title (varchar), community_id (bigint), id (bigint) |
 
 ## 前端消费方
 
