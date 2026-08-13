@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -37,5 +38,16 @@ func TestGetAppState_WithRecord_ReturnsIdAndUpdatedAt(t *testing.T) {
 	assert.Equal(t, int32(0), resp.Base.Code)
 	assert.Equal(t, int64(2001), resp.CurrentCommunityId)
 	assert.Equal(t, now.Unix(), resp.UpdatedAt)
+}
+
+func TestGetAppState_DBError_Propagated(t *testing.T) {
+	svc := testSvc(t)
+	am := appStateModel(svc)
+	am.findErr = errors.New("db down") // 注入非 ErrNotFound 的 DB 错误
+
+	logic := NewGetAppStateLogic(context.Background(), svc)
+	_, err := logic.GetAppState(&userv1.GetAppStateRequest{UserId: 9003})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "db down")
 }
 

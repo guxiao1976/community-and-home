@@ -122,6 +122,7 @@ var _ model.UserBaseModel = (*mockUserBaseModel)(nil)
 type mockMembershipModel struct {
 	data          map[int64]*model.UserCommunityMembership
 	byUserCommIdx map[string]int64
+	findErr       error // 注入 FindByUserId 错误（变异测试补分支用）
 }
 
 func newMockMembershipModel() *mockMembershipModel {
@@ -146,6 +147,9 @@ func (m *mockMembershipModel) FindByUserAndCommunity(ctx context.Context, uid, c
 	return nil, model.ErrNotFound
 }
 func (m *mockMembershipModel) FindByUserId(ctx context.Context, uid int64) ([]*model.UserCommunityMembership, error) {
+	if m.findErr != nil {
+		return nil, m.findErr
+	}
 	var r []*model.UserCommunityMembership
 	for _, d := range m.data {
 		if d.UserId == uid && d.BindStatus == model.MembershipBindStatusActive {
@@ -341,7 +345,9 @@ var _ model.UserResidenceModel = (*mockResidenceModel)(nil)
 // =============================================================================
 
 type mockAppStateModel struct {
-	data map[int64]*model.UserAppState
+	data      map[int64]*model.UserAppState
+	findErr   error // 注入 FindOne 的非 ErrNotFound 错误（变异测试补分支用）
+	upsertErr error // 注入 Upsert 错误（变异测试补分支用）
 }
 
 func newMockAppStateModel() *mockAppStateModel {
@@ -349,6 +355,9 @@ func newMockAppStateModel() *mockAppStateModel {
 }
 
 func (m *mockAppStateModel) FindOne(ctx context.Context, userId int64) (*model.UserAppState, error) {
+	if m.findErr != nil {
+		return nil, m.findErr
+	}
 	if s, ok := m.data[userId]; ok {
 		return s, nil
 	}
@@ -356,6 +365,9 @@ func (m *mockAppStateModel) FindOne(ctx context.Context, userId int64) (*model.U
 }
 
 func (m *mockAppStateModel) Upsert(ctx context.Context, userId, communityId int64) error {
+	if m.upsertErr != nil {
+		return m.upsertErr
+	}
 	s, ok := m.data[userId]
 	if !ok {
 		s = &model.UserAppState{UserId: userId}

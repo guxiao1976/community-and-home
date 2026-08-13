@@ -72,6 +72,27 @@ func TestSetCurrentCommunity_LIMITED_Miss_Returns10015(t *testing.T) {
 	assert.Equal(t, int32(10015), resp.Base.Code)
 }
 
+func TestSetCurrentCommunity_UpsertError_Propagated(t *testing.T) {
+	svc, permMock := certTestSvc(t)
+	permMock.EXPECT().GetDataScopes(gomock.Any(), gomock.Any()).Return(
+		&permissionv1.GetDataScopesResponse{State: permissionv1.DataScopeState_DATA_SCOPE_STATE_GLOBAL}, nil)
+	appStateModel(svc).upsertErr = errors.New("upsert db down")
+
+	logic := NewSetCurrentCommunityLogic(context.Background(), svc)
+	_, err := logic.SetCurrentCommunity(&userv1.SetCurrentCommunityRequest{UserId: 9109, CommunityId: 2001})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "upsert db down")
+}
+
+func TestSetCurrentCommunity_PermissionClientNil_ReturnsError(t *testing.T) {
+	svc := testSvc(t)
+	svc.PermissionClient = nil
+
+	logic := NewSetCurrentCommunityLogic(context.Background(), svc)
+	_, err := logic.SetCurrentCommunity(&userv1.SetCurrentCommunityRequest{UserId: 9110, CommunityId: 2001})
+	require.Error(t, err)
+}
+
 func TestSetCurrentCommunity_GetDataScopesError_Propagated(t *testing.T) {
 	svc, permMock := certTestSvc(t)
 	permMock.EXPECT().GetDataScopes(gomock.Any(), gomock.Any()).Return(nil, errors.New("permission unavailable"))

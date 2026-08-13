@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -76,6 +77,87 @@ func TestIsSameHouse(t *testing.T) {
 		same, _, _, _, err := isSameHouse(context.Background(), svc, 41, 42)
 		require.NoError(t, err)
 		assert.False(t, same)
+	})
+
+	t.Run("partial zero address building", func(t *testing.T) {
+		// 地址部分为 0（如 building=0）也应跳过，不误判同屋
+		svc := testSvc(t)
+		mm := membershipModel(svc)
+		createTestMembershipAt(t, mm, 1, 81, 2001, 0, 2, 301)
+		createTestMembershipAt(t, mm, 2, 82, 2001, 0, 2, 301)
+		same, _, _, _, err := isSameHouse(context.Background(), svc, 81, 82)
+		require.NoError(t, err)
+		assert.False(t, same)
+	})
+
+	t.Run("partial zero address unit", func(t *testing.T) {
+		svc := testSvc(t)
+		mm := membershipModel(svc)
+		createTestMembershipAt(t, mm, 1, 83, 2001, 1, 0, 301)
+		createTestMembershipAt(t, mm, 2, 84, 2001, 1, 0, 301)
+		same, _, _, _, err := isSameHouse(context.Background(), svc, 83, 84)
+		require.NoError(t, err)
+		assert.False(t, same)
+	})
+
+	t.Run("partial zero address room", func(t *testing.T) {
+		svc := testSvc(t)
+		mm := membershipModel(svc)
+		createTestMembershipAt(t, mm, 1, 85, 2001, 1, 2, 0)
+		createTestMembershipAt(t, mm, 2, 86, 2001, 1, 2, 0)
+		same, _, _, _, err := isSameHouse(context.Background(), svc, 85, 86)
+		require.NoError(t, err)
+		assert.False(t, same)
+	})
+
+	t.Run("viewer membership find error", func(t *testing.T) {
+		svc := testSvc(t)
+		mm := membershipModel(svc)
+		mm.findErr = errors.New("viewer db down")
+		_, _, _, _, err := isSameHouse(context.Background(), svc, 51, 52)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "viewer db down")
+	})
+
+	t.Run("target membership find error", func(t *testing.T) {
+		svc := testSvc(t)
+		mm := membershipModel(svc)
+		createTestMembershipAt(t, mm, 1, 61, 2001, 1, 2, 301)
+		mm.findErr = errors.New("target db down")
+		// 第一个 FindByUserId（viewer=61）成功后，第二个（target=62）触发 error
+		_, _, _, _, err := isSameHouse(context.Background(), svc, 61, 62)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "target db down")
+	})
+}
+
+func TestOwnHouseInfo(t *testing.T) {
+	t.Run("has membership returns first house", func(t *testing.T) {
+		svc := testSvc(t)
+		mm := membershipModel(svc)
+		createTestMembershipAt(t, mm, 1, 71, 2001, 3, 4, 502)
+		b, u, r := ownHouseInfo(context.Background(), svc, 71)
+		assert.Equal(t, int32(3), b)
+		assert.Equal(t, int32(4), u)
+		assert.Equal(t, int32(502), r)
+	})
+
+	t.Run("no membership returns zeros", func(t *testing.T) {
+		svc := testSvc(t)
+		b, u, r := ownHouseInfo(context.Background(), svc, 72)
+		assert.Equal(t, int32(0), b)
+		assert.Equal(t, int32(0), u)
+		assert.Equal(t, int32(0), r)
+	})
+
+	t.Run("find error returns zeros", func(t *testing.T) {
+		svc := testSvc(t)
+		mm := membershipModel(svc)
+		mm.findErr = errors.New("db down")
+		b, u, r := ownHouseInfo(context.Background(), svc, 73)
+		assert.Equal(t, int32(0), b)
+		assert.Equal(t, int32(0), u)
+		assert.Equal(t, int32(0), r)
 	})
 }
 
