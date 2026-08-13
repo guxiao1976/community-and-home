@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	authv1 "github.com/guxiao1976/api-proto/gen/go/auth/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-auth/rpc/internal/svc"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/redis/go-redis/v9"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -32,12 +32,12 @@ func NewLoginSmsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginSms
 
 // LoginSms 短信验证码登录
 //
-//	1. 校验短信验证码
-//	2. AES 加密手机号 → 查 auth_credential
-//	3. 调 User Service GetUserByPhone 获取用户信息
-//	4. 校验账号状态（status != 2 禁用）
-//	5. 获取已认证角色（Cache-Aside: Redis → 未命中 → gRPC → 回填）
-//	6. 签发 AT（含 roles）+ RT → 成功后删除验证码
+//  1. 校验短信验证码
+//  2. AES 加密手机号 → 查 auth_credential
+//  3. 调 User Service GetUserByPhone 获取用户信息
+//  4. 校验账号状态（status != 2 禁用）
+//  5. 获取已认证角色（Cache-Aside: Redis → 未命中 → gRPC → 回填）
+//  6. 签发 AT（含 roles）+ RT → 成功后删除验证码
 func (l *LoginSmsLogic) LoginSms(in *authv1.LoginSmsRequest) (*authv1.LoginResponse, error) {
 	// 1. 参数校验
 	if in.Phone == "" || in.SmsCode == "" {
@@ -108,6 +108,13 @@ func (l *LoginSmsLogic) LoginSms(in *authv1.LoginSmsRequest) (*authv1.LoginRespo
 		return &authv1.LoginResponse{
 			Base: responsex.NewBaseRespWithError(509504, "获取用户角色失败"),
 		}, nil
+	}
+
+	// 5.5 端准入判定（签发 Token 前，读 permission GetUserRoles.platforms）
+	// SEE: [[is-system-no-permission-shortcut]]
+	if err := checkPlatformAccess(l.ctx, l.svcCtx, userId, in.DeviceType); err != nil {
+		l.Infof("LoginSms: platform access denied for user=%d, device=%s", userId, in.DeviceType)
+		return &authv1.LoginResponse{Base: responsex.NewBaseRespFromError(err)}, nil
 	}
 
 	// 6. 签发 AT（含 roles）+ RT

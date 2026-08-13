@@ -3,8 +3,9 @@ package svc
 import (
 	"context"
 
-	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	masterdatav1 "github.com/guxiao1976/api-proto/gen/go/masterdata/v1"
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-auth/model"
 	"github.com/guxiao1976/community-auth/rpc/internal/config"
 	sysconfig "github.com/guxiao1976/community-common/v2/pkg/sysconfig"
@@ -15,11 +16,12 @@ import (
 
 // ServiceContext 认证中心 RPC 服务上下文
 type ServiceContext struct {
-	Config         config.Config
-	SysConfig      *sysconfig.Client
-	CredentialModel model.AuthCredentialModel  // 登录凭证 DB 模型
-	RedisClient    *redis.Client               // Redis（RT 存储、AT 黑名单）
-	UserServiceRpc userv1.UserServiceClient    // User Service gRPC 客户端
+	Config           config.Config
+	SysConfig        *sysconfig.Client
+	CredentialModel  model.AuthCredentialModel            // 登录凭证 DB 模型
+	RedisClient      *redis.Client                        // Redis（RT 存储、AT 黑名单）
+	UserServiceRpc   userv1.UserServiceClient             // User Service gRPC 客户端
+	PermissionClient permissionv1.PermissionServiceClient // Permission Service gRPC 客户端（端准入判定）
 }
 
 // NewServiceContext 创建服务上下文
@@ -35,6 +37,9 @@ func NewServiceContext(c config.Config) *ServiceContext {
 
 	// 创建 User Service gRPC 客户端
 	userRpcCli := zrpc.MustNewClient(c.UserServiceRpc)
+
+	// 创建 Permission Service gRPC 客户端（端准入判定读 GetUserRoles）
+	permissionRpcCli := zrpc.MustNewClient(c.PermissionServiceRpc)
 
 	// 初始化系统参数配置客户端
 	sysCfg := sysconfig.MustInit(c.SysConfigRedis, "", func(ctx context.Context, key string) (*sysconfig.ConfigValue, error) {
@@ -56,10 +61,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	})
 
 	return &ServiceContext{
-		Config:          c,
-		SysConfig:       sysCfg,
-		CredentialModel: model.NewAuthCredentialModel(conn, c.Cache),
-		RedisClient:     redisClient,
-		UserServiceRpc:  userv1.NewUserServiceClient(userRpcCli.Conn()),
+		Config:           c,
+		SysConfig:        sysCfg,
+		CredentialModel:  model.NewAuthCredentialModel(conn, c.Cache),
+		RedisClient:      redisClient,
+		UserServiceRpc:   userv1.NewUserServiceClient(userRpcCli.Conn()),
+		PermissionClient: permissionv1.NewPermissionServiceClient(permissionRpcCli.Conn()),
 	}
 }

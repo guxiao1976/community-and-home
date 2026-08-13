@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-auth/model"
 	"github.com/guxiao1976/community-auth/rpc/internal/config"
@@ -102,8 +103,78 @@ func (m *mockUserServiceClient) GetResidences(ctx context.Context, in *userv1.Ge
 func (m *mockUserServiceClient) UpdateUserModerationStatus(ctx context.Context, in *userv1.UpdateModerationStatusRequest, opts ...grpc.CallOption) (*userv1.UpdateModerationStatusResponse, error) {
 	return &userv1.UpdateModerationStatusResponse{}, nil
 }
+func (m *mockUserServiceClient) GetAppState(ctx context.Context, in *userv1.GetAppStateRequest, opts ...grpc.CallOption) (*userv1.GetAppStateResponse, error) {
+	return &userv1.GetAppStateResponse{}, nil
+}
+func (m *mockUserServiceClient) SetCurrentCommunity(ctx context.Context, in *userv1.SetCurrentCommunityRequest, opts ...grpc.CallOption) (*userv1.SetCurrentCommunityResponse, error) {
+	return &userv1.SetCurrentCommunityResponse{}, nil
+}
 
 var _ userv1.UserServiceClient = (*mockUserServiceClient)(nil)
+
+// =============================================================================
+// Mock PermissionServiceClient
+// =============================================================================
+
+type mockPermissionServiceClient struct {
+	GetUserRolesFn func(ctx context.Context, in *permissionv1.GetUserRolesRequest, opts ...grpc.CallOption) (*permissionv1.GetUserRolesResponse, error)
+}
+
+func (m *mockPermissionServiceClient) GetUserRoles(ctx context.Context, in *permissionv1.GetUserRolesRequest, opts ...grpc.CallOption) (*permissionv1.GetUserRolesResponse, error) {
+	if m.GetUserRolesFn != nil {
+		return m.GetUserRolesFn(ctx, in, opts...)
+	}
+	// 默认零角色 → fail-open 放行
+	return &permissionv1.GetUserRolesResponse{Base: okResp()}, nil
+}
+
+func (m *mockPermissionServiceClient) CheckPermission(ctx context.Context, in *permissionv1.CheckPermissionRequest, opts ...grpc.CallOption) (*permissionv1.CheckPermissionResponse, error) {
+	return &permissionv1.CheckPermissionResponse{}, nil
+}
+func (m *mockPermissionServiceClient) GetDataScopes(ctx context.Context, in *permissionv1.GetDataScopesRequest, opts ...grpc.CallOption) (*permissionv1.GetDataScopesResponse, error) {
+	return &permissionv1.GetDataScopesResponse{}, nil
+}
+func (m *mockPermissionServiceClient) AssertPublishScope(ctx context.Context, in *permissionv1.AssertPublishScopeRequest, opts ...grpc.CallOption) (*permissionv1.AssertPublishScopeResponse, error) {
+	return &permissionv1.AssertPublishScopeResponse{}, nil
+}
+func (m *mockPermissionServiceClient) AssignRole(ctx context.Context, in *permissionv1.AssignRoleRequest, opts ...grpc.CallOption) (*permissionv1.AssignRoleResponse, error) {
+	return &permissionv1.AssignRoleResponse{}, nil
+}
+func (m *mockPermissionServiceClient) RevokeRole(ctx context.Context, in *permissionv1.RevokeRoleRequest, opts ...grpc.CallOption) (*permissionv1.RevokeRoleResponse, error) {
+	return &permissionv1.RevokeRoleResponse{}, nil
+}
+func (m *mockPermissionServiceClient) ListRoles(ctx context.Context, in *permissionv1.ListRolesRequest, opts ...grpc.CallOption) (*permissionv1.ListRolesResponse, error) {
+	return &permissionv1.ListRolesResponse{}, nil
+}
+func (m *mockPermissionServiceClient) ListPermissions(ctx context.Context, in *permissionv1.ListPermissionsRequest, opts ...grpc.CallOption) (*permissionv1.ListPermissionsResponse, error) {
+	return &permissionv1.ListPermissionsResponse{}, nil
+}
+func (m *mockPermissionServiceClient) CreateRole(ctx context.Context, in *permissionv1.CreateRoleRequest, opts ...grpc.CallOption) (*permissionv1.CreateRoleResponse, error) {
+	return &permissionv1.CreateRoleResponse{}, nil
+}
+func (m *mockPermissionServiceClient) UpdateRole(ctx context.Context, in *permissionv1.UpdateRoleRequest, opts ...grpc.CallOption) (*permissionv1.UpdateRoleResponse, error) {
+	return &permissionv1.UpdateRoleResponse{}, nil
+}
+func (m *mockPermissionServiceClient) DeleteRole(ctx context.Context, in *permissionv1.DeleteRoleRequest, opts ...grpc.CallOption) (*permissionv1.DeleteRoleResponse, error) {
+	return &permissionv1.DeleteRoleResponse{}, nil
+}
+func (m *mockPermissionServiceClient) GetRole(ctx context.Context, in *permissionv1.GetRoleRequest, opts ...grpc.CallOption) (*permissionv1.GetRoleResponse, error) {
+	return &permissionv1.GetRoleResponse{}, nil
+}
+func (m *mockPermissionServiceClient) GetRolesByIds(ctx context.Context, in *permissionv1.GetRolesByIdsRequest, opts ...grpc.CallOption) (*permissionv1.GetRolesByIdsResponse, error) {
+	return &permissionv1.GetRolesByIdsResponse{}, nil
+}
+func (m *mockPermissionServiceClient) GetUserPermissions(ctx context.Context, in *permissionv1.GetUserPermissionsRequest, opts ...grpc.CallOption) (*permissionv1.GetUserPermissionsResponse, error) {
+	return &permissionv1.GetUserPermissionsResponse{}, nil
+}
+func (m *mockPermissionServiceClient) InvalidateUserCache(ctx context.Context, in *permissionv1.InvalidateUserCacheRequest, opts ...grpc.CallOption) (*permissionv1.InvalidateUserCacheResponse, error) {
+	return &permissionv1.InvalidateUserCacheResponse{}, nil
+}
+func (m *mockPermissionServiceClient) UpdateUserRoleStatus(ctx context.Context, in *permissionv1.UpdateUserRoleStatusRequest, opts ...grpc.CallOption) (*permissionv1.UpdateUserRoleStatusResponse, error) {
+	return &permissionv1.UpdateUserRoleStatusResponse{}, nil
+}
+
+var _ permissionv1.PermissionServiceClient = (*mockPermissionServiceClient)(nil)
 
 // =============================================================================
 // Mock AuthCredentialModel
@@ -150,6 +221,11 @@ const (
 
 func newTestServiceContext(t *testing.T, rds *redis.Client, userRpc userv1.UserServiceClient, credModel model.AuthCredentialModel) *svc.ServiceContext {
 	t.Helper()
+	return newTestServiceContextWithPermission(t, rds, userRpc, credModel, &mockPermissionServiceClient{})
+}
+
+func newTestServiceContextWithPermission(t *testing.T, rds *redis.Client, userRpc userv1.UserServiceClient, credModel model.AuthCredentialModel, permRpc permissionv1.PermissionServiceClient) *svc.ServiceContext {
+	t.Helper()
 	return &svc.ServiceContext{
 		Config: config.Config{
 			JwtAuth: config.JwtAuthConfig{
@@ -160,9 +236,10 @@ func newTestServiceContext(t *testing.T, rds *redis.Client, userRpc userv1.UserS
 			},
 			AesKey: testAESKey,
 		},
-		CredentialModel: credModel,
-		RedisClient:     rds,
-		UserServiceRpc:  userRpc,
+		CredentialModel:  credModel,
+		RedisClient:      rds,
+		UserServiceRpc:   userRpc,
+		PermissionClient: permRpc,
 	}
 }
 

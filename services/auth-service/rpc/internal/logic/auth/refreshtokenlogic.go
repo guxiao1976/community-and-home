@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	authv1 "github.com/guxiao1976/api-proto/gen/go/auth/v1"
-	"github.com/guxiao1976/community-common/v2/pkg/responsex"
-	"github.com/guxiao1976/community-auth/rpc/internal/svc"
 	"github.com/golang-jwt/jwt/v4"
+	authv1 "github.com/guxiao1976/api-proto/gen/go/auth/v1"
+	"github.com/guxiao1976/community-auth/rpc/internal/svc"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -99,16 +99,23 @@ func (l *RefreshTokenLogic) RefreshToken(in *authv1.RefreshTokenRequest) (*authv
 		}, nil
 	}
 
+	// 3.5 端准入判定（签发前；失败不旋转旧 RT，用户可在正确端重试）
+	// SEE: [[is-system-no-permission-shortcut]]
+	if err := checkPlatformAccess(l.ctx, l.svcCtx, userID, in.DeviceType); err != nil {
+		l.Infof("RefreshToken: platform access denied for user=%d, device=%s", userID, in.DeviceType)
+		return &authv1.RefreshTokenResponse{Base: responsex.NewBaseRespFromError(err)}, nil
+	}
+
 	// 4. RT 旋转（Lua 原子操作，仅在角色拉取成功后执行）
 	now := time.Now()
 	newJti := fmt.Sprintf("%d-%d", userID, now.UnixNano())
 	refreshExpire := time.Duration(l.svcCtx.Config.JwtAuth.RefreshExpire) * time.Second
 
 	result, err := l.svcCtx.RedisClient.Eval(l.ctx, rotateRTLua,
-		[]string{rtKey},                // KEYS[1]
-		oldJti,                         // ARGV[1]
-		newJti,                         // ARGV[2]
-		int(refreshExpire.Seconds()),   // ARGV[3]
+		[]string{rtKey},              // KEYS[1]
+		oldJti,                       // ARGV[1]
+		newJti,                       // ARGV[2]
+		int(refreshExpire.Seconds()), // ARGV[3]
 	).Result()
 
 	if err != nil || result == nil {

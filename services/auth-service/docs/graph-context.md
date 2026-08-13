@@ -1,6 +1,6 @@
 # 知识图谱上下文 — auth-service
 
-> 自动生成于 2026-08-13 08:31:20 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-13 17:36:49 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -16,6 +16,7 @@
 | 依赖服务 | 依赖类型 |
 |---------|---------|
 | master-data-service | gRPC |
+| permission-service | gRPC |
 | user-service | gRPC |
 
 ## 被依赖方

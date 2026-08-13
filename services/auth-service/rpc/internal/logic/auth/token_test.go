@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	authv1 "github.com/guxiao1976/api-proto/gen/go/auth/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-auth/model"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -277,6 +277,41 @@ func TestLogin_MerchantRole_CZero(t *testing.T) {
 	assert.Equal(t, int64(0), roles[0].C)
 }
 
+func TestLogin_PlatformDenied(t *testing.T) {
+	// A-L-15: 端限制拒绝 → 50007（mobile-only 角色在 web 端登录）
+	_, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	hashedPwd, _ := crypto.HashPassword("Test123")
+
+	userId := int64(3015)
+	userRpc := &mockUserServiceClient{
+		GetUserByPhoneFn: func(ctx context.Context, in *userv1.GetUserByPhoneRequest, opts ...grpc.CallOption) (*userv1.GetUserResponse, error) {
+			return &userv1.GetUserResponse{Base: okResp(), User: &userv1.User{Id: userId, Status: 1}}, nil
+		},
+		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
+			return &userv1.GetUserRolesResponse{
+				Base:  okResp(),
+				Roles: []*userv1.MembershipRole{{RoleCode: "owner", CommunityId: 1001, VerfStatus: 2}},
+			}, nil
+		},
+	}
+	credModel := &mockCredentialModel{
+		FindByIdentityTypeAndIdentifierFn: func(ctx context.Context, identityType, identifier string) (*model.AuthCredential, error) {
+			return &model.AuthCredential{Id: 1, UserId: userId, Credential: hashedPwd}, nil
+		},
+	}
+	svcCtx := newTestServiceContextWithPermission(t, rdb, userRpc, credModel, mobileOnlyPermRpc())
+	logic := NewLoginLogic(context.Background(), svcCtx)
+	resp, err := logic.Login(&authv1.LoginRequest{
+		EncryptedPhone: rsaEncryptPhone(t, "13900139000"), EncryptedPassword: rsaEncryptPassword(t, "Test123"),
+		DeviceId: "web_001", DeviceType: "web",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(50007), resp.Base.Code)
+	assert.Empty(t, resp.AccessToken, "拒绝时不应签发 AT")
+}
+
 // =============================================================================
 // §2.3 短信验证码登录 (LoginSms) 测试
 // =============================================================================
@@ -295,7 +330,7 @@ func TestLoginSms_Success(t *testing.T) {
 		},
 		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
 			return &userv1.GetUserRolesResponse{
-				Base: okResp(),
+				Base:  okResp(),
 				Roles: []*userv1.MembershipRole{{RoleCode: "owner", CommunityId: 1001, VerfStatus: 2}},
 			}, nil
 		},
@@ -365,6 +400,37 @@ func TestLoginSms_PhoneNotRegistered(t *testing.T) {
 	assert.True(t, mr.Exists("sms:code:13900139000"), "凭证不存在时验证码应保留（Q-04 修复）")
 }
 
+func TestLoginSms_PlatformDenied(t *testing.T) {
+	// A-S-05: 端限制拒绝 → 50007
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	mr.Set("sms:code:13900139000", "123456")
+
+	userId := int64(3105)
+	userRpc := &mockUserServiceClient{
+		GetUserByPhoneFn: func(ctx context.Context, in *userv1.GetUserByPhoneRequest, opts ...grpc.CallOption) (*userv1.GetUserResponse, error) {
+			return &userv1.GetUserResponse{Base: okResp(), User: &userv1.User{Id: userId, Status: 1}}, nil
+		},
+		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
+			return &userv1.GetUserRolesResponse{
+				Base:  okResp(),
+				Roles: []*userv1.MembershipRole{{RoleCode: "owner", CommunityId: 1001, VerfStatus: 2}},
+			}, nil
+		},
+	}
+	svcCtx := newTestServiceContextWithPermission(t, rdb, userRpc, defaultMockCredentialModel(userId), mobileOnlyPermRpc())
+	logic := NewLoginSmsLogic(context.Background(), svcCtx)
+	resp, err := logic.LoginSms(&authv1.LoginSmsRequest{
+		Phone: "13900139000", SmsCode: "123456", DeviceId: "web_001", DeviceType: "web",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(50007), resp.Base.Code)
+	assert.Empty(t, resp.AccessToken)
+	// 端拒绝发生在签发前，验证码应保留（未成功登录）
+	assert.True(t, mr.Exists("sms:code:13900139000"), "端拒绝时验证码不应被删除")
+}
+
 // =============================================================================
 // §2.4 Token 刷新 (RefreshToken) 测试
 // =============================================================================
@@ -389,7 +455,7 @@ func TestRefreshToken_Success(t *testing.T) {
 	userRpc := &mockUserServiceClient{
 		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
 			return &userv1.GetUserRolesResponse{
-				Base: okResp(),
+				Base:  okResp(),
 				Roles: []*userv1.MembershipRole{{RoleCode: "owner", CommunityId: 1001, VerfStatus: 2}},
 			}, nil
 		},
@@ -506,6 +572,43 @@ func TestRefreshToken_GetUserRolesFailed(t *testing.T) {
 	// Q-02 修复验证：角色拉取失败时，旧 RT 仍存在（旋转发生在角色拉取成功之后）
 	rtKey2 := fmt.Sprintf("auth:rt:%d:%s", userId, "web_001")
 	assert.True(t, mr.Exists(rtKey2), "角色拉取失败时旧 RT 应保留（Q-02 修复）")
+}
+
+func TestRefreshToken_PlatformDenied(t *testing.T) {
+	// A-T-10: 端限制拒绝 → 50007，且不旋转旧 RT
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(3210)
+
+	oldJti := fmt.Sprintf("%d-%d", userId, time.Now().UnixNano())
+	rtKey := fmt.Sprintf("auth:rt:%d:%s", userId, "web_001")
+	mr.Set(rtKey, oldJti)
+
+	now := time.Now()
+	rtClaims := jwt.MapClaims{
+		"user_id": float64(userId), "device_id": "web_001", "jti": oldJti,
+		"exp": float64(now.Add(15 * 24 * time.Hour).Unix()), "iat": float64(now.Unix()),
+	}
+	oldRT, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims).SignedString([]byte(testRefreshSecret))
+
+	userRpc := &mockUserServiceClient{
+		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
+			return &userv1.GetUserRolesResponse{
+				Base:  okResp(),
+				Roles: []*userv1.MembershipRole{{RoleCode: "owner", CommunityId: 1001, VerfStatus: 2}},
+			}, nil
+		},
+	}
+	svcCtx := newTestServiceContextWithPermission(t, rdb, userRpc, defaultMockCredentialModel(userId), mobileOnlyPermRpc())
+	logic := NewRefreshTokenLogic(context.Background(), svcCtx)
+	resp, err := logic.RefreshToken(&authv1.RefreshTokenRequest{RefreshToken: oldRT, DeviceType: "web"})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(50007), resp.Base.Code)
+	assert.Empty(t, resp.AccessToken)
+	// 端拒绝发生在旋转之前，旧 RT 应保留
+	v, _ := mr.Get(rtKey)
+	assert.Equal(t, oldJti, v, "端拒绝时旧 RT 不应被旋转")
 }
 
 // =============================================================================

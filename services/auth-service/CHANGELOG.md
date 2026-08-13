@@ -1,6 +1,27 @@
 # CHANGELOG — auth-service
 
-## 2026-08-11 — RBAC 角色来源切换 + 时间字段标准化
+## 2026-08-13 — 端准入判定（access-control）
+
+### 做了什么
+- 新增 `PermissionServiceRpc` gRPC 客户端（`config.go` + `servicecontext.go` + `etc/authservice.yaml`），auth 首次依赖 permission-service
+- 新增 `platform.go`：`classifyDeviceType`（web/admin→pc、ios/android/miniapp→mobile、空/未知→空）+ `checkPlatformAccess`（读 permission `GetUserRoles` 取 `platforms` 做端判定，fail-open：空 platforms/未知端/零角色/GetUserRoles 失败均放行）
+- `Login`/`LoginSms`/`Register`/`RefreshToken` 在签发 Token 前挂载端判定，不匹配返回 `50007`（该账号为移动端用户，请使用移动端 APP）；refresh 使用 proto 新增的 `RefreshTokenRequest.device_type`
+
+### 类型标注
+- Task 2.1（config/svc/yaml 客户端接线）：字段映射类，无独立逻辑
+- Task 2.2（platform helper）：逻辑函数，TDD（table-driven）
+- Task 2.3（4 处挂载）：逻辑函数，TDD（每 logic 增「端拒绝→50007」用例）
+
+### 为什么
+端限制定位为 UX 引导而非安全边界（真正安全由 RBAC + 数据权限兜底），故采用 fail-open，缺配置不得把用户锁在门外。
+
+### 影响
+- Proto: 消费 `permission.Role.platforms`、`auth.RefreshTokenRequest.device_type`（由全局生成，无本服务 proto 改动）
+- 服务依赖: auth-service 新增 gRPC → permission-service（`GetUserRoles`）
+- 数据库: 无
+- 测试: 新增 `platform_test.go`（8 用例）+ 4 条端拒绝用例
+
+
 
 ### 做了什么
 - JWT 角色来源：经 user-service `GetUserRoles` 代理到 permission-service（自动生效，无代码改动）

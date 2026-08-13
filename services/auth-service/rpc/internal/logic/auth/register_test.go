@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/golang-jwt/jwt/v4"
 	authv1 "github.com/guxiao1976/api-proto/gen/go/auth/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-auth/model"
-	"github.com/alicebob/miniredis/v2"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -320,6 +320,25 @@ func TestRegister_JTIAndDeviceFormat(t *testing.T) {
 
 	rtClaims := parseRT(t, resp.RefreshToken)
 	assert.Equal(t, "android_device_xyz", rtClaims["device_id"])
+}
+
+func TestRegister_PlatformDenied(t *testing.T) {
+	// A-R-13: 端限制拒绝 → 50007（mock permission 返回 mobile-only 角色）
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	mr.Set("sms:code:13800138000", "123456")
+
+	userId := int64(2013)
+	userRpc := defaultMockUserRpc(userId)
+	svcCtx := newTestServiceContextWithPermission(t, rdb, userRpc, defaultMockCredentialModel(userId), mobileOnlyPermRpc())
+	logic := NewRegisterLogic(context.Background(), svcCtx)
+	resp, err := logic.Register(&authv1.RegisterRequest{
+		Phone: "13800138000", SmsCode: "123456", DeviceId: "web_001", DeviceType: "web",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(50007), resp.Base.Code)
+	assert.Empty(t, resp.AccessToken)
 }
 
 // jwtParse parses a JWT with the given secret.

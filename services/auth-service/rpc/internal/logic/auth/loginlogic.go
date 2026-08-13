@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	authv1 "github.com/guxiao1976/api-proto/gen/go/auth/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-auth/rpc/internal/svc"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
@@ -113,6 +113,13 @@ func (l *LoginLogic) Login(in *authv1.LoginRequest) (*authv1.LoginResponse, erro
 		return &authv1.LoginResponse{
 			Base: responsex.NewBaseRespWithError(509504, "获取用户角色失败"),
 		}, nil
+	}
+
+	// 6.5 端准入判定（签发 Token 前，读 permission GetUserRoles.platforms）
+	// SEE: [[is-system-no-permission-shortcut]]
+	if err := checkPlatformAccess(l.ctx, l.svcCtx, credential.UserId, in.DeviceType); err != nil {
+		l.Infof("Login: platform access denied for user=%d, device=%s", credential.UserId, in.DeviceType)
+		return &authv1.LoginResponse{Base: responsex.NewBaseRespFromError(err)}, nil
 	}
 
 	// 7. 签发 AT + RT（AT 携带 roles）

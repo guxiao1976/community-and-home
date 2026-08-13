@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	authv1 "github.com/guxiao1976/api-proto/gen/go/auth/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-auth/model"
 	"github.com/guxiao1976/community-auth/rpc/internal/svc"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/redis/go-redis/v9"
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -142,6 +142,13 @@ func (l *RegisterLogic) Register(in *authv1.RegisterRequest) (*authv1.RegisterRe
 		// 获取角色失败不阻塞注册，签发空角色 Token
 		l.Infof("Register: getUserRolesWithCache failed (non-fatal): %v", err)
 		roles = []roleEntry{}
+	}
+
+	// 5.5 端准入判定（签发 Token 前，读 permission GetUserRoles.platforms）
+	// SEE: [[is-system-no-permission-shortcut]]
+	if err := checkPlatformAccess(l.ctx, l.svcCtx, userId, in.DeviceType); err != nil {
+		l.Infof("Register: platform access denied for user=%d, device=%s", userId, in.DeviceType)
+		return &authv1.RegisterResponse{Base: responsex.NewBaseRespFromError(err)}, nil
 	}
 
 	// 6. 签发 AT（含 roles）+ RT

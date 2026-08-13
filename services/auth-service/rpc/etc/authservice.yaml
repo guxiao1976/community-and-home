@@ -27,6 +27,13 @@ UserServiceRpc:
       - 127.0.0.1:2379
     Key: user.rpc
 
+# Permission Service gRPC 客户端（端准入判定读 GetUserRoles）
+PermissionServiceRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: permission.rpc
+
 # gRPC fallback for sysconfig cache-miss: calls master-data GetConfig
 MasterDataRpc:
   Etcd:
