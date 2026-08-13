@@ -1,0 +1,66 @@
+---
+name: pipeline-review
+description: 流水线检视与完善 —— 定期或按需检查开发流水线自身健康度（文档新鲜度、应用率、门禁健康、进化机制、原则符合性），跑样例验链路，产出报告并将问题回 BACKLOG。
+---
+
+# 流水线检视与完善
+
+> 用 `.harness/docs/harness-design-principles.md` 作为标尺，逐项检查流水线自身健康。触发方式：定期（harness-loop，建议每周）或手动 `/pipeline-review`。
+
+## Step 1: 加载标尺
+
+读 `.harness/docs/harness-design-principles.md`（16 条原则 + 环节映射 + 目录规范）。
+
+## Step 2: 检视 5 个维度
+
+### 维度 1 · 文档新鲜度（相对判定，非绝对阈值）
+
+```bash
+# 最近流水线代码改动时间（workflows/scripts/skills 的最近 commit）
+code_ts=$(git log -1 --format=%ct -- .harness/workflows .harness/scripts .harness/skills)
+# 各 harness 文档最后更新时间
+for f in .harness/docs/pipeline-*.md .harness/docs/harness-design-principles.md .harness/agents/owner-agent.md; do
+  doc_ts=$(git log -1 --format=%ct -- "$f")
+  [ "$doc_ts" -lt "$code_ts" ] && echo "滞后: $f"
+done
+```
+
+判定：任何文档 `doc_ts < code_ts` → FAIL（代码改了文档没跟上）；无输出 → PASS。
+
+### 维度 2 · 应用率
+
+抽查 `.harness/tasks/` 最近 N 个已完成任务（completed），确认是否走了 dispatch 分级 + pipeline。判定：应用率 ≥ 90%；S 级内联需有 dispatch 分级记录 + 门禁。
+
+### 维度 3 · 门禁健康（4 子项）
+
+1. **机械化检查**：`bash .harness/skills/qa/scripts/harness-checks.sh --service <各服务>` → 0 FAIL；WARN 有记录且递减
+2. **配置漂移**：对比 `config/quality-gates.yml` 规则数 vs `workflows/gate-engine.js` 执行数 → 无「定义了没执行」漂移
+3. **pre-commit 生效**：确认 `.git/hooks/pre-commit` 挂载且能拦截
+4. **门禁日志**：`ls -la .harness/logs/gates/` → 最近有记录
+
+### 维度 4 · 进化机制运转
+
+```bash
+ls .harness/logs/incidents/*.yml | grep -v _template | wc -l   # Incident 条数
+```
+
+判定：Incident 处理率 100%；达阈值（≥5 条）则已触发 `evolve-pipeline.sh`。
+
+### 维度 5 · 原则符合性（元检视）
+
+对照 16 条原则 + 环节→skills/tools 映射，抽查近期 `docs/devlog/`、`.harness/changes/`、git log，确认各环节用了正确 skill/tool、无「主 agent 越界写代码」等违规。
+
+## Step 3: 测试（正向 + 负向）
+
+**正向**：跑一个最小无害样例任务（给某服务 model 加一行 `// Deprecated`），用 `harness-pipeline.js` 走 Generator→QA→Reviewer，验证不卡死、产出 PASS。
+
+**负向**：故意改坏一个测试，验证 QA 门禁正确拦截（返回 FAIL 而非假装成功）。
+
+判定：正向全链路走通 + 负向被门禁正确拦截。
+
+## Step 4: 闭环
+
+1. 产出报告 `.harness/docs/pipeline-review-report-<日期>.md`（记录 5 维度 + 测试结果 + 结论）
+2. 每个问题 → `bash .harness/scripts/harness-tasks.sh create ...` 回 BACKLOG
+3. Incident 达阈值 → `bash .harness/scripts/evolve-pipeline.sh`
+4. 报告归档作为下次检视基线
