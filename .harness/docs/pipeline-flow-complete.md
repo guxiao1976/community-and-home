@@ -201,7 +201,7 @@
     ↓
 ┌───────────────────────────────────────────────────────────────┐
 │ 阶段 6: 集成归档 (Owner Agent 内联执行)                       │
-│ ├─ 门禁检查: harness-gate-check.sh --phase 5 --change xxx    │
+│ ├─ 门禁检查: gate-engine.js validateGate(qa/review)    │
 │ │   ├─ 检查: 每个服务的_qa.md存在?                           │
 │ │   ├─ 检查: 每个服务的_review*.md存在?                      │
 │ │   ├─ 检查: QA PASS?                                        │
@@ -226,7 +226,7 @@
 │ │       create draft memory file                            │
 │ │       update MEMORY.md index                              │
 │ ├─ 生成summary.md: 基于impl/*/摘要                           │
-│ ├─ 门禁检查: harness-gate-check.sh --phase 6 --change xxx    │
+│ ├─ 门禁检查: gate-engine.js validateGate(verify)    │
 │ │   ├─ 检查: impl/目录存在?                                  │
 │ │   ├─ 检查: summary.md完整?                                 │
 │ │   └─ 检查: 包含关键章节?                                   │

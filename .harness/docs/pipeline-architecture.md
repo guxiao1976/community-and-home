@@ -365,7 +365,7 @@ Pipeline 返回的 `confidence` 评分 (0.0-1.0) 基于：
 | `harness-checks-frontend.sh` | 前端服务机械化检查 | QA Agent / Owner |
 | `check-proto-ts-align.sh` | Proto→TS 对齐检查 | harness-checks.sh (check #11) |
 | `harness-pipeline.js` | 工作流编排脚本 | Owner (Workflow 工具) |
-| `harness-gate-check.sh` | 阶段门禁检查 | Owner (阶段 5 → 6) |
+| `gate-engine.js` | QA/Review/verify 门禁（validateGate） | core.js 阶段 5 |
 | `harness-smoke.sh` | 运行时冒烟测试 | Owner (阶段 6) |
 | `memory-index-build.sh` | 记忆索引构建 | Generator (编码前) |
 | `memory-index-query.sh` | 记忆索引查询 | Generator (编码前) |

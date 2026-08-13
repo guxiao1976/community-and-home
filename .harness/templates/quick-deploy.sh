@@ -69,16 +69,6 @@ else
     echo "  ⚠️  harness-pipeline.template.js 不存在，跳过"
 fi
 
-# 门禁检查脚本
-if [[ -f "$TEMPLATE_DIR/harness-gate-check.template.sh" ]]; then
-    cp "$TEMPLATE_DIR/harness-gate-check.template.sh" \
-       "$TARGET_DIR/.harness/scripts/harness-gate-check-v2.sh"
-    chmod +x "$TARGET_DIR/.harness/scripts/harness-gate-check-v2.sh"
-    echo "  ✅ harness-gate-check-v2.sh"
-else
-    echo "  ⚠️  harness-gate-check.template.sh 不存在，跳过"
-fi
-
 # Pre-commit hook
 if [[ -f "$TEMPLATE_DIR/../tools/pre-commit.sh" ]]; then
     cp "$TEMPLATE_DIR/../tools/pre-commit.sh" \
@@ -118,13 +108,12 @@ You are the Owner Agent for this project.
 ### Phase 1-4: Design
 - Requirement → Technical Design → API Design → DB Design
 
-### Phase 5: Implementation (Gate Check Required)
+### Phase 5: Implementation (QA Required)
 - Code + Tests + TDD Evidence
-- Run: `bash .harness/scripts/harness-gate-check-v2.sh --phase 5 --change <name>`
+- Run: `bash .harness/skills/qa/scripts/harness-checks.sh --service <name>`
 
-### Phase 6: Integration (Gate Check Required)
+### Phase 6: Integration
 - Integration Tests + QA Report
-- Run: `bash .harness/scripts/harness-gate-check-v2.sh --phase 6 --change <name>`
 
 ## Change Tracking
 
@@ -320,11 +309,8 @@ cp .harness/changes/TEMPLATE/* .harness/changes/my-first-change/
 ## 3. 运行质量检查
 
 ```bash
-# Phase 5 门禁检查
-bash .harness/scripts/harness-gate-check-v2.sh --phase 5 --change my-first-change
-
-# Phase 6 门禁检查
-bash .harness/scripts/harness-gate-check-v2.sh --phase 6 --change my-first-change
+# QA 机械化检查（16 项）
+bash .harness/skills/qa/scripts/harness-checks.sh --service <service-name>
 ```
 
 ## 4. 查看完整文档
@@ -370,7 +356,7 @@ echo ""
 echo "📄 核心文件:"
 echo "  .harness/agents/owner-agent.md             - 主 Agent"
 echo "  .harness/workflows/harness-pipeline.js     - 流水线脚本"
-echo "  .harness/scripts/harness-gate-check-v2.sh  - 门禁检查"
+echo "  .harness/skills/qa/scripts/harness-checks.sh - QA 门禁检查"
 echo "  .harness/QUICKSTART.md                     - 快速启动指南"
 echo ""
 echo "🎯 下一步:"
@@ -384,8 +370,8 @@ echo ""
 echo "  3. 安装 Git hooks:"
 echo "     bash tools/install-hooks.sh"
 echo ""
-echo "  4. 测试门禁脚本:"
-echo "     bash .harness/scripts/harness-gate-check-v2.sh --help"
+echo "  4. 测试 QA 检查脚本:"
+echo "     bash .harness/skills/qa/scripts/harness-checks.sh --help"
 echo ""
 echo "  5. 阅读完整文档:"
 echo "     .harness/templates/HARNESS-BOOTSTRAP-GUIDE.md"

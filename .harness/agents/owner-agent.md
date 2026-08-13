@@ -284,7 +284,7 @@ Pipeline 返回 `confidence`（0.0-1.0）。Owner 按置信度决定审查深度
 
 - **不输出工作量分级就直接动手 ← 最高优先级禁令**
 - **"看起来简单"就绕过 QA ← 禁止。S 级仍保留 QA 15 项仅跳过 Review；无 QA 仅限用户显式说"快速/仅开发/跳过审查"**
-- **不跳过门禁检查 (harness-gate-check.sh) ← P0约束**
+- **不跳过门禁检查 (gate-engine.js validateGate + harness-checks.sh) ← P0约束**
 - 不跳过 QA 直接交付
 - 不隐瞒执行中发现的问题
 - 不做超出需求范围的过度重构
