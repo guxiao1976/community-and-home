@@ -34,6 +34,8 @@
 - [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-007.md) — all, P1, closed, qa
 - [QA FAIL: graph_freshness — graph is stale (last sync: 648h ago, latest commit is newer)](task-2026-08-04-008.md) — all, P1, closed, qa
 - [harness-pipeline 与 superpowers 流程衔接规则待收敛](task-2026-08-13-001.md) — global, P1, open, human
+- [4 个 pipeline-*.md 文档滞后（7-8 月演进未写回）](task-2026-08-13-002.md) — global, P1, open, review
+- [hardcoded secrets 检查漏检 Go 短变量声明 :=](task-2026-08-13-003.md) — global, P1, open, review
 
 
 ## P2 — 本月
@@ -43,6 +45,7 @@
 - [审计日志完善（user_id 从 JWT 提取）](task-2026-06-16-012.md) — master-data-service, P2, closed, human
 - [实现 Outbox 模式（outbox_messages 表 + MQ 集成）](task-2026-06-16-013.md) — master-data-service, P2, closed, human
 - [同步知识图谱（29h 未更新）](task-2026-06-17-001.md) — global, P2, closed, sensor
+- [pipeline-review skill 维度1判定误报（同批产物对比）](task-2026-08-13-004.md) — global, P2, open, review
 
 
 ## P3 — 以后
@@ -64,12 +67,12 @@
 | 优先级 | 数量 |
 |:------:|:----:|
 | P0 | 4 |
-| P1 | 17 |
-| P2 | 5 |
+| P1 | 19 |
+| P2 | 6 |
 | P3 | 0 |
 | 进行中 | 0 |
 | 已阻塞 | 0 |
-| **合计** | **26** |
+| **合计** | **29** |
 
 | 服务 | 数量 |
 |------|:----:|
@@ -77,7 +80,7 @@
 | all | 11 |
 | all | 3 |
 | master-data-service | 2 |
-| global | 2 |
+| global | 5 |
 | ai-model-service | 4 |
 | multi | 1 |
 
