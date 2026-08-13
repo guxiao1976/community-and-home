@@ -71,6 +71,14 @@ func (s *UserServiceServer) GetUserRoles(ctx context.Context, in *userv1.GetUser
 	return user.NewGetUserRolesLogic(ctx, s.svcCtx).GetUserRoles(in)
 }
 
+func (s *UserServiceServer) GetAppState(ctx context.Context, in *userv1.GetAppStateRequest) (*userv1.GetAppStateResponse, error) {
+	return user.NewGetAppStateLogic(ctx, s.svcCtx).GetAppState(in)
+}
+
+func (s *UserServiceServer) SetCurrentCommunity(ctx context.Context, in *userv1.SetCurrentCommunityRequest) (*userv1.SetCurrentCommunityResponse, error) {
+	return user.NewSetCurrentCommunityLogic(ctx, s.svcCtx).SetCurrentCommunity(in)
+}
+
 func (s *UserServiceServer) CheckAccess(ctx context.Context, in *userv1.CheckAccessRequest) (*userv1.CheckAccessResponse, error) {
 	return user.NewCheckAccessLogic(ctx, s.svcCtx).CheckAccess(in)
 }

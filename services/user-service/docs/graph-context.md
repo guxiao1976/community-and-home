@@ -1,6 +1,6 @@
 # 知识图谱上下文 — user-service
 
-> 自动生成于 2026-08-13 08:31:23 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-13 17:36:53 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -55,6 +55,7 @@
 | BindResidence | BindResidenceRequest | BindResidenceResponse |
 | CheckAccess | CheckAccessRequest | CheckAccessResponse |
 | CreateUser | CreateUserRequest | CreateUserResponse |
+| GetAppState | GetAppStateRequest | GetAppStateResponse |
 | GetMyCertifications | GetMyCertificationsRequest | GetMyCertificationsResponse |
 | GetResidences | GetResidencesRequest | GetResidencesResponse |
 | GetUser | GetUserRequest | GetUserResponse |
@@ -67,6 +68,7 @@
 | ListCertifications | ListCertificationsRequest | ListCertificationsResponse |
 | ListUsers | ListUsersRequest | ListUsersResponse |
 | ReviewCertification | ReviewCertificationRequest | ReviewCertificationResponse |
+| SetCurrentCommunity | SetCurrentCommunityRequest | SetCurrentCommunityResponse |
 | SubmitCertification | SubmitCertificationRequest | SubmitCertificationResponse |
 | UpdateUser | UpdateUserRequest | UpdateUserResponse |
 | UpdateUserModerationStatus | UpdateModerationStatusRequest | UpdateModerationStatusResponse |
@@ -75,6 +77,7 @@
 
 | 表名 | 列 |
 |------|-----|
+| user_app_state | updated_at (datetime), created_at (datetime), current_community_id (bigint), user_id (bigint) |
 | user_base | deleted_at (nullable), updated_at (datetime), created_at (datetime), nickname_moderation_status (bigint), delete_time (nullable), updated_time (datetime), created_time (datetime), preferences (nullable), credit_score (bigint), status (bigint), birth_date (nullable), gender (nullable), id_card_number (nullable), real_name (nullable), avatar_url (nullable) ... |
 | user_certification | moderation_time (nullable), moderation_status (bigint), submit_time (datetime), review_notes (nullable), review_time (nullable), reviewer_id (nullable), status (bigint), document_urls (nullable), user_id (bigint), role_id (bigint), id (bigint) |
 | user_community_membership | updated_at (datetime), created_at (datetime), room (bigint), unit (bigint), building (bigint), updated_time (datetime), created_time (datetime), leave_time (nullable), join_time (datetime), bind_status (bigint), community_id (bigint), user_id (bigint), id (bigint) |

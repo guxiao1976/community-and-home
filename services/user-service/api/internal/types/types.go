@@ -88,9 +88,10 @@ type PageInfo struct {
 
 type JoinCommunityReq struct {
 	CommunityId int64 `json:"community_id,string"`
-	Building    int32 `json:"building,optional"`
-	Unit        int32 `json:"unit,optional"`
-	Room        int32 `json:"room,optional"`
+	// SEE: [[api-required-field-marked-optional]] — 楼/单元/房号必填，移除 optional
+	Building int32 `json:"building"`
+	Unit     int32 `json:"unit"`
+	Room     int32 `json:"room"`
 	// Ownership 权属：1=自有(owner) 2=租住(tenant)，必填（permission 数据权限自动授权）
 	Ownership int32 `json:"ownership,optional"`
 }
@@ -124,6 +125,23 @@ type CommunityMembership struct {
 	Unit        int   `json:"unit"`     // 单元号
 	Room        int   `json:"room"`     // 房号
 }
+
+// =============================================================================
+// 当前小区应用状态（账号级，跨设备一致）
+// =============================================================================
+
+type GetAppStateReq struct{}
+
+type GetAppStateResp struct {
+	CurrentCommunityId int64 `json:"current_community_id,string"`
+	UpdatedAt          int64 `json:"updated_at"`
+}
+
+type SetCurrentCommunityReq struct {
+	CommunityId int64 `json:"community_id,string"`
+}
+
+type SetCurrentCommunityResp struct{}
 
 // =============================================================================
 // 房产绑定

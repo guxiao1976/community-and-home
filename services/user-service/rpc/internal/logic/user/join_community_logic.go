@@ -40,6 +40,14 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 		}, nil
 	}
 
+	// 0.05. 房屋地址必填：楼/单元/房号三字段缺一不可 → 10040
+	// SEE: [[api-required-field-marked-optional]]
+	if in.Building <= 0 || in.Unit <= 0 || in.Room <= 0 {
+		return &userv1.JoinCommunityResponse{
+			Base: responsex.NewBaseRespWithError(10040, "楼/单元/房号必填"),
+		}, nil
+	}
+
 	// 0.1. 校验用户存在
 	if _, err := l.svcCtx.UserBaseModel.FindOne(l.ctx, in.UserId); err != nil {
 		if err == model.ErrNotFound {
@@ -80,60 +88,73 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 		}, nil
 	}
 
-	// 2.5. 频次限制：非认证业主/租户，首次加入新小区受频次限制
-	if !l.isVerifiedOwnerOrTenant(in.UserId) {
-		isFirstJoin := existing == nil
-		if isFirstJoin {
-			yearStart := time.Date(time.Now().Year(), 1, 1, 0, 0, 0, 0, time.Local)
-			yearCount, err := l.svcCtx.UserCommunityMembershipModel.CountDistinctCommunitiesThisYear(l.ctx, in.UserId, yearStart)
-			if err != nil {
-				l.Errorf("count distinct communities this year error: %v", err)
-				return nil, err
+	// 2.5. 频次限制（首次加入新小区）：
+	//   - 每年限制（10012）仅对非认证用户生效（STAGE3-1 per-community 粒度）
+	//   - 终身限制（10013）对全部用户生效（对齐 spec）
+	isFirstJoin := existing == nil
+	if isFirstJoin && !l.isVerifiedOwnerOrTenant(in.UserId, in.CommunityId) {
+		yearStart := time.Date(time.Now().Year(), 1, 1, 0, 0, 0, 0, time.Local)
+		yearCount, err := l.svcCtx.UserCommunityMembershipModel.CountDistinctCommunitiesThisYear(l.ctx, in.UserId, yearStart)
+		if err != nil {
+			l.Errorf("count distinct communities this year error: %v", err)
+			return nil, err
+		}
+		maxNewPerYear := int64(model.MaxNewCommunitiesPerYear)
+		if l.svcCtx.SysConfig != nil {
+			if v, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.max_new_communities_per_year"); err == nil {
+				maxNewPerYear = int64(v)
 			}
-			maxNewPerYear := int64(model.MaxNewCommunitiesPerYear)
-			if l.svcCtx.SysConfig != nil {
-				if v, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.max_new_communities_per_year"); err == nil {
-					maxNewPerYear = int64(v)
-				}
-			}
-			if yearCount >= maxNewPerYear {
-				return &userv1.JoinCommunityResponse{
-					Base: responsex.NewBaseRespWithError(10012, "每年最多加入 3 个新小区"),
-				}, nil
-			}
-
-			totalCount, err := l.svcCtx.UserCommunityMembershipModel.CountDistinctCommunities(l.ctx, in.UserId)
-			if err != nil {
-				l.Errorf("count distinct communities error: %v", err)
-				return nil, err
-			}
-			maxTotalLifetime := int64(model.MaxTotalCommunitiesLifetime)
-			if l.svcCtx.SysConfig != nil {
-				if v, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.max_total_communities_lifetime"); err == nil {
-					maxTotalLifetime = int64(v)
-				}
-			}
-			if totalCount >= maxTotalLifetime {
-				return &userv1.JoinCommunityResponse{
-					Base: responsex.NewBaseRespWithError(10013, "总计最多加入 12 个不同小区"),
-				}, nil
-			}
+		}
+		if yearCount >= maxNewPerYear {
+			return &userv1.JoinCommunityResponse{
+				Base: responsex.NewBaseRespWithError(10012, "每年最多加入 3 个新小区"),
+			}, nil
 		}
 	}
 
-	// 3. 校验同小区同地址唯一性
-	if in.Building > 0 && in.Room > 0 {
-		addrExisting, err := l.svcCtx.UserCommunityMembershipModel.FindByAddress(
-			l.ctx, in.CommunityId, int(in.Building), int(in.Unit), int(in.Room))
-		if err != nil && err != model.ErrNotFound {
-			l.Errorf("check address uniqueness error: %v", err)
+	// 2.6. 终身限制（10013）：对所有用户生效，仅首次加入新小区时校验
+	if isFirstJoin {
+		totalCount, err := l.svcCtx.UserCommunityMembershipModel.CountDistinctCommunities(l.ctx, in.UserId)
+		if err != nil {
+			l.Errorf("count distinct communities error: %v", err)
 			return nil, err
 		}
-		if addrExisting != nil {
+		maxTotalLifetime := int64(model.MaxTotalCommunitiesLifetime)
+		if l.svcCtx.SysConfig != nil {
+			if v, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.max_total_communities_lifetime"); err == nil {
+				maxTotalLifetime = int64(v)
+			}
+		}
+		if totalCount >= maxTotalLifetime {
 			return &userv1.JoinCommunityResponse{
-				Base: responsex.NewBaseRespWithError(10011, "该地址已有人加入"),
+				Base: responsex.NewBaseRespWithError(10013, "总计最多加入 12 个不同小区"),
 			}, nil
 		}
+	}
+
+	// 3. 每户人数校验：同小区同楼/单元/房号 active 成员 < maxHouseMembers（默认 6）→ 超限 10014
+	// SEE: [[auto-grant-unverified-grant-confers-scope-level0]] — 加入即授权，房屋上限防反复退出重加入绕过
+	maxHouseMembers := int64(model.MaxHouseMembers)
+	if l.svcCtx.SysConfig != nil {
+		if v, err := l.svcCtx.SysConfig.GetInt(l.ctx, "user.max_house_members"); err == nil {
+			maxHouseMembers = int64(v)
+		}
+	}
+	excludeUserId := int64(0)
+	if existing != nil {
+		// 重新激活场景：排除当前用户自身（旧 membership 已退出，不计入）
+		excludeUserId = in.UserId
+	}
+	houseCount, err := l.svcCtx.UserCommunityMembershipModel.CountActiveByAddress(
+		l.ctx, in.CommunityId, int(in.Building), int(in.Unit), int(in.Room), excludeUserId)
+	if err != nil {
+		l.Errorf("count active by address error: %v", err)
+		return nil, err
+	}
+	if houseCount >= maxHouseMembers {
+		return &userv1.JoinCommunityResponse{
+			Base: responsex.NewBaseRespWithError(10014, "该房屋已满员"),
+		}, nil
 	}
 
 	// 3. 如果之前退出过，重新激活；否则插入新记录
@@ -203,8 +224,9 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 	}, nil
 }
 
-// isVerifiedOwnerOrTenant 检查用户是否有已认证的业主或租户角色（从 permission-service 获取）
-func (l *JoinCommunityLogic) isVerifiedOwnerOrTenant(userId int64) bool {
+// isVerifiedOwnerOrTenant 检查用户在目标小区是否有已认证（status=approved）的业主或租户角色。
+// 认证粒度 per-community（STAGE3-1）：仅校验目标小区 community_id 的认证状态，不从全局判定。
+func (l *JoinCommunityLogic) isVerifiedOwnerOrTenant(userId, targetCommunityId int64) bool {
 	if l.svcCtx.PermissionClient == nil {
 		return false
 	}
@@ -214,7 +236,8 @@ func (l *JoinCommunityLogic) isVerifiedOwnerOrTenant(userId int64) bool {
 	}
 	for _, r := range resp.Roles {
 		if r.Status == model.RoleVerfStatusApproved &&
-			(r.Role.Code == model.RoleCodeOwner || r.Role.Code == model.RoleCodeTenant) {
+			(r.Role.Code == model.RoleCodeOwner || r.Role.Code == model.RoleCodeTenant) &&
+			r.ScopeId == targetCommunityId {
 			return true
 		}
 	}

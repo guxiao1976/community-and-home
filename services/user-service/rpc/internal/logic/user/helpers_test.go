@@ -183,6 +183,17 @@ func (m *mockMembershipModel) FindByAddress(ctx context.Context, communityId int
 	}
 	return nil, model.ErrNotFound
 }
+func (m *mockMembershipModel) CountActiveByAddress(ctx context.Context, communityId int64, building, unit, room int, excludeUserId int64) (int64, error) {
+	var n int64
+	for _, d := range m.data {
+		if d.CommunityId == communityId && d.Building == building && d.Unit == unit && d.Room == room &&
+			d.BindStatus == model.MembershipBindStatusActive && d.UserId != excludeUserId {
+			n++
+		}
+	}
+	return n, nil
+}
+
 func (m *mockMembershipModel) UpdateAddress(ctx context.Context, id int64, building, unit, room int) error {
 	if d, ok := m.data[id]; ok {
 		d.Building = building
@@ -326,6 +337,38 @@ func (m *mockResidenceModel) Update(ctx context.Context, d *model.UserResidence)
 var _ model.UserResidenceModel = (*mockResidenceModel)(nil)
 
 // =============================================================================
+// Mock UserAppStateModel
+// =============================================================================
+
+type mockAppStateModel struct {
+	data map[int64]*model.UserAppState
+}
+
+func newMockAppStateModel() *mockAppStateModel {
+	return &mockAppStateModel{data: make(map[int64]*model.UserAppState)}
+}
+
+func (m *mockAppStateModel) FindOne(ctx context.Context, userId int64) (*model.UserAppState, error) {
+	if s, ok := m.data[userId]; ok {
+		return s, nil
+	}
+	return nil, model.ErrNotFound
+}
+
+func (m *mockAppStateModel) Upsert(ctx context.Context, userId, communityId int64) error {
+	s, ok := m.data[userId]
+	if !ok {
+		s = &model.UserAppState{UserId: userId}
+		m.data[userId] = s
+	}
+	s.CurrentCommunityId = communityId
+	s.UpdatedTime = time.Now()
+	return nil
+}
+
+var _ model.UserAppStateModel = (*mockAppStateModel)(nil)
+
+// =============================================================================
 // Test setup
 // =============================================================================
 
@@ -340,6 +383,7 @@ func testSvc(t *testing.T) *svc.ServiceContext {
 		UserCommunityMembershipModel: newMockMembershipModel(),
 		UserCertificationModel:       newMockCertModel(),
 		UserResidenceModel:           newMockResidenceModel(),
+		UserAppStateModel:            newMockAppStateModel(),
 		Redis:                        nil, // nil = cache bypass
 	}
 }
@@ -356,6 +400,9 @@ func certModel(s *svc.ServiceContext) *mockCertModel {
 }
 func residenceModel(s *svc.ServiceContext) *mockResidenceModel {
 	return s.UserResidenceModel.(*mockResidenceModel)
+}
+func appStateModel(s *svc.ServiceContext) *mockAppStateModel {
+	return s.UserAppStateModel.(*mockAppStateModel)
 }
 
 // createTestUser inserts a user into the mock store.

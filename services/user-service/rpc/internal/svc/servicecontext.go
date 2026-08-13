@@ -27,6 +27,7 @@ type ServiceContext struct {
 	UserCommunityMembershipModel model.UserCommunityMembershipModel
 	UserCertificationModel       model.UserCertificationModel
 	UserResidenceModel           model.UserResidenceModel
+	UserAppStateModel            model.UserAppStateModel
 
 	ModerationClient moderationv1.ModerationServiceClient
 	RedisClient      *redis.Redis
@@ -97,6 +98,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		UserCommunityMembershipModel: model.NewUserCommunityMembershipModel(conn),
 		UserCertificationModel:       model.NewUserCertificationModel(conn),
 		UserResidenceModel:           model.NewUserResidenceModel(conn),
+		UserAppStateModel:            model.NewUserAppStateModel(conn),
 		ModerationClient:             modClient,
 		RedisClient:                  redisClient,
 		PermissionClient:             permClient,

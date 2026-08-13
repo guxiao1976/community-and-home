@@ -82,6 +82,23 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 	)
 
+	// 当前小区应用状态（需 JWT 认证）
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/api/users/me/app-state",
+				Handler: user.GetAppStateHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/api/users/me/current-community",
+				Handler: user.SetCurrentCommunityHandler(serverCtx),
+			},
+		},
+		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
+	)
+
 	// 角色管理（需 JWT 认证）
 	server.AddRoutes(
 		[]rest.Route{

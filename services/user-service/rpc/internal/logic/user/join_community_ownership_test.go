@@ -93,7 +93,7 @@ func TestJoinCommunity_Rented_AssignsTenantGrant(t *testing.T) {
 
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1002, CommunityId: 2002, Building: 3, Unit: 0, Room: 502,
+		UserId: 1002, CommunityId: 2002, Building: 3, Unit: 1, Room: 502,
 		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_RENTED,
 	})
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestJoinCommunity_AssignFailure_CompensatesAndFails(t *testing.T) {
 
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1003, CommunityId: 2003, Building: 5, Unit: 0, Room: 601,
+		UserId: 1003, CommunityId: 2003, Building: 5, Unit: 1, Room: 601,
 		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
 	})
 	require.Error(t, err, "授权失败必须使 join 失败")
@@ -169,7 +169,8 @@ func TestJoinCommunity_DuplicateActive_NoDoubleAssign(t *testing.T) {
 
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1005, CommunityId: 2005, Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
+		UserId: 1005, CommunityId: 2005, Building: 1, Unit: 1, Room: 101,
+		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, int32(10007), resp.Base.Code, "重复加入应返回 10007")

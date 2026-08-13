@@ -1,5 +1,48 @@
 # CHANGELOG — user-service
 
+## 2026-08-13 — 访问控制与数据权限改造（user-service 部分，Task 3.1-3.7）
+
+### 做了什么
+- **Task 3.1 — `user_app_state` 表**：`migration/005_add_user_app_state.sql`，账号级当前小区（user_id PK + current_community_id），跨设备一致
+- **Task 3.2 — `UserAppState` model**：`FindOne(userId)`（无记录返回 `ErrNotFound`）+ `Upsert(userId, communityId)`（`ON DUPLICATE KEY UPDATE`）
+- **Task 3.3 — `GetAppState`/`SetCurrentCommunity`**：GetAppState 读 model，无记录 `current_community_id=0`；SetCurrentCommunity 调 `PermissionClient.GetDataScopes(user_id,"community")`，`GLOBAL`→放行、`EMPTY`→`10015`、`LIMITED` 命中 scope_ids 才放行否则 `10015`，放行后 `Upsert`；抽出 `inScope(state, scopeIds, communityID)`；RPC 层注册 + `ServiceContext` 增 `UserAppStateModel`
+- **Task 3.4 — 房屋必填 + 每户 ≤6**：JoinCommunity 顶部增必填校验（building/unit/room 缺一→`10040`）；model 增 `CountActiveByAddress`（`bind_status=active AND user_id<>exclude`）替换 `FindByAddress` 唯一性校验，`>= user.max_house_members`（默认 6）→`10014`，移除 `10011` 路径
+- **Task 3.5 — 终身限制对齐 + per-community 认证**：终身 `10013` 校验移出 `!isVerifiedOwnerOrTenant` 块（对全部用户生效）；`isVerifiedOwnerOrTenant` 增 `targetCommunityId`，仅校验目标小区 `community_id` 的 owner/tenant 认证状态（STAGE3-1）
+- **Task 3.6 — GetUser 同屋互见**：`maskPhone`（`138****1234`，非 11 位兜底原样）+ `isSameHouse`（同小区同楼/单元/房号 active membership，地址非零才判定）；`viewer_id==0`→脱敏、`==target`→明文+自身房屋号、否则同屋判定
+- **Task 3.7 — API 层**：`JoinCommunityReq` 楼/单元/房号移除 `,optional`；新增 `GetAppStateReq/Resp`、`SetCurrentCommunityReq/Resp`；注册 `GET /api/users/me/app-state`、`PUT /api/users/me/current-community`（JWT）；逻辑层用 `responsex.ToError` 透出 `10015`
+
+### 测试（TDD，RED→GREEN）
+| 测试文件 | 用例 | 类型 |
+|---|---|---|
+| `current_community_logic_test.go` | GetAppState 无记录→0 / 有记录→id+updated_at；SetCurrentCommunity GLOBAL 放行 / EMPTY→10015 / LIMITED 命中放行 / 未命中→10015 / GetDataScopes 失败透传 | 逻辑 |
+| `join_community_member_constraints_test.go` | 缺楼/单元/房号→10040、房屋 5 人+新用户放行、6 人→10014、退出者不计、重新激活排除自身、认证用户终身 12→10013、A 小区认证加入 B 受每年限制 | 逻辑 |
+| `same_house_test.go` | maskPhone 脱敏/兜底；isSameHouse 同屋/不同房/不同小区/零地址；GetUser 无 viewer 脱敏 / self 明文 / 同屋明文 / 非同屋脱敏 / 解密失败兜底 | 逻辑 |
+| `api/internal/logic/user/app_state_logic_test.go` | GetAppState 转发 / SetCurrentCommunity 转发+透出 10015 | 逻辑 |
+
+### RED 摘录（回溯补录：移除新增实现后 `go test` 编译失败）
+```
+rpc/internal/logic/user/get_user_logic.go:49:21: undefined: maskPhone
+rpc/internal/logic/user/get_user_logic.go:52:14: undefined: ownHouseInfo
+rpc/internal/logic/user/get_user_logic.go:56:26: undefined: isSameHouse
+rpc/internal/logic/user/current_community_logic_test.go:23:11: undefined: NewGetAppStateLogic
+rpc/internal/logic/user/current_community_logic_test.go:50:11: undefined: NewSetCurrentCommunityLogic
+api/internal/logic/user/app_state_logic_test.go:44:7: undefined: NewGetAppStateLogic
+api/internal/handler/routes.go:91:19: undefined: user.GetAppStateHandler
+rpc/internal/svc/servicecontext.go:30:37: undefined: model.UserAppStateModel
+```
+（GREEN：恢复新增实现后 `go test ./...` 全绿，98 测试函数 PASS）
+
+### 为什么
+当前小区切换（账号级跨设备）+ 成员约束补齐（每户≤6、终身限制对齐）由 user-service 权威执行；同屋互见按「同小区同楼/单元/房号」判定，非同屋默认脱敏（安全）。
+
+### 影响
+- Proto: 消费 `user/v1` 新增 RPC `GetAppState`/`SetCurrentCommunity` + `GetUserRequest.viewer_id`/`GetUserResponse.same_house`（Owner 已生成）
+- 依赖: `permission-service`（`GetDataScopes` 已交付）
+- 数据库: 新增 `user_app_state` 表（`migration/005_add_user_app_state.sql`，需在库执行验证）
+- 备注: 重新生成 stale 的 `api-proto/gen/go/user/v1/mocks/user_grpc_mock.go`（补 `GetAppState`/`SetCurrentCommunity`，解除 API 层测试编译阻塞；未改动任何 proto 契约）
+
+---
+
 ## 2026-08-12 — 数据权限核心编排（阶段③：注册自动授权 / 加入授权 / 退出撤销）
 
 ### 做了什么

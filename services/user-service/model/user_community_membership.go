@@ -33,6 +33,8 @@ type UserCommunityMembershipModel interface {
 	UpdateBindStatus(ctx context.Context, id int64, bindStatus int64, leaveTime time.Time) error
 	// FindByAddress 按地址查询活跃成员（用于唯一性校验）
 	FindByAddress(ctx context.Context, communityId int64, building, unit, room int) (*UserCommunityMembership, error)
+	// CountActiveByAddress 统计同小区同地址的活跃成员数（排除指定用户，每户 ≤6 校验用）
+	CountActiveByAddress(ctx context.Context, communityId int64, building, unit, room int, excludeUserId int64) (int64, error)
 	// UpdateAddress 更新地址信息（重新激活时使用）
 	UpdateAddress(ctx context.Context, id int64, building, unit, room int) error
 	// CountDistinctCommunities 用户历史上加入过的不同小区总数（所有状态）
@@ -115,6 +117,16 @@ func (m *defaultUserCommunityMembershipModel) FindByAddress(ctx context.Context,
 		return nil, err
 	}
 	return &resp, nil
+}
+
+func (m *defaultUserCommunityMembershipModel) CountActiveByAddress(ctx context.Context, communityId int64, building, unit, room int, excludeUserId int64) (int64, error) {
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE community_id = ? AND building = ? AND unit = ? AND room = ? AND bind_status = ? AND user_id <> ?`, m.table)
+	var count int64
+	err := m.conn.QueryRowCtx(ctx, &count, query, communityId, building, unit, room, MembershipBindStatusActive, excludeUserId)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (m *defaultUserCommunityMembershipModel) UpdateAddress(ctx context.Context, id int64, building, unit, room int) error {

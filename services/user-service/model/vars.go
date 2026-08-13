@@ -93,6 +93,10 @@ const MaxNewCommunitiesPerYear = 3
 // TODO: 可通过 sysconfig 动态配置（key: user.max_total_communities_lifetime）
 const MaxTotalCommunitiesLifetime = 12
 
+// MaxHouseMembers 同一房屋（同小区同楼/单元/房号）最多活跃成员数
+// TODO: 可通过 sysconfig 动态配置（key: user.max_house_members）
+const MaxHouseMembers = 6
+
 // ==================== 角色是否需要房屋 ====================
 
 var RolesRequiringResidence = map[string]bool{

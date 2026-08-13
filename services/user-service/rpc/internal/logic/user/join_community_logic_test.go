@@ -61,7 +61,7 @@ func TestJoinCommunity_Idempotent(t *testing.T) {
 
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1002, CommunityId: 2001,
+		UserId: 1002, CommunityId: 2001, Building: 1, Unit: 1, Room: 101,
 		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
 	})
 
@@ -103,7 +103,7 @@ func TestJoinCommunity_Rejoin(t *testing.T) {
 	// 再重新加入
 	joinLogic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := joinLogic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1003, CommunityId: 2001, Building: 1, Unit: 0, Room: 202,
+		UserId: 1003, CommunityId: 2001, Building: 1, Unit: 2, Room: 202,
 		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
 	})
 
@@ -126,7 +126,7 @@ func TestJoinCommunity_MaxFive(t *testing.T) {
 
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1004, CommunityId: 2006,
+		UserId: 1004, CommunityId: 2006, Building: 1, Unit: 1, Room: 101,
 		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_OWNED,
 	})
 
@@ -152,7 +152,7 @@ func TestJoinCommunity_DefaultCommunityNotOverwritten(t *testing.T) {
 
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	_, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1005, CommunityId: 2002, Building: 2, Unit: 0, Room: 305,
+		UserId: 1005, CommunityId: 2002, Building: 2, Unit: 1, Room: 305,
 		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_RENTED,
 	})
 	require.NoError(t, err)
