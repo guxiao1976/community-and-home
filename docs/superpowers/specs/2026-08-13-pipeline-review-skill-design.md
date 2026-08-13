@@ -20,8 +20,21 @@
 
 | 产物 | 位置 | 作用 |
 |---|---|---|
-| `harness-design-principles.md` | `.harness/docs/` | **检视标尺**——把散落在 owner-agent.md / CLAUDE.md / pipeline-architecture.md 的原则收拢成权威清单 |
+| `harness-design-principles.md` | `.harness/docs/` | **检视标尺**——把散落在 owner-agent.md / CLAUDE.md / pipeline-architecture.md 的原则收拢成权威清单，含「环节 → skills/tools 映射」 |
 | `pipeline-review` skill | `.harness/skills/pipeline-review.md` | **检视流程**——用标尺 + 5 个维度做检视，含测试步骤和判定标准 |
+
+**原则文档除 16 条原则外，还包含一个「环节 → skills/tools 映射」章节**，收拢当前散落在 owner-agent.md（阶段表六元组）和 dispatch.md（S/M/L 路由）两处的映射，作为权威操作手册：
+
+| 环节 | skill | tool |
+|---|---|---|
+| 入口分级 | `dispatch.md` | Skill 工具 |
+| 工具选择 | `select-tool.md` | Owner 内联 |
+| 需求分析 | `requirement-analyst` | Agent（子 agent） |
+| 需求评审 | `review.md` | Agent（3 子 agent 并行） |
+| 架构设计 | `architecture-designer` | Agent（子 agent） |
+| 编码+测试 | `harness-pipeline.js` | Workflow（N×并行） |
+| QA / Review | qa / review skill | Workflow 内部 |
+| 集成验证 | `pipeline-flow-complete.md` | 内联 + 脚本 |
 
 ## 3. 16 条设计原则（检视标尺）
 
@@ -88,9 +101,9 @@ skill 的「检视步骤」逐项跑 5 个维度，每个维度有可度量判�
 
 ### 4.5 原则符合性（元检视）
 
-**检查**：对照 16 条原则，抽查近期 devlog / changes / commit。
+**检查**：对照 16 条原则 + 环节→skills/tools 映射，抽查近期 devlog / changes / commit，确认各环节用了正确的 skill/tool。
 
-**判定**：无违反；违反已记录为 Incident。
+**判定**：无违反（原则 + 映射一致）；违反已记录为 Incident。
 
 ## 5. 测试步骤
 
