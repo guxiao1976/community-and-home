@@ -19,6 +19,19 @@
 
 ---
 
+## 2026-08-13 — 访问控制与数据权限（access-control）
+
+**路径**: OpenSpec → N×Workflow（7 服务）
+**状态**: ✅ 已完成（7/7）
+**涉及服务**: permission-service, auth-service, user-service, community-hub-service, master-data-service, web/pc, web/mobile
+**关联**: api-proto c86dc84
+
+端限制登录准入（sys_role.platforms + 50007）+ 当前小区应用状态（user_app_state + 10015）+ 板块发布配额（sys_section_quota + 80007）+ 成员约束（每户≤6 + 10014）+ 同屋互见（SameHouseInfo）。需求 1（角色分层）/3（数据权限统一模型）由前置 access-data-permission 交付，本变更只做需求 2/4/5/6。同时作为「检验开发流水线」的真实 L 级样本，暴露并沉淀 6+ 改进点：RED 证据分诊 + 变异测试 stub（harness-pipeline-fix）、web/pc 122 条历史 TS 错误清理（web-pc-debt-cleanup）。
+
+详见: [.harness/changes/access-control/](./access-control/)
+
+---
+
 ## 2026-08-12 — 数据权限核心（access-data-permission）
 
 **路径**: OpenSpec → 3×Workflow + Owner 集成验收
