@@ -605,12 +605,12 @@ check_hardcoded_secrets() {
   # Search for literal assignment patterns that look like secrets
   # Exclude: test files, yaml configs, env var references (${...})
   local patterns=(
-    'password\s*[:=]\s*"[^$"[:space:]]{4,}"'
-    'secret\s*[:=]\s*"[^$"[:space:]]{4,}"'
-    'token\s*[:=]\s*"[^$"[:space:]]{8,}"'
-    'api_key\s*[:=]\s*"[^$"[:space:]]{4,}"'
-    'apikey\s*[:=]\s*"[^$"[:space:]]{4,}"'
-    'passwd\s*[:=]\s*"[^$"[:space:]]{4,}"'
+    'password\s*[:=]{1,2}\s*"[^$"[:space:]]{4,}"'
+    'secret\s*[:=]{1,2}\s*"[^$"[:space:]]{4,}"'
+    'token\s*[:=]{1,2}\s*"[^$"[:space:]]{8,}"'
+    'api_key\s*[:=]{1,2}\s*"[^$"[:space:]]{4,}"'
+    'apikey\s*[:=]{1,2}\s*"[^$"[:space:]]{4,}"'
+    'passwd\s*[:=]{1,2}\s*"[^$"[:space:]]{4,}"'
   )
 
   for pattern in "${patterns[@]}"; do
