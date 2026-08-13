@@ -28,6 +28,18 @@
 #  13. Response single-wrap — detect Logic functions returning types with embedded BaseResponse
 #  14. Benchmark regression — compare go test -bench against stored baselines
 #  15. API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
+#
+# ─── 项目策略 vs 通用引擎 边界 ────────────────────────────────────────
+# 以下检查为 Community-Home 项目特有策略（非通用引擎逻辑），迁移本脚本到
+# 其他项目时必须替换为对应项目的策略：
+#
+#   4. Proto int64 jstype — Snowflake ID 精度约束（19 位 > JS 安全整数）
+#   5. Go json:",string"  — Snowflake ID 同上
+#   6. Cross-service DB   — 服务间仅 gRPC、禁止直连他人 DB 的架构约束
+#   7. Error code format  — 5 位 errx 错误码常量（禁用魔法数字）
+#
+# 其余检查（go build/vet/test、硬编码密钥、图谱新鲜度、TODO 桩、API 冒烟等）
+# 为通用引擎逻辑，可跨项目复用。策略归属详见 .harness/config/project-policies.md
 
 set -eu
 # NOTE: pipefail intentionally disabled — grep returning 1 (no match) in
