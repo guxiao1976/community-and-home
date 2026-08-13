@@ -25,7 +25,9 @@ func NewGetNoticeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetNoti
 }
 
 func (l *GetNoticeLogic) GetNotice(in *communityv1.GetNoticeRequest) (*communityv1.GetNoticeResponse, error) {
-	n, err := l.svcCtx.NoticeModel.FindOne(l.ctx, in.Id)
+	// 审核可见性门禁：读路径仅返回审核通过（moderation_status=1）的内容，
+	// 待审核/拒绝的内容对普通用户不可见（FindOnePublished 过滤后 ErrNoRows → 80001）。
+	n, err := l.svcCtx.NoticeModel.FindOnePublished(l.ctx, in.Id)
 	if err != nil {
 		l.Infof("GetNotice: not found id=%d", in.Id)
 		return &communityv1.GetNoticeResponse{

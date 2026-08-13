@@ -32,13 +32,15 @@ func (f *fakePerm) AssertPublishScope(ctx context.Context, in *permissionv1.Asse
 // fakeLostFoundModel 记录 Insert / UpdateStatus / FindList 调用
 type fakeLostFoundModel struct {
 	model.LostFoundItemModel
-	inserted        *model.LostFoundItem
-	findItem        *model.LostFoundItem
-	updateCalled    bool
-	updatedStatus   string
-	modStatusCalled bool
-	modStatusSetTo  int64
-	findListCalled  bool
+	inserted          *model.LostFoundItem
+	findItem          *model.LostFoundItem
+	findPublishedItem *model.LostFoundItem
+	findPublishedErr  error
+	updateCalled      bool
+	updatedStatus     string
+	modStatusCalled   bool
+	modStatusSetTo    int64
+	findListCalled    bool
 }
 
 func (f *fakeLostFoundModel) UpdateModerationStatus(ctx context.Context, id int64, status int64) error {
@@ -68,6 +70,17 @@ func (f *fakeLostFoundModel) UpdateStatus(ctx context.Context, id int64, status 
 func (f *fakeLostFoundModel) FindList(ctx context.Context, communityId int64, typ string, offset, limit int64) ([]*model.LostFoundItem, int64, error) {
 	f.findListCalled = true
 	return nil, 0, nil
+}
+
+func (f *fakeLostFoundModel) FindOnePublished(ctx context.Context, id int64) (*model.LostFoundItem, error) {
+	if f.findPublishedErr != nil {
+		return nil, f.findPublishedErr
+	}
+	if f.findPublishedItem != nil {
+		return f.findPublishedItem, nil
+	}
+	// 未显式设置 published 行为时，向后兼容 fallback 到 FindOne
+	return f.FindOne(ctx, id)
 }
 
 type fakeModeration struct {

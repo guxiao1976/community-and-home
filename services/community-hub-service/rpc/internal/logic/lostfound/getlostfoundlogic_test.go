@@ -2,6 +2,7 @@ package lostfound
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	communityv1 "github.com/guxiao1976/api-proto/gen/go/community/v1"
@@ -104,4 +105,25 @@ func TestGetLostFound_FilterByScope(t *testing.T) {
 			}
 		})
 	}
+}
+
+// 审核可见性门禁（最小实现）：Get 读路径仅返回 moderation_status=通过 的内容。
+// FindOne 仍被写接口 / 审核回调使用（不过滤），读路径改用 FindOnePublished。
+//
+// SEE: [[tdd-red-evidence-requires-fail-excerpt]]
+func TestGetLostFound_FilterByModerationStatus(t *testing.T) {
+	mdl := &fakeLostFoundModel{
+		findItem:         &model.LostFoundItem{Id: 1, CommunityId: 100}, // FindOne 不过滤：可查到（ModerationStatus 默认 0）
+		findPublishedErr: sql.ErrNoRows,                                 // FindOnePublished 过滤后：待审核 → not found
+	}
+	sc := &svc.ServiceContext{
+		LostFoundItemModel: mdl,
+		PermissionClient:   readPerm(permissionv1.DataScopeState_DATA_SCOPE_STATE_GLOBAL),
+	}
+
+	l := NewGetLostFoundLogic(ctxWithUserID(t, 42), sc)
+	resp, err := l.GetLostFound(&communityv1.GetLostFoundRequest{Id: 1})
+	require.NoError(t, err)
+	assert.Equal(t, int32(80004), resp.GetBase().GetCode(), "待审核内容对读路径不可见 → 80004 不存在")
+	assert.Nil(t, resp.GetItem(), "拒绝时不得返回内容")
 }

@@ -30,13 +30,15 @@ func (f *fakePerm) AssertPublishScope(ctx context.Context, in *permissionv1.Asse
 
 type fakeNoticeModel struct {
 	model.NoticeModel
-	inserted        *model.Notice
-	findItem        *model.Notice
-	updateCalled    bool
-	deleteCalled    bool
-	modStatusCalled bool
-	modStatusSetTo  int64
-	findListCalled  bool
+	inserted          *model.Notice
+	findItem          *model.Notice
+	findPublishedItem *model.Notice
+	findPublishedErr  error
+	updateCalled      bool
+	deleteCalled      bool
+	modStatusCalled   bool
+	modStatusSetTo    int64
+	findListCalled    bool
 }
 
 func (f *fakeNoticeModel) Insert(ctx context.Context, n *model.Notice) (int64, error) {
@@ -70,6 +72,17 @@ func (f *fakeNoticeModel) UpdateModerationStatus(ctx context.Context, id int64, 
 func (f *fakeNoticeModel) FindList(ctx context.Context, communityId int64, role string, offset, limit int64) ([]*model.Notice, int64, error) {
 	f.findListCalled = true
 	return nil, 0, nil
+}
+
+func (f *fakeNoticeModel) FindOnePublished(ctx context.Context, id int64) (*model.Notice, error) {
+	if f.findPublishedErr != nil {
+		return nil, f.findPublishedErr
+	}
+	if f.findPublishedItem != nil {
+		return f.findPublishedItem, nil
+	}
+	// 未显式设置 published 行为时，向后兼容 fallback 到 FindOne
+	return f.FindOne(ctx, id)
 }
 
 type fakeModeration struct {

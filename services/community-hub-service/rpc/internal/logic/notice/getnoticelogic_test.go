@@ -2,6 +2,7 @@ package notice
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	communityv1 "github.com/guxiao1976/api-proto/gen/go/community/v1"
@@ -96,4 +97,28 @@ func TestGetNotice_FilterByScope(t *testing.T) {
 			}
 		})
 	}
+}
+
+// 审核可见性门禁（最小实现）：Get 读路径仅返回 moderation_status=通过 的内容。
+// FindOne 仍被写接口 / 审核回调使用（不过滤），读路径改用 FindOnePublished。
+// 本测试证明 GetNotice 走 FindOnePublished：内容 status=0（待审核）时 FindOne 能查到、
+// 但 FindOnePublished 过滤后 not found → 返回「不存在」。
+//
+// SEE: [[tdd-red-evidence-requires-fail-excerpt]]
+func TestGetNotice_FilterByModerationStatus(t *testing.T) {
+	mdl := &fakeNoticeModel{
+		findItem:         noticeItem(1, 100), // FindOne 不过滤：可查到（ModerationStatus 默认 0）
+		findPublishedErr: sql.ErrNoRows,      // FindOnePublished 过滤后：待审核 → not found
+	}
+	sc := &svc.ServiceContext{
+		NoticeModel:           mdl,
+		PermissionClient:      listPerm(permissionv1.DataScopeState_DATA_SCOPE_STATE_GLOBAL),
+		NoticeAttachmentModel: &fakeAttachmentModel{},
+	}
+
+	l := NewGetNoticeLogic(noticeCtxWithUserID(t, 42), sc)
+	resp, err := l.GetNotice(&communityv1.GetNoticeRequest{Id: 1})
+	require.NoError(t, err)
+	assert.Equal(t, int32(80001), resp.GetBase().GetCode(), "待审核内容对读路径不可见 → 80001 不存在")
+	assert.Nil(t, resp.GetNotice(), "拒绝时不得返回内容")
 }

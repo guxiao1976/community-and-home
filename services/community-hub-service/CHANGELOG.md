@@ -1,5 +1,23 @@
 # CHANGELOG — community-hub-service
 
+## 2026-08-13 — 审核可见性门禁：读路径仅返回审核通过内容
+
+### 做了什么
+- `model/notice.go` + `model/lost_found_item.go`：
+  - `FindList` 查询加 `moderation_status = 1` 过滤（列表只返回审核通过内容）
+  - 新增 `FindOnePublished`（读路径专用，仅返回 moderation_status=1；`FindOne` 保留给写接口 / 审核回调内部使用）
+- `getnoticelogic.go` + `getlostfoundlogic.go`：读路径 `FindOne` → `FindOnePublished`
+- 新增 TDD 测试：`TestGetNotice_FilterByModerationStatus` / `TestGetLostFound_FilterByModerationStatus`
+
+### 为什么
+数据权限 Wave 阶段④遗留（summary.md WARN）：读列表/详情只按数据范围（scope）过滤，未按审核状态过滤，
+普通用户能看到「待审核/拒绝」的内容。本变更落地「最小实现」：全员读路径仅见审核通过内容。
+
+### 影响
+- 读路径语义：moderation_status=0（待审核）/2（拒绝）内容对普通用户不可见（表现为「不存在」80001/80004）
+- 写接口 / moderation 回调内部仍用 FindOne（不受影响）
+- 门禁：harness-checks 16 PASS / 0 FAIL / 0 WARN
+
 ## 2026-08-12 — TDD 证据补齐（8 个包装函数无测试，QA TDD FAIL → 修复）
 
 ### 背景
