@@ -139,12 +139,13 @@
 
 - `sys_role` 增加 `platforms` 属性（`[pc]` / `[mobile]` / `[pc,mobile]`），`sys_admin` 维护。
 - 默认：PC=`sys_admin`/`community_admin`/`property_admin`/审核员类；移动=`owner`/`tenant`/`grid_worker`/`committee`/`merchant`/`registered_user`。
+- 语义区分（STAGE3-4 定稿）：上述「默认」是**种子初值**（`init_permissions.sql` 显式写入 9 个内置角色）；运行时回退为 **fail-open**——`platforms` 为空的角色视为允许所有端。
 
 ### 4.2 判定
 
 ```
 登录/刷新：存在任一角色 platforms 含当前端 → 放行
-          否则 → 050006 "该账号为移动端用户，请使用移动端 APP"
+          否则 → 50007 "该账号为移动端用户，请使用移动端 APP"
 ```
 - 多角色用户：任一角色允许即可；`RefreshToken` 同规则校验。
 - 端归类：`web`/`admin`→PC；`ios`/`android`/`miniapp`→移动端。
@@ -244,6 +245,7 @@ AssertPublishScope(ctx, userId, targets []ScopeRef) error
   | 下架/移除 | ❌ | 不可见即释放；惩罚走独立机制不混入配额 |
 
   计数条件：`deleted_at IS NULL AND status='active' AND moderation_status IN (0,1)`。
+  > 状态机说明（STAGE3-2 定稿）：`status`（业务态）与 `moderation_status`（审核态）正交；内容创建即 `status='active'`（业务在版），待审期间 `moderation_status=0` 但 `status` 仍为 active，故待审与展示同占配额；下架/移除复用「`status` 非 active」语义。
 - 口径：**个人**（用户×小区×板块），按**目标小区**计（非"当前小区"）；适用所有发布者。
 - 索引：`user_id+community_id+section_type+status`。
 
@@ -319,7 +321,7 @@ auth-service ──角色+platforms──▶ permission-service（已有链路�
 
 | 场景 | 期望 |
 |------|------|
-| owner 在 PC 登录 | ❌ 050006 引导移动端 |
+| owner 在 PC 登录 | ❌ 50007 引导移动端 |
 | owner+community_admin 在 PC | ✅（任一角色允许） |
 | RT 刷新 PC 会话 | ❌ 同规则拦截 |
 
