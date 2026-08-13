@@ -8,8 +8,10 @@ import (
 	"time"
 
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/sysconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zeromicro/go-zero/core/stores/redis"
 	"google.golang.org/grpc"
 )
 
@@ -222,4 +224,123 @@ func TestRoleCache_OnlyVerifiedRoles(t *testing.T) {
 	_, err := getUserRolesWithCache(context.Background(), svcCtx, userId)
 	require.NoError(t, err)
 	assert.True(t, verified, "应传 verf_status=2 查询已认证角色")
+}
+
+func TestRoleCache_NilResponse(t *testing.T) {
+	// gRPC 返回 (nil, nil) → 走业务错误分支
+	_, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(4009)
+
+	userRpc := &mockUserServiceClient{
+		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
+			return nil, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, defaultMockCredentialModel(userId))
+
+	_, err := getUserRolesWithCache(context.Background(), svcCtx, userId)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "GetUserRoles")
+}
+
+func TestRoleCache_BusinessError(t *testing.T) {
+	// gRPC 返回业务错误（code != 0）→ error
+	_, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(4010)
+
+	userRpc := &mockUserServiceClient{
+		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
+			return &userv1.GetUserRolesResponse{Base: errResp(12345, "boom")}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, defaultMockCredentialModel(userId))
+
+	_, err := getUserRolesWithCache(context.Background(), svcCtx, userId)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "boom")
+}
+
+func TestRoleCache_EmptyCachedString(t *testing.T) {
+	// 缓存值为空串（cached == ""）→ 视为未命中，穿透 gRPC
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(4011)
+	mr.Set(fmt.Sprintf("auth:roles:%d", userId), "")
+
+	gRPCCalled := false
+	userRpc := &mockUserServiceClient{
+		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
+			gRPCCalled = true
+			return &userv1.GetUserRolesResponse{
+				Base:  okResp(),
+				Roles: []*userv1.MembershipRole{{RoleCode: "owner", CommunityId: 1001, VerfStatus: 2}},
+			}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, defaultMockCredentialModel(userId))
+
+	roles, err := getUserRolesWithCache(context.Background(), svcCtx, userId)
+	require.NoError(t, err)
+	assert.True(t, gRPCCalled, "空串缓存应穿透 gRPC")
+	assert.Len(t, roles, 1)
+}
+
+func TestRoleCache_ConfigTTL(t *testing.T) {
+	// SysConfig 配置 auth.cache.roles_ttl_seconds=60 → 缓存 TTL 用 60s
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(4012)
+
+	// 在 sys_config hash 写入 ttl 配置（type=number）
+	mr.HSet("sys_config", "auth.cache.roles_ttl_seconds",
+		`{"value":"60","type":"number"}`)
+	sysCfg := sysconfig.MustInit(redis.RedisConf{Host: mr.Addr(), Type: "node"}, "", nil)
+
+	userRpc := &mockUserServiceClient{
+		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
+			return &userv1.GetUserRolesResponse{
+				Base:  okResp(),
+				Roles: []*userv1.MembershipRole{{RoleCode: "owner", CommunityId: 1001, VerfStatus: 2}},
+			}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, defaultMockCredentialModel(userId))
+	svcCtx.SysConfig = sysCfg
+
+	_, err := getUserRolesWithCache(context.Background(), svcCtx, userId)
+	require.NoError(t, err)
+
+	cacheKey := fmt.Sprintf("auth:roles:%d", userId)
+	ttl := mr.TTL(cacheKey)
+	assert.InDelta(t, 60, ttl.Seconds(), 2, "缓存 TTL 应读取配置 60s")
+}
+
+func TestRoleCache_ConfigTTLMissing(t *testing.T) {
+	// SysConfig 存在但 key 缺失 → GetInt 报错 → 回退默认 300s
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(4013)
+
+	// sys_config 存在但不含该 key
+	sysCfg := sysconfig.MustInit(redis.RedisConf{Host: mr.Addr(), Type: "node"}, "", nil)
+
+	userRpc := &mockUserServiceClient{
+		GetUserRolesFn: func(ctx context.Context, in *userv1.GetUserRolesRequest, opts ...grpc.CallOption) (*userv1.GetUserRolesResponse, error) {
+			return &userv1.GetUserRolesResponse{
+				Base:  okResp(),
+				Roles: []*userv1.MembershipRole{{RoleCode: "owner", CommunityId: 1001, VerfStatus: 2}},
+			}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, defaultMockCredentialModel(userId))
+	svcCtx.SysConfig = sysCfg
+
+	_, err := getUserRolesWithCache(context.Background(), svcCtx, userId)
+	require.NoError(t, err)
+
+	cacheKey := fmt.Sprintf("auth:roles:%d", userId)
+	ttl := mr.TTL(cacheKey)
+	assert.InDelta(t, 300, ttl.Seconds(), 2, "配置缺失时应回退默认 300s")
 }

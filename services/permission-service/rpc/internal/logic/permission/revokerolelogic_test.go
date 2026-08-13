@@ -2,6 +2,7 @@ package permission
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
@@ -207,6 +208,55 @@ func TestInvalidateUserCaches_ScanDelete(t *testing.T) {
 	v, err := redisClient.Get(ctx, "perm:scopes:778:community").Result()
 	assert.NoError(t, err)
 	assert.Equal(t, "other-user-should-survive", v)
+}
+
+// TestInvalidateUserCaches_NilRedis — rdb==nil 防御：直接返回不 panic
+func TestInvalidateUserCaches_NilRedis(t *testing.T) {
+	// RedisClient 为 nil，invalidateUserCaches 应安全返回
+	invalidateUserCaches(context.Background(), nil, 42)
+}
+
+// TestInvalidateUserCaches_NoScopesKeys — 用户仅有 perm:user（无 perm:scopes 键）→ Scan 返回空 → 跳过 Del
+func TestInvalidateUserCaches_NoScopesKeys(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	ctx := context.Background()
+
+	redisClient.Set(ctx, "perm:user:999", "stale", 0)
+	// 无 perm:scopes:999:* 键
+
+	invalidateUserCaches(ctx, redisClient, 999)
+
+	_, err := redisClient.Get(ctx, "perm:user:999").Result()
+	assert.ErrorIs(t, err, redis.Nil)
+}
+
+// TestInvalidateUserCaches_MultiPageScan — 大量 perm:scopes 键触发多轮 SCAN（cursor 翻页）
+func TestInvalidateUserCaches_MultiPageScan(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	ctx := context.Background()
+
+	// 预置 150 个 scopes 键（超过单页 100）→ 触发多轮 SCAN
+	for i := 0; i < 150; i++ {
+		redisClient.Set(ctx, fmt.Sprintf("perm:scopes:555:scope%d", i), `{"state":"limited","ids":[100]}`, 0)
+	}
+	// 其他用户键不应被删除
+	redisClient.Set(ctx, "perm:scopes:556:community", "survive", 0)
+
+	invalidateUserCaches(ctx, redisClient, 555)
+
+	// 全部 150 个键应被删
+	for i := 0; i < 150; i++ {
+		_, err := redisClient.Get(ctx, fmt.Sprintf("perm:scopes:555:scope%d", i)).Result()
+		assert.ErrorIs(t, err, redis.Nil, "key scope%d 应被 SCAN-DEL", i)
+	}
+	// 其他用户不受影响
+	v, err := redisClient.Get(ctx, "perm:scopes:556:community").Result()
+	assert.NoError(t, err)
+	assert.Equal(t, "survive", v)
 }
 
 // TestRevokeRole_DifferentScopes 测试不同 scope 类型的撤销

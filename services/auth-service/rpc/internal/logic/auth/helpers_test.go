@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -243,12 +244,18 @@ func newTestServiceContextWithPermission(t *testing.T, rds *redis.Client, userRp
 	}
 }
 
+// testCryptoOnce 缓存 RSA 密钥对/AES 密钥初始化，避免每个测试重复生成 2048-bit RSA
+// 密钥（约百毫秒级），显著加速变异测试（gomu 对每个变异体跑一次完整测试集）。
+var testCryptoOnce sync.Once
+
 func setupTestCrypto(t *testing.T) {
 	t.Helper()
-	pub, priv, err := crypto.GenerateRSAKeyPair(2048)
-	require.NoError(t, err, "GenerateRSAKeyPair")
-	require.NoError(t, crypto.InitRSA(pub, priv), "InitRSA")
-	require.NoError(t, crypto.InitAES(testAESKey), "InitAES")
+	testCryptoOnce.Do(func() {
+		pub, priv, err := crypto.GenerateRSAKeyPair(2048)
+		require.NoError(t, err, "GenerateRSAKeyPair")
+		require.NoError(t, crypto.InitRSA(pub, priv), "InitRSA")
+		require.NoError(t, crypto.InitAES(testAESKey), "InitAES")
+	})
 }
 
 func rsaEncryptPhone(t *testing.T, phone string) string {

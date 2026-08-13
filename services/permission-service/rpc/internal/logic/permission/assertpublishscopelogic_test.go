@@ -25,6 +25,159 @@ func (f *fakeMasterDataClient) ResolveScopeAncestors(ctx context.Context, in *ma
 	return f.resolveFn(ctx, in, opts...)
 }
 
+// TestAssertPublishScope_WrongScopeType — LIMITED 下 target.scope_type 非 community → 060005
+// 覆盖 5 类共性「枚举/字符串映射」：building（词序 < community）与 unit（词序 > community）两端
+func TestAssertPublishScope_WrongScopeType(t *testing.T) {
+	ancestors := map[int64][]int64{100: {100, 90, 80}}
+
+	// grants: owner@A（community limited）→ 进入逐 target 校验
+	grants := []*model.UserRoleWithInfo{{RoleId: 1, ScopeType: model.ScopeTypeCommunity, ScopeId: 100, URStatus: 0}}
+
+	tests := []struct {
+		name       string
+		scopeType  string
+		scopeID    int64
+		wantCode   int32
+		wantDenied bool
+	}{
+		{name: "building（词序小于 community）→ 060005", scopeType: "building", scopeID: 100, wantCode: 60005, wantDenied: true},
+		{name: "unit（词序大于 community）→ 060005", scopeType: "unit", scopeID: 100, wantCode: 60005, wantDenied: true},
+		{name: "空 scopeType → 060005", scopeType: "", scopeID: 100, wantCode: 60005, wantDenied: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mr := miniredis.RunT(t)
+			defer mr.Close()
+			redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+			mockUserRole := new(MockUserRoleModel)
+			mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(2001)).Return(grants, nil)
+
+			fakeMD := &fakeMasterDataClient{
+				resolveFn: func(ctx context.Context, in *masterdatav1.ResolveScopeAncestorsRequest, opts ...grpc.CallOption) (*masterdatav1.ResolveScopeAncestorsResponse, error) {
+					chain, ok := ancestors[in.NodeId]
+					if !ok {
+						return &masterdatav1.ResolveScopeAncestorsResponse{Found: false}, nil
+					}
+					return &masterdatav1.ResolveScopeAncestorsResponse{AncestorIds: chain, Found: true}, nil
+				},
+			}
+
+			svcCtx := &svc.ServiceContext{
+				UserRoleModel:    mockUserRole,
+				RedisClient:      redisClient,
+				MasterDataClient: fakeMD,
+			}
+
+			logic := NewAssertPublishScopeLogic(context.Background(), svcCtx)
+			resp, err := logic.AssertPublishScope(&permissionv1.AssertPublishScopeRequest{
+				UserId: 2001,
+				Targets: []*permissionv1.ScopeRef{
+					{ScopeType: tt.scopeType, ScopeId: tt.scopeID},
+				},
+			})
+			assert.NoError(t, err)
+			assert.False(t, resp.Allowed, "非 community scope_type 应拒绝")
+			assert.Equal(t, tt.wantCode, resp.Base.Code, "错误码应为 %d", tt.wantCode)
+			mockUserRole.AssertExpectations(t)
+		})
+	}
+}
+
+// TestAssertPublishScope_EmptyTargets — LIMITED state + 无 target → 拒绝 060007（len(Targets)==0 分支）
+func TestAssertPublishScope_EmptyTargets(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(2001)).Return([]*model.UserRoleWithInfo{
+		{RoleId: 1, ScopeType: model.ScopeTypeCommunity, ScopeId: 100, URStatus: 0},
+	}, nil)
+
+	// MasterDataClient 不应被调用（len(targets)==0 提前返回）
+	fakeMD := &fakeMasterDataClient{
+		resolveFn: func(ctx context.Context, in *masterdatav1.ResolveScopeAncestorsRequest, opts ...grpc.CallOption) (*masterdatav1.ResolveScopeAncestorsResponse, error) {
+			t.Fatal("不应调用 ResolveScopeAncestors（targets 为空提前拒绝）")
+			return nil, nil
+		},
+	}
+
+	svcCtx := &svc.ServiceContext{
+		UserRoleModel:    mockUserRole,
+		RedisClient:      redisClient,
+		MasterDataClient: fakeMD,
+	}
+
+	logic := NewAssertPublishScopeLogic(context.Background(), svcCtx)
+	resp, err := logic.AssertPublishScope(&permissionv1.AssertPublishScopeRequest{UserId: 2001})
+	assert.NoError(t, err)
+	assert.False(t, resp.Allowed, "无 target 应拒绝")
+	assert.Equal(t, int32(60007), resp.Base.Code, "错误码应为 60007")
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestAssertPublishScope_ResolveFailure — ResolveScopeAncestors 返回 error / nil resp → 安全拒绝 060007
+// 守护 targetCovered 的 `err != nil || resp == nil || !resp.Found` 复合条件（fail-closed）
+func TestAssertPublishScope_ResolveFailure(t *testing.T) {
+	grants := []*model.UserRoleWithInfo{{RoleId: 1, ScopeType: model.ScopeTypeCommunity, ScopeId: 100, URStatus: 0}}
+
+	tests := []struct {
+		name      string
+		resolveFn func(ctx context.Context, in *masterdatav1.ResolveScopeAncestorsRequest, opts ...grpc.CallOption) (*masterdatav1.ResolveScopeAncestorsResponse, error)
+	}{
+		{
+			name: "gRPC 返回 error → 拒绝",
+			resolveFn: func(ctx context.Context, in *masterdatav1.ResolveScopeAncestorsRequest, opts ...grpc.CallOption) (*masterdatav1.ResolveScopeAncestorsResponse, error) {
+				return nil, assert.AnError
+			},
+		},
+		{
+			name: "resp 为 nil → 拒绝",
+			resolveFn: func(ctx context.Context, in *masterdatav1.ResolveScopeAncestorsRequest, opts ...grpc.CallOption) (*masterdatav1.ResolveScopeAncestorsResponse, error) {
+				return nil, nil
+			},
+		},
+		{
+			name: "found=false → 拒绝",
+			resolveFn: func(ctx context.Context, in *masterdatav1.ResolveScopeAncestorsRequest, opts ...grpc.CallOption) (*masterdatav1.ResolveScopeAncestorsResponse, error) {
+				return &masterdatav1.ResolveScopeAncestorsResponse{Found: false}, nil
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mr := miniredis.RunT(t)
+			defer mr.Close()
+			redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+			mockUserRole := new(MockUserRoleModel)
+			mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(2001)).Return(grants, nil)
+
+			fakeMD := &fakeMasterDataClient{resolveFn: tt.resolveFn}
+			svcCtx := &svc.ServiceContext{
+				UserRoleModel:    mockUserRole,
+				RedisClient:      redisClient,
+				MasterDataClient: fakeMD,
+			}
+
+			logic := NewAssertPublishScopeLogic(context.Background(), svcCtx)
+			resp, err := logic.AssertPublishScope(&permissionv1.AssertPublishScopeRequest{
+				UserId: 2001,
+				Targets: []*permissionv1.ScopeRef{
+					{ScopeType: model.ScopeTypeCommunity, ScopeId: 100},
+				},
+			})
+			assert.NoError(t, err)
+			assert.False(t, resp.Allowed, "祖先链解析失败应安全拒绝")
+			assert.Equal(t, int32(60007), resp.Base.Code, "错误码应为 60007")
+			mockUserRole.AssertExpectations(t)
+		})
+	}
+}
+
 // TestAssertPublishScope — T1.7 统一判据：GLOBAL 放行 / EMPTY 拒绝(060007) / 逐 target 祖先链 ∩ ids
 // SEE: [[grpc-timeout-layers]] — AssertPublishScope 内嵌 master-data ResolveScopeAncestors
 func TestAssertPublishScope(t *testing.T) {

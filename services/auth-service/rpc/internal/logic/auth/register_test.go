@@ -341,6 +341,84 @@ func TestRegister_PlatformDenied(t *testing.T) {
 	assert.Empty(t, resp.AccessToken)
 }
 
+func TestRegister_CreateUserNilResponse(t *testing.T) {
+	// A-R-14: CreateUser 返回 (nil, nil) → 走业务错误分支 509001
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	mr.Set("sms:code:13800138000", "123456")
+
+	userRpc := &mockUserServiceClient{
+		CreateUserFn: func(ctx context.Context, in *userv1.CreateUserRequest, opts ...grpc.CallOption) (*userv1.CreateUserResponse, error) {
+			return nil, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, defaultMockCredentialModel(2014))
+	logic := NewRegisterLogic(context.Background(), svcCtx)
+	resp, err := logic.Register(&authv1.RegisterRequest{
+		Phone: "13800138000", SmsCode: "123456",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(509001), resp.Base.Code)
+}
+
+func TestRegister_CreateUserBusinessErrorCode(t *testing.T) {
+	// A-R-15: CreateUser 返回非 509001 的业务错误码 → 透传 code/msg（杀 Base!=nil guard → ==nil）
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	mr.Set("sms:code:13800138000", "123456")
+
+	userRpc := &mockUserServiceClient{
+		CreateUserFn: func(ctx context.Context, in *userv1.CreateUserRequest, opts ...grpc.CallOption) (*userv1.CreateUserResponse, error) {
+			return &userv1.CreateUserResponse{Base: errResp(509002, "注册人数已满"), UserId: 2015}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, defaultMockCredentialModel(2015))
+	logic := NewRegisterLogic(context.Background(), svcCtx)
+	resp, err := logic.Register(&authv1.RegisterRequest{
+		Phone: "13800138000", SmsCode: "123456",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(509002), resp.Base.Code)
+	assert.Equal(t, "注册人数已满", resp.Base.Msg)
+}
+
+func TestRegister_RedisGetError(t *testing.T) {
+	// A-R-16: Redis GET 返回非 Nil 错误（WRONGTYPE）→ 50004 系统繁忙
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	// 将 sms:code 键类型设为 hash，GET 会返回 WRONGTYPE 错误
+	mr.HSet("sms:code:13800138000", "field", "value")
+
+	svcCtx := newTestServiceContext(t, rdb, defaultMockUserRpc(2016), defaultMockCredentialModel(2016))
+	logic := NewRegisterLogic(context.Background(), svcCtx)
+	resp, err := logic.Register(&authv1.RegisterRequest{
+		Phone: "13800138000", SmsCode: "123456",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(50004), resp.Base.Code)
+	assert.Contains(t, resp.Base.Msg, "繁忙")
+}
+
+func TestRegister_ExpiresAtPrecision(t *testing.T) {
+	// A-R-17: AT 的 exp-iat 精确等于 AccessExpire(900s)
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	mr.Set("sms:code:13800138000", "123456")
+
+	svcCtx := newTestServiceContext(t, rdb, defaultMockUserRpc(2017), defaultMockCredentialModel(2017))
+	logic := NewRegisterLogic(context.Background(), svcCtx)
+	resp, err := logic.Register(&authv1.RegisterRequest{
+		Phone: "13800138000", SmsCode: "123456", DeviceId: "web_001",
+	})
+	require.NoError(t, err)
+	require.Equal(t, int32(0), resp.Base.Code)
+
+	claims := parseAT(t, resp.AccessToken)
+	exp := int64(claims["exp"].(float64))
+	iat := int64(claims["iat"].(float64))
+	assert.Equal(t, int64(900), exp-iat)
+}
+
 // jwtParse parses a JWT with the given secret.
 func jwtParse(tokenStr, secret string) (*jwt.Token, error) {
 	return jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {

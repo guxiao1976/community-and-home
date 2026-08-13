@@ -19,9 +19,9 @@ type roleEntry struct {
 
 // getUserRolesWithCache 获取用户已认证角色（Cache-Aside 模式）。
 //
-//	1. Redis GET auth:roles:{userId} → 命中则返回
-//	2. 未命中 → gRPC GetUserRoles(userId, verf_status=2)
-//	3. 写入 Redis（TTL 5 分钟）
+//  1. Redis GET auth:roles:{userId} → 命中则返回
+//  2. 未命中 → gRPC GetUserRoles(userId, verf_status=2)
+//  3. 写入 Redis（TTL 5 分钟）
 func getUserRolesWithCache(ctx context.Context, svcCtx *svc.ServiceContext, userId int64) ([]roleEntry, error) {
 	cacheKey := fmt.Sprintf("auth:roles:%d", userId)
 
@@ -45,8 +45,13 @@ func getUserRolesWithCache(ctx context.Context, svcCtx *svc.ServiceContext, user
 		return nil, fmt.Errorf("GetUserRoles gRPC failed: %w", err)
 	}
 	if resp == nil || resp.Base.GetCode() != 0 {
-		return nil, fmt.Errorf("GetUserRoles business error: code=%d, msg=%s",
-			resp.Base.GetCode(), resp.Base.GetMsg())
+		code := int32(0)
+		msg := ""
+		if resp != nil && resp.Base != nil {
+			code = resp.Base.GetCode()
+			msg = resp.Base.GetMsg()
+		}
+		return nil, fmt.Errorf("GetUserRoles business error: code=%d, msg=%s", code, msg)
 	}
 
 	// 3. 转换为精简格式

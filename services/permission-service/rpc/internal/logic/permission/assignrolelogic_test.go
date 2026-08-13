@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
@@ -193,6 +194,123 @@ func TestAssignRole_Idempotent(t *testing.T) {
 	mockRole.AssertExpectations(t)
 	mockUserRole.AssertExpectations(t)
 	mockUserRole.AssertNumberOfCalls(t, "InsertIgnore", 2)
+}
+
+// TestAssignRole_LifecycleParams 覆盖个体生命周期参数分支：Status/VerifiedAt/ExpiresAt 非 nil 时透传
+func TestAssignRole_LifecycleParams(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+
+	mockRole := new(MockRoleModel)
+	mockRole.On("FindOne", mock.Anything, int64(1)).
+		Return(&model.SysRole{Id: 1, RoleName: "owner"}, nil)
+
+	mockUserRole := new(MockUserRoleModel)
+	status := int64(2)
+	st32 := int32(status)
+	verifiedAt := time.Now().Add(-24 * time.Hour).Unix()
+	expiresAt := time.Now().Add(24 * time.Hour).Unix()
+
+	mockUserRole.On("InsertIgnore", mock.Anything, mock.MatchedBy(func(ur *model.RelUserRole) bool {
+		return ur.UserId == 1001 && ur.RoleId == 1 &&
+			ur.Status == status &&
+			ur.VerifiedAt.Valid && ur.VerifiedAt.Time.Unix() == verifiedAt &&
+			ur.ExpiresAt.Valid && ur.ExpiresAt.Time.Unix() == expiresAt
+	})).Return(nil)
+
+	svcCtx := &svc.ServiceContext{
+		RoleModel:     mockRole,
+		UserRoleModel: mockUserRole,
+		RedisClient:   redis.NewClient(&redis.Options{Addr: mr.Addr()}),
+	}
+
+	logic := NewAssignRoleLogic(context.Background(), svcCtx)
+	resp, err := logic.AssignRole(&permissionv1.AssignRoleRequest{
+		UserId:     1001,
+		RoleId:     1,
+		ScopeType:  "community",
+		ScopeId:    100,
+		Status:     &st32,
+		VerifiedAt: &verifiedAt,
+		ExpiresAt:  &expiresAt,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	mockRole.AssertExpectations(t)
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestAssignRole_LifecycleParams_ZeroTimestamps 覆盖 VerifiedAt/ExpiresAt =0（未设置）→ NullTime 不 Valid
+func TestAssignRole_LifecycleParams_ZeroTimestamps(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+
+	mockRole := new(MockRoleModel)
+	mockRole.On("FindOne", mock.Anything, int64(1)).
+		Return(&model.SysRole{Id: 1, RoleName: "owner"}, nil)
+
+	mockUserRole := new(MockUserRoleModel)
+	zero := int64(0)
+	mockUserRole.On("InsertIgnore", mock.Anything, mock.MatchedBy(func(ur *model.RelUserRole) bool {
+		return ur.UserId == 1001 && ur.RoleId == 1 &&
+			!ur.VerifiedAt.Valid && !ur.ExpiresAt.Valid
+	})).Return(nil)
+
+	svcCtx := &svc.ServiceContext{
+		RoleModel:     mockRole,
+		UserRoleModel: mockUserRole,
+		RedisClient:   redis.NewClient(&redis.Options{Addr: mr.Addr()}),
+	}
+
+	logic := NewAssignRoleLogic(context.Background(), svcCtx)
+	resp, err := logic.AssignRole(&permissionv1.AssignRoleRequest{
+		UserId:     1001,
+		RoleId:     1,
+		ScopeType:  "community",
+		ScopeId:    100,
+		VerifiedAt: &zero,
+		ExpiresAt:  &zero,
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	mockRole.AssertExpectations(t)
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestAssignRole_InsertFailed 覆盖 InsertIgnore 返回 error → 直接透传 nil, err
+func TestAssignRole_InsertFailed(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+
+	mockRole := new(MockRoleModel)
+	mockRole.On("FindOne", mock.Anything, int64(1)).
+		Return(&model.SysRole{Id: 1, RoleName: "owner"}, nil)
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("InsertIgnore", mock.Anything, mock.Anything).
+		Return(assert.AnError)
+
+	svcCtx := &svc.ServiceContext{
+		RoleModel:     mockRole,
+		UserRoleModel: mockUserRole,
+		RedisClient:   redis.NewClient(&redis.Options{Addr: mr.Addr()}),
+	}
+
+	logic := NewAssignRoleLogic(context.Background(), svcCtx)
+	resp, err := logic.AssignRole(&permissionv1.AssignRoleRequest{
+		UserId:    1001,
+		RoleId:    1,
+		ScopeType: "community",
+		ScopeId:   100,
+	})
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	mockRole.AssertExpectations(t)
+	mockUserRole.AssertExpectations(t)
 }
 
 // TestAssignRole_CacheInvalidated 测试缓存失效

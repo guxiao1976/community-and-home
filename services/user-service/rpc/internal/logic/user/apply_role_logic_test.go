@@ -2,7 +2,9 @@ package user
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
@@ -123,6 +125,130 @@ func TestApplyRole_GridWorker(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int32(0), resp.Base.Code)
 	assert.Equal(t, "grid_worker", resp.Role.RoleCode)
+	assert.Equal(t, int64(2001), resp.Role.CommunityId, "非 merchant 角色应绑定小区作用域")
+}
+
+func TestApplyRole_FindOneError(t *testing.T) {
+	// U-A-06: FindOne 返回非 ErrNotFound 错误 → 透传错误（不走用户不存在分支）
+	svc, _ := certTestSvc(t)
+	ub := userBaseModel(svc)
+	ub.findErr = errors.New("db down")
+
+	logic := NewApplyRoleLogic(context.Background(), svc)
+	resp, err := logic.ApplyRole(&userv1.ApplyRoleRequest{
+		UserId: 1001, CommunityId: 2001, RoleCode: "owner",
+	})
+
+	require.Error(t, err)
+	require.Nil(t, resp)
+}
+
+func TestApplyRole_FindMembershipError(t *testing.T) {
+	// U-A-07: FindByUserAndCommunity 返回非 ErrNotFound 错误 → 透传错误（非「成员不存在」分支）
+	svc, _ := certTestSvc(t)
+	ub := userBaseModel(svc)
+	mm := membershipModel(svc)
+
+	createTestUser(t, ub, 1001, "phone_1001")
+	mm.byUserCommErr = errors.New("db down")
+
+	logic := NewApplyRoleLogic(context.Background(), svc)
+	resp, err := logic.ApplyRole(&userv1.ApplyRoleRequest{
+		UserId: 1001, CommunityId: 2001, RoleCode: "owner",
+	})
+
+	require.Error(t, err)
+	require.Nil(t, resp)
+}
+
+func TestApplyRole_MembershipNotActive(t *testing.T) {
+	// U-A-08: membership 存在但非 active（已退出）→ 10005
+	svc, _ := certTestSvc(t)
+	ub := userBaseModel(svc)
+	mm := membershipModel(svc)
+
+	createTestUser(t, ub, 1001, "phone_1001")
+	ms := createTestMembership(t, mm, 5001, 1001, 2001)
+	ms.BindStatus = model.MembershipBindStatusLeft
+
+	logic := NewApplyRoleLogic(context.Background(), svc)
+	resp, err := logic.ApplyRole(&userv1.ApplyRoleRequest{
+		UserId: 1001, CommunityId: 2001, RoleCode: "owner",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(10005), resp.Base.Code)
+}
+
+func TestApplyRole_AssignRoleError(t *testing.T) {
+	// U-A-09: permission AssignRole 失败 → 透传错误
+	svc, permMock := certTestSvc(t)
+	ub := userBaseModel(svc)
+	mm := membershipModel(svc)
+
+	createTestUser(t, ub, 1001, "phone_1001")
+	createTestMembership(t, mm, 5001, 1001, 2001)
+
+	permMock.EXPECT().ListRoles(gomock.Any(), gomock.Any()).Return(&permissionv1.ListRolesResponse{
+		Roles: []*permissionv1.Role{{Id: 1, Code: "owner"}, {Id: 5, Code: "tenant"}, {Id: 7, Code: "merchant"}},
+	}, nil).AnyTimes()
+	permMock.EXPECT().AssignRole(gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("permission service down")).Times(1)
+
+	logic := NewApplyRoleLogic(context.Background(), svc)
+	resp, err := logic.ApplyRole(&userv1.ApplyRoleRequest{
+		UserId: 1001, CommunityId: 2001, RoleCode: "owner",
+	})
+
+	require.Error(t, err)
+	require.Nil(t, resp)
+}
+
+func TestApplyRole_RoleCodeNotFound(t *testing.T) {
+	// U-A-10: role_code 在 permission-service 不存在 → 10008
+	svc, permMock := certTestSvc(t)
+	ub := userBaseModel(svc)
+	mm := membershipModel(svc)
+
+	createTestUser(t, ub, 1001, "phone_1001")
+	createTestMembership(t, mm, 5001, 1001, 2001)
+
+	permMock.EXPECT().ListRoles(gomock.Any(), gomock.Any()).Return(&permissionv1.ListRolesResponse{
+		Roles: []*permissionv1.Role{{Id: 1, Code: "owner"}},
+	}, nil).AnyTimes()
+
+	logic := NewApplyRoleLogic(context.Background(), svc)
+	resp, err := logic.ApplyRole(&userv1.ApplyRoleRequest{
+		UserId: 1001, CommunityId: 2001, RoleCode: "unknown_role",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(10008), resp.Base.Code)
+}
+
+func TestApplyRole_PermissionClientNil(t *testing.T) {
+	// U-A-11: PermissionClient 为 nil（缓存已预热）→ 50000 系统繁忙
+	resetRoleMapper()
+	mapper.mu.Lock()
+	mapper.codeToID = map[string]int64{"owner": 1}
+	mapper.idToCode = map[int64]string{1: "owner"}
+	mapper.loadedAt = time.Now()
+	mapper.mu.Unlock()
+
+	svc := testSvc(t) // PermissionClient 为 nil
+	ub := userBaseModel(svc)
+	mm := membershipModel(svc)
+
+	createTestUser(t, ub, 1001, "phone_1001")
+	createTestMembership(t, mm, 5001, 1001, 2001)
+
+	logic := NewApplyRoleLogic(context.Background(), svc)
+	resp, err := logic.ApplyRole(&userv1.ApplyRoleRequest{
+		UserId: 1001, CommunityId: 2001, RoleCode: "owner",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(50000), resp.Base.Code)
 }
 
 // =============================================================================

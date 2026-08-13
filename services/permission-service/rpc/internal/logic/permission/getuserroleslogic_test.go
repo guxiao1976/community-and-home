@@ -2,7 +2,9 @@ package permission
 
 import (
 	"context"
+	"database/sql"
 	"testing"
+	"time"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-permission/model"
@@ -104,6 +106,55 @@ func TestGetUserRoles_NoRoles(t *testing.T) {
 	assert.Equal(t, int32(0), resp.Base.Code)
 	assert.Nil(t, resp.Roles)
 
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestGetUserRoles_Error 覆盖 FindAllByUserId 返回 error → Roles nil（不 panic）
+func TestGetUserRoles_Error(t *testing.T) {
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindAllByUserId", mock.Anything, int64(1001)).Return(nil, assert.AnError)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole}
+	logic := NewGetUserRolesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetUserRoles(&permissionv1.GetUserRolesRequest{UserId: 1001})
+	assert.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	assert.Nil(t, resp.Roles)
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestGetUserRoles_LifecycleTimestamps 覆盖 VerifiedAt/ExpiresAt Valid 分支透传 Unix 秒
+func TestGetUserRoles_LifecycleTimestamps(t *testing.T) {
+	verifiedAt := time.Now().Add(-24 * time.Hour)
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindAllByUserId", mock.Anything, int64(1001)).
+		Return([]*model.UserRoleWithInfo{
+			{
+				RoleId:     1,
+				RoleCode:   "owner",
+				RoleName:   "业主",
+				Status:     1,
+				Platforms:  "pc",
+				ScopeType:  "community",
+				ScopeId:    100,
+				URStatus:   2,
+				VerifiedAt: sql.NullTime{Time: verifiedAt, Valid: true},
+				ExpiresAt:  sql.NullTime{Time: expiresAt, Valid: true},
+			},
+		}, nil)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole}
+	logic := NewGetUserRolesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetUserRoles(&permissionv1.GetUserRolesRequest{UserId: 1001})
+	assert.NoError(t, err)
+	assert.Len(t, resp.Roles, 1)
+	assert.Equal(t, verifiedAt.Unix(), resp.Roles[0].VerifiedAt, "VerifiedAt 应透传 Unix 秒")
+	assert.Equal(t, expiresAt.Unix(), resp.Roles[0].ExpiresAt, "ExpiresAt 应透传 Unix 秒")
+	assert.Equal(t, int32(2), resp.Roles[0].Status)
 	mockUserRole.AssertExpectations(t)
 }
 

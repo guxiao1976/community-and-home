@@ -16,6 +16,93 @@ import (
 
 // SEE: [[redis-cache-soft-delete]] — GetDataScopes 读穿缓存：HIT 直接返回，MISS 计算后写 JSON + EXPIRE
 
+// TestGetDataScopes_CacheCorruptJSON 覆盖缓存命中但 JSON 损坏 → 忽略缓存重算（不 panic）
+func TestGetDataScopes_CacheCorruptJSON(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	// 写入损坏 JSON（缺引号）
+	assert.NoError(t, redisClient.Set(context.Background(), "perm:scopes:1006:community", `{"state":"limited","ids":[100`, 0).Err())
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(1006)).Return([]*model.UserRoleWithInfo{
+		{RoleId: 1, ScopeType: model.ScopeTypeCommunity, ScopeId: 100, URStatus: 0},
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole, RedisClient: redisClient}
+	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1006, ScopeType: model.ScopeTypeCommunity})
+	assert.NoError(t, err)
+	assert.Equal(t, permissionv1.DataScopeState_DATA_SCOPE_STATE_LIMITED, resp.State)
+	assert.ElementsMatch(t, []int64{100}, resp.ScopeIds, "损坏缓存应被忽略并重算")
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestGetDataScopes_CacheHitEmpty 覆盖缓存命中且 state=empty → 直接返回 EMPTY
+func TestGetDataScopes_CacheHitEmpty(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	cached := `{"state":"empty","ids":[]}`
+	assert.NoError(t, redisClient.Set(context.Background(), "perm:scopes:1007:community", cached, 0).Err())
+
+	mockUserRole := new(MockUserRoleModel) // 命中缓存不查 DB
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole, RedisClient: redisClient}
+	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1007, ScopeType: model.ScopeTypeCommunity})
+	assert.NoError(t, err)
+	assert.Equal(t, permissionv1.DataScopeState_DATA_SCOPE_STATE_EMPTY, resp.State)
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestGetDataScopes_NilIdsNormalized 覆盖 MISS 计算后 ids==nil → 归一为空切片（非 nil）
+func TestGetDataScopes_NilIdsNormalized(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(1008)).Return([]*model.UserRoleWithInfo{
+		{RoleId: 9, ScopeType: model.ScopeTypeEmpty, ScopeId: 0, URStatus: 2},
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole, RedisClient: redisClient}
+	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1008, ScopeType: model.ScopeTypeCommunity})
+	assert.NoError(t, err)
+	assert.Equal(t, permissionv1.DataScopeState_DATA_SCOPE_STATE_EMPTY, resp.State)
+	assert.NotNil(t, resp.ScopeIds, "ids==nil 应归一为非 nil 空切片")
+	assert.Empty(t, resp.ScopeIds)
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestGetDataScopes_UnsupportedScopeType 覆盖非 community/building 等 scope_type（走 limited 并集为空）
+func TestGetDataScopes_UnsupportedScopeType(t *testing.T) {
+	mr := miniredis.RunT(t)
+	defer mr.Close()
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindActiveRolesByUserId", mock.Anything, int64(1009)).Return([]*model.UserRoleWithInfo{
+		{RoleId: 1, ScopeType: model.ScopeTypeCommunity, ScopeId: 100, URStatus: 0},
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole, RedisClient: redisClient}
+	logic := NewGetDataScopesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetDataScopes(&permissionv1.GetDataScopesRequest{UserId: 1009, ScopeType: "building"})
+	assert.NoError(t, err)
+	assert.Equal(t, permissionv1.DataScopeState_DATA_SCOPE_STATE_EMPTY, resp.State, "用户仅有 community scope，查 building 应 EMPTY")
+	assert.Empty(t, resp.ScopeIds)
+	mockUserRole.AssertExpectations(t)
+}
+
 func TestGetDataScopes_Limited(t *testing.T) {
 	mr := miniredis.RunT(t)
 	defer mr.Close()

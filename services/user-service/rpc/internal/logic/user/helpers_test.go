@@ -29,8 +29,9 @@ var _ sql.Result = mockSQLResult{}
 // =============================================================================
 
 type mockUserBaseModel struct {
-	data  map[int64]*model.UserBase
-	phone map[string]*model.UserBase
+	data    map[int64]*model.UserBase
+	phone   map[string]*model.UserBase
+	findErr error // 注入 FindOne 的非 ErrNotFound 错误（变异测试补分支用）
 }
 
 func newMockUserBaseModel() *mockUserBaseModel {
@@ -43,6 +44,9 @@ func (m *mockUserBaseModel) Insert(ctx context.Context, u *model.UserBase) (sql.
 	return mockSQLResult{}, nil
 }
 func (m *mockUserBaseModel) FindOne(ctx context.Context, id int64) (*model.UserBase, error) {
+	if m.findErr != nil {
+		return nil, m.findErr
+	}
 	if u, ok := m.data[id]; ok {
 		return u, nil
 	}
@@ -120,9 +124,16 @@ var _ model.UserBaseModel = (*mockUserBaseModel)(nil)
 // =============================================================================
 
 type mockMembershipModel struct {
-	data          map[int64]*model.UserCommunityMembership
-	byUserCommIdx map[string]int64
-	findErr       error // 注入 FindByUserId 错误（变异测试补分支用）
+	data               map[int64]*model.UserCommunityMembership
+	byUserCommIdx      map[string]int64
+	findErr            error // 注入 FindByUserId 错误（变异测试补分支用）
+	byUserCommErr      error // 注入 FindByUserAndCommunity 错误（变异测试补分支用）
+	insertErr          error // 注入 Insert 错误（变异测试补分支用）
+	updateStatusErr    error // 注入 UpdateBindStatus 错误（变异测试补分支用）
+	countActiveErr     error // 注入 CountActiveByUserId 错误（变异测试补分支用）
+	countDistinctErr   error // 注入 CountDistinctCommunities 错误（变异测试补分支用）
+	countYearErr       error // 注入 CountDistinctCommunitiesThisYear 错误（变异测试补分支用）
+	countAddrErr       error // 注入 CountActiveByAddress 错误（变异测试补分支用）
 }
 
 func newMockMembershipModel() *mockMembershipModel {
@@ -130,6 +141,9 @@ func newMockMembershipModel() *mockMembershipModel {
 }
 
 func (m *mockMembershipModel) Insert(ctx context.Context, d *model.UserCommunityMembership) (sql.Result, error) {
+	if m.insertErr != nil {
+		return nil, m.insertErr
+	}
 	m.data[d.Id] = d
 	m.byUserCommIdx[fmt.Sprintf("%d_%d", d.UserId, d.CommunityId)] = d.Id
 	return mockSQLResult{}, nil
@@ -141,6 +155,9 @@ func (m *mockMembershipModel) FindOne(ctx context.Context, id int64) (*model.Use
 	return nil, model.ErrNotFound
 }
 func (m *mockMembershipModel) FindByUserAndCommunity(ctx context.Context, uid, cid int64) (*model.UserCommunityMembership, error) {
+	if m.byUserCommErr != nil {
+		return nil, m.byUserCommErr
+	}
 	if id, ok := m.byUserCommIdx[fmt.Sprintf("%d_%d", uid, cid)]; ok {
 		return m.data[id], nil
 	}
@@ -159,6 +176,9 @@ func (m *mockMembershipModel) FindByUserId(ctx context.Context, uid int64) ([]*m
 	return r, nil
 }
 func (m *mockMembershipModel) CountActiveByUserId(ctx context.Context, uid int64) (int64, error) {
+	if m.countActiveErr != nil {
+		return 0, m.countActiveErr
+	}
 	var n int64
 	for _, d := range m.data {
 		if d.UserId == uid && d.BindStatus == model.MembershipBindStatusActive {
@@ -168,6 +188,9 @@ func (m *mockMembershipModel) CountActiveByUserId(ctx context.Context, uid int64
 	return n, nil
 }
 func (m *mockMembershipModel) UpdateBindStatus(ctx context.Context, id int64, s int64, lt time.Time) error {
+	if m.updateStatusErr != nil {
+		return m.updateStatusErr
+	}
 	if d, ok := m.data[id]; ok {
 		d.BindStatus = s
 		if lt.IsZero() {
@@ -188,6 +211,9 @@ func (m *mockMembershipModel) FindByAddress(ctx context.Context, communityId int
 	return nil, model.ErrNotFound
 }
 func (m *mockMembershipModel) CountActiveByAddress(ctx context.Context, communityId int64, building, unit, room int, excludeUserId int64) (int64, error) {
+	if m.countAddrErr != nil {
+		return 0, m.countAddrErr
+	}
 	var n int64
 	for _, d := range m.data {
 		if d.CommunityId == communityId && d.Building == building && d.Unit == unit && d.Room == room &&
@@ -208,6 +234,9 @@ func (m *mockMembershipModel) UpdateAddress(ctx context.Context, id int64, build
 }
 
 func (m *mockMembershipModel) CountDistinctCommunities(ctx context.Context, userId int64) (int64, error) {
+	if m.countDistinctErr != nil {
+		return 0, m.countDistinctErr
+	}
 	seen := make(map[int64]bool)
 	for _, d := range m.data {
 		if d.UserId == userId {
@@ -217,6 +246,9 @@ func (m *mockMembershipModel) CountDistinctCommunities(ctx context.Context, user
 	return int64(len(seen)), nil
 }
 func (m *mockMembershipModel) CountDistinctCommunitiesThisYear(ctx context.Context, userId int64, yearStart time.Time) (int64, error) {
+	if m.countYearErr != nil {
+		return 0, m.countYearErr
+	}
 	seen := make(map[int64]bool)
 	for _, d := range m.data {
 		if d.UserId == userId && !d.JoinTime.Before(yearStart) {

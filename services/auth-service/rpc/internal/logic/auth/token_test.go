@@ -277,6 +277,95 @@ func TestLogin_MerchantRole_CZero(t *testing.T) {
 	assert.Equal(t, int64(0), roles[0].C)
 }
 
+func TestLogin_UserDisabled(t *testing.T) {
+	// A-L-16: 账号禁用（status==2）→ 50005
+	_, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	hashedPwd, _ := crypto.HashPassword("Test123")
+
+	userId := int64(3016)
+	userRpc := &mockUserServiceClient{
+		GetUserByPhoneFn: func(ctx context.Context, in *userv1.GetUserByPhoneRequest, opts ...grpc.CallOption) (*userv1.GetUserResponse, error) {
+			return &userv1.GetUserResponse{Base: okResp(), User: &userv1.User{Id: userId, Status: 2}}, nil
+		},
+	}
+	credModel := &mockCredentialModel{
+		FindByIdentityTypeAndIdentifierFn: func(ctx context.Context, identityType, identifier string) (*model.AuthCredential, error) {
+			return &model.AuthCredential{Id: 1, UserId: userId, Credential: hashedPwd}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, credModel)
+	logic := NewLoginLogic(context.Background(), svcCtx)
+	resp, err := logic.Login(&authv1.LoginRequest{
+		EncryptedPhone: rsaEncryptPhone(t, "13900139000"), EncryptedPassword: rsaEncryptPassword(t, "Test123"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(50005), resp.Base.Code)
+	assert.Empty(t, resp.AccessToken)
+}
+
+func TestLogin_UserStatusAboveTwo(t *testing.T) {
+	// A-L-17: 仅 status==2 视为禁用；status==3（删除）不应拦截登录（杀 == → >=）
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	hashedPwd, _ := crypto.HashPassword("Test123")
+
+	userId := int64(3017)
+	userRpc := &mockUserServiceClient{
+		GetUserByPhoneFn: func(ctx context.Context, in *userv1.GetUserByPhoneRequest, opts ...grpc.CallOption) (*userv1.GetUserResponse, error) {
+			return &userv1.GetUserResponse{Base: okResp(), User: &userv1.User{Id: userId, Status: 3}}, nil
+		},
+	}
+	credModel := &mockCredentialModel{
+		FindByIdentityTypeAndIdentifierFn: func(ctx context.Context, identityType, identifier string) (*model.AuthCredential, error) {
+			return &model.AuthCredential{Id: 1, UserId: userId, Credential: hashedPwd}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, credModel)
+	logic := NewLoginLogic(context.Background(), svcCtx)
+	resp, err := logic.Login(&authv1.LoginRequest{
+		EncryptedPhone: rsaEncryptPhone(t, "13900139000"), EncryptedPassword: rsaEncryptPassword(t, "Test123"),
+		DeviceId: "web_001",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code, "status==3 不应被当作禁用")
+	assert.NotEmpty(t, resp.AccessToken)
+	assert.True(t, mr.Exists(fmt.Sprintf("auth:rt:%d:%s", userId, "web_001")))
+}
+
+func TestLogin_ExpiresAtPrecision(t *testing.T) {
+	// A-L-18: AT 的 exp-iat 必须精确等于 AccessExpire(900s)，杀 *time.Second → +/ 变异
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	mr.FlushAll()
+	userId := int64(3018)
+	hashedPwd, _ := crypto.HashPassword("Test123")
+
+	userRpc := &mockUserServiceClient{
+		GetUserByPhoneFn: func(ctx context.Context, in *userv1.GetUserByPhoneRequest, opts ...grpc.CallOption) (*userv1.GetUserResponse, error) {
+			return &userv1.GetUserResponse{Base: okResp(), User: &userv1.User{Id: userId, Status: 1}}, nil
+		},
+	}
+	credModel := &mockCredentialModel{
+		FindByIdentityTypeAndIdentifierFn: func(ctx context.Context, identityType, identifier string) (*model.AuthCredential, error) {
+			return &model.AuthCredential{Id: 1, UserId: userId, Credential: hashedPwd}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, credModel)
+	logic := NewLoginLogic(context.Background(), svcCtx)
+	resp, err := logic.Login(&authv1.LoginRequest{
+		EncryptedPhone: rsaEncryptPhone(t, "13900139000"), EncryptedPassword: rsaEncryptPassword(t, "Test123"),
+		DeviceId: "web_001",
+	})
+	require.NoError(t, err)
+	require.Equal(t, int32(0), resp.Base.Code)
+
+	claims := parseAT(t, resp.AccessToken)
+	exp := int64(claims["exp"].(float64))
+	iat := int64(claims["iat"].(float64))
+	assert.Equal(t, int64(900), exp-iat, "AT 有效期应为精确 900s")
+}
+
 func TestLogin_PlatformDenied(t *testing.T) {
 	// A-L-15: 端限制拒绝 → 50007（mobile-only 角色在 web 端登录）
 	_, rdb := setupRedis(t)
@@ -429,6 +518,93 @@ func TestLoginSms_PlatformDenied(t *testing.T) {
 	assert.Empty(t, resp.AccessToken)
 	// 端拒绝发生在签发前，验证码应保留（未成功登录）
 	assert.True(t, mr.Exists("sms:code:13900139000"), "端拒绝时验证码不应被删除")
+}
+
+func TestLoginSms_UserDisabled(t *testing.T) {
+	// A-S-06: 短信登录账号禁用（status==2）→ 50005
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	mr.Set("sms:code:13900139000", "123456")
+
+	userId := int64(3106)
+	userRpc := &mockUserServiceClient{
+		GetUserByPhoneFn: func(ctx context.Context, in *userv1.GetUserByPhoneRequest, opts ...grpc.CallOption) (*userv1.GetUserResponse, error) {
+			return &userv1.GetUserResponse{Base: okResp(), User: &userv1.User{Id: userId, Status: 2}}, nil
+		},
+	}
+	credModel := &mockCredentialModel{
+		FindByIdentityTypeAndIdentifierFn: func(ctx context.Context, identityType, identifier string) (*model.AuthCredential, error) {
+			return &model.AuthCredential{Id: 1, UserId: userId}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, credModel)
+	logic := NewLoginSmsLogic(context.Background(), svcCtx)
+	resp, err := logic.LoginSms(&authv1.LoginSmsRequest{
+		Phone: "13900139000", SmsCode: "123456",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(50005), resp.Base.Code)
+	assert.Empty(t, resp.AccessToken)
+	// 禁用判定在签发前，验证码应保留
+	assert.True(t, mr.Exists("sms:code:13900139000"))
+}
+
+func TestLoginSms_UserStatusAboveTwo(t *testing.T) {
+	// A-S-07: status==3 不应被当作禁用（杀 == → >=）
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	mr.Set("sms:code:13900139000", "123456")
+
+	userId := int64(3107)
+	userRpc := &mockUserServiceClient{
+		GetUserByPhoneFn: func(ctx context.Context, in *userv1.GetUserByPhoneRequest, opts ...grpc.CallOption) (*userv1.GetUserResponse, error) {
+			return &userv1.GetUserResponse{Base: okResp(), User: &userv1.User{Id: userId, Status: 3}}, nil
+		},
+	}
+	credModel := &mockCredentialModel{
+		FindByIdentityTypeAndIdentifierFn: func(ctx context.Context, identityType, identifier string) (*model.AuthCredential, error) {
+			return &model.AuthCredential{Id: 1, UserId: userId}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, credModel)
+	logic := NewLoginSmsLogic(context.Background(), svcCtx)
+	resp, err := logic.LoginSms(&authv1.LoginSmsRequest{
+		Phone: "13900139000", SmsCode: "123456", DeviceId: "web_001",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code, "status==3 不应被当作禁用")
+	assert.False(t, mr.Exists("sms:code:13900139000"), "登录成功验证码应删除")
+}
+
+func TestLoginSms_ExpiresAtPrecision(t *testing.T) {
+	// A-S-08: AT 的 exp-iat 必须精确等于 AccessExpire(900s)
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	mr.Set("sms:code:13900139000", "123456")
+
+	userId := int64(3108)
+	userRpc := &mockUserServiceClient{
+		GetUserByPhoneFn: func(ctx context.Context, in *userv1.GetUserByPhoneRequest, opts ...grpc.CallOption) (*userv1.GetUserResponse, error) {
+			return &userv1.GetUserResponse{Base: okResp(), User: &userv1.User{Id: userId, Status: 1}}, nil
+		},
+	}
+	credModel := &mockCredentialModel{
+		FindByIdentityTypeAndIdentifierFn: func(ctx context.Context, identityType, identifier string) (*model.AuthCredential, error) {
+			return &model.AuthCredential{Id: 1, UserId: userId}, nil
+		},
+	}
+	svcCtx := newTestServiceContext(t, rdb, userRpc, credModel)
+	logic := NewLoginSmsLogic(context.Background(), svcCtx)
+	resp, err := logic.LoginSms(&authv1.LoginSmsRequest{
+		Phone: "13900139000", SmsCode: "123456", DeviceId: "web_001",
+	})
+	require.NoError(t, err)
+	require.Equal(t, int32(0), resp.Base.Code)
+
+	claims := parseAT(t, resp.AccessToken)
+	exp := int64(claims["exp"].(float64))
+	iat := int64(claims["iat"].(float64))
+	assert.Equal(t, int64(900), exp-iat)
 }
 
 // =============================================================================
@@ -611,6 +787,64 @@ func TestRefreshToken_PlatformDenied(t *testing.T) {
 	assert.Equal(t, oldJti, v, "端拒绝时旧 RT 不应被旋转")
 }
 
+func TestRefreshToken_WrongSigningAlgorithm(t *testing.T) {
+	// A-T-11: RT 用非 HMAC 算法签名 → 50003（杀 signing method 分支）
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(3211)
+	oldJti := fmt.Sprintf("%d-%d", userId, time.Now().UnixNano())
+	mr.Set(fmt.Sprintf("auth:rt:%d:%s", userId, "web_001"), oldJti)
+
+	// 用 RS256 构造一个「合法签名但算法不符」的 RT
+	rsaPub, rsaPriv, err := crypto.GenerateRSAKeyPair(2048)
+	require.NoError(t, err)
+	rsaKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(rsaPriv))
+	require.NoError(t, err)
+	_ = rsaPub
+
+	now := time.Now()
+	rtClaims := jwt.MapClaims{
+		"user_id": float64(userId), "device_id": "web_001", "jti": oldJti,
+		"exp": float64(now.Add(15 * 24 * time.Hour).Unix()), "iat": float64(now.Unix()),
+	}
+	badRT, _ := jwt.NewWithClaims(jwt.SigningMethodRS256, rtClaims).SignedString(rsaKey)
+
+	svcCtx := newTestServiceContext(t, rdb, defaultMockUserRpc(userId), defaultMockCredentialModel(userId))
+	logic := NewRefreshTokenLogic(context.Background(), svcCtx)
+	resp, err := logic.RefreshToken(&authv1.RefreshTokenRequest{RefreshToken: badRT})
+	require.NoError(t, err)
+	assert.Equal(t, int32(50003), resp.Base.Code)
+}
+
+func TestRefreshToken_ExpiresAtPrecision(t *testing.T) {
+	// A-T-12: 新 AT 的 exp-iat 精确等于 AccessExpire(900s)
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(3212)
+
+	oldJti := fmt.Sprintf("%d-%d", userId, time.Now().UnixNano())
+	rtKey := fmt.Sprintf("auth:rt:%d:%s", userId, "web_001")
+	mr.Set(rtKey, oldJti)
+
+	now := time.Now()
+	rtClaims := jwt.MapClaims{
+		"user_id": float64(userId), "device_id": "web_001", "jti": oldJti,
+		"exp": float64(now.Add(15 * 24 * time.Hour).Unix()), "iat": float64(now.Unix()),
+	}
+	oldRT, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims).SignedString([]byte(testRefreshSecret))
+
+	svcCtx := newTestServiceContext(t, rdb, defaultMockUserRpc(userId), defaultMockCredentialModel(userId))
+	logic := NewRefreshTokenLogic(context.Background(), svcCtx)
+	resp, err := logic.RefreshToken(&authv1.RefreshTokenRequest{RefreshToken: oldRT})
+
+	require.NoError(t, err)
+	require.Equal(t, int32(0), resp.Base.Code)
+	claims := parseAT(t, resp.AccessToken)
+	exp := int64(claims["exp"].(float64))
+	iat := int64(claims["iat"].(float64))
+	assert.Equal(t, int64(900), exp-iat)
+}
+
 // =============================================================================
 // §2.5 注销 (Logout) 测试
 // =============================================================================
@@ -674,6 +908,75 @@ func TestLogout_KickAllDevices(t *testing.T) {
 	assert.False(t, mr.Exists(fmt.Sprintf("auth:rt:%d:%s", userId, "web_001")))
 	assert.False(t, mr.Exists(fmt.Sprintf("auth:rt:%d:%s", userId, "ios_001")))
 	assert.False(t, mr.Exists(fmt.Sprintf("auth:rt:%d:%s", userId, "android_001")))
+}
+
+func TestLogout_ExpiredToken(t *testing.T) {
+	// A-O-05: AT 已过期 → 剩余 TTL<=0，不写黑名单但照常删 RT、返回成功
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(3305)
+	now := time.Now()
+	jti := fmt.Sprintf("%d-%d", userId, now.UnixNano())
+
+	mr.Set(fmt.Sprintf("auth:rt:%d:%s", userId, "web_001"), jti)
+
+	atClaims := jwt.MapClaims{
+		"user_id": float64(userId), "jti": jti,
+		"exp": float64(now.Add(-1 * time.Hour).Unix()), "iat": float64(now.Add(-2 * time.Hour).Unix()),
+	}
+	at, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims).SignedString([]byte(testAccessSecret))
+
+	svcCtx := newTestServiceContext(t, rdb, defaultMockUserRpc(userId), defaultMockCredentialModel(userId))
+	logic := NewLogoutLogic(context.Background(), svcCtx)
+	resp, err := logic.Logout(&authv1.LogoutRequest{
+		AccessToken: at, UserId: userId, DeviceId: "web_001",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	assert.False(t, mr.Exists(fmt.Sprintf("auth:at:blacklist:%s", jti)), "过期 AT 不应写黑名单")
+	assert.False(t, mr.Exists(fmt.Sprintf("auth:rt:%d:%s", userId, "web_001")), "RT 仍应删除")
+}
+
+func TestLogout_KickAllDevices_EmptySet(t *testing.T) {
+	// A-O-06: 强踢但设备集合为空 → 不 panic、返回成功
+	mr, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	userId := int64(3306)
+	now := time.Now()
+	jti := fmt.Sprintf("%d-%d", userId, now.UnixNano())
+
+	atClaims := jwt.MapClaims{
+		"user_id": float64(userId), "jti": jti,
+		"exp": float64(now.Add(900 * time.Second).Unix()), "iat": float64(now.Unix()),
+	}
+	at, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims).SignedString([]byte(testAccessSecret))
+
+	devicesKey := fmt.Sprintf("auth:rt:%d:devices", userId)
+	mr.SAdd(devicesKey) // 空集合
+
+	svcCtx := newTestServiceContext(t, rdb, defaultMockUserRpc(userId), defaultMockCredentialModel(userId))
+	logic := NewLogoutLogic(context.Background(), svcCtx)
+	resp, err := logic.Logout(&authv1.LogoutRequest{
+		AccessToken: at, UserId: userId, DeviceId: "web_001", KickAllDevices: true,
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	assert.False(t, mr.Exists(devicesKey), "空设备集也应被删除")
+}
+
+func TestLogout_InvalidToken(t *testing.T) {
+	// A-O-07: 非法 AT → 50400
+	_, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	svcCtx := newTestServiceContext(t, rdb, defaultMockUserRpc(3307), defaultMockCredentialModel(3307))
+	logic := NewLogoutLogic(context.Background(), svcCtx)
+	resp, err := logic.Logout(&authv1.LogoutRequest{
+		AccessToken: "not.a.jwt", UserId: 3307, DeviceId: "web_001",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(50400), resp.Base.Code)
 }
 
 // =============================================================================
@@ -761,4 +1064,47 @@ func TestValidateToken_EmptyToken(t *testing.T) {
 	logic := NewValidateTokenLogic(context.Background(), svcCtx)
 	resp, _ := logic.ValidateToken(&authv1.ValidateTokenRequest{AccessToken: ""})
 	assert.False(t, resp.Valid)
+}
+
+func TestValidateToken_WrongSigningAlgorithm(t *testing.T) {
+	// A-V-06: AT 用非 HMAC 算法签名 → Valid=false（杀 signing method 分支）
+	_, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	now := time.Now()
+
+	_, rsaPriv, err := crypto.GenerateRSAKeyPair(2048)
+	require.NoError(t, err)
+	rsaKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(rsaPriv))
+	require.NoError(t, err)
+
+	atClaims := jwt.MapClaims{
+		"user_id": float64(3406), "jti": "rsa_signed_jti",
+		"exp": float64(now.Add(900 * time.Second).Unix()), "iat": float64(now.Unix()),
+	}
+	badAT, _ := jwt.NewWithClaims(jwt.SigningMethodRS256, atClaims).SignedString(rsaKey)
+
+	svcCtx := newTestServiceContext(t, rdb, defaultMockUserRpc(3406), defaultMockCredentialModel(3406))
+	logic := NewValidateTokenLogic(context.Background(), svcCtx)
+	resp, err := logic.ValidateToken(&authv1.ValidateTokenRequest{AccessToken: badAT})
+	require.NoError(t, err)
+	assert.False(t, resp.Valid)
+}
+
+func TestValidateToken_NoJtiStillValid(t *testing.T) {
+	// A-V-07: AT 缺 jti 仍可通过（黑名单 key 为空），Valid=true
+	_, rdb := setupRedis(t)
+	setupTestCrypto(t)
+	now := time.Now()
+
+	atClaims := jwt.MapClaims{
+		"user_id": float64(3407),
+		"exp":     float64(now.Add(900 * time.Second).Unix()), "iat": float64(now.Unix()),
+	}
+	at, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims).SignedString([]byte(testAccessSecret))
+
+	svcCtx := newTestServiceContext(t, rdb, defaultMockUserRpc(3407), defaultMockCredentialModel(3407))
+	logic := NewValidateTokenLogic(context.Background(), svcCtx)
+	resp, err := logic.ValidateToken(&authv1.ValidateTokenRequest{AccessToken: at})
+	require.NoError(t, err)
+	assert.True(t, resp.Valid)
 }
