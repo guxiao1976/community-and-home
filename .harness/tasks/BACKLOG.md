@@ -34,7 +34,7 @@
 - [QA FAIL: graph_freshness — graph is stale (last sync: 646h ago, latest commit is newer)](task-2026-08-04-007.md) — all, P1, closed, qa
 - [QA FAIL: graph_freshness — graph is stale (last sync: 648h ago, latest commit is newer)](task-2026-08-04-008.md) — all, P1, closed, qa
 - [harness-pipeline 与 superpowers 流程衔接规则待收敛](task-2026-08-13-001.md) — global, P1, open, human
-- [4 个 pipeline-*.md 文档滞后（7-8 月演进未写回）](task-2026-08-13-002.md) — global, P1, open, review
+- [4 个 pipeline-*.md 文档滞后（7-8 月演进未写回）](task-2026-08-13-002.md) — global, P1, closed, review
 - [hardcoded secrets 检查漏检 Go 短变量声明 :=](task-2026-08-13-003.md) — global, P1, closed, review
 
 
