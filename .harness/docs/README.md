@@ -13,6 +13,7 @@
 | [pipeline-architecture.md](./pipeline-architecture.md) | 流水线架构设计（三层体系、21 项检查、Agent 机制） | 新成员、架构师 |
 | [pipeline-evolution.md](./pipeline-evolution.md) | 演进历史（11 个 Phase、改进效果） | 架构师、维护者 |
 | [pipeline-patterns.md](./pipeline-patterns.md) | 最佳实践（扩展指南、代码模板、故障排查） | 开发者、扩展者 |
+| [harness-design-principles.md](./harness-design-principles.md) | 权威设计原则（16 条 + 环节映射 + 目录规范） | 新成员、检视者 |
 
 **使用场景**：
 - 🎯 **新成员入职**：按顺序阅读三份文档，了解流水线全貌
