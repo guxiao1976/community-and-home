@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -67,6 +68,11 @@ func TestJWTUserID(t *testing.T) {
 			want:    0,
 			wantErr: true,
 		},
+		{
+			name: "negative float64 claim passes through (未归类为零，原样返回)",
+			ctx:  context.WithValue(context.Background(), "user_id", float64(-5)),
+			want: -5,
+		},
 	}
 
 	for _, tc := range cases {
@@ -80,6 +86,23 @@ func TestJWTUserID(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestJWTUserID_MissingVsInvalidError 区分两种失败形态：缺身份（errMissingIdentity）vs
+// 身份存在但非法（errInvalidIdentity）。写接口依赖该区分做 fail-closed 语义。
+func TestJWTUserID_MissingVsInvalidError(t *testing.T) {
+	var missing errMissingIdentity
+	var invalid errInvalidIdentity
+
+	_, err := JWTUserID(context.Background())
+	require.Error(t, err)
+	assert.True(t, errors.As(err, &missing), "无任何 claim 应为 errMissingIdentity，实际 %v", err)
+	assert.False(t, errors.As(err, &invalid))
+
+	_, err = JWTUserID(context.WithValue(context.Background(), "user_id", "not-a-number"))
+	require.Error(t, err)
+	assert.True(t, errors.As(err, &invalid), "claim 存在但非数字应为 errInvalidIdentity，实际 %v", err)
+	assert.False(t, errors.As(err, &missing))
 }
 
 // userIDKey returns the JWT claim key so the test does not hardcode a diverging literal.

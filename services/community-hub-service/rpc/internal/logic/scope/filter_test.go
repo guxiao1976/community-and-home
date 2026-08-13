@@ -94,6 +94,20 @@ func TestFilterAllowed(t *testing.T) {
 			communityID: 100,
 			want:        false,
 		},
+		{
+			name: "LIMITED 且范围 id 均大于请求目标 → 未命中过滤（不等才判负）",
+			resp: limitedResp(200),
+			userID:      42,
+			communityID: 100,
+			want:        false,
+		},
+		{
+			name: "负数 userID（非法身份）→ 照常查 GetDataScopes，不因 <= 短路拒绝",
+			resp: limitedResp(100),
+			userID:      -5,
+			communityID: 100,
+			want:        true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -116,6 +130,7 @@ func TestFilterAllowed(t *testing.T) {
 			got, err := FilterAllowed(context.Background(), client, tc.userID, tc.communityID)
 			if tc.wantErr {
 				require.Error(t, err)
+				assert.False(t, got, "传输错误路径必须返回 false（fail-closed 语义）")
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tc.want, got)
