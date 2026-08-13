@@ -55,9 +55,20 @@ func TestInvalidateUserCache_ZeroUserIdKeepsCache(t *testing.T) {
 // TestInvalidateUserCache_PositiveUserId 覆盖正常路径：userId>0 触发缓存失效（miniredis）。
 func TestInvalidateUserCache_PositiveUserId(t *testing.T) {
 	client, _ := setupMiniRedis(t)
+	ctx := context.Background()
+	// 预置缓存，验证正例确实删除（杀 in.UserId <= 0 → true 变异）
+	client.Set(ctx, "perm:user:42", "stale", 0)
+	client.Set(ctx, "perm:scopes:42:community", "stale", 0)
+
 	sc := &svc.ServiceContext{RedisClient: client}
-	l := NewInvalidateUserCacheLogic(context.Background(), sc)
+	l := NewInvalidateUserCacheLogic(ctx, sc)
 	resp, err := l.InvalidateUserCache(&permissionv1.InvalidateUserCacheRequest{UserId: 42})
 	require.NoError(t, err)
 	assert.Equal(t, int32(0), resp.GetBase().GetCode())
+
+	// 正例应删除缓存（若 userId<=0 恒 true 提前返回，则缓存仍在 → 断言失败）
+	_, err = client.Get(ctx, "perm:user:42").Result()
+	assert.Error(t, err, "正例应删除 perm:user:42 缓存")
+	_, err = client.Get(ctx, "perm:scopes:42:community").Result()
+	assert.Error(t, err, "正例应删除 perm:scopes:42:community 缓存")
 }
