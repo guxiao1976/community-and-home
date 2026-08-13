@@ -104,6 +104,8 @@ git stash 实现（保留测试）→ go test（必然 FAIL）→ 捕获输出 �
 | T2 | generator 分诊：有逻辑/字段映射在任务里标注 | `generator.js` | 无 |
 | T3 | 引入 go-mutesting + 加 `check_mutation_testing` | `harness-checks.sh`、`go.mod` | T1 |
 | T4 | 变异存活率阈值 + 报告存活突变体 | `check_mutation_testing` | T3 |
+
+> ⚠️ **T3/T4 受阻（2026-08-13 实测）**：Go 变异测试工具不成熟——`zimmski/go-mutesting` 与 Go 1.25 不兼容（`go/types` panic 崩溃），`avito-tech/go-mutesting` fork 可用但每个变异重跑全包测试、单函数 `--match` 仍 >180s 超时，无法用于 CI 门禁。故 `check_mutation_testing` 保持非阻塞 WARN，测试有效性暂由「TDD 分诊 + RED 摘录（结构性不能替代）」兜底。待 Go 变异测试工具成熟（或改用增量变异/缓存）后再激活为阻塞门禁。
 | T5 | 改写 `tdd-red-evidence-requires-fail-excerpt` 记忆为变异测试语义 | memory 文件 | T3 |
 | T6 | （可选 P1）`_tdd_evidence.md` 机械门禁 | `harness-checks.sh` | 无 |
 | T7 | （可选 P2）stash/pop 回溯捕获脚本 | `scripts/` | 无 |

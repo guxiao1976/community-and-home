@@ -122,10 +122,21 @@ log_warn() {
 # Returns patterns that can be piped: one file per line, relative to PROJECT_ROOT.
 changed_files() {
   local pattern="${1:-*.go}"
-  # Unstaged + staged changes, only files matching pattern
-  (git diff --name-only HEAD 2>/dev/null; git diff --cached --name-only 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null) \
-    | sort -u | grep -E "\.(${pattern//\*/})\$" 2>/dev/null || true
-  # Fallback: if no changes, scan nothing (git diff returns empty)
+  # 主仓库 diff（unstaged + staged + untracked）
+  local files
+  files="$(git diff --name-only HEAD 2>/dev/null; git diff --cached --name-only 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null)"
+  # 嵌套仓库（gitlink）diff：主仓库只见 gitlink 不见内部 .go 改动，需进子仓库扫（盲区修复）
+  local gl
+  while IFS= read -r gl; do
+    [ -z "$gl" ] && continue
+    if [ -d "$gl/.git" ]; then
+      files="$files
+$(git -C "$gl" diff --name-only HEAD 2>/dev/null | sed "s|^|$gl/|")
+$(git -C "$gl" diff --cached --name-only 2>/dev/null | sed "s|^|$gl/|")
+$(git -C "$gl" ls-files --others --exclude-standard 2>/dev/null | sed "s|^|$gl/|")"
+    fi
+  done < <(git ls-files -s 2>/dev/null | grep '^160000' | awk '{print $4}')
+  echo "$files" | sort -u | grep -E "\.(${pattern//\*/})\$" 2>/dev/null || true
 }
 
 # Escape a string for JSON (basic: backslash + quotes)
@@ -1162,7 +1173,7 @@ check_mutation_testing() {
     log_pass "mutation_testing" "无 Go 逻辑变更，跳过"
     return
   fi
-  log_warn "mutation_testing" "go-mutesting 已安装但阈值判据待调优（见 design-tdd-evidence.md T4），本次跳过"
+  log_warn "mutation_testing" "变异测试工具不可用：zimmski/go-mutesting 与 Go 1.25 不兼容（go/types panic），avito-tech fork 极慢（单函数>180s）。暂不纳入阻塞门禁，测试有效性由 TDD 分诊 + RED 摘录兜底（见 design-tdd-evidence.md）"
 }
 
 # ─── Main ─────────────────────────────────────────────────────────────

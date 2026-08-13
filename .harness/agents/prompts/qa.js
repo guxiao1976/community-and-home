@@ -103,6 +103,7 @@ function qaPrompt() {
 
 - **字段映射类**（struct 加字段、SQL 加列、proto 字段透出、seed/配置、纯接线）：无独立逻辑，**只要求「有对应测试」或「build/test 绿」，RED 列记 —（不要求）**。
 - **有逻辑函数**（分支/转换/计算/条件/校验）：RED 列必须有具体 FAIL 输出摘录（仅写"看到失败"无实际 error → ❌）。
+- **结构性证明不能替代真实摘录**：`git show HEAD:` 显示新符号不存在只能证明「RED 真实」，不能替代「具体 FAIL 输出文本」（`undefined:`/`expected:...actual:...`/断言失败行）。RED 列必须有具体 error 文本，否则一律 ❌（此标准对所有服务统一，不得放宽）。
 - 只有「有逻辑函数」的 RED 缺失才判 QA FAIL（TDD 证据不足）；字段映射缺失 RED 不判 FAIL。
 \`\`\`
 
