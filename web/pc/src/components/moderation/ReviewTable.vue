@@ -25,10 +25,10 @@
     <el-table-column label="操作" width="240" fixed="right">
       <template #default="{ row }">
         <div style="display: flex; gap: 4px; flex-wrap: nowrap;">
-          <el-button type="primary" size="small" @click="$emit('detail', row)">详情</el-button>
+          <el-button type="primary" size="small" @click="$emit('detail', row as ReviewListItem)">详情</el-button>
           <template v-if="row.review_status === 0">
-            <el-button type="success" size="small" @click="$emit('approve', row)">通过</el-button>
-            <el-button type="danger" size="small" @click="$emit('reject', row)">不通过</el-button>
+            <el-button type="success" size="small" @click="$emit('approve', row as ReviewListItem)">通过</el-button>
+            <el-button type="danger" size="small" @click="$emit('reject', row as ReviewListItem)">不通过</el-button>
           </template>
         </div>
       </template>

@@ -26,15 +26,15 @@
         <el-table-column prop="max_tokens" label="最大Token" width="120" />
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleHealthCheck(row)">
+            <el-button link type="primary" @click="handleHealthCheck(row as ModelConfig)">
               <el-icon><CircleCheck /></el-icon>
               健康检查
             </el-button>
-            <el-button link type="primary" @click="handleEdit(row)">
+            <el-button link type="primary" @click="handleEdit(row as ModelConfig)">
               <el-icon><Edit /></el-icon>
               编辑
             </el-button>
-            <el-button link type="danger" @click="handleDelete(row)">
+            <el-button link type="danger" @click="handleDelete(row as ModelConfig)">
               <el-icon><Delete /></el-icon>
               删除
             </el-button>
@@ -74,8 +74,8 @@ const pagination = ref({
   total: 0
 });
 
-const getProviderType = (provider: string) => {
-  const types: Record<string, string> = {
+const getProviderType = (provider: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const types: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     openai: 'primary',
     claude: 'success',
     ollama: 'warning'
@@ -113,7 +113,7 @@ const handleEdit = (row: ModelConfig) => {
 const handleDelete = async (row: ModelConfig) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除模型 "${row.model_name}" 吗？`,
+      `确定要删除模型 "${row.display_name}" 吗？`,
       '删除确认',
       {
         confirmButtonText: '确定',
@@ -137,10 +137,10 @@ const handleHealthCheck = async (row: ModelConfig) => {
   loading.value = true;
   try {
     const res = await triggerHealthCheck(row.id);
-    if (res.data.status === 1) {
-      ElMessage.success(`健康检查成功，响应时间: ${res.data.response_time}ms`);
+    if (res.status === 1) {
+      ElMessage.success(`健康检查成功，响应时间: ${res.response_time}ms`);
     } else {
-      ElMessage.warning(`健康检查失败: ${res.data.error_message}`);
+      ElMessage.warning(`健康检查失败: ${res.error_message}`);
     }
   } catch (error) {
     ElMessage.error('健康检查失败');

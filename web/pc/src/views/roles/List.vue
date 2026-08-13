@@ -26,17 +26,33 @@
             <el-tag v-else type="danger" size="small">禁用</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="允许登录端" width="160">
+          <template #default="{ row }">
+            <template v-if="row.platforms && row.platforms.length > 0">
+              <el-tag
+                v-for="p in row.platforms"
+                :key="p"
+                size="small"
+                :type="p === 'pc' ? 'primary' : 'success'"
+                class="platform-tag"
+              >
+                {{ platformLabel(p) }}
+              </el-tag>
+            </template>
+            <el-tag v-else size="small" type="info">全部</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="180" />
         <el-table-column label="操作" width="380" fixed="right">
           <template #default="{ row }">
-            <el-button v-permission="'role:update'" link type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button v-permission="'role:permission'" link type="primary" @click="handlePermissions(row)">权限配置</el-button>
-            <el-button link type="primary" @click="handleRoleUsers(row)">查看用户</el-button>
+            <el-button v-permission="'role:update'" link type="primary" @click="handleEdit(row as Role)">编辑</el-button>
+            <el-button v-permission="'role:permission'" link type="primary" @click="handlePermissions(row as Role)">权限配置</el-button>
+            <el-button link type="primary" @click="handleRoleUsers(row as Role)">查看用户</el-button>
             <el-button
               v-permission="'role:delete'"
               link
               type="danger"
-              @click="handleDelete(row)"
+              @click="handleDelete(row as Role)"
               :disabled="row.isSystem"
             >
               删除
@@ -89,6 +105,19 @@
             placeholder="请输入角色描述"
           />
         </el-form-item>
+        <el-form-item label="允许登录端" prop="platforms">
+          <el-checkbox-group v-model="form.platforms">
+            <el-checkbox
+              v-for="opt in PLATFORM_OPTIONS"
+              :key="opt.value"
+              :value="opt.value"
+              :label="opt.value"
+            >
+              {{ opt.label }}
+            </el-checkbox>
+          </el-checkbox-group>
+          <div class="platform-hint">未勾选 = 允许所有端登录</div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -111,6 +140,18 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
+// 允许登录端选项：值域与 permission-service sys_role.platforms 一致（pc/mobile）
+// 空数组 = 未声明，运行时 fail-open（允许所有端），由 auth-service 权威判定
+// SEE: [[frontend-business-rule-hardcode]] — 前端仅做选项与展示，端准入权威判定在后端
+const PLATFORM_OPTIONS = [
+  { value: 'pc', label: 'PC 管理端' },
+  { value: 'mobile', label: '移动端' }
+];
+
+const platformLabel = (p: string) => {
+  return p === 'pc' ? 'PC' : '移动端';
+};
+
 const loading = ref(false);
 const submitting = ref(false);
 const dialogVisible = ref(false);
@@ -128,7 +169,8 @@ const form = reactive({
   id: '',
   name: '',
   code: '',
-  description: ''
+  description: '',
+  platforms: [] as string[]
 });
 
 const rules: FormRules = {
@@ -174,6 +216,7 @@ const handleEdit = (row: Role) => {
   form.name = row.name;
   form.code = row.code;
   form.description = row.description;
+  form.platforms = Array.isArray(row.platforms) ? [...row.platforms] : [];
   dialogVisible.value = true;
 };
 
@@ -217,14 +260,16 @@ const handleSubmit = async () => {
       if (form.id) {
         await identityApi.updateRole(form.id, {
           name: form.name,
-          description: form.description
+          description: form.description,
+          platforms: form.platforms
         });
         ElMessage.success('更新成功');
       } else {
         await identityApi.createRole({
           name: form.name,
           code: form.code,
-          description: form.description
+          description: form.description,
+          platforms: form.platforms
         });
         ElMessage.success('创建成功');
       }
@@ -239,10 +284,11 @@ const handleSubmit = async () => {
 };
 
 const resetForm = () => {
-  form.id = 0;
+  form.id = '';
   form.name = '';
   form.code = '';
   form.description = '';
+  form.platforms = [];
   formRef.value?.resetFields();
 };
 </script>
@@ -266,6 +312,16 @@ const resetForm = () => {
     margin-top: 20px;
     display: flex;
     justify-content: flex-end;
+  }
+
+  .platform-tag {
+    margin-right: 4px;
+  }
+
+  .platform-hint {
+    font-size: 12px;
+    color: #86909c;
+    line-height: 1.5;
   }
 }
 </style>

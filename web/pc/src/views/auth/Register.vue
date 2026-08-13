@@ -90,6 +90,7 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
 import { sendSms } from '@/api/identity';
 import { requiredPhoneRule, nicknameRule, smsCodeRule } from '@/utils/validation';
+import { ERROR_CODE_PLATFORM_RESTRICTED, PLATFORM_RESTRICTED_MESSAGE } from '@/utils/request';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -168,7 +169,12 @@ const handleRegister = async () => {
       ElMessage.success('注册成功');
       router.push('/dashboard');
     } catch (error: any) {
-      ElMessage.error(error.message || '注册失败');
+      // 50007 端限制：注册即登录被端准入拒绝，展示专属引导
+      if (error?.code === ERROR_CODE_PLATFORM_RESTRICTED) {
+        ElMessage.error(PLATFORM_RESTRICTED_MESSAGE);
+      } else {
+        ElMessage.error(error.message || '注册失败');
+      }
     } finally {
       loading.value = false;
     }

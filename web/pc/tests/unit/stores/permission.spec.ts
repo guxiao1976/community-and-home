@@ -24,18 +24,13 @@ describe('Permission Store', () => {
   describe('loadUserPermissionsAndMenus', () => {
     it('should load permissions and menus for a user', async () => {
       vi.mocked(identityApi.getUserPermissions).mockResolvedValue({
-        permissions: ['user:list', 'user:create'],
-        menus: [
-          { id: '1', name: 'User', code: 'user', type: 1, parentId: '0', path: '/users', sortOrder: 1, status: 1 },
-          { id: '2', name: 'User List', code: 'user:list', type: 2, parentId: '1', path: '', sortOrder: 1, status: 1 }
-        ]
+        permissionCodes: ['user:list', 'user:create']
       } as any);
 
       const store = usePermissionStore();
       await store.loadUserPermissionsAndMenus('5');
 
       expect(store.userPermissions).toEqual(['user:list', 'user:create']);
-      expect(store.menuPermissions).toHaveLength(2);
       expect(store.isLoaded).toBe(true);
       expect(store.currentUserId).toBe('5');
     });
@@ -66,7 +61,7 @@ describe('Permission Store', () => {
     it('should load user roles', async () => {
       vi.mocked(identityApi.getUserRoles).mockResolvedValue({
         roles: [
-          { id: '1', name: 'Admin', code: 'admin', isSystem: true, status: 1 }
+          { role: { id: '1', name: 'Admin', code: 'admin', isSystem: true, status: 1 }, scopeType: 'global', scopeId: '0', status: 1 }
         ]
       } as any);
 
@@ -143,8 +138,7 @@ describe('Permission Store', () => {
   describe('clearPermissions', () => {
     it('should reset all state', async () => {
       vi.mocked(identityApi.getUserPermissions).mockResolvedValue({
-        permissions: ['user:list'],
-        menus: []
+        permissionCodes: ['user:list']
       } as any);
 
       const store = usePermissionStore();
@@ -165,11 +159,13 @@ describe('Permission Store', () => {
 
   describe('buildTree', () => {
     it('should build a tree from flat permissions', async () => {
-      vi.mocked(identityApi.getPermissions).mockResolvedValue([
-        { id: '1', name: 'User', code: 'user', type: 1, parentId: '0', sortOrder: 1, status: 1 },
-        { id: '2', name: 'User List', code: 'user:list', type: 2, parentId: '1', sortOrder: 1, status: 1 },
-        { id: '3', name: 'Role', code: 'role', type: 1, parentId: '0', sortOrder: 2, status: 1 }
-      ] as any);
+      vi.mocked(identityApi.getPermissions).mockResolvedValue({
+        permissions: [
+          { id: '1', name: 'User', code: 'user', type: 1, parentId: '0', sortOrder: 1, status: 1 },
+          { id: '2', name: 'User List', code: 'user:list', type: 2, parentId: '1', sortOrder: 1, status: 1 },
+          { id: '3', name: 'Role', code: 'role', type: 1, parentId: '0', sortOrder: 2, status: 1 }
+        ]
+      } as any);
 
       const store = usePermissionStore();
       await store.loadPermissions();

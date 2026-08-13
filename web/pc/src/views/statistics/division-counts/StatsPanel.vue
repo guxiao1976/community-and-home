@@ -29,7 +29,7 @@
           v-if="panel.data.length > 0"
           :data="panel.data"
           highlight-current-row
-          :row-class-name="({ row }) => row._selected ? 'is-selected' : ''"
+          :row-class-name="({ row }) => (row as any)._selected ? 'is-selected' : ''"
           @row-click="(row) => panel.onRowClick(row)"
           size="small"
           :max-height="500"

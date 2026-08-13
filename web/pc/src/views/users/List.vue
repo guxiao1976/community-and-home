@@ -62,7 +62,7 @@
               link
               :type="row.status === 1 ? 'warning' : 'success'"
               size="small"
-              @click="handleToggleStatus(row)"
+              @click="handleToggleStatus(row as User)"
             >
               {{ row.status === 1 ? '禁用' : '启用' }}
             </el-button>

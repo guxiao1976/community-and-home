@@ -302,7 +302,7 @@ async function handleTestConnection() {
   try {
     // 编辑模式下，如果表单没填密钥，测试连接仍可执行（后端会从 DB 取现有密钥）
     let apiKey = formData.api_key;
-    const res = await testModelConnection({ config_key: formData.name, endpoint: formData.endpoint, api_key: apiKey, provider: formData.provider || undefined, model_name: formData.name });
+    const res = await testModelConnection({ endpoint: formData.endpoint, api_key: apiKey, provider: formData.provider || undefined, model_name: formData.name });
     const inner = (res as any)?.data || res;
     testResult.value = { success: inner.success ?? false, latency_ms: inner.latency_ms ?? 0, error: inner.error || '' };
   } catch (e: any) { testResult.value = { success: false, latency_ms: 0, error: e?.message || String(e) }; }

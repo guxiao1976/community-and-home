@@ -190,7 +190,7 @@ export const createSensitiveWord = (data: {
   word: string
   category: string
   severity: number
-  action: string
+  action: number
 }) => {
   return request.post<{ id: string }>('/api/masterdata/sensitive-words', data)
 }
@@ -198,7 +198,7 @@ export const createSensitiveWord = (data: {
 export const updateSensitiveWord = (id: string, data: {
   category?: string
   severity?: number
-  action?: string
+  action?: number
   status?: number
 }) => {
   return request.put<null>(`/api/masterdata/sensitive-words/${id}`, data)

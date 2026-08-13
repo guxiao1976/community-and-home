@@ -20,11 +20,11 @@ const statusFilter = ref<number | undefined>(undefined)
 
 // Filters
 const filters = reactive({
-  province_id: undefined as number | undefined,
-  city_id: undefined as number | undefined,
-  county_id: undefined as number | undefined,
-  street_id: undefined as number | undefined,
-  community_div_id: undefined as number | undefined,
+  province_id: undefined as string | undefined,
+  city_id: undefined as string | undefined,
+  county_id: undefined as string | undefined,
+  street_id: undefined as string | undefined,
+  community_div_id: undefined as string | undefined,
   submission_status: undefined as number | undefined,
   community_type: undefined as number | undefined,
   keyword: '',
@@ -69,7 +69,7 @@ const loadProvinces = async () => {
 }
 
 // Province change -> load cities
-const handleProvinceChange = async (provinceId: number) => {
+const handleProvinceChange = async (provinceId: string) => {
   filters.city_id = undefined
   filters.county_id = undefined
   filters.street_id = undefined
@@ -81,7 +81,7 @@ const handleProvinceChange = async (provinceId: number) => {
   if (!provinceId) return
   divisionLoading.value = true
   try {
-    const res = await getAdministrativeDivisions({ parent_id: String(provinceId), level: 2, page: 1, page_size: 100 })
+    const res = await getAdministrativeDivisions({ parent_id: provinceId, level: 2, page: 1, page_size: 100 })
     cityOptions.value = res.list || []
   } catch (error) {
     console.error('Failed to load cities:', error)
@@ -91,7 +91,7 @@ const handleProvinceChange = async (provinceId: number) => {
 }
 
 // City change -> load districts
-const handleCityChange = async (cityId: number) => {
+const handleCityChange = async (cityId: string) => {
   filters.county_id = undefined
   filters.street_id = undefined
   filters.community_div_id = undefined
@@ -101,7 +101,7 @@ const handleCityChange = async (cityId: number) => {
   if (!cityId) return
   divisionLoading.value = true
   try {
-    const res = await getAdministrativeDivisions({ parent_id: String(cityId), level: 3, page: 1, page_size: 500 })
+    const res = await getAdministrativeDivisions({ parent_id: cityId, level: 3, page: 1, page_size: 500 })
     districtOptions.value = res.list || []
   } catch (error) {
     console.error('Failed to load districts:', error)
@@ -111,7 +111,7 @@ const handleCityChange = async (cityId: number) => {
 }
 
 // District change -> load streets
-const handleDistrictChange = async (districtId: number) => {
+const handleDistrictChange = async (districtId: string) => {
   filters.street_id = undefined
   filters.community_div_id = undefined
   filters.county_id = districtId || undefined
@@ -120,7 +120,7 @@ const handleDistrictChange = async (districtId: number) => {
   if (!districtId) return
   divisionLoading.value = true
   try {
-    const res = await getAdministrativeDivisions({ parent_id: String(districtId), level: 4, page: 1, page_size: 500 })
+    const res = await getAdministrativeDivisions({ parent_id: districtId, level: 4, page: 1, page_size: 500 })
     streetOptions.value = res.list || []
   } catch (error) {
     console.error('Failed to load streets:', error)
@@ -130,14 +130,14 @@ const handleDistrictChange = async (districtId: number) => {
 }
 
 // Street change -> load communities
-const handleStreetChange = async (streetId: number) => {
+const handleStreetChange = async (streetId: string) => {
   filters.community_div_id = undefined
   communityOptions.value = []
   communityOptionsLoaded.value = false
   if (!streetId) return
   divisionLoading.value = true
   try {
-    const res = await getAdministrativeDivisions({ parent_id: String(streetId), level: 5, page: 1, page_size: 500 })
+    const res = await getAdministrativeDivisions({ parent_id: streetId, level: 5, page: 1, page_size: 500 })
     communityOptions.value = res.list || []
     communityOptionsLoaded.value = true
   } catch (error) {
@@ -149,7 +149,7 @@ const handleStreetChange = async (streetId: number) => {
 }
 
 // Community change -> set community_div_id
-const handleCommunityChange = (communityId: number) => {
+const handleCommunityChange = (communityId: string) => {
   filters.community_div_id = communityId || undefined
 }
 
@@ -242,13 +242,13 @@ const handleCreate = () => {
 
   const query: Record<string, string | number> = {
     county_id: filters.county_id,
-    county_name: districtOptions.value.find(d => d.id === Number(filters.county_id))?.name || '',
+    county_name: districtOptions.value.find(d => d.id === filters.county_id)?.name || '',
     street_id: filters.street_id,
-    street_name: streetOptions.value.find(s => s.id === Number(filters.street_id))?.name || ''
+    street_name: streetOptions.value.find(s => s.id === filters.street_id)?.name || ''
   }
   if (filters.community_div_id) {
     query.community_div_id = filters.community_div_id
-    query.community_name = communityOptions.value.find(c => c.id === Number(filters.community_div_id))?.name || ''
+    query.community_name = communityOptions.value.find(c => c.id === filters.community_div_id)?.name || ''
   }
 
   saveFilterState()

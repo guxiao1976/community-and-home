@@ -7,7 +7,7 @@ import type { RouteRecordRaw } from 'vue-router';
 export interface MenuItemConfig {
   path: string;           // 路由路径
   title: string;          // 菜单标题
-  icon?: Component;       // 图标组件
+  icon?: Component | string;       // 图标组件
   permission?: string;    // 权限码（可选）
   children?: MenuItemConfig[];  // 子菜单
   hidden?: boolean;       // 是否隐藏（用于详情页等）

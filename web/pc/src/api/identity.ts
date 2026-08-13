@@ -12,7 +12,8 @@ import type {
   UserFilter,
   Role,
   Permission,
-  HomeownerVerification
+  HomeownerVerification,
+  UserRole
 } from '@common/types/identity';
 import type { PaginatedResponse, PaginationParams } from '@common/types/common';
 import { getPublicKey, encryptWithPublicKey } from '@/utils/crypto';
@@ -157,6 +158,7 @@ export function createUser(data: {
 export function updateUser(id: string, data: {
   nickname?: string;
   scope?: string;
+  status?: number;
 }) {
   return request.put<null>(`/api/users/${id}`, data);
 }
@@ -259,7 +261,7 @@ export function autoDiscoverPermissions() {
  * Get all roles
  */
 export function getRoles(params?: PaginationParams) {
-  return request.get<PaginatedResponse<Role>>('/api/perm/roles', { params });
+  return request.get<{ roles: Role[]; page: { total: number } }>('/api/perm/roles', { params });
 }
 
 /**
@@ -276,6 +278,7 @@ export function createRole(data: {
   name: string;
   code: string;
   description?: string;
+  platforms?: string[];
 }) {
   return request.post<{ id: string }>('/api/perm/roles', data);
 }
@@ -286,6 +289,7 @@ export function createRole(data: {
 export function updateRole(id: string, data: {
   name?: string;
   description?: string;
+  platforms?: string[];
 }) {
   return request.put<null>(`/api/perm/roles/${id}`, data);
 }

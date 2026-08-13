@@ -48,7 +48,7 @@ export const usePermissionStore = defineStore('permission', () => {
   const loadUserRoles = async (userId: string): Promise<void> => {
     try {
       const response = await identityApi.getUserRoles(userId);
-      userRoles.value = response?.roles || [];
+      userRoles.value = (response?.roles || []).map((ur) => ur.role as Role);
     } catch {
       userRoles.value = [];
     }
@@ -56,7 +56,7 @@ export const usePermissionStore = defineStore('permission', () => {
 
   const loadRoles = async (): Promise<void> => {
     const response = await identityApi.getRoles();
-    roles.value = response?.list || [];
+    roles.value = response?.roles || [];
   };
 
   const hasPermission = (permissionCode: string): boolean => {

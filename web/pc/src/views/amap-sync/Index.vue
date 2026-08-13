@@ -136,10 +136,10 @@ const progress = ref<SyncProgress | null>(null)
 let pollTimer: ReturnType<typeof setInterval> | null = null
 
 const filters = reactive({
-  provinceId: undefined as number | undefined,
-  cityId: undefined as number | undefined,
-  countyId: undefined as number | undefined,
-  streetId: undefined as number | undefined
+  provinceId: undefined as string | undefined,
+  cityId: undefined as string | undefined,
+  countyId: undefined as string | undefined,
+  streetId: undefined as string | undefined
 })
 
 const effectiveDivisionId = computed(() => {

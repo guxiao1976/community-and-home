@@ -113,7 +113,7 @@ export interface UsageStatistics {
  * Get model configs list
  */
 export function getModelConfigs(params?: PaginationParams) {
-  return request.get<PaginatedResponse<ModelConfig>>('/api/v1/models', { params });
+  return request.get<{ models: ModelConfig[]; total: number }>('/api/v1/models', { params });
 }
 
 /**
@@ -310,7 +310,7 @@ export function getUsageStatistics(params?: {
   start_date?: string;
   end_date?: string;
 } & PaginationParams) {
-  return request.get<PaginatedResponse<UsageStatistics>>('/api/v1/statistics', { params });
+  return request.get<{ statistics: UsageStatistics[]; total: number }>('/api/v1/statistics', { params });
 }
 
 // ==================== Test Connection API ====================

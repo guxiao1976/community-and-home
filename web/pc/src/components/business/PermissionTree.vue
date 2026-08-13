@@ -47,7 +47,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const treeRef = ref<InstanceType<typeof ElTree>>();
-const checkedKeys = ref<number[]>([]);
+const checkedKeys = ref<string[]>([]);
 
 const treeProps = {
   children: 'children',
@@ -71,7 +71,7 @@ watch(() => props.checkedIds, (newVal) => {
 
 const handleCheck = () => {
   if (treeRef.value) {
-    const checkedNodes = treeRef.value.getCheckedKeys() as number[];
+    const checkedNodes = treeRef.value.getCheckedKeys() as string[];
     // Only emit fully-checked keys. Half-checked means "some children selected"
     // — the parent node itself should NOT be sent as a selected permission.
     emit('update:checkedIds', [...checkedNodes]);
@@ -82,7 +82,7 @@ const handleCheck = () => {
 defineExpose({
   getCheckedKeys: () => treeRef.value?.getCheckedKeys() || [],
   getHalfCheckedKeys: () => treeRef.value?.getHalfCheckedKeys() || [],
-  setCheckedKeys: (keys: number[]) => treeRef.value?.setCheckedKeys(keys)
+  setCheckedKeys: (keys: string[]) => treeRef.value?.setCheckedKeys(keys)
 });
 </script>
 

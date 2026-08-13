@@ -73,7 +73,7 @@
       </el-table-column>
       <el-table-column label="操作" width="80" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" link @click="handleView(row)">详情</el-button>
+          <el-button type="primary" link @click="handleView(row as QueryResidentialAreaItem)">详情</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -114,11 +114,11 @@ const communityTypeMap: Record<number, string> = {
 }
 
 const filters = reactive({
-  province_id: undefined as number | undefined,
-  city_id: undefined as number | undefined,
-  county_id: undefined as number | undefined,
-  street_id: undefined as number | undefined,
-  community_div_id: undefined as number | undefined,
+  province_id: undefined as string | undefined,
+  city_id: undefined as string | undefined,
+  county_id: undefined as string | undefined,
+  street_id: undefined as string | undefined,
+  community_div_id: undefined as string | undefined,
   community_type: undefined as number | undefined,
   keyword: ''
 })
@@ -143,7 +143,7 @@ const loadDivisions = async (parentId?: string, level?: number): Promise<Adminis
     if (parentId) params.parent_id = parentId
     if (level) params.level = level
     const res = await getAdministrativeDivisions(params)
-    return (res?.list || []).map((d: any) => ({ id: d.id, name: d.name }))
+    return res?.list || []
   } catch {
     return []
   }

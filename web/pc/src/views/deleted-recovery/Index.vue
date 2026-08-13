@@ -22,7 +22,7 @@ const deletedCounts = ref<DeletedCounts>({
   total: 0
 })
 
-const restoringId = ref<number | null>(null)
+const restoringId = ref<string | null>(null)
 
 const statCards = computed(() => [
   { key: 'residential_area', label: '住宅小区', color: '#409EFF' },
@@ -170,7 +170,7 @@ onMounted(() => {
               link
               size="small"
               :loading="restoringId === row.id"
-              @click="handleRestore(row)"
+              @click="handleRestore(row as DeletedItem)"
             >
               恢复
             </el-button>

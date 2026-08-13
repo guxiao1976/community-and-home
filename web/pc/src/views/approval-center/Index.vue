@@ -503,7 +503,7 @@ onMounted(() => {
             <el-table-column prop="submit_time" label="提交时间" width="180" />
             <el-table-column label="操作" width="100" fixed="right">
               <template #default="{ row }">
-                <el-button type="primary" link size="small" @click="openDetail(row)">详情</el-button>
+                <el-button type="primary" link size="small" @click="openDetail(row as ApprovalPendingItem)">详情</el-button>
               </template>
             </el-table-column>
           </el-table>

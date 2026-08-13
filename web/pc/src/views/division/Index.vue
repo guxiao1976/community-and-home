@@ -45,10 +45,10 @@
             </el-table-column>
             <el-table-column label="操作" width="280" fixed="right">
               <template #default="{ row }">
-                <el-button v-if="canEdit(row)" link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-                <el-button v-if="canAddChild(row)" link type="primary" size="small" @click="handleCreateChild(row)">添加下级</el-button>
-                <el-button v-if="canDelete(row)" link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
-                <el-button v-if="canCancelDelete(row)" link type="warning" size="small" @click="handleCancelDelete(row)">取消删除</el-button>
+                <el-button v-if="canEdit(row)" link type="primary" size="small" @click="handleEdit(row as AdministrativeDivision)">编辑</el-button>
+                <el-button v-if="canAddChild(row)" link type="primary" size="small" @click="handleCreateChild(row as AdministrativeDivision)">添加下级</el-button>
+                <el-button v-if="canDelete(row)" link type="danger" size="small" @click="handleDelete(row as AdministrativeDivision)">删除</el-button>
+                <el-button v-if="canCancelDelete(row)" link type="warning" size="small" @click="handleCancelDelete(row as AdministrativeDivision)">取消删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -108,9 +108,9 @@
             </el-table-column>
             <el-table-column label="操作" width="160" fixed="right">
               <template #default="{ row }">
-                <el-button v-if="canSubmit(row)" link type="warning" size="small" @click="handleSubmitSingle(row)">提交</el-button>
-                <el-button v-if="canWithdraw(row)" link type="primary" size="small" @click="handleWithdraw(row)">撤回</el-button>
-                <el-button v-if="canPhysicalDelete(row)" link type="danger" size="small" @click="handlePhysicalDelete(row)">删除</el-button>
+                <el-button v-if="canSubmit(row)" link type="warning" size="small" @click="handleSubmitSingle(row as AdministrativeDivision)">提交</el-button>
+                <el-button v-if="canWithdraw(row)" link type="primary" size="small" @click="handleWithdraw(row as AdministrativeDivision)">撤回</el-button>
+                <el-button v-if="canPhysicalDelete(row)" link type="danger" size="small" @click="handlePhysicalDelete(row as AdministrativeDivision)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -231,7 +231,7 @@ import { useDivisionStore } from '@/stores/division'
 import { getAdministrativeDivisions, submitDivision, batchSubmitDivisions, requestDeleteDivision, cancelDeleteDivision, withdrawDivision, getMySubmissionRecords, getDivisionChildCount } from '@/api/masterdata'
 import type { SubmissionRecord, AdministrativeDivision } from '@common/types/masterdata'
 
-type StatusType = 'info' | 'warning' | 'success' | 'danger'
+type StatusType = 'primary' | 'info' | 'warning' | 'success' | 'danger'
 
 const submissionStatusMap: Record<number, { label: string; type: StatusType }> = {
   0: { label: '待提交', type: 'info' },
@@ -336,7 +336,7 @@ const getLevelLabel = (level: number): string => {
 const divisionList = ref<AdministrativeDivision[]>([])
 const editTableLoading = ref(false)
 const editTableKey = ref(0)
-const expandedRowIds = ref<Set<number>>(new Set())
+const expandedRowIds = ref<Set<string>>(new Set())
 const editTableRef = ref<any>(null)
 
 const refreshEditTable = async () => {
@@ -511,8 +511,8 @@ const dialogTitle = computed(() => {
 })
 
 interface FormData {
-  id?: number; code: string; name: string; level: number
-  parent_id?: number | null; sort_order: number
+  id?: string; code: string; name: string; level: number
+  parent_id?: string | null; sort_order: number
 }
 
 const formData = ref<FormData>({ code: '', name: '', level: 1, sort_order: 0 })

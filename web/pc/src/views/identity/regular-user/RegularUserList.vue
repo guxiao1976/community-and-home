@@ -39,7 +39,7 @@
             :active-value="1"
             :inactive-value="2"
             v-permission="'identity:regular-user:update'"
-            @change="handleStatusChange(row)"
+            @change="handleStatusChange(row as User)"
           />
         </template>
       </el-table-column>
@@ -52,7 +52,7 @@
             type="primary"
             size="small"
             v-permission="'identity:regular-user:update'"
-            @click="handleEdit(row)"
+            @click="handleEdit(row as User)"
           >
             编辑
           </el-button>
@@ -61,7 +61,7 @@
             type="danger"
             size="small"
             v-permission="'identity:regular-user:delete'"
-            @click="handleDelete(row)"
+            @click="handleDelete(row as User)"
           >
             删除
           </el-button>

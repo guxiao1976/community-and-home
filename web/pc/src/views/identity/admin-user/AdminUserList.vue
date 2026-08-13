@@ -36,7 +36,7 @@
             type="primary"
             size="small"
             v-permission="'identity:admin-user:assign-role'"
-            @click="handleAssignRoles(row)"
+            @click="handleAssignRoles(row as UserWithRoles)"
           >
             分配角色
           </el-button>
@@ -50,7 +50,7 @@
             :active-value="1"
             :inactive-value="2"
             v-permission="'identity:admin-user:update'"
-            @change="handleStatusChange(row)"
+            @change="handleStatusChange(row as User)"
           />
         </template>
       </el-table-column>
@@ -63,7 +63,7 @@
             type="primary"
             size="small"
             v-permission="'identity:admin-user:update'"
-            @click="handleEdit(row)"
+            @click="handleEdit(row as User)"
           >
             编辑
           </el-button>
@@ -72,7 +72,7 @@
             type="danger"
             size="small"
             v-permission="'identity:admin-user:delete'"
-            @click="handleDelete(row)"
+            @click="handleDelete(row as User)"
           >
             删除
           </el-button>
@@ -122,11 +122,10 @@
         <el-form-item label="昵称" prop="nickname">
           <el-input v-model="form.nickname" placeholder="请输入昵称" />
         </el-form-item>
-        <el-form-item label="权限范围ID" prop="scope_id">
-          <el-input-number
-            v-model="form.scope_id"
-            placeholder="请输入权限范围ID（可选）"
-            :min="1"
+        <el-form-item label="权限范围" prop="scope">
+          <el-input
+            v-model="form.scope"
+            placeholder="请输入权限范围（可选）"
             style="width: 100%"
           />
         </el-form-item>
@@ -181,7 +180,7 @@ import {
   disableUser,
   enableUser,
   getUserRoles,
-  assignUserRoles,
+  assignUserRole,
   getRoles
 } from '@/api/identity';
 import { UserType, UserStatus, type User, type Role } from '@common/types/identity';
@@ -196,8 +195,8 @@ const tableData = ref<UserWithRoles[]>([]);
 const dialogVisible = ref(false);
 const roleDialogVisible = ref(false);
 const formRef = ref<FormInstance>();
-const currentUserId = ref<number>();
-const selectedRoleIds = ref<number[]>([]);
+const currentUserId = ref<string>();
+const selectedRoleIds = ref<string[]>([]);
 const availableRoles = ref<Role[]>([]);
 
 const pagination = reactive({
@@ -211,7 +210,7 @@ const form = reactive({
   phone: '',
   password: '',
   nickname: '',
-  scope_id: undefined as number | undefined
+  scope: ''
 });
 
 const dialogTitle = computed(() => (form.id ? '编辑管理员' : '新建管理员'));
@@ -244,7 +243,7 @@ const fetchUsers = async () => {
       data.list.map(async (user) => {
         try {
           const rolesData = await getUserRoles(user.id);
-          return { ...user, roles: rolesData?.roles || [] };
+          return { ...user, roles: (rolesData?.roles || []).map((ur) => ur.role as Role) };
         } catch {
           return { ...user, roles: [] };
         }
@@ -264,7 +263,7 @@ const fetchUsers = async () => {
 const fetchAvailableRoles = async () => {
   try {
     const data = await getRoles({ page: 1, page_size: 100 });
-    availableRoles.value = data.list;
+    availableRoles.value = data.roles;
   } catch (error) {
     ElMessage.error('获取角色列表失败');
     console.error(error);
@@ -279,7 +278,7 @@ const handleEdit = (row: User) => {
   form.id = row.id;
   form.phone = row.phone;
   form.nickname = row.nickname;
-  form.scope_id = row.scope_id;
+  form.scope = row.scope;
   dialogVisible.value = true;
 };
 
@@ -333,7 +332,7 @@ const handleSubmit = async () => {
       if (form.id) {
         await updateUser(form.id, {
           nickname: form.nickname,
-          scope_id: form.scope_id
+          scope: form.scope
         });
         ElMessage.success('更新成功');
       } else {
@@ -342,7 +341,7 @@ const handleSubmit = async () => {
           password: form.password,
           nickname: form.nickname,
           user_type: UserType.Staff,
-          scope_id: form.scope_id
+          scope: form.scope
         });
         ElMessage.success('创建成功');
       }
@@ -369,7 +368,9 @@ const handleSubmitRoles = async () => {
 
   submitting.value = true;
   try {
-    await assignUserRoles(currentUserId.value, selectedRoleIds.value);
+    for (const roleId of selectedRoleIds.value) {
+      await assignUserRole({ userId: currentUserId.value, roleId, scopeType: 'global', scopeId: '0' });
+    }
     ElMessage.success('角色分配成功');
     roleDialogVisible.value = false;
     fetchUsers();
@@ -386,7 +387,7 @@ const resetForm = () => {
   form.phone = '';
   form.password = '';
   form.nickname = '';
-  form.scope_id = undefined;
+  form.scope = '';
   formRef.value?.resetFields();
 };
 

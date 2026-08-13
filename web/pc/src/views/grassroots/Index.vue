@@ -66,10 +66,10 @@
             </el-table-column>
             <el-table-column label="操作" width="280" fixed="right">
               <template #default="{ row }">
-                <el-button v-if="canEdit(row)" link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-                <el-button v-if="canAddChild(row)" link type="primary" size="small" @click="handleCreateCommunity(row)">添加下级</el-button>
-                <el-button v-if="canDelete(row)" link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
-                <el-button v-if="canCancelDelete(row)" link type="warning" size="small" @click="handleCancelDelete(row)">取消删除</el-button>
+                <el-button v-if="canEdit(row)" link type="primary" size="small" @click="handleEdit(row as AdministrativeDivision)">编辑</el-button>
+                <el-button v-if="canAddChild(row)" link type="primary" size="small" @click="handleCreateCommunity(row as AdministrativeDivision)">添加下级</el-button>
+                <el-button v-if="canDelete(row)" link type="danger" size="small" @click="handleDelete(row as AdministrativeDivision)">删除</el-button>
+                <el-button v-if="canCancelDelete(row)" link type="warning" size="small" @click="handleCancelDelete(row as AdministrativeDivision)">取消删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -145,9 +145,9 @@
             </el-table-column>
             <el-table-column label="操作" width="160" fixed="right">
               <template #default="{ row }">
-                <el-button v-if="canSubmit(row)" link type="warning" size="small" @click="handleSubmitSingle(row)">提交</el-button>
-                <el-button v-if="canWithdraw(row)" link type="primary" size="small" @click="handleWithdraw(row)">撤回</el-button>
-                <el-button v-if="canPhysicalDelete(row)" link type="danger" size="small" @click="handlePhysicalDelete(row)">删除</el-button>
+                <el-button v-if="canSubmit(row)" link type="warning" size="small" @click="handleSubmitSingle(row as AdministrativeDivision)">提交</el-button>
+                <el-button v-if="canWithdraw(row)" link type="primary" size="small" @click="handleWithdraw(row as AdministrativeDivision)">撤回</el-button>
+                <el-button v-if="canPhysicalDelete(row)" link type="danger" size="small" @click="handlePhysicalDelete(row as AdministrativeDivision)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -272,7 +272,7 @@ import { getAdministrativeDivisions, submitDivision, batchSubmitDivisions, reque
 import type { SubmissionRecord } from '@common/types/masterdata'
 import type { AdministrativeDivision } from '@common/types/masterdata'
 
-type StatusType = 'info' | 'warning' | 'success' | 'danger'
+type StatusType = 'primary' | 'info' | 'warning' | 'success' | 'danger'
 
 const submissionStatusMap: Record<number, { label: string; type: StatusType }> = {
   0: { label: '待提交', type: 'info' },
@@ -373,8 +373,8 @@ const activeTab = ref('edit')
 
 // ==================== Tab 1: 查询编辑 ====================
 
-const selectedDivision = ref<number[]>([])
-const selectedDistrictId = ref<number | null>(null)
+const selectedDivision = ref<string[]>([])
+const selectedDistrictId = ref<string | null>(null)
 const editSearchLoading = ref(false)
 const streetList = ref<AdministrativeDivision[]>([])
 const editTableLoading = ref(false)
@@ -388,7 +388,7 @@ const editTableRef = ref<any>(null)
 
 const STORAGE_KEY_SELECTED = 'grassroots_selected_division'
 const STORAGE_KEY_EXPANDED = 'grassroots_expanded_rows'
-const cascaderCodeMap = new Map<number, string>()
+const cascaderCodeMap = new Map<string, string>()
 
 const cascaderProps = {
   lazy: true,
@@ -411,7 +411,7 @@ const cascaderProps = {
   expandTrigger: 'click' as const
 }
 
-const handleCascaderChange = (value: number[]) => {
+const handleCascaderChange = (value: string[]) => {
   selectedDistrictId.value = (value && value.length === 3) ? value[2] : null
   sessionStorage.setItem(STORAGE_KEY_SELECTED, JSON.stringify(value || []))
   editSearched.value = false

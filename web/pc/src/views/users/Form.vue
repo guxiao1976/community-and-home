@@ -76,7 +76,7 @@ const formRef = ref<FormInstance>()
 const submitting = ref(false)
 
 const userId = computed(() => {
-  const id = route.params.id
+  const id = route.params.id as string | undefined
   return id || null
 })
 
@@ -154,7 +154,8 @@ const handleSubmit = async () => {
       await createUser({
         phone: formData.phone,
         password: formData.password,
-        nickname: formData.nickname
+        nickname: formData.nickname,
+        user_type: 2
       })
       ElMessage.success('用户创建成功')
     }

@@ -65,7 +65,7 @@ const verdictLabel = computed(() => {
   return m[props.result?.final_verdict || ''] || props.result?.final_verdict || '';
 });
 const verdictTagType = computed(() => {
-  const m: Record<string, string> = { pass: 'success', reject: 'danger', need_review: 'warning' };
+  const m: Record<string, 'success' | 'danger' | 'warning' | 'info'> = { pass: 'success', reject: 'danger', need_review: 'warning' };
   return m[props.result?.final_verdict || ''] || 'info';
 });
 

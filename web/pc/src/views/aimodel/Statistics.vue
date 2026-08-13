@@ -23,7 +23,7 @@
               <el-option
                 v-for="model in modelList"
                 :key="model.id"
-                :label="model.model_name"
+                :label="model.display_name"
                 :value="model.id"
               />
             </el-select>
@@ -174,7 +174,7 @@ const fetchData = async () => {
     };
 
     if (selectedModel.value) {
-      params.model_config_id = selectedModel.value;
+      params.model_id = selectedModel.value;
     }
 
     if (dateRange.value && dateRange.value.length === 2) {
@@ -186,10 +186,10 @@ const fetchData = async () => {
 
     // Merge model names
     const dataWithModelNames = (res.statistics || []).map(item => {
-      const model = modelList.value.find(m => m.id === item.model_config_id);
+      const model = modelList.value.find(m => m.id === item.model_id);
       return {
         ...item,
-        model_name: model?.model_name || `模型 #${item.model_config_id}`
+        model_name: model?.display_name || `模型 #${item.model_id}`
       };
     });
 

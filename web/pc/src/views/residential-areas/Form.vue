@@ -21,9 +21,9 @@ const submitting = ref(false)
 const divisionOptions = ref<any[]>([])
 
 const formData = reactive({
-  county_id: undefined as number | undefined,
-  street_id: undefined as number | undefined,
-  community_div_id: undefined as number | undefined,
+  county_id: undefined as string | undefined,
+  street_id: undefined as string | undefined,
+  community_div_id: undefined as string | undefined,
   name: '',
   address: '',
   community_type: 1
@@ -59,7 +59,7 @@ const loadDivisions = async () => {
 }
 
 const buildDivisionTree = (list: AdministrativeDivision[]): any[] => {
-  const map = new Map<number, any>()
+  const map = new Map<string, any>()
   const roots: any[] = []
 
   list.forEach(d => {
@@ -78,7 +78,7 @@ const buildDivisionTree = (list: AdministrativeDivision[]): any[] => {
 }
 
 // Cascader change handler (edit mode only)
-const handleDivisionChange = (value: number[]) => {
+const handleDivisionChange = (value: string[]) => {
   formData.county_id = value[0] || undefined
   formData.street_id = value[1] || undefined
   formData.community_div_id = value[2] || undefined
@@ -90,7 +90,7 @@ const loadArea = async () => {
   loading.value = true
   try {
     const res = await getResidentialAreaById(areaId.value)
-    const area = res.residential_area
+    const area = res
     formData.county_id = area.county_id || undefined
     formData.street_id = area.street_id || undefined
     formData.community_div_id = area.community_div_id || undefined
@@ -156,9 +156,9 @@ onMounted(() => {
   } else {
     // Create mode: read from route query
     const q = route.query
-    formData.county_id = q.county_id ? Number(q.county_id) : undefined
-    formData.street_id = q.street_id ? Number(q.street_id) : undefined
-    formData.community_div_id = q.community_div_id ? Number(q.community_div_id) : undefined
+    formData.county_id = q.county_id ? String(q.county_id) : undefined
+    formData.street_id = q.street_id ? String(q.street_id) : undefined
+    formData.community_div_id = q.community_div_id ? String(q.community_div_id) : undefined
     // Auto-set community type based on whether community is selected
     formData.community_type = formData.community_div_id ? 1 : 2
     // Auto-fill name: if community name ends with "村委会", use "xx村" as default name

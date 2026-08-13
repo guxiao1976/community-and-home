@@ -64,7 +64,7 @@
               v-if="canApprove || canReject"
               link
               type="primary"
-              @click="handleView(row)"
+              @click="handleView(row as HomeownerVerification)"
             >
               审核详情
             </el-button>
@@ -72,7 +72,7 @@
               v-else
               link
               type="info"
-              @click="handleView(row)"
+              @click="handleView(row as HomeownerVerification)"
             >
               查看详情
             </el-button>
@@ -113,7 +113,7 @@
             <el-tag v-else-if="currentVerification.verificationStatus === 2" type="danger">已拒绝</el-tag>
           </el-descriptions-item>
           <el-descriptions-item v-if="currentVerification.reviewerId" label="审核人" :span="2">
-            {{ currentVerification.reviewer?.nickname }} ({{ currentVerification.reviewedAt }})
+            {{ currentVerification.reviewer?.nickname }} ({{ currentVerification.reviewed_at }})
           </el-descriptions-item>
           <el-descriptions-item v-if="currentVerification.reviewNotes" label="审核备注" :span="2">
             {{ currentVerification.reviewNotes }}
@@ -146,7 +146,7 @@
                 placeholder="请输入审核备注（拒绝时必填）"
               />
             </el-form-item>
-            <el-form-item>
+            <el-form-item v-if="canApprove || canReject">
               <el-button v-permission="'verification:approve'" type="success" :loading="submitting" @click="handleApprove">
                 通过
               </el-button>
@@ -208,7 +208,7 @@ const reviewForm = reactive({
 onMounted(async () => {
   const currentUser = authStore.user;
   if (currentUser?.id) {
-    await permissionStore.loadUserPermissions(currentUser.id);
+    await permissionStore.loadUserPermissionsAndMenus(currentUser.id);
   }
   loadData();
 });

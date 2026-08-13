@@ -78,7 +78,7 @@
                   type="danger"
                   size="small"
                   :disabled="row.isSystem"
-                  @click="handleRemoveRole(row)"
+                  @click="handleRemoveRole(row as Role)"
                 >
                   移除
                 </el-button>
@@ -136,7 +136,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserById, getUserRoles, assignUserRoles, removeUserRole, getUserPermissions } from '@/api/identity'
+import { getUserById, getUserRoles, assignUserRole, revokeUserRole, getUserPermissions } from '@/api/identity'
 import PermissionTree from '@/components/business/PermissionTree.vue'
 import type { User, Role, Permission } from '@common/types/identity'
 
@@ -150,7 +150,7 @@ const userRoles = ref<Role[]>([])
 const effectivePermissions = ref<Permission[]>([])
 const showPermissions = ref(false)
 const assignDialogVisible = ref(false)
-const selectedRoleIds = ref<number[]>([])
+const selectedRoleIds = ref<string[]>([])
 const allRoles = ref<Role[]>([])
 
 const userId = route.params.id as string
@@ -177,7 +177,7 @@ const loadRoles = async () => {
   rolesLoading.value = true
   try {
     const response = await getUserRoles(userId)
-    userRoles.value = response?.roles || []
+    userRoles.value = (response?.roles || []).map((ur) => ur.role as Role)
   } catch {
     userRoles.value = []
   } finally {
@@ -188,7 +188,7 @@ const loadRoles = async () => {
 const loadPermissions = async () => {
   try {
     const response = await getUserPermissions(userId)
-    effectivePermissions.value = response?.menus || []
+    effectivePermissions.value = (response as any)?.menus || []
   } catch {
     effectivePermissions.value = []
   }
@@ -198,7 +198,7 @@ const loadAllRoles = async () => {
   try {
     const { getRoles } = await import('@/api/identity')
     const response = await getRoles({ page: 1, page_size: 100 })
-    allRoles.value = response?.list || []
+    allRoles.value = response?.roles || []
   } catch {
     allRoles.value = []
   }
@@ -216,7 +216,9 @@ const handleConfirmAssign = async () => {
   }
   assigning.value = true
   try {
-    await assignUserRoles(userId, selectedRoleIds.value)
+    for (const roleId of selectedRoleIds.value) {
+      await assignUserRole({ userId, roleId, scopeType: 'global', scopeId: '0' });
+    }
     ElMessage.success('角色分配成功')
     assignDialogVisible.value = false
     loadRoles()
@@ -231,7 +233,7 @@ const handleConfirmAssign = async () => {
 const handleRemoveRole = async (row: Role) => {
   try {
     await ElMessageBox.confirm(`确定要移除角色 "${row.name}" 吗？`, '提示', { type: 'warning' })
-    await removeUserRole(userId, row.id)
+    await revokeUserRole({ userId, roleId: row.id })
     ElMessage.success('角色已移除')
     loadRoles()
     loadPermissions()

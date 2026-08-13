@@ -18,7 +18,7 @@ const filters = reactive({
 })
 
 const reviewDialogVisible = ref(false)
-const reviewForm = reactive({ id: 0, action: 'approve' as 'approve' | 'reject', review_notes: '' })
+const reviewForm = reactive({ id: '' as string, action: 'approve' as 'approve' | 'reject', review_notes: '' })
 const reviewFormRef = ref<FormInstance>()
 
 const communityTypeMap: Record<number, string> = { 1: '住宅小区', 2: '村庄', 3: '混合型' }
@@ -112,8 +112,8 @@ onMounted(() => { loadResidentialAreas() })
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <template v-if="row.submission_status === 1">
-              <el-button type="success" :icon="Check" size="small" @click="openReviewDialog(row, 'approve')">批准</el-button>
-              <el-button type="danger" :icon="Close" size="small" @click="openReviewDialog(row, 'reject')">拒绝</el-button>
+              <el-button type="success" :icon="Check" size="small" @click="openReviewDialog(row as ResidentialArea, 'approve')">批准</el-button>
+              <el-button type="danger" :icon="Close" size="small" @click="openReviewDialog(row as ResidentialArea, 'reject')">拒绝</el-button>
             </template>
             <template v-else>
               <el-tag v-if="row.submission_status === 2" type="success">已批准</el-tag>

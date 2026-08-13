@@ -38,11 +38,11 @@
         </el-table-column>
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
-            <el-button link type="success" @click.stop="handleTestOpen(row)">测试</el-button>
-            <el-button link type="primary" @click.stop="handleEdit(row)">编辑</el-button>
-            <el-button link type="primary" @click.stop="handleCopy(row)">复制</el-button>
-            <el-button link type="warning" @click.stop="handleSetProduction(row)">设生产</el-button>
-            <el-button link type="danger" @click.stop="handleDelete(row)">删除</el-button>
+            <el-button link type="success" @click.stop="handleTestOpen(row as PipelineConfig)">测试</el-button>
+            <el-button link type="primary" @click.stop="handleEdit(row as PipelineConfig)">编辑</el-button>
+            <el-button link type="primary" @click.stop="handleCopy(row as PipelineConfig)">复制</el-button>
+            <el-button link type="warning" @click.stop="handleSetProduction(row as PipelineConfig)">设生产</el-button>
+            <el-button link type="danger" @click.stop="handleDelete(row as PipelineConfig)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -176,7 +176,7 @@ const dialogVisible = ref(false);
 const dialogTitle = ref('');
 const submitting = ref(false);
 const isEditing = ref(false);
-const form = reactive<{ id: number; pipeline_id: string; pipeline_name: string }>({ id: 0, pipeline_id: '', pipeline_name: '' });
+const form = reactive<{ id: string; pipeline_id: string; pipeline_name: string }>({ id: '', pipeline_id: '', pipeline_name: '' });
 const formAcEnabled = ref(1);
 const formAcSeverity = ref(1);
 const formLargeModelTemplateId = ref('');
@@ -187,14 +187,14 @@ const verdictLabel = (v: string) =>
   ({ last_model_wins: '末模胜出', large_overrides: '大模优先', small_overrides: '小模优先' } as Record<string, string>)[v] || v;
 
 const defaultForm = () => {
-  form.id = 0; form.pipeline_id = ''; form.pipeline_name = '';
+  form.id = ''; form.pipeline_id = ''; form.pipeline_name = '';
   formAcEnabled.value = 1; formAcSeverity.value = 1; formLargeModelTemplateId.value = '';
 };
 
 const resetForm = () => { defaultForm(); };
 
 const populateForm = (config: PipelineConfig) => {
-  form.id = typeof config.id === 'string' ? parseInt(config.id) : (config.id || 0);
+  form.id = config.id || '';
   form.pipeline_id = config.pipeline_id;
   form.pipeline_name = config.pipeline_name;
   formAcEnabled.value = config.ac_enabled ?? 1;
@@ -288,7 +288,7 @@ const handleSubmit = async () => {
   if (!form.pipeline_name.trim()) { ElMessage.warning('请输入管线名称'); return; }
   submitting.value = true;
   try {
-    if (isEditing.value && form.id > 0) {
+    if (isEditing.value && form.id) {
       await updatePipeline({
         id: form.id, pipeline_name: form.pipeline_name,
         ac_enabled: formAcEnabled.value, ac_severity_threshold: formAcSeverity.value,

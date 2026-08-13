@@ -9,8 +9,8 @@
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
-    "lint": "vue-tsc --noEmit",
-    "type-check": "vue-tsc --noEmit"
+    "lint": "vue-tsc -b",
+    "type-check": "vue-tsc -b"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

@@ -346,7 +346,7 @@ const handleSubmitForm = async () => {
 };
 
 const resetForm = () => {
-  form.id = 0;
+  form.id = '';
   form.word = '';
   form.category = '';
   form.severity = 3;

@@ -114,6 +114,7 @@ import { ElMessage, type FormInstance } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
 import { sendSms } from '@/api/identity';
 import { requiredPhoneRule, requiredPasswordRule, smsCodeRule } from '@/utils/validation';
+import { ERROR_CODE_PLATFORM_RESTRICTED, PLATFORM_RESTRICTED_MESSAGE } from '@/utils/request';
 
 const router = useRouter();
 const route = useRoute();
@@ -147,6 +148,16 @@ const smsRules = {
   smsCode: smsCodeRule
 };
 
+// 统一登录失败提示：50007 端限制展示专属引导，其余走通用错误
+// SEE: [[error-code-collision-and-namespace-alignment]] — 50007 为端限制专用码，前端仅消费
+const handleLoginError = (error: any) => {
+  if (error?.code === ERROR_CODE_PLATFORM_RESTRICTED) {
+    ElMessage.error(PLATFORM_RESTRICTED_MESSAGE);
+  } else {
+    ElMessage.error(error.message || '登录失败');
+  }
+};
+
 // Handle password login
 const handlePasswordLogin = async () => {
   if (!passwordFormRef.value) return;
@@ -166,7 +177,7 @@ const handlePasswordLogin = async () => {
       const redirect = (route.query.redirect as string) || '/dashboard';
       await router.push(redirect);
     } catch (error: any) {
-      ElMessage.error(error.message || '登录失败');
+      handleLoginError(error);
     } finally {
       loading.value = false;
     }
@@ -191,7 +202,7 @@ const handleSmsLogin = async () => {
       const redirect = (route.query.redirect as string) || '/dashboard';
       await router.push(redirect);
     } catch (error: any) {
-      ElMessage.error(error.message || '登录失败');
+      handleLoginError(error);
     } finally {
       loading.value = false;
     }

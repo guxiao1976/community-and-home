@@ -3,7 +3,7 @@
     <div class="page-header">
       <el-page-header @back="handleBack">
         <template #content>
-          <h2>用户角色分配 - {{ userInfo?.name }}</h2>
+          <h2>用户角色分配 - {{ userInfo?.nickname }}</h2>
         </template>
       </el-page-header>
     </div>
@@ -39,7 +39,7 @@
                 v-permission="'user:assign-role'"
                 link
                 type="danger"
-                @click="handleRemoveRole(row)"
+                @click="handleRemoveRole(row as UserRole)"
               >
                 移除
               </el-button>
@@ -160,7 +160,7 @@ const loadUserRoles = async () => {
 
 const loadAvailableRoles = async () => {
   try {
-    const response = await identityApi.getRoles({ page: 1, pageSize: 100 })
+    const response = await identityApi.getRoles({ page: 1, page_size: 100 })
     availableRoles.value = response?.roles || []
   } catch (error: any) {
     ElMessage.error(error.message || '加载角色列表失败')
@@ -206,8 +206,8 @@ const getRoleStatusLabel = (status: number) => {
   return map[status] ?? '未知'
 }
 
-const getRoleStatusType = (status: number) => {
-  const map: Record<number, string> = {
+const getRoleStatusType = (status: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const map: Record<number, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     0: 'info',
     1: 'warning',
     2: 'success',

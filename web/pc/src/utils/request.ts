@@ -8,6 +8,12 @@ import type { ApiResponse } from '@common/types/common';
 import { logger } from './logger';
 import { parse, isLosslessNumber, LosslessNumber } from 'lossless-json';
 
+// 端限制拒绝（auth-service 50007）：账号角色 platforms 与当前登录端不匹配
+// SEE: [[error-code-collision-and-namespace-alignment]] — 50007 为 auth 端限制拒绝专用码，前端仅消费不另设语义
+export const ERROR_CODE_PLATFORM_RESTRICTED = 50007;
+// 端限制拒绝引导文案（与后端 auth-service 50007 返回 msg 一致）
+export const PLATFORM_RESTRICTED_MESSAGE = '该账号为移动端用户，请使用移动端 APP';
+
 // Custom JSON reviver: keep safe integers as numbers, convert large integers to strings.
 // Snowflake IDs are 19-digit int64 values that exceed JS Number.MAX_SAFE_INTEGER (2^53).
 // By converting only unsafe integers to strings, normal number fields (status, page, total)
@@ -116,8 +122,16 @@ request.interceptors.response.use(
 
     // Business error
     logger.warn('Business error', { code, message: errorMessage });
-    ElMessage.error(errorMessage || '请求失败');
-    return Promise.reject(new Error(errorMessage || '请求失败'));
+
+    // 携带错误码供调用方（登录/注册页）按 code 分支处理
+    const bizError = new Error(errorMessage || '请求失败') as Error & { code?: number };
+    bizError.code = code;
+
+    // 50007 端限制拒绝：由登录/注册页展示专属引导文案，此处不发通用 toast（避免双 toast 且文案更精准）
+    if (code !== ERROR_CODE_PLATFORM_RESTRICTED) {
+      ElMessage.error(errorMessage || '请求失败');
+    }
+    return Promise.reject(bizError);
   },
   async (error: AxiosError<ApiResponse<any>>) => {
     logger.apiError(
@@ -169,7 +183,15 @@ request.interceptors.response.use(
           refreshToken
         });
 
-        const { accessToken, refreshToken: newRefreshToken, expiresAt } = response.data.data;
+        const respData = response.data as any;
+        // 刷新 Token 也可能触发端限制（50007）：角色 platforms 变更后旧会话刷新被拒
+        if (respData && typeof respData.code === 'number' && respData.code !== ErrorCode.Success && respData.code !== 200) {
+          const refreshErr = new Error(respData.msg || respData.message || '登录状态已失效') as Error & { code?: number };
+          refreshErr.code = respData.code;
+          throw refreshErr;
+        }
+
+        const { accessToken, refreshToken: newRefreshToken, expiresAt } = respData.data;
 
         // Update tokens
         setTokens(accessToken, newRefreshToken, expiresAt);
@@ -191,6 +213,12 @@ request.interceptors.response.use(
         // Refresh failed, clear tokens and redirect to login
         processQueue(refreshError as AxiosError, null);
         clearTokens();
+
+        // 50007 端限制拒绝：刷新被拒时提示用户换端登录
+        const refreshErr = refreshError as Error & { code?: number };
+        if (refreshErr?.code === ERROR_CODE_PLATFORM_RESTRICTED) {
+          ElMessage.error(PLATFORM_RESTRICTED_MESSAGE);
+        }
 
         // Clear auth store to prevent loops
         if (typeof window !== 'undefined') {
