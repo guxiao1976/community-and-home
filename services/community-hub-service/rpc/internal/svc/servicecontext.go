@@ -26,6 +26,7 @@ type ServiceContext struct {
 	ModerationClient      moderationv1.ModerationServiceClient
 	RedisClient           *redis.Redis
 	PermissionClient      permissionv1.PermissionServiceClient // 数据权限（AssertPublishScope/GetDataScopes）
+	MasterDataClient      masterdatav1.MasterdataServiceClient // 板块配额（GetSectionQuota）
 }
 
 // NewServiceContext 创建服务上下文，初始化所有数据库模型
@@ -70,6 +71,13 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	}
 	permClient := permissionv1.NewPermissionServiceClient(permConn.Conn())
 
+	// Initialize master-data client (section quota: GetSectionQuota)
+	mdConn, err := zrpc.NewClient(c.MasterDataRpc)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create master-data client: %v", err))
+	}
+	mdClient := masterdatav1.NewMasterdataServiceClient(mdConn.Conn())
+
 	return &ServiceContext{
 		Config:                c,
 		SysConfig:             sysCfg,
@@ -80,5 +88,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		ModerationClient:      modClient,
 		RedisClient:           redisClient,
 		PermissionClient:      permClient,
+		MasterDataClient:      mdClient,
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	communityv1 "github.com/guxiao1976/api-proto/gen/go/community/v1"
+	masterdatav1 "github.com/guxiao1976/api-proto/gen/go/masterdata/v1"
 	moderationv1 "github.com/guxiao1976/api-proto/gen/go/moderation/v1"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
@@ -29,6 +30,19 @@ func (f *fakePerm) AssertPublishScope(ctx context.Context, in *permissionv1.Asse
 	return f.assertFn(ctx, in, opts...)
 }
 
+// fakeMasterData 仅覆盖 GetSectionQuota；未显式设置 quotaFn 时默认「未配置=不限」（放行）。
+type fakeMasterData struct {
+	masterdatav1.MasterdataServiceClient
+	quotaFn func(ctx context.Context, in *masterdatav1.GetSectionQuotaReq, opts ...grpc.CallOption) (*masterdatav1.GetSectionQuotaResp, error)
+}
+
+func (f *fakeMasterData) GetSectionQuota(ctx context.Context, in *masterdatav1.GetSectionQuotaReq, opts ...grpc.CallOption) (*masterdatav1.GetSectionQuotaResp, error) {
+	if f.quotaFn != nil {
+		return f.quotaFn(ctx, in, opts...)
+	}
+	return &masterdatav1.GetSectionQuotaResp{Base: responsex.NewBaseResp(), Configured: false}, nil
+}
+
 // fakeLostFoundModel 记录 Insert / UpdateStatus / FindList 调用
 type fakeLostFoundModel struct {
 	model.LostFoundItemModel
@@ -41,6 +55,12 @@ type fakeLostFoundModel struct {
 	modStatusCalled   bool
 	modStatusSetTo    int64
 	findListCalled    bool
+	quotaCount        int64
+	quotaErr          error
+	quotaCalled       bool
+	quotaGotPublisher int64
+	quotaGotCommunity int64
+	quotaGotTyp       string
 }
 
 func (f *fakeLostFoundModel) UpdateModerationStatus(ctx context.Context, id int64, status int64) error {
@@ -70,6 +90,14 @@ func (f *fakeLostFoundModel) UpdateStatus(ctx context.Context, id int64, status 
 func (f *fakeLostFoundModel) FindList(ctx context.Context, communityId int64, typ string, offset, limit int64) ([]*model.LostFoundItem, int64, error) {
 	f.findListCalled = true
 	return nil, 0, nil
+}
+
+func (f *fakeLostFoundModel) CountQuotaOccupied(ctx context.Context, publisherId, communityId int64, typ string) (int64, error) {
+	f.quotaCalled = true
+	f.quotaGotPublisher = publisherId
+	f.quotaGotCommunity = communityId
+	f.quotaGotTyp = typ
+	return f.quotaCount, f.quotaErr
 }
 
 func (f *fakeLostFoundModel) FindOnePublished(ctx context.Context, id int64) (*model.LostFoundItem, error) {
@@ -164,6 +192,7 @@ func TestCreateLostFound_ScopeAllowed_WithinScope(t *testing.T) {
 	sc := &svc.ServiceContext{
 		LostFoundItemModel: mdl,
 		PermissionClient:   allowAll(),
+		MasterDataClient:   &fakeMasterData{}, // 默认未配置=不限
 		ModerationClient:   &fakeModeration{},
 		RedisClient:        redis.New("127.0.0.1:6379"),
 	}
@@ -179,6 +208,43 @@ func TestCreateLostFound_ScopeAllowed_WithinScope(t *testing.T) {
 	assert.Equal(t, int32(0), resp.GetBase().GetCode())
 	require.NotNil(t, mdl.inserted, "数据权限允许后落库")
 	assert.Equal(t, int64(100), mdl.inserted.CommunityId)
+}
+
+// SEE: [[tdd-red-evidence-requires-fail-excerpt]] — RED 摘录：`expected: 80007, actual: 0`（达上限未拦截，直接落库）
+// SEE: [[grpc-only-comms]] — 配额经 master-data GetSectionQuota 读取，不直连 DB
+func TestCreateLostFound_QuotaExceeded(t *testing.T) {
+	// 板块已配置 lost_found=5 且发布者已占 5 条 → 再发被 80007 拦截，不得落库
+	mdl := &fakeLostFoundModel{quotaCount: 5}
+	md := &fakeMasterData{
+		quotaFn: func(ctx context.Context, in *masterdatav1.GetSectionQuotaReq, opts ...grpc.CallOption) (*masterdatav1.GetSectionQuotaResp, error) {
+			assert.Equal(t, "lost_found", in.GetSectionType())
+			return &masterdatav1.GetSectionQuotaResp{Base: responsex.NewBaseResp(), Configured: true, MaxCount: 5}, nil
+		},
+	}
+	sc := &svc.ServiceContext{
+		LostFoundItemModel: mdl,
+		PermissionClient:   allowAll(),
+		MasterDataClient:   md,
+		ModerationClient:   &fakeModeration{},
+		RedisClient:        redis.New("127.0.0.1:6379"),
+	}
+
+	l := NewCreateLostFoundLogic(ctxWithUserID(t, 100), sc)
+	resp, err := l.CreateLostFound(&communityv1.CreateLostFoundRequest{
+		CommunityId: 100,
+		Type:        communityv1.LostFoundType_LOST_FOUND_TYPE_LOST,
+		Title:       "寻物",
+		PublisherId: 100,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(80007), resp.GetBase().GetCode(), "达板块上限 → 080007")
+	assert.Nil(t, mdl.inserted, "配额超限后不得落库")
+
+	// 计数口径：用户×小区×板块
+	assert.True(t, mdl.quotaCalled, "配额校验必须触发占配额计数")
+	assert.Equal(t, int64(100), mdl.quotaGotPublisher)
+	assert.Equal(t, int64(100), mdl.quotaGotCommunity)
+	assert.Equal(t, "lost_found", mdl.quotaGotTyp)
 }
 
 func TestCreateLostFound_ScopeDenied_NoIdentity(t *testing.T) {

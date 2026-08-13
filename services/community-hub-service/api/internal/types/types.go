@@ -13,12 +13,13 @@ package types
 // 功能权限先于数据权限执行：中间件链（WithJwt → PermMiddleware）先于 handler → rpc 逻辑。
 // 常量定义在 rpc/internal/logic/scope.CodePublishScopeDenied（=80006），本文件仅登记语义。
 const (
-	CodeNoticeNotFound = 80001 // 通知不存在
-	CodePublishDenied  = 80002 // 无发布权限（功能权限，复用）
-	CodeOverLimit      = 80003 // 超限（复用）
-	CodeLostFoundMiss  = 80004 // 寻失记录不存在（复用）
-	CodeInvalidParam   = 80005 // 参数无效（复用）
-	CodeScopeDenied    = 80006 // 目标小区超出发布者数据范围（数据权限，新增）
+	CodeNoticeNotFound       = 80001 // 通知不存在
+	CodePublishDenied        = 80002 // 无发布权限（功能权限，复用）
+	CodeOverLimit            = 80003 // 超限（复用）
+	CodeLostFoundMiss        = 80004 // 寻失记录不存在（复用）
+	CodeInvalidParam         = 80005 // 参数无效（复用）
+	CodeScopeDenied          = 80006 // 目标小区超出发布者数据范围（数据权限，新增）
+	CodeSectionQuotaExceeded = 80007 // 超出发布配额（板块配额，新增；常量实现在 rpc/internal/logic/scope.CodeSectionQuotaExceeded）
 )
 
 // =============================================================================

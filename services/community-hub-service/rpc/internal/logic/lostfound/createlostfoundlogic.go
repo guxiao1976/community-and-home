@@ -8,6 +8,7 @@ import (
 
 	communityv1 "github.com/guxiao1976/api-proto/gen/go/community/v1"
 	moderationv1 "github.com/guxiao1976/api-proto/gen/go/moderation/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
 	"github.com/guxiao1976/community-hub/model"
@@ -46,6 +47,16 @@ func (l *CreateLostFoundLogic) CreateLostFound(in *communityv1.CreateLostFoundRe
 	}
 	if denyResp != nil {
 		return &communityv1.CreateLostFoundResponse{Base: denyResp}, nil
+	}
+
+	// 板块发布配额（Task 4.3 / design §4.3）：AssertPublishScope 之后、落库之前校验。
+	// 口径「用户×小区×板块」，按目标小区计；超限 → 080007；GetSectionQuota/计数传输错误原样传播（fail-closed）。
+	if err := scope.CheckSectionQuota(l.ctx, l.svcCtx, in.PublisherId, in.GetCommunityId(), scope.SectionTypeLostFound); err != nil {
+		if ce := errx.FromError(err); ce != nil && ce.Code == scope.CodeSectionQuotaExceeded {
+			return &communityv1.CreateLostFoundResponse{Base: responsex.NewBaseRespWithError(scope.CodeSectionQuotaExceeded, "超出发布配额")}, nil
+		}
+		l.Errorf("CreateLostFound: check section quota failed: %v", err)
+		return nil, err
 	}
 
 	imageUrlsJSON := "[]"

@@ -1,5 +1,43 @@
 # CHANGELOG — community-hub-service
 
+## 2026-08-13 — 板块发布配额（access-control Task 4.1-4.4）
+
+### 做了什么
+- `model/lost_found_item.go`：新增 `CountQuotaOccupied(ctx, publisherId, communityId, typ)`（Task 4.1），
+  谓词 `deleted_at IS NULL AND status='active' AND moderation_status IN (0,1)` —— 待审(0)+通过(1) 同占配额，
+  驳回(2)/已解决(resolved)/已删除(deleted_at 非空) 释放；口径「用户×小区×板块」按目标小区计。
+- `rpc/internal/logic/scope/section_quota.go`：新增 `CheckSectionQuota` + `quotaAllowed`（Task 4.2），
+  消费 master-data `GetSectionQuota`（configured=false 不限），计数 `>= max_count` → 80007。
+- `rpc/internal/logic/lostfound/createlostfoundlogic.go`（Task 4.3）：`AssertPublishScope` 之后、`Insert` 之前
+  挂载 `CheckSectionQuota`，超限返回 080007，传输/DB 错误原样传播（fail-closed）。
+- `rpc/internal/svc/servicecontext.go`：新增 `MasterDataClient`（GetSectionQuota 客户端）。
+- 错误码 80007（Task 4.4）：`api/internal/types/types.go` 登记 `CodeSectionQuotaExceeded`；
+  常量实现在 `scope.CodeSectionQuotaExceeded`。
+
+### 关键设计决策
+- **板块口径**：配额按板块（`sys_section_quota.section_type`，种子 `lost_found=5`）配置；`lost_found_items`
+  表即 lost_found 板块唯一承载（`type` 列仅区分 lost/found 子类，二者同属 lost_found 板块共同占配额），
+  故 `CountQuotaOccupied` 不按 `type` 过滤，按「用户×小区×板块」统计整板占配额内容。`typ` 参数保留为
+  多板块扩展位（对应 tasks.md SQL 中的 `type=?`，此处以板块为粒度收敛，避免 `type='lost_found'` 恒空）。
+- **校验顺序**：功能权限（PermMiddleware）→ 数据权限（AssertPublishScope）→ 配额（CheckSectionQuota）→ 落库。
+- **fail-closed**：`GetSectionQuota`/`CountQuotaOccupied` 传输或 DB 错误原样返回，不静默放行。
+
+### TDD
+- 含逻辑函数（CheckSectionQuota/quotaAllowed/CountQuotaOccupied/CreateLostFound 挂载）均先测试后实现：
+  `section_quota_test.go`（未配置/4-5/5-5/6-5/传输错误/DB 错误）、`lost_found_item_quota_test.go`
+  （sqlmock 锁定谓词 + DB 错误）、`publishscope_test.go` 新增 `TestCreateLostFound_QuotaExceeded`。
+- RED 摘录（行为型，已留档于测试注释）：`expected: 80007, actual: 0`（达上限未拦截直接落库）。
+
+### 影响
+- 配置：无新增（复用 `MasterDataRpc` 目标 `masterdata.rpc`）。
+- 依赖：`go.mod` 新增测试依赖 `go-sqlmock v1.5.2`（model 层 sqlmock 边界测试）；`testify` 由间接转直接。
+- 兼容：RPC/API 请求响应契约未变；新增 080007 错误码（原 80001-80006 未占用码位）。
+- 跨服务：依赖 master-data `GetSectionQuota` RPC（proto 已由 Owner 生成，逻辑侧 Task 5.2 并行交付）；
+  调用失败 fail-closed 传播。
+- 门禁：harness-checks 18 PASS / 0 FAIL / 0 WARN；`go build ./...` + `go vet ./...` + `go test ./...` 全绿。
+
+---
+
 ## 2026-08-13 — 审核可见性门禁：读路径仅返回审核通过内容
 
 ### 做了什么
