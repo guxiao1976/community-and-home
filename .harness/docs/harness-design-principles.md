@@ -45,3 +45,15 @@
 | 运行时层（运行产物） | `logs/`、`loop-runs/`、`backups/` | 运行产生，明确 gitignore 边界 |
 
 **现状缺口**：`scripts/`（harness-checks 硬编码 Snowflake）、`skills/`（dispatch 硬编码服务名）、`agents/`（owner-agent 混入项目职责）需逐步把项目策略外提到 `config/` / `registry/` / `rules/`。
+
+## 四、流程衔接规则（harness-pipeline vs superpowers）
+
+按「产物类型 + 需求明确度」选择流程：
+
+| 任务类型 | 需求 | 产物 | 流程 |
+|---|---|---|---|
+| 业务功能开发 | 明确（有 spec/tasks） | Go/proto/前端代码 | `harness-pipeline.js`（dispatch → S/M/L → Workflow/OpenSpec） |
+| harness 自身开发 | 需探索（无 spec） | 文档/skill/配置 | superpowers（brainstorming → writing-plans → 执行） |
+| 运维收尾 | 明确 | 小改动/补测试/归档 | Owner 内联 + 门禁（harness-checks） |
+
+**边界**：harness 自身开发若需求已明确（如「修一行正则」），也可走 dispatch S 级；业务功能若需探索需求，先 brainstorm 再走 harness-pipeline。核心判据：**产物是否业务代码 + 需求是否已有 spec**。
