@@ -2,10 +2,14 @@
 	path = common
 	url = git@github.com:guxiao1976/community-common.git
 
-[submodule "services/moderation-service"]
-	path = services/moderation-service
-	url = git@github.com:guxiao1976/community-moderation.git
+[submodule "services/ai-model-service"]
+	path = services/ai-model-service
+	url = git@github.com:guxiao1976/community-ai-model.git
 
 [submodule "services/master-data-service"]
 	path = services/master-data-service
 	url = git@github.com:guxiao1976/community-masterdata.git
+
+[submodule "services/moderation-service"]
+	path = services/moderation-service
+	url = git@github.com:guxiao1976/community-moderation.git
