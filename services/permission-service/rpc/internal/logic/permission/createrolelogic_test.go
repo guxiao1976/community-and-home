@@ -189,3 +189,23 @@ func TestCreateRole_FindByCodeError(t *testing.T) {
 	assert.Equal(t, int32(0), resp.Base.Code)
 	mockRole.AssertExpectations(t)
 }
+
+// TestCreateRole_SortOrderZero — SortOrder 不设（0）→ 用默认（杀 L41 in.SortOrder > 0 → true 变异）
+func TestCreateRole_SortOrderZero(t *testing.T) {
+	mockRole := new(MockRoleModel)
+	mockRole.On("FindByCode", mock.Anything, "owner").Return(nil, sql.ErrNoRows)
+	mockRole.On("Insert", mock.Anything, mock.MatchedBy(func(r *model.SysRole) bool {
+		return r.RoleCode == "owner" && r.SortOrder == 0 // SortOrder 未设 → 0
+	})).Return(int64(6), nil)
+	mockRole.On("FindOne", mock.Anything, int64(6)).Return(&model.SysRole{
+		Id: 6, RoleCode: "owner", RoleName: "业主", Status: 1, SortOrder: 0,
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
+	logic := NewCreateRoleLogic(context.Background(), svcCtx)
+
+	resp, err := logic.CreateRole(&permissionv1.CreateRoleRequest{Code: "owner", Name: "业主"})
+	assert.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	mockRole.AssertExpectations(t)
+}
