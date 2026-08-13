@@ -20,7 +20,7 @@
 
 | 产物 | 位置 | 作用 |
 |---|---|---|
-| `harness-design-principles.md` | `.harness/docs/` | **检视标尺**——把散落在 owner-agent.md / CLAUDE.md / pipeline-architecture.md 的原则收拢成权威清单，含「环节 → skills/tools 映射」 |
+| `harness-design-principles.md` | `.harness/docs/` | **检视标尺**——把散落的原则收拢成权威清单，含「环节→skills/tools 映射」+「目录结构规范」 |
 | `pipeline-review` skill | `.harness/skills/pipeline-review.md` | **检视流程**——用标尺 + 5 个维度做检视，含测试步骤和判定标准 |
 
 **原则文档除 16 条原则外，还包含一个「环节 → skills/tools 映射」章节**，收拢当前散落在 owner-agent.md（阶段表六元组）和 dispatch.md（S/M/L 路由）两处的映射，作为权威操作手册：
@@ -35,6 +35,16 @@
 | 编码+测试 | `harness-pipeline.js` | Workflow（N×并行） |
 | QA / Review | qa / review skill | Workflow 内部 |
 | 集成验证 | `pipeline-flow-complete.md` | 内联 + 脚本 |
+
+**原则文档还包含「harness 目录结构规范」章节**，把 `.harness/` 目录按三层划分（第 16 条「引擎与策略分离」的落地细则）：
+
+| 层 | 目录 | 职责 |
+|---|---|---|
+| **引擎层**（通用，可移植） | `workflows/`、`scripts/`、`skills/`、`linters/`、`validators/`、`templates/`、`tools/`、`tests/`、`agents/` | 只放通用逻辑，禁止硬编码项目特定内容 |
+| **策略层**（项目独有） | `config/`、`registry/`、`rules/`、`knowledge/`、`changes/`、`tasks/` | 所有项目独有的规则、配置、知识 |
+| **运行时层**（运行产物） | `logs/`、`loop-runs/`、`backups/` | 运行产生，明确 gitignore 边界 |
+
+**现状缺口**：`scripts/`（harness-checks 硬编码 Snowflake）、`skills/`（dispatch 硬编码服务名）、`agents/`（owner-agent 混入项目职责）需逐步把项目策略外提到 `config/` / `registry/` / `rules/`。
 
 ## 3. 16 条设计原则（检视标尺）
 
