@@ -1,6 +1,6 @@
 # Harness Pipeline Patterns
 
-> 流水线最佳实践 · 如何添加新检查、如何扩展技能 · 最后更新 2026-06-22
+> 流水线最佳实践 · 如何添加新检查、如何扩展技能 · 最后更新 2026-08-13
 
 ---
 
@@ -818,7 +818,37 @@ diff <(jq -S . baseline.json) <(jq -S . current.json)
 
 ---
 
-## 10. 关联资源
+## 10. 治理与进化模式
+
+> 对应 `pipeline-evolution.md` Phase 17（Incident 机制 + 流水线检视）与 Phase 14（dispatch）。
+
+### 10.1 Incident 模式（问题驱动进化）
+
+流水线自身的问题也按「Incident」登记，问题驱动进化，避免「进化空转」：
+
+1. 检视/运行中发现流水线缺陷 → 记入 Incident 记录（含现象、根因、整改）。
+2. `evolve-pipeline.sh` 读取 Incident，按优先级驱动整改。
+3. Incident 数量低于阈值时主动触发检视，保证闭环不空转。
+
+### 10.2 检视模式（pipeline-review）
+
+对流水线自身做可重复的「主动检视」：
+
+1. 以 `harness-design-principles.md` 的 16 条原则为标尺，逐环节映射。
+2. 检查目录规范、引擎与策略分离、硬编码残留。
+3. 检视结果闭环整改（首轮即抓出 hardcoded secrets 漏检等真实问题）。
+
+### 10.3 引擎策略分离模式
+
+通用引擎逻辑与项目特有策略分离（`harness-design-principles.md` 原则 16）：
+
+- **引擎**：go build/vet/test、硬编码密钥、TODO 桩等——可跨项目复用。
+- **策略**：Snowflake ID 精度、5 位 errx 错误码、跨服务仅 gRPC 等——迁移时需替换（见 `.harness/config/project-policies.md`）。
+- **实践**：服务名映射外提 `registry/services.json`（单一数据源），项目策略在 `harness-checks.sh` 头部标注归属。
+
+---
+
+## 11. 关联资源
 
 | 资源 | 路径 |
 |------|------|

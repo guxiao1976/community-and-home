@@ -34,7 +34,8 @@ Harness Pipeline 是 Community-Home 项目的自动化质量保障系统，通�
 ┌─────────────────────────────────────────────────────────────┐
 │  Layer 1: 机械化检查层 (Mechanized Checks)                    │
 │  ├─ Go 服务: 15 项检查 (harness-checks.sh)                   │
-│  └─ 前端服务: 6 项检查 (harness-checks-frontend.sh)          │
+│  ├─ 前端服务: 6 项检查 (harness-checks-frontend.sh)          │
+│  └─ 确定性验证层: deterministic-rules.yml（blocker 标记）    │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -47,12 +48,17 @@ Harness Pipeline 是 Community-Home 项目的自动化质量保障系统，通�
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  Layer 3: 全局协调层 (Global Coordination)                   │
-│  ├─ 路径选择 (Edit / Dev Agent / OpenSpec)                  │
+│  ├─ dispatch 分级 (S→轻量Pipeline / M→Pipeline / L→OpenSpec) │
 │  ├─ 子 Agent 派发与验收                                      │
 │  ├─ Proto 变更管控                                           │
 │  └─ 跨服务并行调度                                           │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+> 三条「7-8 月演进」补充（详见 `pipeline-evolution.md` Phase 12/14/17）：
+> - **确定性验证层**（Phase 12）：`config/deterministic-rules.yml` 把编译/测试/覆盖率等确定性检查显式化，`blocker` 标记 FAIL 阻断 AI 判断，避免「把模型判断当确定性验证」。
+> - **dispatch 统一入口 + 工作量分级**（Phase 14）：所有开发任务先走 dispatch 分级（S/M/L），禁止绕过入口直接开发（CLAUDE.md 硬约束 #7）。
+> - **流水线检视**（Phase 17）：`pipeline-review` skill + `harness-design-principles.md`（16 条原则标尺），对三层体系做持续检视与进化闭环。
 
 ---
 
@@ -284,15 +290,18 @@ Iteration 4+:
 7. **文档与知识维护** - 代码变更 → CHANGELOG，新坑 → memory/
 8. **任务与 BACKLOG** - QA/Review 问题 → tasks/
 
-### 5.2 路径选择规则
+### 5.2 路径选择规则（dispatch 统一入口 + 工作量分级）
 
-**收到任何改动需求后，必须在动手前输出路径选择结论** (硬性第一步)。
+**收到任何改动需求后，必须走 dispatch 入口做 S/M/L 工作量分级** (硬性第一步，CLAUDE.md 约束 #7)。
 
-| 路径 | 判定条件 (满足任一) | 流程 |
-|------|---------------------|------|
-| **直接 Edit** | ① 单文件 ≤10 行<br>② 只改注释/文案/配置<br>③ 修复明确 bug (有 stack trace) | Edit → build → 完成 |
-| **Dev Agent** | ① 改动局限 1 服务内<br>② 不涉及 Proto<br>③ 不涉及 common/<br>④ 需求明确 | dispatch → QA+Review |
-| **OpenSpec** | ① 跨 2+ 服务<br>② 涉及 Proto<br>③ 涉及 common/ 或架构决策<br>④ 需求模糊<br>⑤ 新功能开发 | 需求分析 → 评审 → 设计 → QA+Review → 归档 |
+| 分级 | 判定条件 | 执行方式 | QA | Review |
+|------|---------|---------|:---:|:---:|
+| **S（轻量）** | 单服务单文件 ≤20 行，不涉及 Proto/common，不新增公开 API | 轻量 Pipeline（`workload:"S"`） | ✅ 15 项 | ❌ 跳过 |
+| **M（单服务）** | 单服务代码改动，非 S 非 L | Pipeline（默认全流程） | ✅ 15 项 | 按 taskType |
+| **L（跨服务）** | 跨 2+ 服务 / 涉及 Proto/common / 新增公开 API / 架构决策 | OpenSpec → N×Pipeline | ✅ 每服务 | ✅ 每服务 3 视角 |
+| **跳过** | 纯文案/注释/配置值，无需编译验证 | Edit → build | ❌ | ❌ |
+
+> 原「直接 Edit / Dev Agent」路径已废弃——它们绕过 Pipeline，导致未 QA 的代码直达用户。
 
 ### 5.3 OpenSpec 六阶段流程
 
