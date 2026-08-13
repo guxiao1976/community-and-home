@@ -196,3 +196,53 @@ func TestGetUserRoles_SystemRole(t *testing.T) {
 
 	mockUserRole.AssertExpectations(t)
 }
+
+// TestGetUserRoles_ErrWithRoles — err 非 nil 但 roles 非空（杀 L27 的 ||→&& 变异）
+func TestGetUserRoles_ErrWithRoles(t *testing.T) {
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindAllByUserId", mock.Anything, int64(3001)).
+		Return([]*model.UserRoleWithInfo{{RoleId: 1, RoleCode: "owner", URStatus: 0}}, assert.AnError)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole}
+	logic := NewGetUserRolesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetUserRoles(&permissionv1.GetUserRolesRequest{UserId: 3001})
+	assert.NoError(t, err) // err 存在时函数吞掉，返回空 Roles
+	assert.Len(t, resp.Roles, 0)
+	mockUserRole.AssertExpectations(t)
+}
+
+// TestGetUserRoles_VerifiedAndExpiresTimestamps
+// 覆盖 VerifiedAt.Valid 与 ExpiresAt.Valid 的分支（L37/L40），杀 r.VerifiedAt.Valid 变异族
+func TestGetUserRoles_VerifiedAndExpiresTimestamps(t *testing.T) {
+	now := time.Now()
+	mockUserRole := new(MockUserRoleModel)
+	mockUserRole.On("FindAllByUserId", mock.Anything, int64(2001)).
+		Return([]*model.UserRoleWithInfo{
+			{
+				RoleId: 1, RoleCode: "owner", RoleName: "业主",
+				URStatus:  2,
+				VerifiedAt: sql.NullTime{Time: now, Valid: true}, // 已验证
+				ExpiresAt:  sql.NullTime{Time: now.Add(24 * time.Hour), Valid: true},
+			},
+			{
+				RoleId: 2, RoleCode: "registered_user", RoleName: "注册用户",
+				URStatus: 2,
+				// VerifiedAt/ExpiresAt 均 Invalid
+			},
+		}, nil)
+
+	svcCtx := &svc.ServiceContext{UserRoleModel: mockUserRole}
+	logic := NewGetUserRolesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.GetUserRoles(&permissionv1.GetUserRolesRequest{UserId: 2001})
+	assert.NoError(t, err)
+	assert.Len(t, resp.Roles, 2)
+	// 已验证角色：VerifiedAt/ExpiresAt 填充
+	assert.Equal(t, now.Unix(), resp.Roles[0].VerifiedAt)
+	assert.Equal(t, now.Add(24*time.Hour).Unix(), resp.Roles[0].ExpiresAt)
+	// 未验证角色：均为 0
+	assert.Equal(t, int64(0), resp.Roles[1].VerifiedAt)
+	assert.Equal(t, int64(0), resp.Roles[1].ExpiresAt)
+	mockUserRole.AssertExpectations(t)
+}
