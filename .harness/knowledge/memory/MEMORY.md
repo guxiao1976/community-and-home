@@ -4,6 +4,7 @@
 > 格式：`- [标题](文件.md) — 适用范围, 严重程度, 类型, 触发关键词`
 
 - [测试纪律](global/testing-discipline.md) — 所有代码改动, 硬性约束, 流程, 测试/PR/提交/改动
+- [Go 的 Deprecated 是机器可读指令，禁止做自测/占位注释](global/go-deprecated-directive-not-test-comment.md) — all, should-follow, `pitfall`, `Deprecated 弃用标记 go doc staticcheck SA1019 自测 占位`
 - [is_system 不再授予全权限](permission-service/is-system-no-permission-shortcut.md) — permission-service, must-follow, `decision`, `is_system CheckPermission RBAC 系统角色 短路`
 - [种子数据 API path 必须匹配实际路由](permission-service/permission-seed-api-path-must-match-routes.md) — permission-service, must-follow, `pitfall`, `seed path 前缀 CheckPermission 匹配 路由`
 - [FindByRoleId 查询不存在的 assign_time 列 → MySQL 1054](permission-service/need-human-findbyroleid-assign_time.md) — permission-service, must-follow, `pitfall`, `FindByRoleId assign_time rel_user_role 1054 Unknown column select * need_human 缓存失效`

@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated_at": "2026-08-12T11:57:07Z",
-  "total_memories": 56,
+  "generated_at": "2026-08-13T02:14:23Z",
+  "total_memories": 57,
   "index": {
     "模板": [
       "ai-model-template-variable-content"
@@ -571,6 +571,39 @@
     ],
     "npm": [
       "frontend-pipeline-integration-pattern"
+    ],
+    "Deprecated": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "弃用标记": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "go doc": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "staticcheck": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "SA1019": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "golangci-lint": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "自测注释": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "占位注释": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "流水线样例": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "链路验证": [
+      "go-deprecated-directive-not-test-comment"
+    ],
+    "废弃指令": [
+      "go-deprecated-directive-not-test-comment"
     ],
     "TODO stub": [
       "goctl-logic-stubs"
@@ -1728,6 +1761,26 @@
         "isFrontend",
         "vitest",
         "npm"
+      ]
+    },
+    "go-deprecated-directive-not-test-comment": {
+      "title": "Go 的 `// Deprecated:` 是机器可读指令，禁止用作自测/占位注释",
+      "file": "global/go-deprecated-directive-not-test-comment.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "Deprecated",
+        "弃用标记",
+        "go doc",
+        "staticcheck",
+        "SA1019",
+        "golangci-lint",
+        "自测注释",
+        "占位注释",
+        "流水线样例",
+        "链路验证",
+        "废弃指令"
       ]
     },
     "goctl-logic-stubs": {
