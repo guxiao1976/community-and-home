@@ -315,7 +315,26 @@ Iteration 4+:
 | 5 | **编码+测试** | N×Workflow 并行 (harness-pipeline.js) | 代码 + `_qa.md` + `_review.md` | 每服务 QA PASS + Review 2/3 PASS |
 | 6 | **集成归档** | Owner 内联 | 移动 QA/Review 到 impl/ + INDEX + summary | 全链路通过 |
 
-### 5.4 跨服务并行调度
+### 5.3.1 Pipeline 边界澄清（狭义 vs 广义）
+
+**「Pipeline」一词有歧义，本文统一如下**：
+
+- **狭义 Pipeline = `harness-pipeline.js`**（Workflow）——**只负责编码+测试**一环：`Generator → QA → (Debug) → Reviewer`。它不含需求分析、设计。
+- **广义全流程 = OpenSpec**（L 级跨服务）——需求分析 + 需求评审 + 架构设计 + 编码 Pipeline + 集成归档。上文 §5.3 六阶段即广义全流程。
+
+**需求分析、设计是 Pipeline 的上游独立阶段，不由 Pipeline 执行**。
+
+### 5.3.2 各阶段工具与技能
+
+| 阶段 | 工具/子 Agent | 技能 | 产出 |
+|------|--------------|------|------|
+| 需求分析 | `requirement-analyst` 子 Agent | `superpowers:brainstorming`（交互澄清）+ `AskUserQuestion`（结构化提问） | `proposal.md` + `specs/*/spec.md` + `.change.yaml` |
+| 需求评审 | 3 Reviewer 子 Agent 并行（coverage/structure/clarity） | `review.md` 模式一 | `review/spec_review_*.md` ×3 |
+| 架构设计 | `architecture-designer` 子 Agent | `superpowers:writing-plans`（bite-sized 任务拆分） | `design.md` + `tasks.md` |
+| 编码+测试 | 狭义 Pipeline（`harness-pipeline.js`） | Generator/QA/Debug/Review prompt | 代码 + `_qa.md` + `_review.md` |
+| Proto 变更 | Owner 内联（api-proto + make ci） | — | proto + 生成代码 |
+
+**⚠️ 硬性约束**：需求分析/设计必须由子 Agent 在干净上下文执行，Owner 只验收产出摘要——禁止在 Owner 主对话里 inline 拍脑袋出方案（绕过子 Agent 隔离会污染上下文、丢失验收门禁）。
 
 **调度策略**:
 ```
