@@ -74,7 +74,7 @@ function qaPrompt() {
 4. 运行 \`${buildCmd}\` — ${isFrontend ? '构建检查' : '编译检查'}（FRESH，必须看到 exit 0）
 5. 运行 \`${vetCmd}\` — 静态分析（FRESH，必须看到 clean output）
 6. 运行 \`${testCmd}\` — 单元测试（FRESH${isFrontend ? '' : '，禁用缓存'}；输出${isFrontend ? '测试文件数' : '测试包数'}和测试函数数）
-7. **TDD 证据检查** — 新增${isFrontend ? '组件/函数' : '函数'}是否有对应测试？是否有 RED→GREEN 证据？
+7. **TDD 证据检查（分诊）** — 先区分变更类型：${isFrontend ? '组件/函数' : '函数'}中「字段映射类」（struct 加字段/SQL 加列/proto 字段透出/seed/纯接线）只要求测试+绿色、不要求 RED 摘录；「有逻辑函数」（分支/转换/计算/条件/校验）才要求 RED→GREEN 摘录
 8. 检查新增代码的测试覆盖
 9. 写入 ${SVC_DIR}/_qa.md（每次 FRESH 覆盖，不追加旧报告）
 10. 输出 VERDICT（附 every-fresh-run 证据）
@@ -96,13 +96,14 @@ function qaPrompt() {
 | 7 | 错误码格式 | ✅/⚠️ | <详情> |
 | 8 | 硬编码密钥 | ✅/❌ | <详情> |
 
-## TDD 证据检查
-| 新增/修改函数 | 是否有测试 | RED 确认（含 FAIL 输出摘录） | GREEN 确认 | 状态 |
-|-------------|:---:|:---:|:---:|:---:|
-| FuncName | ✅/❌ | 看到 FAIL: "undefined: FuncName" ✅/❌ | 看到 PASS ✅/❌ | PASS/FAIL |
+## TDD 证据检查（分诊：字段映射 vs 有逻辑函数）
+| 新增/修改函数 | 类型 | 是否有测试 | RED 确认（仅「有逻辑」要求） | GREEN 确认 | 状态 |
+|-------------|------|:---:|:---:|:---:|:---:|
+| FuncName | 字段映射/有逻辑 | ✅/❌ | 看到 FAIL: "undefined: FuncName" ✅/❌/— | 看到 PASS ✅/❌ | PASS/FAIL |
 
-- RED 列缺少具体 FAIL 输出摘录（仅写"看到失败"无实际 error）→ 视为 ❌
-- 若有 FAIL → 判定 QA FAIL（TDD 证据不足）
+- **字段映射类**（struct 加字段、SQL 加列、proto 字段透出、seed/配置、纯接线）：无独立逻辑，**只要求「有对应测试」或「build/test 绿」，RED 列记 —（不要求）**。
+- **有逻辑函数**（分支/转换/计算/条件/校验）：RED 列必须有具体 FAIL 输出摘录（仅写"看到失败"无实际 error → ❌）。
+- 只有「有逻辑函数」的 RED 缺失才判 QA FAIL（TDD 证据不足）；字段映射缺失 RED 不判 FAIL。
 \`\`\`
 
 ## 约束

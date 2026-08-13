@@ -30,6 +30,7 @@
 #  15. API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
 #  16. Memory index freshness — memory 索引与记忆文件保持同步
 #  17. Git hygiene — gitlink/.gitmodules 一致、无孤儿 worktree 分支
+#  18. Mutation testing — 有逻辑函数的测试有效性（变异测试，工具未装则 SKIP）
 #
 # ─── 项目策略 vs 通用引擎 边界 ────────────────────────────────────────
 # 以下检查为 Community-Home 项目特有策略（非通用引擎逻辑），迁移本脚本到
@@ -180,7 +181,7 @@ fi
 # ─── Check 1: go build ───────────────────────────────────────────────
 
 check_go_build() {
-  echo "[1/17] go build ./..." >&2
+  echo "[1/18] go build ./..." >&2
   local out err rc
   cd "$TARGET_DIR"
   set +e
@@ -203,7 +204,7 @@ check_go_build() {
 # ─── Check 2: go vet ─────────────────────────────────────────────────
 
 check_go_vet() {
-  echo "[2/17] go vet ./..." >&2
+  echo "[2/18] go vet ./..." >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -226,7 +227,7 @@ check_go_vet() {
 # ─── Check 3: go test (with 0/0 detection) ───────────────────────────
 
 check_go_test() {
-  echo "[3/17] go test ./... (with 0/0 + new-package detection)" >&2
+  echo "[3/18] go test ./... (with 0/0 + new-package detection)" >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -321,7 +322,7 @@ check_go_test() {
 # ─── Check 4: Proto int64 jstype ─────────────────────────────────────
 
 check_proto_jstype() {
-  echo "[4/17] Proto int64 jstype" >&2
+  echo "[4/18] Proto int64 jstype" >&2
   local proto_dir="$PROJECT_ROOT/api-proto/api"
   local violations=()
 
@@ -381,7 +382,7 @@ check_proto_jstype() {
 # ─── Check 5: Go json:",string" (AST-based with regex fallback) ─────
 
 check_json_string() {
-  echo "[5/17] Go json:\",string\" (AST)" >&2
+  echo "[5/18] Go json:\",string\" (AST)" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -496,7 +497,7 @@ check_json_string() {
 # ─── Check 6: Cross-service DB import ────────────────────────────────
 
 check_cross_service_import() {
-  echo "[6/17] Cross-service DB import" >&2
+  echo "[6/18] Cross-service DB import" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -564,7 +565,7 @@ check_cross_service_import() {
 # ─── Check 7: Error code format ──────────────────────────────────────
 
 check_error_codes() {
-  echo "[7/17] Error code format" >&2
+  echo "[7/18] Error code format" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -606,7 +607,7 @@ check_error_codes() {
 # ─── Check 8: Hardcoded secrets ──────────────────────────────────────
 
 check_hardcoded_secrets() {
-  echo "[8/17] Hardcoded secrets" >&2
+  echo "[8/18] Hardcoded secrets" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -664,7 +665,7 @@ check_hardcoded_secrets() {
 # ─── Check 9: Knowledge graph freshness ───────────────────────────────
 
 check_graph_freshness() {
-  echo "[9/17] Knowledge graph freshness" >&2
+  echo "[9/18] Knowledge graph freshness" >&2
   local stamp_file="$PROJECT_ROOT/.harness/.graph_last_sync"
 
   if [[ ! -f "$stamp_file" ]]; then
@@ -714,7 +715,7 @@ check_graph_freshness() {
 # ─── Check 10: CLAUDE.md structural data ──────────────────────────
 
 check_claude_structural_data() {
-  echo "[10/17] CLAUDE.md structural data check" >&2
+  echo "[10/18] CLAUDE.md structural data check" >&2
   local violations=()
 
   # Determine which CLAUDE.md files to scan
@@ -791,7 +792,7 @@ check_claude_structural_data() {
 # ─── Check 11: Proto→TypeScript alignment ─────────────────────────
 
 check_proto_ts_align() {
-  echo "[11/17] Proto→TypeScript alignment" >&2
+  echo "[11/18] Proto→TypeScript alignment" >&2
   local check_script="$PROJECT_ROOT/.harness/skills/qa/scripts/check-proto-ts-align.sh"
 
   if [[ ! -f "$check_script" ]]; then
@@ -822,7 +823,7 @@ check_proto_ts_align() {
 # {code:0, data:null} — a "silent success" that masks missing functionality.
 
 check_api_stubs() {
-  echo "[12/17] API logic TODO stubs" >&2
+  echo "[12/18] API logic TODO stubs" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -858,7 +859,7 @@ check_api_stubs() {
 # (goctl Response types embed BaseResponse). These should return raw data instead.
 
 check_response_wrap() {
-  echo "[13/17] Response single-wrap" >&2
+  echo "[13/18] Response single-wrap" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -889,7 +890,7 @@ check_response_wrap() {
 
 # Check 14: Benchmark regression — compare against stored baselines (non-blocking)
 check_bench_regression() {
-  echo "[14/17] Benchmark regression" >&2
+  echo "[14/18] Benchmark regression" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -961,7 +962,7 @@ check_bench_regression() {
 
 # Check 15: API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
 check_api_smoke() {
-  echo "[15/17] API smoke test" >&2
+  echo "[15/18] API smoke test" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -1040,7 +1041,7 @@ check_api_smoke() {
 # ─── Check 16: Memory Index Freshness ────────────────────────────────
 
 check_memory_index() {
-  echo "[16/17] Memory Index Freshness" >&2
+  echo "[16/18] Memory Index Freshness" >&2
 
   local index_file="$PROJECT_ROOT/.harness/knowledge/memory/.memory-index.json"
   local memory_dir="$PROJECT_ROOT/.harness/knowledge/memory"
@@ -1112,7 +1113,7 @@ check_memory_index() {
 # ─── Check 17: Git hygiene ─────────────────────────────────────────
 
 check_git_hygiene() {
-  echo "[17/17] Git hygiene" >&2
+  echo "[17/18] Git hygiene" >&2
   local violations=()
 
   # 1. gitlink ↔ .gitmodules 一致性
@@ -1145,6 +1146,25 @@ check_git_hygiene() {
   fi
 }
 
+# ─── Check 18: Mutation testing（测试有效性）────────────────────────
+
+check_mutation_testing() {
+  echo "[18/18] Mutation testing" >&2
+  # 变异测试：对「有逻辑函数」验证测试有效性（替代 RED 证据，见 harness-pipeline-fix/design-tdd-evidence.md T3/T4）
+  # 工具未安装时 SKIP（可选门禁）；安装 go-mutesting 后对 diff 有逻辑函数所在 package 跑变异，存活率 >20% 判 FAIL
+  if ! command -v go-mutesting >/dev/null 2>&1; then
+    log_pass "mutation_testing" "go-mutesting 未安装，跳过（可选门禁；安装后对 diff 有逻辑函数跑变异，存活率>20%判FAIL）"
+    return
+  fi
+  local go_files
+  go_files=$(changed_files 'go' | grep '\.go$' | grep -v '_test\.go$' || true)
+  if [[ -z "$go_files" ]]; then
+    log_pass "mutation_testing" "无 Go 逻辑变更，跳过"
+    return
+  fi
+  log_warn "mutation_testing" "go-mutesting 已安装但阈值判据待调优（见 design-tdd-evidence.md T4），本次跳过"
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -1172,6 +1192,7 @@ main() {
   check_api_smoke
   check_memory_index
   check_git_hygiene
+  check_mutation_testing
   # Note: frontend checks use separate script: harness-checks-frontend.sh
 
   # Count results
@@ -1204,7 +1225,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "git hygiene")
+    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "git hygiene" "mutation testing")
     for result in "${RESULTS[@]}"; do
       local status label detail why fix example reference
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

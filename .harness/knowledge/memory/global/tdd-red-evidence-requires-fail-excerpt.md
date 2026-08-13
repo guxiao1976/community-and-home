@@ -19,6 +19,8 @@ apply_count: 2
 
 ## 怎么做
 
+- **分诊（2026-08-13 定稿，详见 `.harness/changes/harness-pipeline-fix/design-tdd-evidence.md`）**：RED 证据只对「有逻辑函数」（分支/转换/计算/条件/校验）要求；「字段映射类」（struct 加字段、SQL 加列、proto 字段透出、seed、纯接线）无独立逻辑，**只需测试绿，不要求 RED 摘录**。QA/generator 均已按此分诊（qa.js / generator.js）。
+
 - **Generator 侧**：RED 阶段必须把真实失败输出（`go build`/`go test` 的错误文本，含 `undefined: FuncName`、行号）写入任务记录 / CHANGELOG，不能只写"看到失败"。
 - **测试与生产代码同 commit**：新增测试文件（如 `invalidate_test.go`）不能以未跟踪状态留在工作树，须与生产代码一起提交（request.md 修复目标 #2）。
 - **QA 侧判定**：RED 列没有具体 FAIL 输出摘录（仅文字描述）→ ❌；只要存在 ❌ → QA FAIL（TDD 证据不足）。结构性证明（`git show HEAD:` 显示新符号不存在）可作辅助佐证，但不能替代真实摘录。
