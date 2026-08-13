@@ -619,16 +619,10 @@ function resolveService(taskText) {
   return null
 }
 
-// ── Service name → Chinese label ──
+// ── Service name → Chinese label (single source: registry/services.json) ──
 function serviceLabel(name) {
-  const m = {
-    'ai-model-service': 'AI模型服务', 'auth-service': '认证服务',
-    'community-hub-service': '社区枢纽服务', 'file-service': '文件服务',
-    'master-data-service': '主数据服务', 'moderation-service': '内容审核服务',
-    'monitoring-service': '监控服务', 'permission-service': '权限服务',
-    'user-service': '用户服务',
-  }
-  return m[name] || name
+  const svc = ServiceRegistry.getService(name)
+  return (svc && svc.displayName) || name
 }
 
 // ── Step A: auto-detect from task text ──

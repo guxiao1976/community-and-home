@@ -4,95 +4,87 @@
   "services": [
     {
       "name": "ai-model-service",
-      "displayName": "CLAUDE.md",
+      "displayName": "AI模型服务",
       "language": "python",
       "module": "",
       "hasApi": true,
       "hasRpc": true,
       "generated": "2026-07-10T11:39:48Z",
       "generatedBy": "generate-service-metadata.sh"
-    }
-,
+    },
     {
       "name": "auth-service",
-      "displayName": "CLAUDE.md",
+      "displayName": "认证服务",
       "language": "go",
       "module": "github.com/guxiao1976/community-auth",
       "hasApi": true,
       "hasRpc": true,
       "generated": "2026-07-10T11:40:13Z",
       "generatedBy": "generate-service-metadata.sh"
-    }
-,
+    },
     {
       "name": "community-hub-service",
-      "displayName": "community-hub-service",
+      "displayName": "社区枢纽服务",
       "language": "go",
       "module": "github.com/guxiao1976/community-hub",
       "hasApi": true,
       "hasRpc": true,
       "generated": "2026-07-10T11:40:26Z",
       "generatedBy": "generate-service-metadata.sh"
-    }
-,
+    },
     {
       "name": "file-service",
-      "displayName": "file-service",
+      "displayName": "文件服务",
       "language": "go",
       "module": "github.com/guxiao1976/community-file",
       "hasApi": true,
       "hasRpc": true,
       "generated": "2026-07-10T11:40:26Z",
       "generatedBy": "generate-service-metadata.sh"
-    }
-,
+    },
     {
       "name": "master-data-service",
-      "displayName": "master-data-service",
+      "displayName": "主数据服务",
       "language": "go",
       "module": "github.com/guxiao1976/community-master-data-service",
       "hasApi": true,
       "hasRpc": true,
       "generated": "2026-07-10T11:40:26Z",
       "generatedBy": "generate-service-metadata.sh"
-    }
-,
+    },
     {
       "name": "moderation-service",
-      "displayName": "moderation-service",
+      "displayName": "内容审核服务",
       "language": "go",
       "module": "github.com/guxiao1976/community-moderation-service",
       "hasApi": true,
       "hasRpc": true,
       "generated": "2026-07-10T11:40:26Z",
       "generatedBy": "generate-service-metadata.sh"
-    }
-,
+    },
     {
       "name": "monitoring-service",
-      "displayName": "monitoring-service",
+      "displayName": "监控服务",
       "language": "go",
       "module": "github.com/guxiao1976/community-monitoring",
       "hasApi": true,
       "hasRpc": false,
       "generated": "2026-07-10T11:40:26Z",
       "generatedBy": "generate-service-metadata.sh"
-    }
-,
+    },
     {
       "name": "permission-service",
-      "displayName": "permission-service",
+      "displayName": "权限服务",
       "language": "go",
       "module": "github.com/guxiao1976/community-permission",
       "hasApi": true,
       "hasRpc": true,
       "generated": "2026-07-10T11:40:26Z",
       "generatedBy": "generate-service-metadata.sh"
-    }
-,
+    },
     {
       "name": "user-service",
-      "displayName": "user-service",
+      "displayName": "用户服务",
       "language": "go",
       "module": "github.com/guxiao1976/community-user",
       "hasApi": true,
@@ -100,7 +92,6 @@
       "generated": "2026-07-10T11:40:26Z",
       "generatedBy": "generate-service-metadata.sh"
     }
-
   ],
   "web": [
     {"name": "pc", "displayName": "管理后台", "type": "admin"},
