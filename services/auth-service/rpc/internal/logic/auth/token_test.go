@@ -650,6 +650,15 @@ func TestRefreshToken_Success(t *testing.T) {
 	var roles []roleEntry
 	json.Unmarshal(rolesJSON, &roles)
 	assert.Len(t, roles, 1)
+
+	// 过期时间断言（杀 L112 accessExpire*time.Second → + 变异）：
+	// AT exp = now + AccessExpire(900s)；RT exp = now + RefreshExpire(1296000s)
+	atClaims := parseAT(t, resp.AccessToken)
+	assert.InDelta(t, now.Add(900*time.Second).Unix(), atClaims["exp"].(float64), 5,
+		"AT 过期时间应 = now + AccessExpire(900s)")
+	rtClaimsNew := parseRT(t, resp.RefreshToken)
+	assert.InDelta(t, now.Add(1296000*time.Second).Unix(), rtClaimsNew["exp"].(float64), 5,
+		"RT 过期时间应 = now + RefreshExpire(1296000s)")
 }
 
 func TestRefreshToken_JTIMismatch(t *testing.T) {
