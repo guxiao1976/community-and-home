@@ -323,7 +323,7 @@ go tool cover -html=coverage.out
 
 ## 参考资料
 
-- Mock 设置指南: \`.harness/docs/MOCK-SETUP-GUIDE.md\`
+- Mock 设置指南: \`.harness/docs/_archive/MOCK-SETUP-GUIDE.md\`
 - 测试模板示例: \`services/user-service/api/internal/logic/user/user_logic_test.go\`
 EOREADME
 

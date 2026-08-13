@@ -35,16 +35,7 @@
 
 ## 📝 阶段完成记录（历史存档）
 
-这些文档记录了流水线各阶段的实施过程，主要用于追溯：
-
-| 文档 | 内容 |
-|------|------|
-| [PHASE1-COMPLETE.md](./PHASE1-COMPLETE.md) | Phase 1: 机械化检查基础（8 项） |
-| [PHASE1-2-COMPLETE.md](./PHASE1-2-COMPLETE.md) | Phase 1.2: TDD 证据检查 |
-| [PHASE1-3-COMPLETE.md](./PHASE1-3-COMPLETE.md) | Phase 1.3: 知识图谱集成 |
-| [PHASE2-COMPLETE.md](./PHASE2-COMPLETE.md) | Phase 2: 前端检查集成 |
-| [PHASE3-COMPLETE.md](./PHASE3-COMPLETE.md) | Phase 3: Pipeline 编排优化 |
-| [phase1-implementation-summary.md](./phase1-implementation-summary.md) | Phase 1 总结 |
+历史实施记录（Phase 1-3 完成记录、problem-* 分析报告、各阶段 test/summary 报告等）已归档到 [`_archive/`](./_archive/)，用于追溯流水线各阶段的实施过程。
 
 ---
 

@@ -340,7 +340,7 @@ echo "${REVIEW_DIR}/${TYPE}_v${NEXT_VERSION}.md"
 
 ## 八、参考资料
 
-- `.harness/docs/harness-engineering-comparison.md` - Harness 工程对比分析
+- `.harness/docs/_archive/harness-engineering-comparison.md` - Harness 工程对比分析
 - `.harness/docs/pipeline-flow-complete.md` - 完整流程图
 - `.harness/workflows/harness-pipeline.js` - 流程实现
 

@@ -349,7 +349,7 @@ metadata:
   references:
     - ".harness/workflows/harness-pipeline.js"
     - ".harness/agents/owner-agent.md"
-    - ".harness/docs/harness-engineering-comparison.md"
+    - ".harness/docs/_archive/harness-engineering-comparison.md"
 
   usage:
     - "在 workflow 中通过 loadQualityGates() 加载此配置"
