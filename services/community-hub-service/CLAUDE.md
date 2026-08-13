@@ -1,4 +1,4 @@
-# CLAUDE.md — community-hub-service
+# 社区枢纽服务 — community-hub-service
 
 ## 角色定位
 

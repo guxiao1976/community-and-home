@@ -1,4 +1,4 @@
-# CLAUDE.md — auth-service
+# 认证服务 — auth-service
 
 ## 角色定位
 

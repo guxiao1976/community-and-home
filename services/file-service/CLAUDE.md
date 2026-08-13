@@ -1,4 +1,4 @@
-# CLAUDE.md — file-service
+# 文件服务 — file-service
 
 ## 角色定位
 

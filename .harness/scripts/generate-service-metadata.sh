@@ -71,7 +71,7 @@ for svc_dir in services/*-service; do
 EOF
 
   echo "  ✅ $svc_name → .service.json created"
-  ((generated++))
+  generated=$((generated + 1))
 done
 
 echo ""

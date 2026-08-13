@@ -1,4 +1,4 @@
-# CLAUDE.md — permission-service
+# 权限服务 — permission-service
 
 ## 角色定位
 

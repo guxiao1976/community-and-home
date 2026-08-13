@@ -1,10 +1,10 @@
 {
   "name": "file-service",
-  "displayName": "file-service",
+  "displayName": "文件服务",
   "language": "go",
   "module": "github.com/guxiao1976/community-file",
   "hasApi": true,
   "hasRpc": true,
-  "generated": "2026-07-10T11:40:26Z",
+  "generated": "2026-08-13T03:12:52Z",
   "generatedBy": "generate-service-metadata.sh"
 }

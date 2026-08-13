@@ -1,4 +1,4 @@
-# CLAUDE.md — monitoring-service
+# 监控服务 — monitoring-service
 
 ## 角色定位
 

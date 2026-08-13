@@ -1,4 +1,4 @@
-# CLAUDE.md — user-service
+# 用户服务 — user-service
 
 ## 角色定位
 
