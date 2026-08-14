@@ -45,27 +45,34 @@
 
 ## 三、完善方案（分阶段，每项含「依据 → 做法 → 验证」）
 
-### Phase 1 — 收敛闭环（最高优先，直接解决 ~200 万 token 浪费）
+### Phase 1 — 收敛闭环（最高优先，直接解决 ~200 万 token 浪费）✅ 已实施（commit e45fe59）
 
-**P1.1 评审反馈注入（D1 根因）**
+**P1.1 评审反馈注入（D1 根因）** ✅
 - 依据：2.1「评审反馈必须闭环」+ 2.2「歧义解析循环」
 - 做法：stage2 REVISION 回阶段 1 时，把本轮 mustFixes 结构化拼入 analyst prompt（`## 上轮评审反馈` 段，含 section/issue/fix），要求分析师逐条对照修订并标注「已解决」
 - 验证：评审轮次分布收敛（中位数从 3+ 降到 ≤2）；重复发现同类缺口次数归零
+- 状态：已实现（`stage1Requirement` 注入 `ctx.stageResults[2].reviewRounds` 末轮 mustFixes）
 
-**P1.2 语义收敛早停（D4）**
+**P1.2 语义收敛早停（D4）** ✅
 - 依据：2.1「audit 无新发现即早停」+ 2.4「语义早停」
 - 做法：评审轮次间对比 mustFixes 集合，**连续一轮无新 mustFixes → 判定收敛**（直接 APPROVED 或带剩余 WARNING 前进）；有界 ≤3 轮 + 人工修正 cycle ≤2 次后强制 escalate
 - 验证：spec 评审不再靠人肉判断何时停；早停轮次 ≥50% 场景 ≤2 轮
+- 状态：已实现（`mustFixKey` 签名跨轮对比，`rounds>=2 && newKeys==0` → 提前 escalate）
 
-**P1.3 新鲜评审隔离 + 缓存确定性失效（D3）**
+**P1.3 新鲜评审隔离 + 缓存确定性失效（D3）** ✅
 - 依据：2.1「评审 scratch 在 worktree 外」+ 2.3「评审输入版本化」
 - 做法：评审 prompt 嵌入**被审 spec 文件内容哈希**（非 cycle 序号）；文件变则 prompt 变 → resume 缓存必然失效；评审 scratch（mustFixes 收集）存 worktree 外
 - 验证：resume 后评审必读最新文件，缓存命中旧结论为 0
+- 状态：已实现（`specContentHash` FNV-1a 确定性哈希进评审 prompt）
 
-**P1.4 决策状态即消费即清（D2）**
+**P1.4 决策状态即消费即清（D2）** ✅
 - 依据：状态机幂等
 - 做法：统一 `consumeDecision(ctx, checkpoint)` helper——读取后立即 `delete ctx.decisions[cp]`；主循环以「决策是否已消费」判分支，杜绝重进回环
 - 验证：escalate/approve 分支单次触发，回环计数为 0
+- 状态：已实现（stage2/3/4/5/6 全部决策消费；`stage1_clarify` 为持久输入不消费）
+
+> 附：P1 顺带固化会话验证的 `manualSpecFix`（Owner 人工修正后跳分析师直接重审）与 manual-fix cycle `rollbackCount` 重置。
+> 行为测试：`.harness/workflows/p1-convergence.test.js`（14 项，`node .harness/workflows/p1-convergence.test.js`）。
 
 ### Phase 2 — 成本预算护栏（防 D5）
 
