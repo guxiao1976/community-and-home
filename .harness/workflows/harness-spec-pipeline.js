@@ -206,6 +206,13 @@ ${TASK}
   // S/M 级短路阶段 1-4（阶段 5 用 workload:S 调 harness-pipeline）
   ctx.stageResults[0] = { workload: ctx.workload, route: ctx.route, services: ctx.services }
   saveState(ctx)
+
+  // SKIP 级（纯文案/配置）：不进流水线，直接结束（Owner 自行 Edit + build）
+  if (ctx.workload === 'SKIP' || ctx.route === 'SKIP') {
+    log(`  ⏭️ SKIP 级（纯文案/配置）：流水线结束，Owner 直接 Edit + build 验证`)
+    ctx.currentStage = 999  // 超出 0-6 循环
+    saveState(ctx)
+  }
 }
 
 // 阶段 1: 需求分析
