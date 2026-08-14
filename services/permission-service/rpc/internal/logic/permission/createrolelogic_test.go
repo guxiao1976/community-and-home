@@ -209,3 +209,80 @@ func TestCreateRole_SortOrderZero(t *testing.T) {
 	assert.Equal(t, int32(0), resp.Base.Code)
 	mockRole.AssertExpectations(t)
 }
+
+// TestCreateRole_InvalidPlatform — 非法登录端 ["web"] → Base 60008 原子拒绝，Insert 不被调用
+// RED: 当前实现未校验 platforms → Insert 会被调用且 Base.Code=0 → FAIL
+func TestCreateRole_InvalidPlatform(t *testing.T) {
+	mockRole := new(MockRoleModel)
+	mockRole.On("FindByCode", mock.Anything, "owner").Return(nil, sql.ErrNoRows)
+
+	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
+	logic := NewCreateRoleLogic(context.Background(), svcCtx)
+
+	resp, err := logic.CreateRole(&permissionv1.CreateRoleRequest{
+		Code:      "owner",
+		Name:      "业主",
+		Platforms: []string{"web"},
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, int32(60008), resp.Base.Code, "非法登录端应返回 60008")
+	assert.Contains(t, resp.Base.Msg, "非法登录端")
+	assert.Nil(t, resp.Role, "原子拒绝时不应返回 Role")
+	mockRole.AssertNotCalled(t, "Insert", mock.Anything, mock.Anything)
+}
+
+// TestCreateRole_PlatformsPersisted — ["pc","mobile"] → Insert 捕获 Platforms=="pc,mobile"
+// RED: 当前实现不写 platforms → Insert 收到 Platforms=="" ≠ "pc,mobile" → FAIL
+func TestCreateRole_PlatformsPersisted(t *testing.T) {
+	mockRole := new(MockRoleModel)
+	mockRole.On("FindByCode", mock.Anything, "owner").Return(nil, sql.ErrNoRows)
+	mockRole.On("Insert", mock.Anything, mock.MatchedBy(func(r *model.SysRole) bool {
+		return r.RoleCode == "owner" && r.Platforms == "pc,mobile"
+	})).Return(int64(5), nil)
+	mockRole.On("FindOne", mock.Anything, int64(5)).Return(&model.SysRole{
+		Id: 5, RoleCode: "owner", RoleName: "业主", Status: 1, Platforms: "pc,mobile",
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
+	logic := NewCreateRoleLogic(context.Background(), svcCtx)
+
+	resp, err := logic.CreateRole(&permissionv1.CreateRoleRequest{
+		Code:      "owner",
+		Name:      "业主",
+		Platforms: []string{"pc", "mobile"},
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	assert.Equal(t, []string{"pc", "mobile"}, resp.Role.Platforms, "创建后的角色应透出 platforms")
+	mockRole.AssertExpectations(t)
+}
+
+// TestCreateRole_PlatformsDedup — ["pc","pc"] → 落库前去重 → "pc"
+// RED: 当前实现不写 platforms → Insert 收到 Platforms=="" ≠ "pc" → FAIL
+func TestCreateRole_PlatformsDedup(t *testing.T) {
+	mockRole := new(MockRoleModel)
+	mockRole.On("FindByCode", mock.Anything, "owner").Return(nil, sql.ErrNoRows)
+	mockRole.On("Insert", mock.Anything, mock.MatchedBy(func(r *model.SysRole) bool {
+		return r.RoleCode == "owner" && r.Platforms == "pc"
+	})).Return(int64(5), nil)
+	mockRole.On("FindOne", mock.Anything, int64(5)).Return(&model.SysRole{
+		Id: 5, RoleCode: "owner", RoleName: "业主", Status: 1, Platforms: "pc",
+	}, nil)
+
+	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
+	logic := NewCreateRoleLogic(context.Background(), svcCtx)
+
+	resp, err := logic.CreateRole(&permissionv1.CreateRoleRequest{
+		Code:      "owner",
+		Name:      "业主",
+		Platforms: []string{"pc", "pc"},
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	assert.Equal(t, []string{"pc"}, resp.Role.Platforms, "重复值应去重")
+	mockRole.AssertExpectations(t)
+}

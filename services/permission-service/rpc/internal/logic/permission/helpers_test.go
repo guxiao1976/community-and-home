@@ -7,9 +7,11 @@ import (
 	"time"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-permission/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // TestSplitPlatforms table-driven：platforms 字符串 → 切片
@@ -72,7 +74,7 @@ func TestToRolePbFields(t *testing.T) {
 	assert.Equal(t, "owner", pb.Code)
 	assert.Equal(t, "业主", pb.Name)
 	assert.Equal(t, "desc", pb.Description)
-	assert.True(t, pb.IsSystem)   // IsSystem==1 → true
+	assert.True(t, pb.IsSystem) // IsSystem==1 → true
 	assert.Equal(t, int32(1), pb.Status)
 	assert.Equal(t, int32(5), pb.SortOrder)
 
@@ -178,4 +180,47 @@ func TestScopeStateFromString(t *testing.T) {
 func TestSqlNullString(t *testing.T) {
 	assert.Equal(t, sql.NullString{}, sqlNullString(""))
 	assert.Equal(t, sql.NullString{String: "pc", Valid: true}, sqlNullString("pc"))
+}
+
+// TestValidatePlatforms table-driven：platforms 值域校验 + 去重
+// SEE: [[error-code-literal-bypasses-qa-gate]] — 60008 用命名常量 CodeInvalidPlatform，禁止裸字面量
+// 空/nil → fail-open（通过）；任一非法值 → 60008；重复值去重保持顺序
+func TestValidatePlatforms(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      []string
+		want    []string
+		wantErr bool
+	}{
+		{name: "空切片 → 通过（fail-open）", in: []string{}, want: []string{}},
+		{name: "nil → 通过（fail-open）", in: nil, want: []string{}},
+		{name: "单端 pc", in: []string{"pc"}, want: []string{"pc"}},
+		{name: "单端 mobile", in: []string{"mobile"}, want: []string{"mobile"}},
+		{name: "双端 pc,mobile", in: []string{"pc", "mobile"}, want: []string{"pc", "mobile"}},
+		{name: "重复 pc → 去重", in: []string{"pc", "pc"}, want: []string{"pc"}},
+		{name: "重复混排 → 去重保持顺序", in: []string{"pc", "pc", "mobile"}, want: []string{"pc", "mobile"}},
+		{name: "重复 mobile → 去重", in: []string{"mobile", "mobile", "mobile"}, want: []string{"mobile"}},
+		{name: "非法值 web → 60008", in: []string{"web"}, wantErr: true},
+		{name: "合法+非法混排 → 60008", in: []string{"pc", "web"}, wantErr: true},
+		{name: "非法值大写 PC → 60008（大小写敏感）", in: []string{"PC"}, wantErr: true},
+		{name: "空串元素 → 60008（值域外）", in: []string{""}, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := validatePlatforms(tt.in)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, got, "校验失败应返回 nil 切片")
+				assert.Equal(t, CodeInvalidPlatform, int32(60008), "CodeInvalidPlatform 常量应为 60008")
+				ce := errx.FromError(err)
+				require.NotNil(t, ce, "错误应为 errx.CodeError")
+				assert.Equal(t, 60008, ce.Code, "非法登录端应返回 60008")
+				assert.Contains(t, ce.Msg, "非法登录端")
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }

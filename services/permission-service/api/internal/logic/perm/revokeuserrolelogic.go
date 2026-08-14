@@ -4,6 +4,7 @@ import (
 	"context"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-permission/api/internal/svc"
 	"github.com/guxiao1976/community-permission/api/internal/types"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -33,6 +34,12 @@ func (l *RevokeUserRoleLogic) RevokeUserRole(req *types.RevokeUserRoleReq) error
 		grpcReq.ScopeId = nil
 	}
 
-	_, err := l.svcCtx.PermissionRpc.RevokeRole(l.ctx, grpcReq)
-	return err
+	grpcResp, err := l.svcCtx.PermissionRpc.RevokeRole(l.ctx, grpcReq)
+	if err != nil {
+		return err
+	}
+
+	// Base 检查：业务错误写入 grpcResp.Base，需转为 Go error，不再静默成功
+	// SEE: [[rpc-callback-must-check-response-base]]
+	return responsex.ToError(grpcResp.Base)
 }

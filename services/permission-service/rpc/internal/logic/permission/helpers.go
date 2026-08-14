@@ -8,8 +8,13 @@ import (
 
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-permission/model"
 )
+
+// CodeInvalidPlatform 非法登录端错误码（060008，协议头注释登记）
+// SEE: [[error-code-literal-bypasses-qa-gate]] — 禁止裸字面量，必须命名常量
+const CodeInvalidPlatform int32 = 60008
 
 // grantSatisfiedLevel 计算单个 grant 满足的能力层级（T1.5 §5.1.1 数据驱动聚合规则）
 //
@@ -92,6 +97,35 @@ func splitPlatforms(s string) []string {
 // joinPlatforms 将切片合并为逗号分隔字符串（写回存储时使用，与 splitPlatforms 互为逆操作）
 func joinPlatforms(ps []string) string {
 	return strings.Join(ps, ",")
+}
+
+// validPlatforms 允许登录端值域（pc/mobile），与前端 PLATFORM_OPTIONS 对齐
+// 平台值域权威在后端：非法端由 RPC 60008 拒绝
+// SEE: [[frontend-business-rule-hardcode]] — 后端为值域唯一权威
+var validPlatforms = map[string]struct{}{
+	"pc":     {},
+	"mobile": {},
+}
+
+// validatePlatforms 校验 platforms 值域并去重（REQ-PLAT-4）
+//
+//   - 值域 {pc, mobile}；任一非法值 → errx.CodeError(60008, "非法登录端: <v>")
+//   - 空/nil → 通过（fail-open，允许所有端）
+//   - 重复值 → 去重且保持原顺序（["pc","pc","mobile"] → ["pc","mobile"]）
+func validatePlatforms(ps []string) ([]string, error) {
+	out := make([]string, 0, len(ps))
+	seen := make(map[string]struct{}, len(ps))
+	for _, v := range ps {
+		if _, ok := validPlatforms[v]; !ok {
+			return nil, errx.NewCodeError(int(CodeInvalidPlatform), "非法登录端: "+v)
+		}
+		if _, dup := seen[v]; dup {
+			continue // 去重，保持首次出现顺序
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	return out, nil
 }
 
 // toRolePb 将 model.SysRole 转换为 proto Role（不含权限）

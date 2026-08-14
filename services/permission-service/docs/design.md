@@ -51,9 +51,10 @@
 | `role_code` | string UNIQUE | 全局唯一编码：owner, property_admin, community_admin, grid_worker |
 | `role_name` | string | 显示名称 |
 | `description` | string? | 描述 |
-| `is_system` | int64 | 1=系统角色（不可删除，权限由配置决定，无自动继承） |
+| `is_system` | int64 | 1=系统角色（不可删除；字段级策略：name/description/platforms/sort_order/permission_ids 可编辑，status 仍拦截 60004；权限由配置决定，无自动继承） |
 | `sort_order` | int64 | 排序 |
-| `status` | int64 | 1=启用 0=禁用 |
+| `status` | int64 | 1=启用 0=禁用（系统角色 status 由后端拦截修改，防误禁用锁死后台） |
+| `platforms` | string | 允许登录的端，逗号分隔：`pc,mobile`；空=未声明（运行时 fail-open，允许所有端）。写链路由 CreateRole/UpdateRole 经 `validatePlatforms`（值域 pc/mobile，非法 60008）校验后 `joinPlatforms` 落库。变更触发持有者 perm 缓存失效 |
 | `deleted_at` | datetime? | 软删除时间 |
 
 ### 2.2 `sys_permission` — 权限定义表
@@ -219,6 +220,7 @@ Cache:
 | 060005 | 不支持的数据范围类型 |
 | 060006 | 角色编码已存在 |
 | 060007 | 目标小区超出发布者数据范围（AssertPublishScope 数据权限拒绝） |
+| 060008 | 非法登录端（platforms 值域仅 pc/mobile） |
 
 ---
 

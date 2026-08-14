@@ -16,11 +16,20 @@ import (
 	"google.golang.org/grpc"
 )
 
-// mockPermRpc 最小 gRPC 客户端 mock：内嵌 permission.PermissionService 接口，仅覆写 ListRoles
+// mockPermRpc 最小 gRPC 客户端 mock：内嵌 permission.PermissionService 接口，覆写测试所需 RPC 方法
 // 其余接口方法由嵌入的 nil 接口兜底（不会在本次路径被调用）
 type mockPermRpc struct {
 	permission.PermissionService
-	listRolesFn func(ctx context.Context, in *permissionv1.ListRolesRequest) (*permissionv1.ListRolesResponse, error)
+	listRolesFn          func(ctx context.Context, in *permissionv1.ListRolesRequest) (*permissionv1.ListRolesResponse, error)
+	createRoleFn         func(ctx context.Context, in *permissionv1.CreateRoleRequest) (*permissionv1.CreateRoleResponse, error)
+	updateRoleFn         func(ctx context.Context, in *permissionv1.UpdateRoleRequest) (*permissionv1.UpdateRoleResponse, error)
+	getRoleFn            func(ctx context.Context, in *permissionv1.GetRoleRequest) (*permissionv1.GetRoleResponse, error)
+	getUserPermissionsFn func(ctx context.Context, in *permissionv1.GetUserPermissionsRequest) (*permissionv1.GetUserPermissionsResponse, error)
+	getUserRolesFn       func(ctx context.Context, in *permissionv1.GetUserRolesRequest) (*permissionv1.GetUserRolesResponse, error)
+	listPermissionsFn    func(ctx context.Context, in *permissionv1.ListPermissionsRequest) (*permissionv1.ListPermissionsResponse, error)
+	deleteRoleFn         func(ctx context.Context, in *permissionv1.DeleteRoleRequest) (*permissionv1.DeleteRoleResponse, error)
+	assignRoleFn         func(ctx context.Context, in *permissionv1.AssignRoleRequest) (*permissionv1.AssignRoleResponse, error)
+	revokeRoleFn         func(ctx context.Context, in *permissionv1.RevokeRoleRequest) (*permissionv1.RevokeRoleResponse, error)
 }
 
 func (m *mockPermRpc) ListRoles(ctx context.Context, in *permissionv1.ListRolesRequest, opts ...grpc.CallOption) (*permissionv1.ListRolesResponse, error) {
@@ -28,6 +37,69 @@ func (m *mockPermRpc) ListRoles(ctx context.Context, in *permissionv1.ListRolesR
 		return m.listRolesFn(ctx, in)
 	}
 	return &permissionv1.ListRolesResponse{Base: responsex.NewBaseResp()}, nil
+}
+
+func (m *mockPermRpc) CreateRole(ctx context.Context, in *permissionv1.CreateRoleRequest, opts ...grpc.CallOption) (*permissionv1.CreateRoleResponse, error) {
+	if m.createRoleFn != nil {
+		return m.createRoleFn(ctx, in)
+	}
+	return &permissionv1.CreateRoleResponse{Base: responsex.NewBaseResp()}, nil
+}
+
+func (m *mockPermRpc) UpdateRole(ctx context.Context, in *permissionv1.UpdateRoleRequest, opts ...grpc.CallOption) (*permissionv1.UpdateRoleResponse, error) {
+	if m.updateRoleFn != nil {
+		return m.updateRoleFn(ctx, in)
+	}
+	return &permissionv1.UpdateRoleResponse{Base: responsex.NewBaseResp()}, nil
+}
+
+func (m *mockPermRpc) GetRole(ctx context.Context, in *permissionv1.GetRoleRequest, opts ...grpc.CallOption) (*permissionv1.GetRoleResponse, error) {
+	if m.getRoleFn != nil {
+		return m.getRoleFn(ctx, in)
+	}
+	return &permissionv1.GetRoleResponse{Base: responsex.NewBaseResp()}, nil
+}
+
+func (m *mockPermRpc) GetUserPermissions(ctx context.Context, in *permissionv1.GetUserPermissionsRequest, opts ...grpc.CallOption) (*permissionv1.GetUserPermissionsResponse, error) {
+	if m.getUserPermissionsFn != nil {
+		return m.getUserPermissionsFn(ctx, in)
+	}
+	return &permissionv1.GetUserPermissionsResponse{Base: responsex.NewBaseResp()}, nil
+}
+
+func (m *mockPermRpc) GetUserRoles(ctx context.Context, in *permissionv1.GetUserRolesRequest, opts ...grpc.CallOption) (*permissionv1.GetUserRolesResponse, error) {
+	if m.getUserRolesFn != nil {
+		return m.getUserRolesFn(ctx, in)
+	}
+	return &permissionv1.GetUserRolesResponse{Base: responsex.NewBaseResp()}, nil
+}
+
+func (m *mockPermRpc) ListPermissions(ctx context.Context, in *permissionv1.ListPermissionsRequest, opts ...grpc.CallOption) (*permissionv1.ListPermissionsResponse, error) {
+	if m.listPermissionsFn != nil {
+		return m.listPermissionsFn(ctx, in)
+	}
+	return &permissionv1.ListPermissionsResponse{Base: responsex.NewBaseResp()}, nil
+}
+
+func (m *mockPermRpc) DeleteRole(ctx context.Context, in *permissionv1.DeleteRoleRequest, opts ...grpc.CallOption) (*permissionv1.DeleteRoleResponse, error) {
+	if m.deleteRoleFn != nil {
+		return m.deleteRoleFn(ctx, in)
+	}
+	return &permissionv1.DeleteRoleResponse{Base: responsex.NewBaseResp()}, nil
+}
+
+func (m *mockPermRpc) AssignRole(ctx context.Context, in *permissionv1.AssignRoleRequest, opts ...grpc.CallOption) (*permissionv1.AssignRoleResponse, error) {
+	if m.assignRoleFn != nil {
+		return m.assignRoleFn(ctx, in)
+	}
+	return &permissionv1.AssignRoleResponse{Base: responsex.NewBaseResp()}, nil
+}
+
+func (m *mockPermRpc) RevokeRole(ctx context.Context, in *permissionv1.RevokeRoleRequest, opts ...grpc.CallOption) (*permissionv1.RevokeRoleResponse, error) {
+	if m.revokeRoleFn != nil {
+		return m.revokeRoleFn(ctx, in)
+	}
+	return &permissionv1.RevokeRoleResponse{Base: responsex.NewBaseResp()}, nil
 }
 
 // TestListRoles_SortPassThrough — req.SortBy/SortOrder → grpcReq.Sort.Field/Order 透传

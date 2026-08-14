@@ -21,7 +21,8 @@ func NewCreateRoleLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Create
 }
 
 // CreateRole 创建角色
-//   校验角色编码唯一性 → 插入 sys_role → 批量插入 rel_role_permission
+//
+//	校验角色编码唯一性 → 校验 platforms → 插入 sys_role → 批量插入 rel_role_permission
 func (l *CreateRoleLogic) CreateRole(in *permissionv1.CreateRoleRequest) (*permissionv1.CreateRoleResponse, error) {
 	// 校验编码唯一性
 	existing, err := l.svcCtx.RoleModel.FindByCode(l.ctx, in.Code)
@@ -31,12 +32,22 @@ func (l *CreateRoleLogic) CreateRole(in *permissionv1.CreateRoleRequest) (*permi
 		}, nil
 	}
 
+	// 校验允许登录端（REQ-PLAT-4）：非法值 → 60008 原子拒绝，不 Insert
+	// SEE: [[error-code-literal-bypasses-qa-gate]] — 60008 用命名常量
+	platforms, err := validatePlatforms(in.Platforms)
+	if err != nil {
+		return &permissionv1.CreateRoleResponse{
+			Base: responsex.NewBaseRespFromError(err),
+		}, nil
+	}
+
 	// 插入角色
 	role := &model.SysRole{
 		RoleCode:    in.Code,
 		RoleName:    in.Name,
 		Description: sqlNullString(in.Description),
 		Status:      1, // 默认启用
+		Platforms:   joinPlatforms(platforms),
 	}
 	if in.SortOrder > 0 {
 		role.SortOrder = int64(in.SortOrder)

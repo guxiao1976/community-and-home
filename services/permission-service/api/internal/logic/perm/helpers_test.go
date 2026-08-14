@@ -5,6 +5,7 @@ import (
 
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	"github.com/guxiao1976/community-permission/api/internal/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -81,4 +82,34 @@ func TestToPermissionInfoList_RecursiveChildren(t *testing.T) {
 func TestToPermissionInfoList_EmptyReturnsNil(t *testing.T) {
 	assert.Nil(t, toPermissionInfoList(nil))
 	assert.Nil(t, toPermissionInfoList([]*permissionv1.Permission{}))
+}
+
+// TestToRoleInfo_NilRole — toRoleInfo(nil) 返回零值不 panic（REQ-UPDATE-2 nil 防御）
+// RED: 当前实现直接解引用 r.Id → nil panic → 测试 FAIL
+func TestToRoleInfo_NilRole(t *testing.T) {
+	info := toRoleInfo(nil)
+	assert.NotPanics(t, func() { _ = toRoleInfo(nil) })
+	assert.Equal(t, types.RoleInfo{}, info, "nil → 零值 RoleInfo")
+}
+
+// TestToRoleInfo_PlatformsPassthrough — toRoleInfo 透传 Platforms（REQ-PLAT-6）
+// RED: 当前实现不设置 Platforms → 断言 []string{"mobile"} FAIL
+func TestToRoleInfo_PlatformsPassthrough(t *testing.T) {
+	r := &permissionv1.Role{Id: 1, Code: "owner", Name: "业主", Platforms: []string{"mobile"}}
+	info := toRoleInfo(r)
+	assert.Equal(t, []string{"mobile"}, info.Platforms, "platforms 应透传到 RoleInfo")
+}
+
+// TestToRoleInfo_EmptyPlatformsIsEmptyArray — 空 platforms → len==0 且非 nil（空数组非 null，REQ-PLAT-6）
+// RED: 当前实现不设置 Platforms → info.Platforms == nil → IsNil FAIL
+func TestToRoleInfo_EmptyPlatformsIsEmptyArray(t *testing.T) {
+	r := &permissionv1.Role{Id: 1, Code: "owner", Name: "业主", Platforms: []string{}}
+	info := toRoleInfo(r)
+	assert.Equal(t, 0, len(info.Platforms))
+	assert.NotNil(t, info.Platforms, "空 platforms 应归一为 [] 非 null，供前端 Array.isArray 判定「全部」")
+
+	// nil platforms 同样归一为空数组
+	info2 := toRoleInfo(&permissionv1.Role{Id: 2, Code: "grid_worker", Name: "网格员"})
+	assert.Equal(t, 0, len(info2.Platforms))
+	assert.NotNil(t, info2.Platforms)
 }

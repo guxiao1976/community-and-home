@@ -19,6 +19,18 @@
 
 ---
 
+## 2026-08-14 — 角色管理 bug 修复 + platforms 写链路（role-platforms-save）
+
+**路径**: L 级 spec-pipeline（阶段 0-6 全流程）
+**状态**: ✅ 已归档
+**涉及服务**: api-proto, permission-service, web/pc
+
+修复角色管理 500 panic（系统角色编辑）+ platforms（允许登录端）写链路补全 + 列表列宽重排。系统角色字段级编辑策略、60008 值域校验、base-check 类级审计、sort_order 落库修复。QA 16 PASS/0 FAIL，Review 3/3 PASS，已重启生效。
+
+详见: [.harness/changes/role-platforms-save/](./role-platforms-save/)
+
+---
+
 ## 2026-08-14 — spec-pipeline L 级 e2e 验证（spec-pipeline-e2e-l）
 
 **路径**: spec-pipeline 全流程 e2e 测试

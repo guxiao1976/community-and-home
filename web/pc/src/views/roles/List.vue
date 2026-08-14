@@ -10,10 +10,10 @@
 
     <el-card>
       <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="200" />
-        <el-table-column prop="name" label="角色名称" />
-        <el-table-column prop="code" label="角色编码" />
-        <el-table-column prop="description" label="描述" show-overflow-tooltip />
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="name" label="角色名称" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="code" label="角色编码" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
         <el-table-column label="系统角色" width="100">
           <template #default="{ row }">
             <el-tag v-if="row.isSystem" type="warning" size="small">系统</el-tag>
@@ -43,7 +43,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="380" fixed="right">
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button v-permission="'role:update'" link type="primary" @click="handleEdit(row as Role)">编辑</el-button>
             <el-button v-permission="'role:permission'" link type="primary" @click="handlePermissions(row as Role)">权限配置</el-button>

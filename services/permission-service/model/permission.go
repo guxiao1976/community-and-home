@@ -138,8 +138,10 @@ func orderByClause(sortField, sortOrder string) string {
 }
 
 func (m *defaultSysRoleModel) Update(ctx context.Context, data *SysRole) error {
-	_, err := m.conn.ExecCtx(ctx, fmt.Sprintf("update %s set role_name = ?, description = ?, status = ?, platforms = ?, updated_at = now() where id = ?", m.table),
-		data.RoleName, data.Description, data.Status, data.Platforms, data.Id)
+	// D6: 补 sort_order 落库（既有 Update 遗漏该列，导致前端编辑排序不生效）
+	// 参数顺序与占位符一一对应：role_name, description, status, platforms, sort_order, id
+	_, err := m.conn.ExecCtx(ctx, fmt.Sprintf("update %s set role_name = ?, description = ?, status = ?, platforms = ?, sort_order = ?, updated_at = now() where id = ?", m.table),
+		data.RoleName, data.Description, data.Status, data.Platforms, data.SortOrder, data.Id)
 	return err
 }
 

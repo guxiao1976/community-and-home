@@ -52,13 +52,16 @@ type PageInfo struct {
 
 // RoleInfo 角色信息（HTTP 响应）
 type RoleInfo struct {
-	Id          int64            `json:"id,string"`
-	Code        string           `json:"code"`
-	Name        string           `json:"name"`
-	Description string           `json:"description"`
-	IsSystem    bool             `json:"isSystem"`
-	Status      int32            `json:"status"`
-	SortOrder   int32            `json:"sortOrder"`
+	Id          int64  `json:"id,string"`
+	Code        string `json:"code"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	IsSystem    bool   `json:"isSystem"`
+	Status      int32  `json:"status"`
+	SortOrder   int32  `json:"sortOrder"`
+	// Platforms 允许登录端（pc/mobile）；无 omitempty：空必须序列化为 [] 非 null，供前端 Array.isArray 判定「全部」
+	// SEE: [[edit-form-data-integrity]] — 编辑回显完整（8 层链路）
+	Platforms   []string         `json:"platforms"`
 	Permissions []PermissionInfo `json:"permissions,omitempty"`
 	CreatedAt   int64            `json:"createdAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
 	UpdatedAt   int64            `json:"updatedAt,string"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
@@ -86,6 +89,7 @@ type CreateRoleReq struct {
 	Description   string     `json:"description,optional"`
 	SortOrder     int32      `json:"sortOrder,optional"`
 	PermissionIds Int64Array `json:"permissionIds,optional"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
+	Platforms     []string   `json:"platforms,optional"`     // 允许登录端：pc/mobile；空=fail-open
 }
 
 // CreateRoleResp 创建角色响应
@@ -111,6 +115,7 @@ type UpdateRoleReq struct {
 	Status        *int32     `json:"status,optional"`
 	SortOrder     *int32     `json:"sortOrder,optional"`
 	PermissionIds Int64Array `json:"permissionIds,optional"` // SEE: [[proto-jstype]] — 避免 JavaScript Number 精度丢失
+	Platforms     []string   `json:"platforms,optional"`     // 允许登录端：pc/mobile；空=fail-open（D3 恒透传，空列表=显式清空）
 }
 
 // UpdateRoleResp 更新角色响应

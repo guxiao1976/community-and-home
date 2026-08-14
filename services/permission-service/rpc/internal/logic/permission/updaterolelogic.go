@@ -23,7 +23,14 @@ func NewUpdateRoleLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Update
 
 // UpdateRole 更新角色
 //
-//	校验角色存在 → 更新字段 → 替换权限列表 → 失效相关用户缓存
+//	校验角色存在 → 系统角色 status 门禁（先于字段与 platforms 校验）→ 校验 platforms → 更新字段 → 替换权限列表 → 失效相关用户缓存
+//
+// 系统角色字段级策略（REQ-UPDATE-4 / D1）：
+//   - name/description/platforms/sort_order/permission_ids 可编辑（is_system=1 放行）
+//   - status 仍拦截（60004 原子拒绝，先于任何字段应用、先于 platforms 校验；无部分写入）
+//   - 60004 message 收窄为「系统角色状态不可修改」（仅本路径；DeleteRole 路径 60004 语义不改）
+//
+// SEE: [[is-system-no-permission-shortcut]] — 字段级放行不改变权限模型（无特权短路）
 func (l *UpdateRoleLogic) UpdateRole(in *permissionv1.UpdateRoleRequest) (*permissionv1.UpdateRoleResponse, error) {
 	// 校验角色存在
 	existing, err := l.svcCtx.RoleModel.FindOne(l.ctx, in.Id)
@@ -33,10 +40,19 @@ func (l *UpdateRoleLogic) UpdateRole(in *permissionv1.UpdateRoleRequest) (*permi
 		}, nil
 	}
 
-	// 系统角色不可修改（is_system 仅用于保护内置角色不被修改或删除）
-	if existing.IsSystem == 1 {
+	// 系统角色 status 门禁（校验顺序钉死：先于任何字段应用、先于 platforms 校验，原子拒绝）
+	if existing.IsSystem == 1 && in.Status != nil {
 		return &permissionv1.UpdateRoleResponse{
-			Base: responsex.NewBaseRespWithError(60004, "系统角色不可修改"),
+			Base: responsex.NewBaseRespWithError(60004, "系统角色状态不可修改"),
+		}, nil
+	}
+
+	// 校验允许登录端（REQ-PLAT-4）：非法值 → 60008 原子拒绝，任何字段不落库
+	// SEE: [[error-code-literal-bypasses-qa-gate]] — 60008 用命名常量
+	platforms, err := validatePlatforms(in.Platforms)
+	if err != nil {
+		return &permissionv1.UpdateRoleResponse{
+			Base: responsex.NewBaseRespFromError(err),
 		}, nil
 	}
 
@@ -47,6 +63,9 @@ func (l *UpdateRoleLogic) UpdateRole(in *permissionv1.UpdateRoleRequest) (*permi
 	if in.Description != nil {
 		existing.Description = sqlNullString(*in.Description)
 	}
+	// platforms 无条件覆盖（D3）：空列表 = 显式清空（fail-open）
+	existing.Platforms = joinPlatforms(platforms)
+	// status 仅非系统角色应用（系统角色 status 已在上方门禁拦截）
 	if in.Status != nil {
 		existing.Status = int64(*in.Status)
 	}

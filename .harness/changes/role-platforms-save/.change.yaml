@@ -1,0 +1,27 @@
+schema: spec-driven
+created: 2026-08-14
+name: role-platforms-save
+description: 角色管理两个 bug 修复（系统角色编辑 500 + 列表列宽）+ platforms 允许登录端写链路补全
+status: requirement_analysis_complete
+specs:
+  # capability 顺序 = 依赖序：role-platforms-write-path 先加 platforms 全链路（types/helpers），
+  # role-update-fix 的 REQ-UPDATE-4（系统角色 name+platforms 落库）依赖其 REQ-PLAT-2/3，故排后。
+  - capability: role-platforms-write-path
+    file: specs/role-platforms-write-path/spec.md
+    priority: P0
+    description: platforms 写链路补全（proto→API→RPC→model）+ 60008 校验 + 空语义 + 缓存失效 + sort_order 修复 + HTTP 读链路闭合（D2/D3/D4/D6）
+  - capability: role-update-fix
+    file: specs/role-update-fix/spec.md
+    priority: P0
+    description: 500 panic 修复 + ToError 类级审计推广（11 文件）+ 系统角色字段级编辑策略（D1/D5）
+  - capability: role-list-column-layout
+    file: specs/role-list-column-layout/spec.md
+    priority: P1
+    description: 前端列表列宽整体重排（D7）
+shared_files:
+  - api/internal/logic/perm/helpers.go: toRoleInfo 由 write-path（REQ-PLAT-6 透传 platforms + [] 非 null）先改，update-fix（REQ-UPDATE-2 nil 防御）复用
+  - api/internal/types/types.go: RoleInfo 增 Platforms 由 write-path（REQ-PLAT-2/6）改；update-fix 仅读（ToError 审计不加类型）
+  - api/internal/logic/perm/updaterolelogic.go: write-path（REQ-PLAT-2 透传 platforms）与 update-fix（REQ-UPDATE-1 ToError 前置）均改，依赖序 write-path 先
+  - api/internal/logic/perm/createrolelogic.go: write-path（REQ-PLAT-2 透传 platforms）与 update-fix（REQ-UPDATE-3 ToError）均改
+  - api/internal/logic/perm/assignrolepermissionslogic.go: write-path（REQ-PLAT-8 读现有 platforms 透传 + GetRole Base 检查 + 读取失败中止）与 update-fix（REQ-UPDATE-3 ToError）均改
+  - rpc/internal/logic/permission/updaterolelogic.go: write-path（REQ-PLAT-3 写 platforms + REQ-PLAT-4 校验 + REQ-PLAT-7 缓存失效）与 update-fix（REQ-UPDATE-4 字段级策略 + 校验顺序）均改，同一函数，须合并实现

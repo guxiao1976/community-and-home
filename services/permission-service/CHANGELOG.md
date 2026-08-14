@@ -1,5 +1,110 @@
 # CHANGELOG — permission-service
 
+## 2026-08-14 — role-platforms-save：platforms 允许登录端写链路 + 系统角色字段级策略 + 500 panic 修复（Task 1.1-1.11）
+
+### 类型
+分诊：`validatePlatforms`、`CreateRole` platforms 集成、`UpdateRole` 合并实现、`toRoleInfo` nil 防御/透传、API CreateRole/UpdateRole 透传+ToError、base-check 类级审计（8 文件）、`AssignRolePermissions` platforms 保留均属**有逻辑函数**，全部走 RED→GREEN→REFACTOR（留 RED FAIL 摘录）；Task 1.1 model Update SQL 补 sort_order、Task 1.5 types 增 Platforms 属**字段映射类**免 RED（由 RPC/API 集成测试兜底验证）。
+
+### TDD 证据（RED FAIL 摘录 → GREEN PASS）
+
+#### RED 1 — Task 1.2 validatePlatforms + CodeInvalidPlatform（`go test -run TestValidatePlatforms`）
+```
+rpc/internal/logic/permission/helpers_test.go:211:16: undefined: validatePlatforms
+rpc/internal/logic/permission/helpers_test.go:215:21: undefined: CodeInvalidPlatform
+FAIL	github.com/guxiao1976/community-permission/rpc/internal/logic/permission [build failed]
+```
+GREEN：`ok`，12 table cases 全 PASS（空/nil fail-open、单/双端、去重保序、非法值 60008、大写/空串拒）。
+
+#### RED 2 — Task 1.3 CreateRole platforms 原子拒绝（`go test -run TestCreateRole`）
+```
+--- FAIL: TestCreateRole_InvalidPlatform (0.00s)
+panic: assert: mock: I don't know what to return because the method call was unexpected.
+	This method was unexpected:
+		Insert(context.backgroundCtx,*model.SysRole)
+```
+GREEN：`ok`，新增 `TestCreateRole_InvalidPlatform`（60008 + Insert 未被调用）/ `_PlatformsPersisted`（捕获 `Platforms=="pc,mobile"`）/ `_PlatformsDedup`（`"pc"`）全 PASS，既有 8 用例不破。
+
+#### RED 3 — Task 1.4 UpdateRole 合并实现字段级策略（`go test -run TestUpdateRole`）
+```
+--- FAIL: TestUpdateRole_SystemRoleFieldLevel
+	expected: 0   Messages: 系统角色 name/platforms 编辑应放行
+--- FAIL: TestUpdateRole_SystemRoleStatusAtomic
+	"系统角色不可修改" does not contain "状态不可修改"
+--- FAIL: TestUpdateRole_SystemRoleInvalidPlatform
+	expected: 60008
+--- FAIL: TestUpdateRole_PlatformsEmptyClears
+	expected: ""   Messages: 空列表应显式清空 platforms（fail-open）
+```
+GREEN：`ok`，新增矩阵 8 用例（字段级放行+status 保持/60004 原子/status 门禁优先于 60008/非系统 status 落库/sort_order==5/空 platforms 清空/cache DEL 双用户）全 PASS，既有 Success/RoleNotFound/CacheInvalidated 不破。
+
+#### RED 4 — Task 1.6 toRoleInfo nil 防御 + platforms 透传（`go test -run TestToRoleInfo`）
+```
+--- FAIL: TestToRoleInfo_NilRole (0.00s)
+panic: runtime error: invalid memory address or nil pointer dereference
+	github.com/guxiao1976/community-permission/api/internal/logic/perm/helpers.go:18
+```
+GREEN：`ok`，`_NilRole`（零值不 panic）/ `_PlatformsPassthrough`（`["mobile"]`）/ `_EmptyPlatformsIsEmptyArray`（空 → `[]` 非 null）全 PASS，既有 FieldMapping 不破。
+
+#### RED 5 — Task 1.7/1.8 API CreateRole/UpdateRole 透传 + ToError（`go test -run TestCreateRole|TestUpdateRole`）
+```
+--- FAIL: TestCreateRole_PlatformsPassThrough
+	expected: []string{"pc", "mobile"}   actual: []string(nil)
+--- FAIL: TestCreateRole_BaseErrorNoPanic
+	An error is expected but got nil.
+--- FAIL: TestUpdateRole_PlatformsAlwaysPassed
+	Expected value not to be nil.  Messages: 空 platforms 也应恒透传（空列表，非 nil）
+--- FAIL: TestUpdateRole_Base60004NoPanic
+	An error is expected but got nil.
+```
+GREEN：`ok`，5 新用例全 PASS。
+
+#### RED 6 — Task 1.9/1.10 base-check 类级审计（`go test ./api/internal/logic/perm/ -run TestGetRole_...`）
+```
+--- FAIL: TestGetRolePermissions_BaseError (0.00s)
+panic: runtime error: invalid memory address or nil pointer dereference  （deref nil Role.Permissions）
+--- FAIL: TestDeleteRole_Base60004  /  TestGetRole_BaseError  /  TestAssignUserRole_BaseError  ...（静默成功 → 应转 Go error）
+```
+GREEN：`ok`，8 个审计用例全 PASS（60001/60004/99400 → Go error，不再 deref / 不再静默成功）。
+
+#### RED 7 — Task 1.11 AssignRolePermissions platforms 保留（`go test -run TestAssignRolePermissions`）
+```
+--- FAIL: TestAssignRolePermissions_PreservesPlatforms
+	Should be true   Messages: 应先调用 GetRole 读取当前 platforms
+--- FAIL: TestAssignRolePermissions_GetRoleBaseAbort
+	An error is expected but got nil.  /  Should be false: GetRole 失败时不得调用 UpdateRole
+```
+GREEN：`ok`，3 用例全 PASS（platforms 显式保留 / GetRole 60001 abort 不调 UpdateRole / UpdateRole Base 非零转 error）。
+
+### 做了什么
+- **T1.1 model**：`model/permission.go` — `defaultSysRoleModel.Update` SQL 补 `sort_order = ?`（D6 潜伏缺陷：前端编辑排序不落库）；参数顺序 `role_name, description, status, platforms, sort_order, id`。
+- **T1.2 rpc helpers**：`rpc/internal/logic/permission/helpers.go` — 新增命名常量 `CodeInvalidPlatform = 60008`（防裸字面量）+ `validPlatforms` 值域 map + `validatePlatforms`（值域 {pc,mobile} 校验 → 60008；空/nil fail-open；重复去重保序）。`helpers_test.go` 增 `TestValidatePlatforms`（12 cases）。
+- **T1.3 rpc CreateRole**：`createrolelogic.go` — 入口 `validatePlatforms(in.Platforms)`，非法 → `Base: responsex.NewBaseRespFromError(err)`（60008 原子拒绝，不 Insert）；`role.Platforms = joinPlatforms(platforms)`。`createrolelogic_test.go` 增 3 用例。
+- **T1.4 rpc UpdateRole（合并实现）**：`updaterolelogic.go` — 校验顺序钉死：FindOne(60001) → 系统角色 status 门禁（60004「系统角色状态不可修改」，先于任何字段应用、先于 platforms 校验，原子拒绝）→ `validatePlatforms`(60008) → 应用字段（name/description/sort_order 在场才覆盖；`existing.Platforms = joinPlatforms(platforms)` **无条件覆盖**，空=fail-open；status 仅非系统角色）→ Update → permission_ids 替换 → `invalidateRoleCache`（platforms 变更同样触发）。系统角色字段级策略（REQ-UPDATE-4/D1）：name/description/platforms/sort_order/permission_ids 可编辑，status 仍拦截。`updaterolelogic_test.go` 解 Skip 并重写为矩阵 8 用例。
+- **T1.5 api types**：`types.go` — `RoleInfo` 增 `Platforms []string json:"platforms"`（**无 omitempty**，空序列化为 `[]` 非 null）；`CreateRoleReq`/`UpdateRoleReq` 增 `Platforms []string json:"platforms,optional"`。
+- **T1.6 api helpers**：`api/internal/logic/perm/helpers.go` — `toRoleInfo(nil)` 返回零值不 panic（REQ-UPDATE-2）；新增 `normalizePlatforms`（nil/空 → `[]string{}` 非 null，REQ-PLAT-6）；`info.Platforms = normalizePlatforms(r.Platforms)`。
+- **T1.7/1.8 api CreateRole/UpdateRole**：`createrolelogic.go`/`updaterolelogic.go` — grpcReq 透传 `Platforms`（UpdateRole **恒透传**：空列表也设置，D3 区分「未传」）；RPC 调用后、deref Role 前 `responsex.ToError(grpcResp.Base)`（60006/60004 + Role=nil → Go error，修复 HTTP 500 panic）。新建两 test 文件共 5 用例。
+- **T1.9/1.10 base-check 类级审计**：8 文件 RPC 调用后立即 `responsex.ToError(grpcResp.Base)`，非零返回 Go error、禁止 deref 响应字段 / 不再静默成功 — panic 类 5 文件（`getrolelogic`/`getrolepermissionslogic`/`getuserpermissionslogic`/`getuserroleslogic`/`listpermissionslogic`）+ 静默类 3 文件（`deleterolelogic`/`assignuserrolelogic`/`revokeuserrolelogic`）。新建 8 个 test 文件共 8 用例。
+- **T1.11 api AssignRolePermissions**：`assignrolepermissionslogic.go` — 先 `GetRole` 读当前 platforms + base-check（60001 → abort，不调 UpdateRole），构造 `UpdateRoleRequest{ Id, PermissionIds, Platforms: 当前值 }` 显式保留（REQ-PLAT-8，防 D3 无条件覆盖清空端限制），UpdateRole 响应 base-check。新建 test 文件 3 用例。
+
+### 影响
+- Proto: 无（`CreateRoleRequest.platforms=6`/`UpdateRoleRequest.platforms=7`/错误码 060008 由 Owner 在 Task 0.x 交付，本服务仅消费生成代码）
+- 调用方: API 网关 `POST/PUT /api/perm/roles` 支持 platforms；`POST /api/perm/roles/:id/permissions` 不再误清角色端限制
+- 数据库: 无 schema 变更（`sys_role.platforms`/`sort_order` 列已存在）；`Update` SQL 修复 sort_order 落库
+- 缓存: platforms 变更随既有 `invalidateRoleCache` 失效（perm:user / perm:scopes 系列）
+- 安全: 60008 原子拒绝（非法端不落库）；60004 系统角色 status 原子拒绝（先于字段与 platforms 校验）；base-check 类级规则消除「业务错误静默吞掉 + 空指针 panic」
+
+### 应用的记忆
+- [[is-system-no-permission-shortcut]] (must-follow) — UpdateRole 字段级放行不改变 is_system 权限模型（updaterolelogic.go:44 注释）
+- [[rpc-callback-must-check-response-base]] (must-follow) — ToError 类级规则推广 11 文件（CreateRole/UpdateRole + 审计 8 文件 + AssignRolePermissions）
+- [[error-code-literal-bypasses-qa-gate]] (must-follow) — 60008 用命名常量 `CodeInvalidPlatform`（helpers.go）
+- （缓存一致性遵循既有 `invalidateRoleCache` 模式，platforms 变更同样触发失效；无对应记忆文件）
+- [[verify-api-before-calling]] — AssignRolePermissions 先 GetRole（base-check）再 UpdateRole（assignrolepermissionslogic.go）
+- [[edit-form-data-integrity]] — `RoleInfo.Platforms` 读链路闭合、空=[] 非 null（helpers.go / types.go）
+- [[frontend-business-rule-hardcode]] — 平台值域权威在后端（validPlatforms map）
+- [[tdd-red-evidence-requires-fail-excerpt]] (must-follow) — 全部含逻辑 Task 附 RED FAIL 摘录
+
+---
+
 ## 2026-08-14 — role-list-sort：角色列表排序（FindList 签名扩展 + orderByClause + validateSort + API 透传/ToError 修复）
 
 ### 类型
