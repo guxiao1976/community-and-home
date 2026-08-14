@@ -289,6 +289,40 @@ ${JSON.stringify(decisions, null, 2)}
 // 阶段 2: 需求评审（3 视角并行 + 投票）
 async function stage2Review(ctx) {
   phase('2 需求评审')
+
+  // resume 处理：若已暂停过 stage2_done/stage2_escalate，读用户裁决分支
+  if (ctx.decisions.stage2_done && ctx.decisions.stage2_done.approve) {
+    const approve = ctx.decisions.stage2_done.approve
+    log(`  📋 评审裁决: ${approve}`)
+    if (approve.includes('回需求分析') || approve.includes('回')) {
+      ctx.currentStage = 0  // 主循环 +1 → 阶段 1 修正
+      saveState(ctx)
+      return
+    }
+    // 「进入架构设计」→ 正常推进阶段 3
+    log('  → 进入架构设计')
+    return
+  }
+  if (ctx.decisions.stage2_escalate && ctx.decisions.stage2_escalate.escalate) {
+    const act = ctx.decisions.stage2_escalate.escalate
+    log(`  ⛔ 人工裁决: ${act}`)
+    if (act.includes('终止')) {
+      ctx.currentStage = 999  // 终止变更（超出 0-6 循环）
+      saveState(ctx)
+      return
+    }
+    if (act.includes('放宽')) {
+      // 放宽阈值 → 强制通过进入架构设计
+      ctx.stageResults[2] = { pass: 3, total: 3, rounds: ctx.stageResults[2]?.rounds || 1, escalated: true }
+      log('  → 放宽阈值，进入架构设计')
+      return
+    }
+    // 「人工修正 spec 后重试」→ 回阶段 1
+    ctx.currentStage = 0
+    saveState(ctx)
+    return
+  }
+
   const lenses = [
     { key: 'coverage', label: '覆盖完整性' },
     { key: 'structure', label: '结构合理性' },
@@ -366,6 +400,20 @@ async function stage2Review(ctx) {
 // 阶段 3: 架构设计
 async function stage3Architecture(ctx) {
   phase('3 架构设计')
+
+  // resume 处理：若已暂停过 stage3_done，读用户裁决分支
+  if (ctx.decisions.stage3_done && ctx.decisions.stage3_done.approve) {
+    const approve = ctx.decisions.stage3_done.approve
+    log(`  📋 设计确认: ${approve}`)
+    if (approve.includes('回需求分析') || approve.includes('回')) {
+      ctx.currentStage = 0  // 回阶段 1
+      saveState(ctx)
+      return
+    }
+    log('  → 进入 Proto 阶段')
+    return
+  }
+
   const res = await agent(
     `你是 Community-Home 的架构设计师。执行 .harness/skills/architect-design.md 的完整流程，
 产出 design + tasks。**必须先 Read .harness/agents/subagents/architecture-designer.md 获取权威流程**。
@@ -446,6 +494,20 @@ async function stage4Proto(ctx) {
 // 阶段 5: 编码测试（HITL 委托 Owner 启动 N×harness-pipeline.js）
 async function stage5Coding(ctx) {
   phase('5 编码+测试')
+
+  // resume 处理：若已暂停过 stage5_done，读用户裁决分支
+  if (ctx.decisions.stage5_done && ctx.decisions.stage5_done.approve) {
+    const approve = ctx.decisions.stage5_done.approve
+    log(`  📋 编码确认: ${approve}`)
+    if (approve.includes('需修复')) {
+      ctx.currentStage = 4  // 回阶段 5 重跑
+      saveState(ctx)
+      return
+    }
+    log('  → 进入集成归档')
+    return
+  }
+
   const services = (ctx.stageResults[3] && ctx.stageResults[3].services) || ctx.services || []
   if (services.length === 0) {
     // 没有服务列表（S/M 短路或设计未产出）→ 用 ctx.services
