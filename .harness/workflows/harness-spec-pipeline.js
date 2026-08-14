@@ -650,11 +650,12 @@ async function stage6Integrate(ctx) {
 
   const services = (ctx.stageResults[5] && ctx.stageResults[5].services) || []
 
-  // 6.1 全链路编译门禁
+  // 6.1 全链路编译门禁（archived=true 表示阶段 6 正在执行归档动作）
   const gate = checkGate('integration', {
     changeDir: changeDir(),
     services: services.map(svcName),
     change: CHANGE,
+    archived: true,
     summary: `${CHANGE} 集成归档门禁`,
   })
   if (!gate.passed) {
@@ -677,6 +678,7 @@ async function stage6Integrate(ctx) {
       changeDir: changeDir(),
       services: services.map(svcName),
       change: CHANGE,
+      archived: true,
       summary: `${CHANGE} 集成归档门禁(归档后)`,
     })
     if (!gate2.passed) {
