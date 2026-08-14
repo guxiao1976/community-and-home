@@ -550,6 +550,22 @@ async function stage5Coding(ctx) {
 // 阶段 6: 集成归档
 async function stage6Integrate(ctx) {
   phase('6 集成归档')
+
+  // resume 处理：若已暂停过 stage6_done，读用户最终交付决策
+  if (ctx.decisions.stage6_done && ctx.decisions.stage6_done.deliver) {
+    const deliver = ctx.decisions.stage6_done.deliver
+    log(`  📋 最终交付: ${deliver}`)
+    if (deliver.includes('需修复')) {
+      ctx.currentStage = 5  // 回阶段 5 修复
+      saveState(ctx)
+      return
+    }
+    // 「批准归档」→ 流水线完成（返回 pass）
+    ctx.currentStage = 999  // 超出 0-6 循环 → 主循环退出，返回 pass
+    saveState(ctx)
+    return
+  }
+
   const services = (ctx.stageResults[5] && ctx.stageResults[5].services) || []
 
   // 6.1 全链路编译门禁
