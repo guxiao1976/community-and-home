@@ -184,7 +184,7 @@ Workflow 返回 `need_input`（含 `checkpoint`、`questions`、`ctx`）后，Ow
 **⚠️ 阶段 5 硬性禁令**：
 
 - ❌ **禁止使用 superpowers `subagent-driven-development` / `executing-plans` / 任何外部技能替代 `harness-pipeline.js`**
-- ❌ **禁止跳过 QA 机械化检查（15 项，含 API 冒烟测试）**
+- ❌ **禁止跳过 QA 机械化检查（18 项，含 API 冒烟测试）**
 - ❌ **禁止跳过 Review 门禁（3 视角并行，2/3 PASS）**
 - ❌ **禁止在无 Workflow 隔离的情况下直接 dispatch implementer subagent**
 
@@ -199,7 +199,7 @@ Workflow({scriptPath: ".harness/workflows/harness-pipeline.js", args: {
   task: "Task 1: ...\nTask 2: ..."
 }})
 ```
-Workflow 内部自动执行：Generator → QA(15项) → QA FAIL? Debug → Reviewer(3视角并行) → 最多 3 轮。
+Workflow 内部自动执行：Generator → QA(18项) → QA FAIL? Debug → Reviewer(3视角并行) → 最多 3 轮。
 | 6 | **集成归档** | 编码通过 | Owner 内联 | 移动 QA/Review → `.harness/changes/<change>/impl/` + 更新 INDEX + summary | 全链路通过 | — | 修复重试 |
 
 **上下文隔离设计**：
@@ -218,7 +218,7 @@ Owner Agent 上下文 (~200 lines)
 
 子 Agent 间**不通过 Owner 上下文交接**——前一个子 Agent 的产出写入 disk，后一个子 Agent 从 disk 读取。Owner Agent 只读取产出文件的**摘要**来做验收决策，不加载全文。
 
-阶段 5 内部流程：TDD → QA(15项) → QA FAIL? Debug → Review(3视角) → 最多 3 轮。
+阶段 5 内部流程：TDD → QA(18项) → QA FAIL? Debug → Review(3视角) → 最多 3 轮。
 
 阶段 6 详细步骤见 `.harness/docs/pipeline-flow-complete.md`。核心：门禁检查 → 全链路编译 → 归档 QA/Review → 冒烟测试 → Memory Suggestions 处理 → 产出 summary → 更新 INDEX。
 
@@ -268,12 +268,12 @@ Pipeline 返回 `confidence`（0.0-1.0）。Owner 按置信度决定审查深度
 
 | 分级 | 判定条件（信号全部满足） | 执行方式 | QA | Review |
 |------|-------------------------|---------|:--:|:--:|
-| **S（轻量）** | ① 单服务单文件 ≤20行<br>② 不涉及 Proto/common<br>③ 不新增公开 API<br>④ 需求清晰 | 轻量 Pipeline（`workload:"S"`） | ✅ 15项 | ❌ 跳过 |
-| **M（单服务）** | 单服务代码改动，非 S 非 L | Pipeline | ✅ 15项 | 按 taskType |
+| **S（轻量）** | ① 单服务单文件 ≤20行<br>② 不涉及 Proto/common<br>③ 不新增公开 API<br>④ 需求清晰 | 轻量 Pipeline（`workload:"S"`） | ✅ 18项 | ❌ 跳过 |
+| **M（单服务）** | 单服务代码改动，非 S 非 L | Pipeline | ✅ 18项 | 按 taskType |
 | **L（跨服务）** | ① 跨 2+ 服务<br>② 涉及 Proto/common<br>③ 新增公开 API<br>④ 架构决策 / 需求模糊 | OpenSpec → N×Pipeline | ✅ 每服务 | ✅ 每服务 3视角 |
 | **跳过** | 纯文案/注释/配置值，不需要编译验证 | Edit → build | ❌ | ❌ |
 
-> **原"直接 Edit"和"Dev Agent"路径已废弃**——它们绕过了 Pipeline，导致未 QA 的代码直达用户。所有代码改动统一走 dispatch 分级路由；S 级仍保留 QA 15 项、仅跳过 Review，不是无 QA 直改。
+> **原"直接 Edit"和"Dev Agent"路径已废弃**——它们绕过了 Pipeline，导致未 QA 的代码直达用户。所有代码改动统一走 dispatch 分级路由；S 级仍保留 QA 18 项、仅跳过 Review，不是无 QA 直改。
 
 #### 进入 L 级前的需求分析判断（并入分级）
 
@@ -292,7 +292,7 @@ Pipeline 返回 `confidence`（0.0-1.0）。Owner 按置信度决定审查深度
 - 命中信号: A=单服务 B=否 C=否 D=1文件 E=≤20行 F=否 G=否 H=清晰
 - 理由: <一句话>
 - 路由: 轻量Pipeline / Pipeline / OpenSpec→N×Pipeline
-- QA: ✅15项 | Review: 跳过 / 3视角
+- QA: ✅18项 | Review: 跳过 / 3视角
 - 涉及服务: <列表>
 ```
 
@@ -329,7 +329,7 @@ Pipeline 返回 `confidence`（0.0-1.0）。Owner 按置信度决定审查深度
 ### 禁止做的
 
 - **不输出工作量分级就直接动手 ← 最高优先级禁令**
-- **"看起来简单"就绕过 QA ← 禁止。S 级仍保留 QA 15 项仅跳过 Review；无 QA 仅限用户显式说"快速/仅开发/跳过审查"**
+- **"看起来简单"就绕过 QA ← 禁止。S 级仍保留 QA 18 项仅跳过 Review；无 QA 仅限用户显式说"快速/仅开发/跳过审查"**
 - **不跳过门禁检查 (gate-engine.js validateGate + harness-checks.sh) ← P0约束**
 - 不跳过 QA 直接交付
 - 不隐瞒执行中发现的问题

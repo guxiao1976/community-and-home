@@ -45,8 +45,8 @@ cat .harness/registry/services.json
 
 | 分级 | 执行方式 | QA | Review |
 |------|---------|:--:|:--:|
-| **S（轻量）** | `harness-pipeline.js`（轻量，`workload:"S"`） | ✅ 15项 | ❌ 跳过 |
-| **M（单服务）** | `harness-pipeline.js`（全流程） | ✅ 15项 | 按 taskType |
+| **S（轻量）** | `harness-pipeline.js`（轻量，`workload:"S"`） | ✅ 18项 | ❌ 跳过 |
+| **M（单服务）** | `harness-pipeline.js`（全流程） | ✅ 18项 | 按 taskType |
 | **L（跨服务）** | `harness-spec-pipeline.js`（全流程 0-6，每阶段 HITL） | ✅ 每服务 | ✅ 每服务 3视角 |
 
 > **路由口径**（2026-08-14 统一）：S/M 直连 `harness-pipeline.js`，L 走 `harness-spec-pipeline.js`（与 Step 4 一致）。spec-pipeline 的 S/M 短路仅作为「绕过 Owner 直接调」的兜底路径。
@@ -116,7 +116,7 @@ QA 阶段默认只扫描本次 git diff 变更的文件。用户说以下词时�
 - 命中信号: A=单服务 B=否 C=否 D=1文件 E=≤20行 F=否 G=否 H=清晰
 - 理由: <一句话，如"单服务+单文件≤20行+不涉及Proto/common+不新增API">
 - 路由: 轻量Pipeline / Pipeline / OpenSpec→N×Pipeline
-- QA: ✅15项 | Review: 跳过 / 3视角
+- QA: ✅18项 | Review: 跳过 / 3视角
 - 涉及服务: <列表>
 ```
 
@@ -212,7 +212,7 @@ Workflow({ scriptPath: ".harness/workflows/harness-pipeline.js",
 - 命中信号: A=单服务 B=否 C=否 D=2文件 E=40行 F=否 G=否 H=清晰
 - 理由: 单服务多文件小改动，非 S 非 L
 - 路由: Pipeline
-- QA: ✅15项 | Review: ✅3视角
+- QA: ✅18项 | Review: ✅3视角
 - 涉及服务: ai-model-service
 ```
 
@@ -237,7 +237,7 @@ SessionStart agent 应解析每条 `[DISPATCH]` 指令，**先按工作量分级
 
 | `[DISPATCH]` type | 默认分级 | 理由 |
 |------|:---:|------|
-| `chore` / `debt` | **S** | 机械性/已知修复模式，QA 15 项即可，Review 可跳过 |
+| `chore` / `debt` | **S** | 机械性/已知修复模式，QA 18 项即可，Review 可跳过 |
 | `bug` / `feature`（P0） | **M** | 高危或新功能，保守走全流程，安全优先 |
 
 启动对应 Pipeline：
