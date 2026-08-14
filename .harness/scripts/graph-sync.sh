@@ -92,8 +92,18 @@ if command -v python3 &>/dev/null; then
         svc_name=$(basename "$svc_dir")
         context_dir="$svc_dir/docs"
         mkdir -p "$context_dir"
-        bash "$SCRIPT_DIR/graph-query.sh" "$svc_name" > "$context_dir/graph-context.md" 2>/dev/null || true
-        echo "[graph-sync] Generated graph-context.md for $svc_name"
+        # 幂等写：新内容与现有文件除时间戳行外一致 → 跳过写
+        # （否则每次 post-commit sync 更新时间戳 → 需再提交 → 又触发 sync 的循环噪音）
+        tmp="$context_dir/.graph-context.$$.tmp"
+        bash "$SCRIPT_DIR/graph-query.sh" "$svc_name" > "$tmp" 2>/dev/null || true
+        if [ -f "$context_dir/graph-context.md" ] \
+           && diff <(grep -v '自动生成于' "$context_dir/graph-context.md" 2>/dev/null) <(grep -v '自动生成于' "$tmp") >/dev/null 2>&1; then
+            rm -f "$tmp"
+            echo "[graph-sync] graph-context.md 无实质变化，跳过写 $svc_name"
+        else
+            mv "$tmp" "$context_dir/graph-context.md"
+            echo "[graph-sync] Generated graph-context.md for $svc_name"
+        fi
     done
 fi
 
