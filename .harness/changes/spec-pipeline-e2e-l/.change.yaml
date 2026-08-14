@@ -1,0 +1,68 @@
+schema: spec-driven
+created: 2026-08-14
+change: spec-pipeline-e2e-l
+title: permission-service 角色列表接口新增排序支持（单列排序 + 白名单 + id 平局决胜）
+size: L
+route: OpenSpec
+services:
+  - api-proto
+  - permission-service
+  - web/pc
+design_basis: .harness/changes/spec-pipeline-e2e-l/proposal.md
+design_basis_sections:
+  - "做什么"
+  - "已确认设计决策 → 覆盖对照"
+  - "风险评估"
+specs:
+  - role-list-sort
+proto_change_required: true
+proto_changes:
+  - "permission.proto ListRolesRequest 增 optional common.v1.SortField sort = 3（单列排序）；common/v1.SortField 已存在（field/order），common.proto 无需变更"
+common_change_required: false
+data_migration_required: false
+clarifications:
+  - id: q1
+    scope: role-list-sort
+    question: "Proto 放置位置：ListRolesRequest 如何承载排序参数"
+    decision: "ListRolesRequest 新增 optional common.v1.SortField sort = 3（复用已有 common.v1.SortField）"
+  - id: q2
+    scope: role-list-sort
+    question: "单列 vs 多列排序"
+    decision: "单列排序（SortField 单 field+order，不支持多列组合）"
+  - id: q3
+    scope: role-list-sort
+    question: "可排序字段白名单"
+    decision: "id, role_code, role_name, sort_order, status, created_at, updated_at（DB 列名）"
+  - id: q4
+    scope: role-list-sort
+    question: "非法字段/方向的处理方式"
+    decision: "拒绝并返回 400（落地为统一响应体 code=99400 errx.CodeInvalidParam），msg 指明非法字段/方向"
+  - id: q5
+    scope: role-list-sort
+    question: "方向语法（大小写、空值、非法值）"
+    decision: "大小写不敏感；空值默认 asc；非法值报 400（字段匹配同样大小写不敏感）"
+  - id: q6
+    scope: role-list-sort
+    question: "同值记录的排序稳定性"
+    decision: "恒追加 id asc 平局决胜"
+  - id: q7
+    scope: role-list-sort
+    question: "校验归属层（RPC vs API vs 前端）"
+    decision: "RPC logic 统一校验（单层），API 透传并 ToError 转换，前端仅交互"
+  - id: q8
+    scope: role-list-sort
+    question: "前端改造范围"
+    decision: "roles/List.vue 白名单列 sortable（id/角色名称/角色编码/状态/创建时间）"
+  - id: q9
+    scope: role-list-sort
+    question: "数据访问层签名"
+    decision: "扩展 RoleModel.FindList 签名以接收排序字段与方向"
+  - id: q10
+    scope: role-list-sort
+    question: "REST 参数命名"
+    decision: "camelCase sortBy / sortOrder"
+out_of_scope:
+  - "多列组合排序 / 每列独立方向"
+  - "把排序能力推广到其他列表接口（ListPermissions / GetUserRoles 等）"
+  - "sort_order 列在前端表格渲染为可排序列（当前表格未渲染该列，仅白名单支持）"
+  - "REST 层重复校验（决策 q7 已定 RPC 单层校验）"
