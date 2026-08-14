@@ -26,9 +26,9 @@
   └─ 任何代码/配置/文档改动（其余所有）？
         → 调用 dispatch Skill（统一入口，CLAUDE.md 约束 #7）
         → dispatch 自动做 S/M/L 工作量分级并路由：
-            S      → 轻量 Pipeline（QA 15项，跳过 Review）
-            M      → Pipeline（默认全流程，QA 15项 + Review 按 taskType）
-            L      → OpenSpec（需求分析 → 架构设计 → 并行 N×Pipeline）
+            S      → 轻量（spec-pipeline 短路到阶段 5 编码：QA 15项，跳过 Review）
+            M      → 全流程（spec-pipeline：QA 15项 + Review 按 taskType）
+            L      → spec-pipeline 全流程自动化（0-6 阶段，每阶段 HITL）
             跳过级  → 纯文案/配置 → 直接 Edit + build 验证
         → 用户显式"快速/仅开发/跳过审查" → dispatch 模式二（仅开发，无 QA）
 ```
@@ -38,8 +38,7 @@
 | 工具 | 适用规模 | 触发条件 |
 |------|:---:|------|
 | **dispatch（统一入口）** | 全部 | 任何代码/配置/文档改动，内部 S/M/L 分级路由 |
-| **OpenSpec** | L 级 | 跨 2+ 服务 / 涉及 Proto/common / 新增公开 API / 架构决策 |
-| **Workflow** | S/M/L 级 | dispatch 按分级启动 `harness-pipeline.js` |
+| **spec-pipeline** | S/M/L 级 | dispatch 按分级启动 `harness-spec-pipeline.js`（全流程自动化，阶段 5 编码委托 harness-pipeline） |
 | **Ralph 循环** | 批量 | 已知清单 >5 项、需自主迭代（每项仍分级） |
 
 ## 反例（常见误判）
@@ -55,16 +54,12 @@
 ## 下一步
 
 决策完成后，根据分级结果：
-- **dispatch（S 级）** → 轻量 Pipeline：`Workflow harness-pipeline.js` args 加 `workload:"S"`
-- **dispatch（M 级）** → Pipeline：`Workflow harness-pipeline.js`（默认全流程）
-- **dispatch（L 级）** → 派发需求分析子 Agent (`.harness/agents/subagents/requirement-analyst.md`) → 派发架构设计子 Agent (`.harness/agents/subagents/architecture-designer.md`) → 并行 N×Workflow
+- **dispatch（S/M/L 级）** → `Workflow harness-spec-pipeline.js`（全流程自动化；S 级短路阶段 1-4 直接阶段 5 编码，L 级走完整 0-6）
 - **跳过级（纯文案/配置）** → 直接 Edit + build 验证
 - **Ralph** → 写 fix_plan.md → 启动 Ralph 循环（每项仍走 dispatch 分级）
 
 ## 关联资源
 
 - 统一入口 / 分级路由：`.harness/skills/dispatch.md`
-- 需求分析子 Agent：`.harness/agents/subagents/requirement-analyst.md`
-- 架构设计子 Agent：`.harness/agents/subagents/architecture-designer.md`
-- Harness Pipeline：`.harness/workflows/harness-pipeline.js`
+- 全流程自动化：`.harness/workflows/harness-spec-pipeline.js`（阶段 5 编码委托 harness-pipeline.js）
 - Ralph 配置：`.ralphrc`

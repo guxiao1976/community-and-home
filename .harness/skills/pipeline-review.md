@@ -19,7 +19,7 @@ description: 流水线检视与完善 —— 定期或按需检查开发流水�
 # 列出各 harness 文档最后更新时间 + 最近引擎实质改动，供人工判断。
 # 注：设计先行原则（第15条，文档先提交）使「文档与代码同批交付」时文档时间必然早于代码，
 # 故本维度不自动 FAIL，改为列出信息由人工判断「哪些实质改动改变了文档描述的内容却未同步」。
-for f in .harness/docs/pipeline-*.md .harness/docs/harness-design-principles.md .harness/agents/owner-agent.md; do
+for f in .harness/docs/pipeline-architecture.md .harness/docs/pipeline-flow-complete.md .harness/docs/pipeline-patterns.md .harness/docs/pipeline-evolution.md .harness/docs/harness-design-principles.md .harness/agents/owner-agent.md; do
   echo "--- $f"
   git log -1 --format='  最后更新: %cd  %s' --date=format:'%F %T' -- "$f" 2>/dev/null
 done
@@ -31,7 +31,7 @@ git log -10 --format='  %cd  %s' --date=format:'%F %T' -- .harness/workflows .ha
 
 ### 维度 2 · 应用率
 
-抽查 `.harness/tasks/` 最近 N 个已完成任务（completed），确认是否走了 dispatch 分级 + pipeline。判定：应用率 ≥ 90%；S 级内联需有 dispatch 分级记录 + 门禁。
+抽查 `.harness/tasks/` 最近 N 个已完成任务（completed），确认是否走了 dispatch 分级 + spec-pipeline（全流程自动化）或 harness-pipeline（编码）。判定：应用率 ≥ 90%；S 级内联需有 dispatch 分级记录 + 门禁。
 
 ### 维度 3 · 门禁健康（4 子项）
 
@@ -54,7 +54,7 @@ ls .harness/logs/incidents/*.yml | grep -v _template | wc -l   # Incident 条数
 
 ## Step 3: 测试（正向 + 负向）
 
-**正向**：跑一个最小无害样例任务（给某服务 model 加一行 `// Deprecated`），用 `harness-pipeline.js` 走 Generator→QA→Reviewer，验证不卡死、产出 PASS。
+**正向**：跑一个最小无害样例任务（给某服务 model 加一行 `// Deprecated`），用 `harness-spec-pipeline.js` 走全流程（S 级轻量：dispatch → 阶段 5 编码 harness-pipeline → 阶段 6 归档），验证不卡死、产出 PASS。
 
 **负向**：故意改坏一个测试，验证 QA 门禁正确拦截（返回 FAIL 而非假装成功）。
 

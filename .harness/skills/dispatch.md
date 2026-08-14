@@ -34,9 +34,9 @@
 
 | 分级 | 执行方式 | QA | Review |
 |------|---------|:--:|:--:|
-| **S（轻量）** | Workflow `harness-pipeline.js`（args 加 `workload:"S"`） | ✅ 15项 | ❌ 跳过 |
-| **M（单服务）** | Workflow `harness-pipeline.js`（默认全流程） | ✅ 15项 | 按 taskType |
-| **L（跨服务）** | OpenSpec → 需求分析 → 架构设计 → 并行 N×Workflow | ✅ 每服务 | ✅ 每服务 3视角 |
+| **S（轻量）** | `harness-spec-pipeline.js`（短路到阶段 5 编码 harness-pipeline） | ✅ 15项 | ❌ 跳过 |
+| **M（单服务）** | `harness-spec-pipeline.js`（全流程，阶段 5 编码） | ✅ 15项 | 按 taskType |
+| **L（跨服务）** | `harness-spec-pipeline.js`（全流程 0-6，每阶段 HITL） | ✅ 每服务 | ✅ 每服务 3视角 |
 
 QA 阶段默认只扫描本次 git diff 变更的文件。用户说以下词时切换为全量扫描：
 - **"全量" / "全量扫描" / "完整检查" / "全面检查"** → QA 使用 `--full`
