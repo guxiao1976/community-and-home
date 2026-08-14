@@ -163,12 +163,108 @@ ${TASK}
 
   // S/M 级短路阶段 1-4（阶段 5 用 workload:S 调 harness-pipeline）
   ctx.stageResults[0] = { workload: ctx.workload, route: ctx.route, services: ctx.services }
-  ctx.currentStage = 1
   saveState(ctx)
 }
 
-// 阶段 1: 需求分析（Phase 3 实现）
-async function stage1Requirement(ctx) { /* Phase 3 */ }
+// 阶段 1: 需求分析
+async function stage1Requirement(ctx) {
+  phase('1 需求分析')
+  // S/M 级短路：不跑需求分析，直接跳阶段 5（编码）
+  if (ctx.workload === 'S' || ctx.workload === 'M') {
+    log(`  ⏭️ ${ctx.workload} 级：跳过需求分析/评审/设计，直接编码（阶段 5）`)
+    ctx.stageResults[1] = { skipped: true, reason: `${ctx.workload} 级不走 OpenSpec` }
+    ctx.currentStage = 4  // 主循环 +1 后跳到阶段 5
+    saveState(ctx)
+    return
+  }
+
+  // 1a. 澄清（brainstorming 硬门禁，显式第一步）
+  if (!ctx.decisions.stage1_clarify) {
+    const clarify = await agent(
+      `你是需求澄清 Agent。对以下用户需求做 brainstorming 澄清（superpowers:brainstorming 思路）：
+先探索现状、识别关键决策点，然后产出「待用户确认的澄清问题清单」。不要直接产出 spec。
+
+## 变更
+${CHANGE}
+
+## 用户需求
+${TASK}
+
+## 输出（问题清单，每项含选项 + 推荐）
+请列出需要用户拍板的关键问题（边界、方案对比、影响范围、安全权衡等），每项：
+- id: 唯一标识
+- text: 问题描述
+- options: 候选选项数组（每项 label + 说明）
+- recommended: 推荐选项的 index
+- why: 为什么需要用户确认`,
+      { label: '需求澄清（brainstorming）', schema: {
+        type: 'object', additionalProperties: false, required: ['summary', 'questions'],
+        properties: {
+          summary: { type: 'string' },
+          questions: { type: 'array', items: {
+            type: 'object', additionalProperties: false, required: ['id', 'text', 'options'],
+            properties: {
+              id: { type: 'string' },
+              text: { type: 'string' },
+              options: { type: 'array', items: { type: 'string' } },
+              recommended: { type: 'number' },
+              why: { type: 'string' },
+            },
+          } },
+        },
+      } }
+    )
+    ctx.stageResults[1] = { clarifySummary: clarify.summary }
+    return pauseForInput(ctx, 'stage1_clarify', {
+      stage: 1,
+      summary: `需求澄清问题（${CHANGE}）— 请逐项拍板`,
+      questions: clarify.questions,
+      onResume: '决策注入后进入需求分析形式化',
+    })
+  }
+
+  // 1b. 分析（决策已确认）
+  const decisions = ctx.decisions.stage1_clarify
+  const res = await agent(
+    `你是 Community-Home 的需求分析师。执行 .harness/skills/requirement-analysis.md 的完整流程（Step 2-8），
+产出 proposal + specs。**必须先 Read .harness/skills/requirement-analysis.md 获取权威流程**。
+
+## 变更
+${CHANGE}
+
+## 用户需求
+${TASK}
+
+## 已确认的设计决策（用户已拍板）
+${JSON.stringify(decisions, null, 2)}
+
+## 产出（写入磁盘）
+- .harness/changes/${CHANGE}/proposal.md
+- .harness/changes/${CHANGE}/specs/<capability>/spec.md
+- .harness/changes/${CHANGE}/.change.yaml
+
+完成后返回：{ traceability, specsCount, selfReview }（traceability=转换追溯表，全✅ 才能通过）`,
+      { label: 'requirement-analyst', schema: {
+        type: 'object', additionalProperties: false, required: ['traceability', 'specsCount', 'selfReview'],
+        properties: {
+          traceability: { type: 'object', additionalProperties: true },
+          specsCount: { type: 'number' },
+          selfReview: { type: 'string' },
+        },
+      } }
+    )
+
+    // 门禁：requirement_analysis
+    const gate = checkGate('requirement_analysis', { changeDir: changeDir(), summary: `${CHANGE} 需求分析门禁` })
+    if (!gate.passed) {
+      log(`❌ 需求分析门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
+      return { status: 'stage_fail', stage: 1, change: CHANGE, failures: gate.failures, stateFile: statePath() }
+    }
+    ctx.stageResults[1] = { ...ctx.stageResults[1], traceability: res.traceability, specsCount: res.specsCount, gatePassed: true }
+    saveState(ctx)
+    log(`  ✅ 需求分析完成: ${res.specsCount} specs, self-review ${res.selfReview}`)
+  }
+}
 
 // 阶段 2: 需求评审（Phase 4 实现）
 async function stage2Review(ctx) { /* Phase 4 */ }
@@ -206,20 +302,31 @@ const STAGE_GATE = ['', 'requirement_analysis', 'requirement_review', 'architect
 
 while (ctx.currentStage <= 6) {
   const stage = ctx.currentStage
-  // 空壳阶段：Phase 3-6 实现前直接推进（避免骨架测试卡住）
-  if (['', null, undefined].includes(String(STAGE_FN[stage]))) {
+  const fn = STAGE_FN[stage]
+  // 空壳阶段：Phase 3-6 实现前直接推进
+  if (!fn) {
     ctx.currentStage++
     saveState(ctx)
     continue
   }
-  await STAGE_FN[stage](ctx)
-  ctx.currentStage++
+
+  const result = await fn(ctx)
+  ctx.currentStage = ctx.currentStage + 1
   saveState(ctx)
+
+  // 阶段函数请求 HITL 暂停 → 返回 need_input，终止本轮（resume 后从 currentStage 续跑）
+  if (result && result.status === 'need_input') {
+    return result
+  }
+  // 阶段门禁失败 → 返回 stage_fail
+  if (result && result.status === 'stage_fail') {
+    return result
+  }
 }
 
-log('✅ 全流程骨架完成（阶段函数待 Phase 3-6 实现）')
+log('✅ 全流程完成')
 return {
-  status: 'skeleton_done',
+  status: 'pass',
   change: CHANGE,
   stageResults: ctx.stageResults,
   stateFile: statePath(),
