@@ -44,7 +44,9 @@
 | 策略层（项目独有） | `config/`、`registry/`、`rules/`、`knowledge/`、`changes/`、`tasks/` | 所有项目独有的规则、配置、知识 |
 | 运行时层（运行产物） | `logs/`、`loop-runs/` | 运行产生，明确 gitignore 边界 |
 
-**现状缺口**：`agents/`（owner-agent 混入项目职责）需逐步把项目策略外提到 `config/` / `registry/` / `rules/`。~~`skills/`（dispatch 硬编码服务名）~~ 与 ~~`scripts/`（harness-checks 硬编码服务模块）~~ 已于 2026-08-14 落地：`dispatch.md`、`harness-loop.sh`、`harness-checks.sh`（含 ast-checks.sh / go-ast-checker）均从 `registry/services.json`（单一数据源）读取服务名与模块映射。
+**现状缺口**：~~`skills/`（dispatch 硬编码服务名）~~ 与 ~~`scripts/`（harness-checks 硬编码服务模块）~~ 已于 2026-08-14 落地：`dispatch.md`、`harness-loop.sh`、`harness-checks.sh`（含 ast-checks.sh / go-ast-checker）均从 `registry/services.json`（单一数据源）读取服务名与模块映射。
+
+**`agents/`（owner-agent）**：2026-08-14 评估——owner-agent 是**项目专用调度文档**（第一行声明"Community-Home 项目中"），其项目特定内容（背景表/知识索引/规范引用）均为**引用式**（指向 rules/、registry/、skills/），无规范复制；拆分收益（跨项目可移植）对本单项目 monorepo 价值有限，**暂不拆分**，保留为长期可选项。
 
 ## 四、流程衔接规则（harness-pipeline vs superpowers）
 
