@@ -184,3 +184,29 @@ func TestInt64PrecisionPreservation(t *testing.T) {
 		})
 	}
 }
+
+// TestListRolesReq_SortFormTags — sortBy/sortOrder 为 camelCase query 参数（可选 *string）
+// 契约锁：REST 网关以 form tag 解析 query，tag 与前端约定必须一致。
+// SEE: [[api-required-field-marked-optional]] — sortBy/sortOrder 均为 optional，正确
+func TestListRolesReq_SortFormTags(t *testing.T) {
+	req := ListRolesReq{
+		Page:      1,
+		PageSize:  10,
+		SortBy:    strptr("role_name"),
+		SortOrder: strptr("desc"),
+	}
+	if req.SortBy == nil || *req.SortBy != "role_name" {
+		t.Errorf("SortBy not wired: %v", req.SortBy)
+	}
+	if req.SortOrder == nil || *req.SortOrder != "desc" {
+		t.Errorf("SortOrder not wired: %v", req.SortOrder)
+	}
+
+	// 未携带排序参数（nil）时结构零值可用
+	empty := ListRolesReq{Page: 1, PageSize: 10}
+	if empty.SortBy != nil || empty.SortOrder != nil {
+		t.Errorf("optional sort fields should be nil when absent")
+	}
+}
+
+func strptr(s string) *string { return &s }

@@ -6,6 +6,7 @@ import (
 
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-permission/model"
 	"github.com/guxiao1976/community-permission/rpc/internal/svc"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,7 @@ import (
 // TestListRoles_DefaultPage 覆盖 Page nil → 默认 page=1, pageSize=10
 func TestListRoles_DefaultPage(t *testing.T) {
 	mockRole := new(MockRoleModel)
-	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10)).
+	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10), "", "").
 		Return([]*model.SysRole{}, int64(0), nil)
 
 	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
@@ -34,7 +35,7 @@ func TestListRoles_DefaultPage(t *testing.T) {
 // TestListRoles_CustomPage 覆盖 Page/PageSize 显式设置 → 透传给 FindList
 func TestListRoles_CustomPage(t *testing.T) {
 	mockRole := new(MockRoleModel)
-	mockRole.On("FindList", mock.Anything, mock.Anything, int64(2), int64(50)).
+	mockRole.On("FindList", mock.Anything, mock.Anything, int64(2), int64(50), "", "").
 		Return([]*model.SysRole{
 			{Id: 1, RoleCode: "owner", RoleName: "业主", Status: 1},
 		}, int64(51), nil)
@@ -57,7 +58,7 @@ func TestListRoles_CustomPage(t *testing.T) {
 // TestListRoles_PageZeroFallsBack 覆盖 Page 设置了但 Page=0/PageSize=0 → 回落默认 1/10
 func TestListRoles_PageZeroFallsBack(t *testing.T) {
 	mockRole := new(MockRoleModel)
-	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10)).
+	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10), "", "").
 		Return([]*model.SysRole{}, int64(0), nil)
 
 	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
@@ -78,7 +79,7 @@ func TestListRoles_StatusFilter(t *testing.T) {
 	mockRole := new(MockRoleModel)
 	mockRole.On("FindList", mock.Anything, mock.MatchedBy(func(s *int64) bool {
 		return s != nil && *s == 1
-	}), int64(1), int64(10)).
+	}), int64(1), int64(10), "", "").
 		Return([]*model.SysRole{}, int64(0), nil)
 
 	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
@@ -93,7 +94,7 @@ func TestListRoles_StatusFilter(t *testing.T) {
 // TestListRoles_TotalPagesCeil 覆盖分页总页数上取整边界（total 整除 pageSize 时 -1/+1 区分）
 func TestListRoles_TotalPagesCeil(t *testing.T) {
 	mockRole := new(MockRoleModel)
-	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10)).
+	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10), "", "").
 		Return([]*model.SysRole{}, int64(100), nil)
 
 	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
@@ -108,7 +109,7 @@ func TestListRoles_TotalPagesCeil(t *testing.T) {
 // TestListRoles_Error 覆盖 FindList 报错 → 透传 error
 func TestListRoles_Error(t *testing.T) {
 	mockRole := new(MockRoleModel)
-	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10)).
+	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10), "", "").
 		Return(nil, int64(0), assert.AnError)
 
 	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
@@ -136,7 +137,7 @@ func TestListRoles_PlatformsTransparency(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRole := new(MockRoleModel)
-			mockRole.On("FindList", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			mockRole.On("FindList", mock.Anything, mock.Anything, mock.Anything, mock.Anything, "", "").
 				Return([]*model.SysRole{
 					{
 						Id:        1,
@@ -160,4 +161,73 @@ func TestListRoles_PlatformsTransparency(t *testing.T) {
 			mockRole.AssertExpectations(t)
 		})
 	}
+}
+
+// ==================== 排序集成（Task 2.2，RED→GREEN） ====================
+
+// TestListRoles_SortPassthrough — 合法排序 → FindList 收到规范化参数 (field, order)
+// RED: ListRoles 尚未集成 validateSort/透传，始终传 ""，"" → mock 收到非预期参数 → FAIL
+// SEE: [[rpc-callback-must-check-response-base]] — 业务错误走 Base 而非 Go error
+func TestListRoles_SortPassthrough(t *testing.T) {
+	mockRole := new(MockRoleModel)
+	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10), "role_name", "desc").
+		Return([]*model.SysRole{}, int64(0), nil)
+
+	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
+	logic := NewListRolesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.ListRoles(&permissionv1.ListRolesRequest{
+		Sort: &commonv1.SortField{Field: "role_name", Order: "desc"},
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	mockRole.AssertExpectations(t)
+}
+
+// TestListRoles_InvalidSortField — 非法字段 → Base.Code=99400，Roles 空，返回 nil err
+func TestListRoles_InvalidSortField(t *testing.T) {
+	mockRole := new(MockRoleModel)
+	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
+	logic := NewListRolesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.ListRoles(&permissionv1.ListRolesRequest{
+		Sort: &commonv1.SortField{Field: "evil", Order: "asc"},
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, int32(errx.CodeInvalidParam), resp.Base.Code, "非法字段应返回 Base 99400")
+	assert.Empty(t, resp.Roles)
+	mockRole.AssertNotCalled(t, "FindList", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+// TestListRoles_InvalidSortOrder — 非法方向 → Base.Code=99400，nil err
+func TestListRoles_InvalidSortOrder(t *testing.T) {
+	mockRole := new(MockRoleModel)
+	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
+	logic := NewListRolesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.ListRoles(&permissionv1.ListRolesRequest{
+		Sort: &commonv1.SortField{Field: "role_name", Order: "sideways"},
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, int32(errx.CodeInvalidParam), resp.Base.Code, "非法方向应返回 Base 99400")
+	mockRole.AssertNotCalled(t, "FindList", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+// TestListRoles_SortEmptyFieldNoError — 空字段+非空方向不报错（REQ-4），FindList 收到空串
+func TestListRoles_SortEmptyFieldNoError(t *testing.T) {
+	mockRole := new(MockRoleModel)
+	mockRole.On("FindList", mock.Anything, mock.Anything, int64(1), int64(10), "", "").
+		Return([]*model.SysRole{}, int64(0), nil)
+
+	svcCtx := &svc.ServiceContext{RoleModel: mockRole}
+	logic := NewListRolesLogic(context.Background(), svcCtx)
+
+	resp, err := logic.ListRoles(&permissionv1.ListRolesRequest{
+		Sort: &commonv1.SortField{Field: "", Order: "desc"},
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, int32(0), resp.Base.Code)
+	mockRole.AssertExpectations(t)
 }

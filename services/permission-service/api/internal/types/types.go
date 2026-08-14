@@ -66,9 +66,11 @@ type RoleInfo struct {
 
 // ListRolesReq 角色列表请求
 type ListRolesReq struct {
-	Page     int64  `form:"page,default=1"`
-	PageSize int64  `form:"pageSize,default=10"`
-	Status   *int32 `form:"status,optional"`
+	Page      int64   `form:"page,default=1"`
+	PageSize  int64   `form:"pageSize,default=10"`
+	Status    *int32  `form:"status,optional"`
+	SortBy    *string `form:"sortBy,optional"`    // 排序字段（白名单校验在 RPC 层）
+	SortOrder *string `form:"sortOrder,optional"` // 排序方向 asc/desc，空串由 RPC 层默认 asc
 }
 
 // ListRolesResp 角色列表响应

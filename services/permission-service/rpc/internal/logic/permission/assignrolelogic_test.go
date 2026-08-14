@@ -67,8 +67,8 @@ func (m *MockRoleModel) FindByIds(ctx context.Context, ids []int64) ([]*model.Sy
 	return args.Get(0).([]*model.SysRole), args.Error(1)
 }
 
-func (m *MockRoleModel) FindList(ctx context.Context, status *int64, page, pageSize int64) ([]*model.SysRole, int64, error) {
-	args := m.Called(ctx, status, page, pageSize)
+func (m *MockRoleModel) FindList(ctx context.Context, status *int64, page, pageSize int64, sortField, sortOrder string) ([]*model.SysRole, int64, error) {
+	args := m.Called(ctx, status, page, pageSize, sortField, sortOrder)
 	if args.Get(0) == nil {
 		return nil, 0, args.Error(2)
 	}

@@ -30,12 +30,27 @@ type SysRole struct {
 	DeleteTime  sql.NullTime   `db:"deleted_at"`
 }
 
+// roleSortFieldWhitelist ORDER BY 白名单字面量（二次防御，杜绝用户原始输入拼入 SQL）。
+// 与 rpc/internal/logic/permission/sort.go 的 roleSortFieldWhitelist 需保持同步（各自独立定义，双处同步）。
+// SEE: [[error-code-literal-bypasses-qa-gate]] — 纵深防御：即使 RPC 层校验被绕过，此处仍回落默认值。
+var roleSortFieldWhitelist = map[string]struct{}{
+	"id":         {},
+	"role_code":  {},
+	"role_name":  {},
+	"sort_order": {},
+	"status":     {},
+	"created_at": {},
+	"updated_at": {},
+}
+
 type SysRoleModel interface {
 	Insert(ctx context.Context, data *SysRole) (int64, error)
 	FindOne(ctx context.Context, id int64) (*SysRole, error)
 	FindByCode(ctx context.Context, code string) (*SysRole, error)
 	FindByIds(ctx context.Context, ids []int64) ([]*SysRole, error)
-	FindList(ctx context.Context, status *int64, page, pageSize int64) ([]*SysRole, int64, error)
+	// FindList 分页查询；sortField/sortOrder 为 RPC 层已校验值，可为空。
+	// 空 sortField → 默认首键 sort_order；恒追加 id asc 平局决胜。
+	FindList(ctx context.Context, status *int64, page, pageSize int64, sortField, sortOrder string) ([]*SysRole, int64, error)
 	Update(ctx context.Context, data *SysRole) error
 	SoftDelete(ctx context.Context, id int64) error
 }
@@ -86,7 +101,7 @@ func (m *defaultSysRoleModel) FindByIds(ctx context.Context, ids []int64) ([]*Sy
 	return list, err
 }
 
-func (m *defaultSysRoleModel) FindList(ctx context.Context, status *int64, page, pageSize int64) ([]*SysRole, int64, error) {
+func (m *defaultSysRoleModel) FindList(ctx context.Context, status *int64, page, pageSize int64, sortField, sortOrder string) ([]*SysRole, int64, error) {
 	where := "where  deleted_at is null"
 	args := make([]interface{}, 0)
 	if status != nil {
@@ -99,9 +114,27 @@ func (m *defaultSysRoleModel) FindList(ctx context.Context, status *int64, page,
 	}
 	offset := (page - 1) * pageSize
 	var list []*SysRole
-	query := fmt.Sprintf("select * from %s %s order by sort_order asc limit %d offset %d", m.table, where, pageSize, offset)
+	query := fmt.Sprintf("select * from %s %s %s limit %d offset %d", m.table, where, orderByClause(sortField, sortOrder), pageSize, offset)
 	err := m.conn.QueryRowsCtx(ctx, &list, query, args...)
 	return list, total, err
+}
+
+// orderByClause 组装 ORDER BY 子句（白名单字面量二次防御）。
+// - 字段转小写比对白名单，非白名单回落默认首键 sort_order
+// - 方向仅 asc/desc 字面量二值分支，非 desc 回落 asc
+// - 空字段默认 sort_order
+// - 恒追加 id asc 平局决胜（tiebreaker），保证分页稳定性
+// 用户原始输入（含注入载荷）永不拼入 SQL（REQ-6 安全）。
+func orderByClause(sortField, sortOrder string) string {
+	field := strings.ToLower(sortField)
+	if _, ok := roleSortFieldWhitelist[field]; !ok {
+		field = "sort_order"
+	}
+	direction := "asc"
+	if strings.ToLower(sortOrder) == "desc" {
+		direction = "desc"
+	}
+	return fmt.Sprintf("order by %s %s, id asc", field, direction)
 }
 
 func (m *defaultSysRoleModel) Update(ctx context.Context, data *SysRole) error {

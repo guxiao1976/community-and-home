@@ -1,6 +1,6 @@
 # 知识图谱上下文 — permission-service
 
-> 自动生成于 2026-08-13 15:55:44 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-14 12:25:01 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -21,6 +21,7 @@
 
 | 消费方 | 依赖类型 |
 |---------|---------|
+| auth-service | None |
 | community-hub-service | None |
 | master-data-service | None |
 | user-service | None |

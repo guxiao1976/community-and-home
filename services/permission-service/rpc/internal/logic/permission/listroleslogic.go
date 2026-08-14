@@ -5,6 +5,7 @@ import (
 
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-permission/rpc/internal/svc"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -38,7 +39,21 @@ func (l *ListRolesLogic) ListRoles(in *permissionv1.ListRolesRequest) (*permissi
 		status = &v
 	}
 
-	roles, total, err := l.svcCtx.RoleModel.FindList(l.ctx, status, page, pageSize)
+	// 排序校验：非法 → 业务错误写 Base（99400），返回 nil error（项目 gRPC 层约定，见 createrolelogic.go 同款模式）
+	// SEE: [[rpc-callback-must-check-response-base]] — 业务错误走 Base 而非 Go error
+	// SEE: [[error-code-literal-bypasses-qa-gate]] — 用 errx.CodeInvalidParam 常量，禁止裸数字
+	sortField, sortOrder := "", ""
+	if in.Sort != nil {
+		field, order, err := validateSort(in.Sort.Field, in.Sort.Order)
+		if err != nil {
+			return &permissionv1.ListRolesResponse{
+				Base: responsex.NewBaseRespWithError(int32(errx.CodeInvalidParam), err.Error()),
+			}, nil
+		}
+		sortField, sortOrder = field, order
+	}
+
+	roles, total, err := l.svcCtx.RoleModel.FindList(l.ctx, status, page, pageSize, sortField, sortOrder)
 	if err != nil {
 		return nil, err
 	}

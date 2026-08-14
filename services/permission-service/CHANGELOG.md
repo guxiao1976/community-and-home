@@ -1,5 +1,73 @@
 # CHANGELOG — permission-service
 
+## 2026-08-14 — role-list-sort：角色列表排序（FindList 签名扩展 + orderByClause + validateSort + API 透传/ToError 修复）
+
+### 类型
+分诊：`orderByClause`/`validateSort`/`ListRoles` 排序集成/API `ToError` 均属**有逻辑函数**（分支/校验/转换），全部走 RED→GREEN→REFACTOR；`ListRolesReq` 增 sortBy/sortOrder 为**字段映射类**免 RED。Task 1.1 的 FindList 签名变更属签名中间态（rpc 包在同步前编译失败，属正常）。
+
+### TDD 证据
+
+#### RED 1 — Task 1.1 model FindList 签名扩展（`go test ./model/ -run FindList`）
+```
+# github.com/guxiao1976/community-permission/model [build failed]
+model/permission_test.go:133:86: too many arguments in call to m.FindList
+	have (context.Context, nil, int64, int64, string, string)
+	want (context.Context, *int64, int64, int64)
+FAIL	github.com/guxiao1976/community-permission/model [build failed]
+```
+GREEN（`go test ./model/ -run FindList`）：`ok`，`TestSysRoleModel_FindList_WithSortField`（断言 SQL `order by role_name desc, id asc`）+ `TestSysRoleModel_FindList_DefaultSort`（`order by sort_order asc, id asc`）全 PASS。补充 `TestOrderByClause`（8 cases：合法/空/非白名单回落/注入载荷被拒/大写归一/非法方向回落 asc）覆盖白名单二次防御。
+
+#### RED 2 — Task 2.1 validateSort（`go test ./rpc/internal/logic/permission/ -run Sort`）
+```
+rpc/internal/logic/permission/sort_test.go:36:25: undefined: validateSort
+FAIL	github.com/guxiao1976/community-permission/rpc/internal/logic/permission [build failed]
+```
+GREEN：`ok`，11 table cases 全 PASS（合法/大小写不敏感/空方向默认 asc/空字段不报错/非法字段 99400/注入载荷被拒/非法方向 99400）。
+
+#### RED 3 — Task 2.2 ListRoles 排序集成（`go test ./rpc/internal/logic/permission/ -run ListRoles`）
+```
+--- FAIL: TestListRoles_SortPassthrough (0.00s)
+panic: mock: Unexpected Method Call
+	FindList(context.backgroundCtx,*int64,int64,int64,string,string)
+	        4: ""
+	        5: ""
+	Diff: 4: FAIL:  (string=) != (string=role_name)
+```
+GREEN：`ok`，新增 `TestListRoles_SortPassthrough`（FindList 收到 `"role_name","desc"`）、`TestListRoles_InvalidSortField`（Base 99400 + Roles 空 + FindList 未被调用）、`TestListRoles_InvalidSortOrder`、`TestListRoles_SortEmptyFieldNoError`（REQ-4 空字段+方向不报错）全 PASS。
+
+#### RED 4 — Task 3.2 API 透传 + ToError 修复（`go test ./api/internal/logic/perm/ -run ListRoles`）
+```
+--- FAIL: TestListRoles_SortPassThrough (0.00s)
+    Error: Expected value not to be nil.
+    Messages: sort 参数应透传到 gRPC 请求
+--- FAIL: TestListRoles_SortOnlyNoOrder
+--- FAIL: TestListRoles_BaseErrorToGoError
+```
+GREEN：`ok`，`TestListRoles_SortPassThrough`（grpcReq.Sort.Field/Order 透传）、`TestListRoles_SortOnlyNoOrder`（SortOrder nil → 透传空串由 RPC 默认 asc）、`TestListRoles_BaseErrorToGoError`（Base.Code=99400 → 转 Go error）全 PASS。
+
+### 做了什么
+- **T1.1 model**：`model/permission.go` — `SysRoleModel.FindList` 签名扩展 `(ctx, status, page, pageSize, sortField, sortOrder)`；新增包内纯函数 `orderByClause`（白名单字面量二次防御：非白名单回落 `sort_order`、方向仅 asc/desc 二值分支、空字段默认 `sort_order`、恒追加 `, id asc` tiebreaker）；`roleSortFieldWhitelist` map（7 字段）。rpc 侧同步：`MockRoleModel.FindList` +2 参数、`listroleslogic.go` 调用点补 `"",""`、`listroleslogic_test.go` 全部 `On("FindList",...)` 断言补 2 参数。
+- **T2.1 rpc**：新增 `rpc/internal/logic/permission/sort.go` — 纯函数 `validateSort(field, order) (field, order, error)`：字段转小写比对白名单，未命中 → `errx.NewCodeError(errx.CodeInvalidParam, "非法排序字段: "+field)`；字段为空返回空（不报错，即使带方向）；方向转小写、空默认 `asc`、非 asc/desc → 99400。白名单与 model 层各自独立定义、注释标注双处需同步。
+- **T2.2 rpc**：`listroleslogic.go` — `in.Sort != nil` 时先 `validateSort`，失败写 `Base=99400` 返回 nil err（业务错误走 Base，不执行查询），成功透传规范化 field/order 到 `FindList`。
+- **T3.1 api**：`api/internal/types/types.go` — `ListRolesReq` 增 `SortBy *string form:"sortBy,optional"`、`SortOrder *string form:"sortOrder,optional"`（camelCase query 参数）。
+- **T3.2 api**：`api/internal/logic/perm/listroleslogic.go` — 构建 `grpcReq.Sort`（`req.SortBy != nil` 时，SortOrder 为空串透传由 RPC 层默认 asc；防 nil 解引用）；gRPC 调用后立即 `responsex.ToError(grpcResp.Base)`，非成功返回 Go error（修复原实现未检查 Base、业务校验错误被静默吞掉的缺陷）。
+- 前端 web/pc 排序交互属其他 Agent 任务 4.x，本服务无前端改动。
+
+### 影响
+- Proto: 无（`ListRolesRequest.sort` 由 Owner 在 api-proto Task 0.2 交付，本次仅消费生成代码）
+- 调用方: API 网关 `GET /api/perm/roles` 新增 `?sortBy=`/`?sortOrder=`；无排序参数时行为不变（默认 `sort_order asc, id asc`）
+- 数据库: 无 schema 变更（排序字段均为 sys_role 既有列）
+- 缓存: 无新增缓存键
+- 安全: ORDER BY 仅拼接白名单字面量，注入载荷（`role_name; drop table sys_role`）被两层拦截（RPC 白名单 + model 二次防御）
+
+### 应用的记忆
+- [[change-verification-checklist]] (must-follow) — 改动后逐项验证：go build/test、harness-checks、跨服务调用方检查（FindList 无跨服务影响）
+- [[error-code-literal-bypasses-qa-gate]] (must-follow) — validateSort/ListRoles 用 `errx.CodeInvalidParam` 常量，禁止裸数字
+- [[rpc-callback-must-check-response-base]] (must-follow) — RPC 业务错误走 Base；API 层 `ToError(grpcResp.Base)` 修复
+- [[error-code-collision-and-namespace-alignment]] — 99400 语义唯一（Bad Request）
+
+---
+
 ## 2026-08-13 — access-control：sys_role.platforms 存储/透出 + 当前小区接口权限码（Task 1.1-1.4）
 
 ### 类型
