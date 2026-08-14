@@ -124,12 +124,29 @@ check_chain() {
   [ "$ok" -eq 1 ] && pass "chain" "dispatch → spec-pipeline → harness-pipeline 调用链完整"
 }
 
+# 检查 6: registry ↔ dispatch 服务名同步（新增服务后别名表不得漂移）
+check_registry() {
+  local reg="$ROOT/.harness/registry/services.json"
+  local dispatch="$ROOT/.harness/skills/dispatch.md"
+  if [ ! -f "$reg" ]; then fail "registry_sync" "services.json 缺失"; return; fi
+  if [ ! -f "$dispatch" ]; then fail "registry_sync" "dispatch.md 缺失"; return; fi
+  local missing=0 svc
+  while read -r svc; do
+    [ -z "$svc" ] && continue
+    if ! grep -qE "\`$svc\`" "$dispatch"; then
+      missing=$((missing+1)); fail "registry_sync" "dispatch 别名表缺少服务 $svc（registry 已注册）"
+    fi
+  done < <(python3 -c "import json,sys; print('\n'.join(s['name'] for s in json.load(open(sys.argv[1]))['services']))" "$reg" 2>/dev/null)
+  [ "$missing" -eq 0 ] && pass "registry_sync" "registry ↔ dispatch 服务名同步"
+}
+
 # ── 执行 ──
 check_refs
 check_naming
 check_docs
 check_config_drift
 check_chain
+check_registry
 
 # ── 输出 ──
 if $OUTPUT_JSON; then

@@ -561,6 +561,7 @@ cmd_index() {
     case "$stat" in
       in_progress) in_prog+="$line"$'\n'; count_ip=$((count_ip + 1)) ;;
       blocked)     blocked+="$line"$'\n'; count_bl=$((count_bl + 1)) ;;
+      closed|completed) : ;;   # 终态：不进 BACKLOG 待办列表（仍计入 svc_count 统计）
       *)
         case "$prio" in
           P0) p0+="$line"$'\n'; count_p0=$((count_p0 + 1)) ;;
@@ -571,10 +572,12 @@ cmd_index() {
         ;;
     esac
 
-    # Per-service count (guard: some legacy task files may lack a service field)
-    local svc_key2="${svc:-unknown}"
-    local cur=${svc_count[$svc_key2]:-0}
-    svc_count[$svc_key2]=$((cur + 1))
+    # Per-service count —— 只统计非终态待办（BACKLOG 是待办索引，不应计入 closed/completed）
+    if [[ "$stat" != "closed" && "$stat" != "completed" ]]; then
+      local svc_key2="${svc:-unknown}"
+      local cur=${svc_count[$svc_key2]:-0}
+      svc_count[$svc_key2]=$((cur + 1))
+    fi
   done
 
   cat > "$BACKLOG" <<BACKLOGEOF
