@@ -656,7 +656,7 @@ check_hardcoded_secrets() {
       local line_num
       line_num=$(echo "$match" | cut -d: -f2)
       violations+=("$rel:$line_num:potential secret")
-    done < <(grep -rnPE "$pattern" "$search_dir" --include='*.go' 2>/dev/null || true)
+    done < <(grep -rPni "$pattern" "$search_dir" --include='*.go' 2>/dev/null || true)   # -i: 覆盖驼峰命名（apiKey/clientSecret/dbPassword/accessToken）
   done
 
   if [[ ${#violations[@]} -eq 0 ]]; then
