@@ -334,8 +334,18 @@ async function stage2Review(ctx) {
       onResume: '评审裁决后进入阶段 3',
     })
   }
-  // 评审不过 → 回阶段 1（≤3 轮）
-  log(`  ❌ 需求评审 ${pass}/${valid.length}（阈值 2/3）— 回阶段 1`)
+  // 评审不过 → 回阶段 1（≤3 轮，超限升级人工）
+  const rounds = ctx.stageResults[2].rounds
+  if (rounds >= 3) {
+    log(`  ⛔ 需求评审已达 ${rounds} 轮上限，升级人工决策`)
+    return pauseForInput(ctx, 'stage2_escalate', {
+      stage: 2,
+      summary: `需求评审 ${rounds} 轮仍未通过（${pass}/${valid.length}）— 升级人工`,
+      questions: [{ id: 'escalate', text: '评审多次未通过，如何处理？', options: ['人工修正 spec 后重试', '终止变更', '放宽阈值'] }],
+      onResume: '按人工决策继续',
+    })
+  }
+  log(`  ❌ 需求评审 ${pass}/${valid.length}（阈值 2/3）— 回阶段 1（第 ${rounds} 轮）`)
   ctx.currentStage = 0  // 主循环 +1 → 阶段 1
   saveState(ctx)
 }
@@ -556,6 +566,10 @@ if (ctx.resumePending && RESUME_WITH && RESUME_WITH.decisions) {
 const STAGE_FN = [stage0Dispatch, stage1Requirement, stage2Review, stage3Architecture, stage4Proto, stage5Coding, stage6Integrate]
 const STAGE_GATE = ['', 'requirement_analysis', 'requirement_review', 'architecture_design', 'proto_ci', '', 'integration']
 
+// 全局兜底：回退计数（防阶段 0-6 无限循环）
+ctx.rollbackCount = ctx.rollbackCount || 0
+const MAX_ROLLBACK = 10
+
 while (ctx.currentStage <= 6) {
   const stage = ctx.currentStage
   const fn = STAGE_FN[stage]
@@ -565,6 +579,23 @@ while (ctx.currentStage <= 6) {
     saveState(ctx)
     continue
   }
+
+  // 全局兜底：回退到已过阶段 → 计数；超限升级人工
+  if (stage <= ctx.lastStage && ctx.stageResults[stage]) {
+    ctx.rollbackCount++
+    saveState(ctx)
+    if (ctx.rollbackCount >= MAX_ROLLBACK) {
+      log(`⛔ 回退 ${ctx.rollbackCount} 次超上限，升级人工决策`)
+      return {
+        status: 'escalated',
+        change: CHANGE,
+        checkpoint: 'global_escalate',
+        summary: `全流程回退 ${ctx.rollbackCount} 次超限，需人工介入`,
+        stateFile: statePath(),
+      }
+    }
+  }
+  ctx.lastStage = stage
 
   const result = await fn(ctx)
   ctx.currentStage = ctx.currentStage + 1
