@@ -142,6 +142,52 @@ function pauseForInput(ctx, checkpoint, payload) {
   }
 }
 
+// ── P1.4: 决策状态即消费（读取后立即 delete，防主循环重进回环）──
+function consumeDecision(ctx, checkpoint) {
+  const d = ctx.decisions[checkpoint]
+  delete ctx.decisions[checkpoint]
+  return d
+}
+
+// ── P1.3: 被审 spec 内容哈希（文件变 → prompt 变 → resume 缓存必然失效，杜绝旧 REVISION 缓存命中）──
+// 确定性 hash（FNV-1a 简化），仅依赖文件内容，不依赖时间/随机。沙箱无 fs 时返回空（由调用方 fallback）。
+function specContentHash() {
+  if (!fs) return ''
+  try {
+    const specsDir = `${changeDir()}/specs`
+    const targets = [
+      `${changeDir()}/request.md`,
+      `${changeDir()}/proposal.md`,
+      `${changeDir()}/.change.yaml`,
+    ]
+    if (fs.existsSync(specsDir)) {
+      for (const cap of fs.readdirSync(specsDir)) {
+        const capDir = `${specsDir}/${cap}`
+        if (!fs.existsSync(capDir) || !fs.statSync(capDir).isDirectory()) continue
+        for (const f of fs.readdirSync(capDir)) {
+          if (f.endsWith('.md')) targets.push(`${capDir}/${f}`)
+        }
+      }
+    }
+    let h = 2166136261
+    for (const p of targets) {
+      if (!fs.existsSync(p)) continue
+      const buf = fs.readFileSync(p, 'utf8')
+      for (let i = 0; i < buf.length; i++) {
+        h ^= buf.charCodeAt(i)
+        h = Math.imul(h, 16777619)
+      }
+      h ^= 0x9e3779b9 // 文件边界分隔，避免拼接碰撞
+    }
+    return `#${(h >>> 0).toString(16)}`
+  } catch (e) { return '' }
+}
+
+// ── P1.2: mustFix 签名（section+issue 首 80 字符），用于跨轮对比"是否有新发现" ──
+function mustFixKey(lens, mf) {
+  return `${lens}|${mf.section || ''}|${String(mf.issue || mf.fix || '').slice(0, 80)}`
+}
+
 // ── 服务名提取（兼容 string / {service} / {serviceDir,name} 三种形态）──
 function svcName(s) {
   if (typeof s === 'string') return s
@@ -332,6 +378,22 @@ ${TASK}
 
   // 1b. 分析（决策已确认）
   const decisions = ctx.decisions.stage1_clarify
+
+  // P1: Owner 人工修正 spec 后重试 → 跳分析师重写（保留已修正 specs），直接进入评审
+  if (ctx.manualSpecFix) {
+    log('  → Owner 已人工修正 spec，跳过分析师重写（保留已修正 specs），直接进入评审')
+    ctx.stageResults[1] = ctx.stageResults[1] || {}
+    ctx.stageResults[1].manualFixApplied = true
+    return
+  }
+
+  // P1.1: 注入上轮评审 mustFixes（闭合反馈环，让分析师定向修正而非盲重写）
+  const rr = ctx.stageResults[2] && Array.isArray(ctx.stageResults[2].reviewRounds) ? ctx.stageResults[2].reviewRounds : []
+  const lastRoundMF = rr.length ? rr[rr.length - 1].mustFixes : []
+  const feedbackSection = lastRoundMF.length
+    ? `\n## 上轮评审反馈（REVISION 原因，必须逐条对照修订；修订后在 traceability 对应条目标注「已解决」）\n${lastRoundMF.map((m, i) => `${i + 1}. [${m.lens}] ${m.section || ''} — ${m.issue || ''}${m.fix ? `\n   修复建议: ${m.fix}` : ''}`).join('\n')}\n`
+    : ''
+
   const res = await agent(
     `你是 Community-Home 的需求分析师。执行 .harness/skills/requirement-analysis.md 的完整流程（Step 2-8），
 产出 proposal + specs。**必须先 Read .harness/skills/requirement-analysis.md 获取权威流程**。
@@ -344,7 +406,7 @@ ${TASK}
 
 ## 已确认的设计决策（用户已拍板）
 ${JSON.stringify(decisions, null, 2)}
-
+${feedbackSection}
 ## 产出（写入磁盘）
 - .harness/changes/${CHANGE}/proposal.md
 - .harness/changes/${CHANGE}/specs/<capability>/spec.md
@@ -377,9 +439,10 @@ ${JSON.stringify(decisions, null, 2)}
 async function stage2Review(ctx) {
   phase('2 需求评审')
 
-  // resume 处理：若已暂停过 stage2_done/stage2_escalate，读用户裁决分支
-  if (ctx.decisions.stage2_done && ctx.decisions.stage2_done.approve) {
-    const approve = ctx.decisions.stage2_done.approve
+  // resume 处理：决策即消费（P1.4）——读后立即 delete，杜绝主循环重进回环
+  const stage2Done = consumeDecision(ctx, 'stage2_done')
+  if (stage2Done && stage2Done.approve) {
+    const approve = stage2Done.approve
     log(`  📋 评审裁决: ${approve}`)
     if (approve.includes('回需求分析') || approve.includes('回')) {
       ctx.currentStage = 0  // 主循环 +1 → 阶段 1 修正
@@ -387,11 +450,13 @@ async function stage2Review(ctx) {
       return
     }
     // 「进入架构设计」→ 正常推进阶段 3
+    ctx.manualSpecFix = false
     log('  → 进入架构设计')
     return
   }
-  if (ctx.decisions.stage2_escalate && ctx.decisions.stage2_escalate.escalate) {
-    const act = ctx.decisions.stage2_escalate.escalate
+  const stage2Escalate = consumeDecision(ctx, 'stage2_escalate')
+  if (stage2Escalate && stage2Escalate.escalate) {
+    const act = stage2Escalate.escalate
     log(`  ⛔ 人工裁决: ${act}`)
     if (act.includes('终止')) {
       ctx.currentStage = 999  // 终止变更（超出 0-6 循环）
@@ -404,7 +469,10 @@ async function stage2Review(ctx) {
       log('  → 放宽阈值，进入架构设计')
       return
     }
-    // 「人工修正 spec 后重试」→ 回阶段 1
+    // 「人工修正 spec 后重试」→ 回阶段 1：Owner 已修 spec → 跳分析师重写，直接重审；重置回退预算
+    ctx.manualSpecFix = true
+    ctx.stageResults[2] = { pass: 0, total: 0, rounds: 0, manualFix: true, reviewRounds: [] }
+    ctx.rollbackCount = 0  // 人工修正 cycle 重置回退预算，避免累计到全局上限
     ctx.currentStage = 0
     saveState(ctx)
     return
@@ -415,6 +483,8 @@ async function stage2Review(ctx) {
     { key: 'structure', label: '结构合理性' },
     { key: 'clarity', label: '清晰可执行' },
   ]
+  // P1.3: 被审 spec 内容哈希进 prompt —— 文件变则 prompt 变，resume 缓存必然失效（杜绝旧 REVISION 缓存命中）
+  const specHash = specContentHash() || `fallback:r${ctx.stageResults[2]?.rounds || 0}:rc${ctx.resumeCount || 0}`
   const reviews = await parallel(
     lenses.map(lens => () =>
       agent(
@@ -425,6 +495,10 @@ async function stage2Review(ctx) {
 - coverage: 需求覆盖/场景完整性/边界识别
 - structure: 服务归属/依赖顺序/职责边界
 - clarity: 粒度/歧义/一致性（SHALL/MUST 唯一解释）
+
+## 审查版本（P1.3）
+${specHash}
+若此哈希与历史轮次不同，说明 spec 已更新——必须按磁盘最新内容独立重新审查，勿沿用旧轮结论或缓存。
 
 ## 审查对象（磁盘）
 - .harness/changes/${CHANGE}/request.md
@@ -441,7 +515,15 @@ async function stage2Review(ctx) {
   )
   const valid = reviews.filter(Boolean)
   const pass = valid.filter(r => r.verdict === 'APPROVED').length
-  ctx.stageResults[2] = { pass, total: valid.length, rounds: (ctx.stageResults[2]?.rounds || 0) + 1 }
+  const rounds = (ctx.stageResults[2]?.rounds || 0) + 1
+  // P1.2: 收集本轮 mustFix（签名 + 全量对象），供反馈注入（P1.1）与收敛早停判据使用
+  const roundMF = valid.flatMap(r => (r.mustFixes || []).map(mf => ({ lens: r.lens, ...mf })))
+  const roundKeys = roundMF.map(mf => mustFixKey(mf.lens, mf))
+  ctx.stageResults[2] = {
+    ...(ctx.stageResults[2] || {}),
+    pass, total: valid.length, rounds,
+    reviewRounds: [...(ctx.stageResults[2]?.reviewRounds || []), { round: rounds, mustFixes: roundMF, keys: roundKeys }],
+  }
   saveState(ctx)
 
   // 写评审报告（审计轨迹）
@@ -457,9 +539,10 @@ async function stage2Review(ctx) {
     } catch (e) { /* 报告写入失败不阻断 */ }
   }
 
-  // 投票：≥2/3 通过；否则回阶段 1
-  const gate = checkGate('requirement_review', { passCount: pass, totalReviews: valid.length, rounds: ctx.stageResults[2].rounds })
+  // 投票：≥2/3 通过；否则回阶段 1（含 P1.2 收敛早停）
+  const gate = checkGate('requirement_review', { passCount: pass, totalReviews: valid.length, rounds })
   if (gate.passed) {
+    ctx.manualSpecFix = false
     log(`  ✅ 需求评审 ${pass}/${valid.length} APPROVED`)
     return pauseForInput(ctx, 'stage2_done', {
       stage: 2,
@@ -468,8 +551,19 @@ async function stage2Review(ctx) {
       onResume: '评审裁决后进入阶段 3',
     })
   }
+  // P1.2: 语义收敛早停——本轮无任何「新 mustFix」（相对历史轮次）→ 收敛停滞，提前升级人工（不再盲跑满 3 轮）
+  const historyKeys = new Set(ctx.stageResults[2].reviewRounds.slice(0, -1).flatMap(r => r.keys || []))
+  const newKeys = roundKeys.filter(k => !historyKeys.has(k))
+  if (rounds >= 2 && newKeys.length === 0) {
+    log(`  ⛔ 收敛停滞（第 ${rounds} 轮无新 mustFix，均为历史重复）— 提前升级人工，附全量 mustFixes`)
+    return pauseForInput(ctx, 'stage2_escalate', {
+      stage: 2,
+      summary: `需求评审 ${pass}/${valid.length}，第 ${rounds} 轮无新发现（收敛停滞）— 升级人工`,
+      questions: [{ id: 'escalate', text: '评审停滞（连续轮次无新 mustFix），如何处理？', options: ['人工修正 spec 后重试', '终止变更', '放宽阈值'] }],
+      onResume: '按人工决策继续',
+    })
+  }
   // 评审不过 → 回阶段 1（≤3 轮，超限升级人工）
-  const rounds = ctx.stageResults[2].rounds
   if (rounds >= 3) {
     log(`  ⛔ 需求评审已达 ${rounds} 轮上限，升级人工决策`)
     return pauseForInput(ctx, 'stage2_escalate', {
@@ -479,7 +573,7 @@ async function stage2Review(ctx) {
       onResume: '按人工决策继续',
     })
   }
-  log(`  ❌ 需求评审 ${pass}/${valid.length}（阈值 2/3）— 回阶段 1（第 ${rounds} 轮）`)
+  log(`  ❌ 需求评审 ${pass}/${valid.length}（阈值 2/3）— 回阶段 1（第 ${rounds} 轮，本轮新 mustFix ${newKeys.length} 个）`)
   ctx.currentStage = 0  // 主循环 +1 → 阶段 1
   saveState(ctx)
 }
@@ -489,8 +583,9 @@ async function stage3Architecture(ctx) {
   phase('3 架构设计')
 
   // resume 处理：若已暂停过 stage3_done，读用户裁决分支
-  if (ctx.decisions.stage3_done && ctx.decisions.stage3_done.approve) {
-    const approve = ctx.decisions.stage3_done.approve
+  const stage3Done = consumeDecision(ctx, 'stage3_done')
+  if (stage3Done && stage3Done.approve) {
+    const approve = stage3Done.approve
     log(`  📋 设计确认: ${approve}`)
     if (approve.includes('回需求分析') || approve.includes('回')) {
       ctx.currentStage = 0  // 回阶段 1
@@ -555,7 +650,8 @@ async function stage4Proto(ctx) {
     return
   }
 
-  if (!ctx.decisions.stage4_proto) {
+  const stage4Proto = consumeDecision(ctx, 'stage4_proto')
+  if (!stage4Proto) {
     return pauseForInput(ctx, 'stage4_proto', {
       stage: 4,
       summary: `需要修改 ${protoChanges.length} 个 proto 文件。请按硬规则由 Owner（全局 Claude）执行：`,
@@ -570,8 +666,8 @@ async function stage4Proto(ctx) {
   }
 
   // resume 后：把 Owner 决策（proto_done）映射到 ctx.protoDone，供门禁校验
-  if (ctx.decisions.stage4_proto && ctx.decisions.stage4_proto.proto_done) {
-    const done = ctx.decisions.stage4_proto.proto_done
+  if (stage4Proto.proto_done) {
+    const done = stage4Proto.proto_done
     ctx.protoDone = done === '已执行并提交' || done === '无变更'
     if (!ctx.protoDone) {
       log('  ⛔ Owner 确认 proto 未完成，回阶段 3')
@@ -600,8 +696,9 @@ async function stage5Coding(ctx) {
   phase('5 编码+测试')
 
   // resume 处理：若已暂停过 stage5_done，读用户裁决分支
-  if (ctx.decisions.stage5_done && ctx.decisions.stage5_done.approve) {
-    const approve = ctx.decisions.stage5_done.approve
+  const stage5Done = consumeDecision(ctx, 'stage5_done')
+  if (stage5Done && stage5Done.approve) {
+    const approve = stage5Done.approve
     log(`  📋 编码确认: ${approve}`)
     if (approve.includes('需修复')) {
       ctx.currentStage = 4  // 回阶段 5 重跑
@@ -618,7 +715,8 @@ async function stage5Coding(ctx) {
     log('  ⚠️ 无服务任务清单，使用 dispatch 阶段的服务列表')
   }
 
-  if (!ctx.decisions.stage5_dispatch) {
+  const stage5Dispatch = consumeDecision(ctx, 'stage5_dispatch')
+  if (!stage5Dispatch) {
     const svcList = services.map(svcName).join('\n')
     return pauseForInput(ctx, 'stage5_dispatch', {
       stage: 5,
@@ -629,7 +727,7 @@ async function stage5Coding(ctx) {
   }
 
   // resume 后聚合（Owner 在 decisions 里带回各服务结果）
-  const dispatchResult = ctx.decisions.stage5_dispatch
+  const dispatchResult = stage5Dispatch
   ctx.stageResults[5] = { dispatchResult, services }
   saveState(ctx)
   log(`  ✅ 编码阶段完成（${services.length} 服务，Owner 已确认 Pipeline 结果）`)
@@ -647,8 +745,9 @@ async function stage6Integrate(ctx) {
   phase('6 集成归档')
 
   // resume 处理：若已暂停过 stage6_done，读用户最终交付决策
-  if (ctx.decisions.stage6_done && ctx.decisions.stage6_done.deliver) {
-    const deliver = ctx.decisions.stage6_done.deliver
+  const stage6Done = consumeDecision(ctx, 'stage6_done')
+  if (stage6Done && stage6Done.deliver) {
+    const deliver = stage6Done.deliver
     log(`  📋 最终交付: ${deliver}`)
     if (deliver.includes('需修复')) {
       ctx.currentStage = 5  // 回阶段 5 修复
