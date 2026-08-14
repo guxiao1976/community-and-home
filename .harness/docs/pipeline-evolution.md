@@ -616,6 +616,28 @@ graph_freshness 检查用「任何 commit 时间 > stamp」判 stale，把 graph
 
 ---
 
+## Phase 18: spec-pipeline 全流程自动化 (2026-08-14)
+
+### 背景
+
+阶段 0-4、6 由 Owner 人工编排（手工派子 Agent、读产出、裁决、查路由表），只有阶段 5（编码）自动化。用户期望「从输入到归档的全流程自动化」（规范驱动），人工编排成为瓶颈。
+
+### 解决方案
+
+新建 `harness-spec-pipeline.js` 全流程 Workflow，编排阶段 0-6：
+- **自动编排**：dispatch 分级 → 需求分析（澄清+分析）→ 需求评审（3 视角投票）→ 架构设计 → Proto 变更 → 编码（委托 harness-pipeline.js）→ 集成归档
+- **HITL 暂停**：每阶段末 `need_input` 暂停等用户拍板（6 个暂停点），`resumeFromRunId + resumeState(ctx) + resumeWith(decisions)` 续跑
+- **门禁**：内置纯逻辑门禁（评审投票/轮次）+ 信任 agent 报告（沙箱无 fs 的架构限制）
+- **双层命名**：spec-pipeline（全流程）vs harness-pipeline（编码，阶段 5）
+
+### 效果
+
+- 真实 L 级需求（角色列表排序）完整跑通 0→6：澄清 10 决策 → 评审 escalate → 架构 10 tasks → 真实 Proto make ci → 编码一次 PASS（confidence 1.0）→ 归档
+- 全程 6 次 HITL 用户拍板
+- 暴露并修复 6+ bug（沙箱 fs/Date/门禁降级/proto_done/svcName/反引号）
+
+---
+
 ## 待改进事项
 
 ### 短期 (1-2 周)

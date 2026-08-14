@@ -846,6 +846,17 @@ diff <(jq -S . baseline.json) <(jq -S . current.json)
 - **策略**：Snowflake ID 精度、5 位 errx 错误码、跨服务仅 gRPC 等——迁移时需替换（见 `.harness/config/project-policies.md`）。
 - **实践**：服务名映射外提 `registry/services.json`（单一数据源），项目策略在 `harness-checks.sh` 头部标注归属。
 
+### 10.4 全流程自动化模式（spec-pipeline HITL/resume）
+
+构建「规范驱动全流程自动化」流水线的模式（`harness-spec-pipeline.js` 已验证）：
+
+- **阶段状态机**：`while(currentStage<=6)` + 每阶段一个函数，阶段间用 ctx 对象传结构化状态。
+- **HITL 暂停**：每阶段末 `pauseForInput(checkpoint, payload)` → 返回 `{status:'need_input', ctx, questions}`，Owner 问用户后 resume。
+- **Resume 传递状态**：沙箱无 fs → 完整 ctx 经 `args.resumeState` 传回，`resumeWith.decisions` 注入决策。
+- **失败自动回退**：评审 ≤1/3 自动回退阶段 1（rounds 累加），3 轮后 `stage2_escalate` 升级人工。
+- **门禁分层**：沙箱内纯逻辑门禁（投票/轮次）+ 信任 agent 报告（traceability/tasksCount）；文件级门禁由子 Agent 完整环境跑 harness-checks。
+- **编码委托**：阶段 5 用 HITL 委托 Owner 启动 N×`harness-pipeline.js`（不嵌套调用——沙箱限制）。
+
 ---
 
 ## 11. 关联资源
