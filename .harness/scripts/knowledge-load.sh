@@ -141,6 +141,7 @@ fi
 
 # ─── 查询匹配记忆 ───
 declare -A MEM_SCORES=()
+declare -A MEM_KW_COUNT=()
 declare -A MEM_REASONS=()
 declare -A MEM_SEVERITIES=()
 declare -A MEM_SERVICES=()
@@ -173,51 +174,48 @@ for kw in "${KEYWORDS[@]}"; do
       continue
     fi
 
-    # 计分
-    score=0
-    reasons=""
-
-    # severity 分数
-    case "$mem_sev" in
-      must-follow) score=$((score + 40)); reasons="severity=must-follow" ;;
-      should-follow) score=$((score + 20)); reasons="severity=should-follow" ;;
-      *) score=$((score + 5)); reasons="severity=info" ;;
-    esac
-
-    # service match 分数
-    if [ -n "$SERVICE" ] && [ "$mem_svc" == "$SERVICE" ]; then
-      score=$((score + 30))
-      reasons="$reasons, service=exact"
-    elif [ "$mem_svc" == "all" ]; then
-      score=$((score + 15))
-      reasons="$reasons, service=global"
+    # 计分：首次命中加一次性基础分（severity/service/时效），每次命中累加 keyword 计数。
+    # 修复：此前 MEM_SCORES 每次被覆盖（非累加），kw_count 恒 1/2——多关键词加分永不达标
+    if [ -z "${MEM_SCORES[$slug]:-}" ]; then
+      # 首次命中：基础分（severity + service + 时效，只算一次）
+      score=0
+      reasons=""
+      case "$mem_sev" in
+        must-follow) score=$((score + 40)); reasons="severity=must-follow" ;;
+        should-follow) score=$((score + 20)); reasons="severity=should-follow" ;;
+        *) score=$((score + 5)); reasons="severity=info" ;;
+      esac
+      if [ -n "$SERVICE" ] && [ "$mem_svc" == "$SERVICE" ]; then
+        score=$((score + 30)); reasons="$reasons, service=exact"
+      elif [ "$mem_svc" == "all" ]; then
+        score=$((score + 15)); reasons="$reasons, service=global"
+      fi
+      mem_path="$MEMORY_DIR/$mem_file"
+      [ ! -f "$mem_path" ] && mem_path=$(find "$MEMORY_DIR" -name "$mem_file" -type f 2>/dev/null | head -1)
+      if [ -f "$mem_path" ]; then
+        mtime=$(stat -c %Y "$mem_path" 2>/dev/null || echo 0)
+        age_days=$(( (NOW_EPOCH - mtime) / 86400 ))
+        if [ "$age_days" -le 90 ]; then
+          score=$((score + 5)); reasons="$reasons, updated=${age_days}d ago"
+        fi
+      fi
+      kw_count=1
+    else
+      # 后续命中：保留基础分，累加 keyword 计数
+      score=${MEM_SCORES[$slug]}
+      reasons="${MEM_REASONS[$slug]}"
+      kw_count=$(( ${MEM_KW_COUNT[$slug]:-1} + 1 ))
     fi
 
-    # keyword match 分数（每个匹配的关键词 +5，上限 25）
-    kw_count=1
-    if [ -n "${MEM_SCORES[$slug]:-}" ]; then
-      kw_count=$((kw_count + 1))
-    fi
+    # keyword bonus（每命中一个关键词 +5，上限 25）
     bonus=$((kw_count * 5))
     [ $bonus -gt 25 ] && bonus=25
     score=$((score + bonus))
     reasons="$reasons, keywords=$kw_count"
 
-    # 检查时效性：如果记忆文件存在，检查修改时间
-    mem_path="$MEMORY_DIR/$mem_file"
-    # 尝试子目录查找
-    [ ! -f "$mem_path" ] && mem_path=$(find "$MEMORY_DIR" -name "$mem_file" -type f 2>/dev/null | head -1)
-    if [ -f "$mem_path" ]; then
-      mtime=$(stat -c %Y "$mem_path" 2>/dev/null || echo 0)
-      age_days=$(( (NOW_EPOCH - mtime) / 86400 ))
-      if [ "$age_days" -le 90 ]; then
-        score=$((score + 5))
-        reasons="$reasons, updated=${age_days}d ago"
-      fi
-    fi
-
     MEM_SCORES[$slug]=$score
     MEM_REASONS[$slug]="$reasons"
+    MEM_KW_COUNT[$slug]=$kw_count
     MEM_SEVERITIES[$slug]="$mem_sev"
     MEM_SERVICES[$slug]="$mem_svc"
     MEM_FILES[$slug]="$mem_file"
