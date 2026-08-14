@@ -323,7 +323,7 @@ auto_dispatch_tasks() {
     log_dispatch_action "$task_id" "DISPATCH" "${svc_label}: ${task_title}"
     DISPATCHED_COUNT=$((DISPATCHED_COUNT + 1))
 
-  done <<< "$p0_auto"
+  done <<< "$combined"
 
   if [[ $DISPATCHED_COUNT -eq 0 ]]; then
     echo "  （无 P0 可自动派发任务）"

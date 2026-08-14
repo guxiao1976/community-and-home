@@ -62,3 +62,6 @@ my-ralph-project/
 
 # gomu 变异测试缓存
 .gomu_history.json
+
+# Harness AST checker 编译产物（脚本运行时 go build 生成，不入库）
+.harness/tools/go-ast-checker/go-ast-checker

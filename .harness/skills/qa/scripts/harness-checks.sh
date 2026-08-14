@@ -404,7 +404,9 @@ check_json_string() {
   # Try AST-based check first
   local ast_checker="$PROJECT_ROOT/.harness/tools/go-ast-checker/go-ast-checker"
 
-  if [[ -f "$ast_checker" ]] && [[ -n "$SERVICE_NAME" ]]; then
+  # AST 检查：SERVICE_NAME 存在即调用 ast-checks.sh（其内部负责 go build 二进制）。
+  # 修复死锁——此前 [[ -f ast_checker ]] 前置条件挡住构建，二进制永不存在、检查永不执行。
+  if [[ -n "$SERVICE_NAME" ]]; then
     echo "  (using AST checker)" >&2
 
     # Run AST checks and capture JSON output.

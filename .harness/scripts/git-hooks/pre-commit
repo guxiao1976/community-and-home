@@ -11,9 +11,14 @@ set -e
 
 echo "🔍 Pre-commit 检查..."
 
-# 获取项目根目录（兼容经 .git/hooks 符号链接调用：先解析真实路径，否则 ../../.. 会落在仓库父目录）
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]:-$0}")")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+# 项目根目录：用 git rev-parse 解析（兼容 symlink 与 cp 两种安装方式）。
+# 旧实现 readlink+../../.. 在 cp 安装到 .git/hooks/ 时会把根解析到仓库父目录，
+# 导致 memory 索引跳过、pipeline 重建路径错误、误阻断提交。
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "$PROJECT_ROOT" ]]; then
+  echo "⚠️ 无法解析项目根目录，跳过 pre-commit 检查" >&2
+  exit 0
+fi
 
 # ==================== 检查 0: Memory 索引更新 ====================
 
