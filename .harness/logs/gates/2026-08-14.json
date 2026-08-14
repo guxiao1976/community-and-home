@@ -1,0 +1,98 @@
+[
+  {
+    "timestamp": "2026-08-14T01:11:03.977Z",
+    "phase": "requirement_analysis",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "req_file_exists",
+        "message": "proposal.md 必须存在"
+      },
+      {
+        "gate": "req_required_sections",
+        "message": "proposal.md 必须含 背景/做什么/影响范围/风险评估"
+      },
+      {
+        "gate": "req_specs_exist",
+        "message": "specs/*/spec.md 至少 1 个"
+      }
+    ],
+    "warnings": [],
+    "context": "requirement_analysis"
+  },
+  {
+    "timestamp": "2026-08-14T01:11:03.978Z",
+    "phase": "architecture_design",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "arch_design_exists",
+        "message": "design.md 必须存在"
+      },
+      {
+        "gate": "arch_design_sections",
+        "message": "design.md 必须含 架构概述/数据模型/接口设计"
+      },
+      {
+        "gate": "arch_tasks_exists",
+        "message": "tasks.md 必须存在"
+      },
+      {
+        "gate": "arch_task_count",
+        "message": "tasks.md 至少 3 个任务"
+      }
+    ],
+    "warnings": [],
+    "context": "architecture_design"
+  },
+  {
+    "timestamp": "2026-08-14T01:11:04.418Z",
+    "phase": "integration",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "integ_full_build",
+        "message": "根目录 go build ./... 必须通过（全链路编译）"
+      },
+      {
+        "gate": "integ_full_vet",
+        "message": "根目录 go vet ./... 必须通过"
+      },
+      {
+        "gate": "integ_summary_exists",
+        "message": "summary.md 必须存在且含必填章节"
+      }
+    ],
+    "warnings": [],
+    "context": "integration"
+  },
+  {
+    "timestamp": "2026-08-14T01:11:04.419Z",
+    "phase": "review",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "review"
+  },
+  {
+    "timestamp": "2026-08-14T01:11:04.419Z",
+    "phase": "review",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "review_min_approved",
+        "message": "评审需 ≥2/3 视角通过（quality-gates.yml review.review_verdict.min_approved=2, total_reviewers=3）；debt 类单视角 ≥1"
+      }
+    ],
+    "warnings": [],
+    "context": "review"
+  },
+  {
+    "timestamp": "2026-08-14T01:11:14.949Z",
+    "phase": "requirement_analysis",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "requirement_analysis"
+  }
+]
