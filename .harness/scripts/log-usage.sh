@@ -35,6 +35,17 @@ json="$json}"
 
 # 位置：项目根/.harness/logs/usage/<script>.jsonl
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+# ── 开关：config/tracking.yml enabled + 环境变量 HARNESS_TRACKING 覆盖 ──
+# 开发初期默认开启（为复盘积累数据）；成熟后置 false 或 HARNESS_TRACKING=off 关闭
+tracking=true
+TRACKING_CFG="$ROOT/.harness/config/tracking.yml"
+if [[ -f "$TRACKING_CFG" ]] && grep -qE '^\s*enabled:\s*false' "$TRACKING_CFG"; then
+  tracking=false
+fi
+[[ "${HARNESS_TRACKING:-}" == "off" ]] && tracking=false
+$tracking || exit 0
+
 USAGE_DIR="$ROOT/.harness/logs/usage"
 mkdir -p "$USAGE_DIR"
 echo "$json" >> "$USAGE_DIR/$SCRIPT_NAME.jsonl"

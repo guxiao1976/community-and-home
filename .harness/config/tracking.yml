@@ -1,0 +1,9 @@
+# 流水线执行记录开关（usage 打点 + pipeline metrics）
+#
+# 开发流水线使用初期：保持 enabled: true，为复盘积累第一手数据
+#   （哪些脚本被调用/知识检索命中率/QA 通过率/pipeline 轮次分布）。
+# 流水线成熟稳定后：可改 enabled: false 关闭，减少运行开销。
+#
+# 覆盖方式：
+#   - 环境变量 HARNESS_TRACKING=off 可临时关闭（不改配置文件）
+enabled: true

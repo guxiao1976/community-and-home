@@ -600,9 +600,17 @@ const ServiceRegistry = loadServiceRegistry()
 // ── Pipeline metrics logger (best-effort, never blocks) ──
 function logMetrics(record) {
   try {
-    const logDir = path.join(process.cwd(), '.harness/logs/pipeline')
-    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
-    fs.appendFileSync(path.join(logDir, 'metrics.jsonl'), JSON.stringify(record) + '\n')
+    // 开关：config/tracking.yml enabled=false 时跳过持久化（成熟后可关闭）
+    let tracking = true
+    try {
+      const cfgPath = path.join(process.cwd(), '.harness/config/tracking.yml')
+      if (fs.existsSync(cfgPath) && /enabled:\s*false/.test(fs.readFileSync(cfgPath, 'utf8'))) tracking = false
+    } catch (e) { /* 沙箱无 fs：读不到配置，默认开 */ }
+    if (tracking) {
+      const logDir = path.join(process.cwd(), '.harness/logs/pipeline')
+      if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
+      fs.appendFileSync(path.join(logDir, 'metrics.jsonl'), JSON.stringify(record) + '\n')
+    }
   } catch (e) {
     // 沙箱无 fs：console 输出 METRIC 行（progress 可见；持久化由 bash 侧 usage 打点承载）
     console.log('METRIC ' + JSON.stringify(record))

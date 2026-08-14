@@ -48,6 +48,8 @@
 **用途**：为流水线复盘提供第一手数据——哪个脚本被调用/频率、知识检索命中率、QA 通过率、pipeline 轮次分布。复盘时 `jq -s '.' <file>` 聚合分析。
 
 > 打点由 `scripts/log-usage.sh` 统一写入；改 `logs/` 下其他记录（gates 门禁判定、incidents 事件、judgments 判断）仍入库。
+>
+> **开关**：`config/tracking.yml` 的 `enabled`（默认 `true`，开发流水线初期记录；成熟后置 `false` 关闭）或环境变量 `HARNESS_TRACKING=off` 临时关闭。
 
 ### skills/：自建 vs 第三方
 
