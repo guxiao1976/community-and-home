@@ -1,16 +1,17 @@
-# Harness Pipeline 完整流程图
+# Harness Spec Pipeline 完整流程图
 
-> 从需求到交付的端到端流程 · 工具调用链路详解 · 最后更新 2026-08-13
+> 规范驱动全流程自动化：从需求到交付的端到端流程 · 最后更新 2026-08-14
 
 ---
 
 ## 概述
 
-本文档详细展示一个需求从接收到最终交付的完整流程，包括：
-- 每个阶段调用的脚本/Agent/工具
-- 调用条件和判断逻辑
-- 文件读写和数据流转
-- 决策点和回退路径
+本文档展示一个需求从接收到最终交付的**全流程自动化**流程（由 `harness-spec-pipeline.js` 编排）。每个阶段：
+- **自动编排**：Workflow 依次驱动各阶段（dispatch → 需求分析 → 评审 → 架构 → Proto → 编码 → 归档）
+- **HITL 暂停**：每阶段末暂停等用户拍板（`need_input` → Owner 问用户 → `resumeFromRunId` 续跑）
+- **编码流水线**：阶段 5 委托 `harness-pipeline.js`（Generator → QA → Review）
+
+> **双层流水线**：全流程 = `harness-spec-pipeline.js`；编码流水线 = `harness-pipeline.js`（阶段 5 内部）。
 
 ---
 
@@ -29,230 +30,100 @@
 
 ---
 
-## 完整流程概览
+## 完整流程概览（spec-pipeline 自动编排）
 
 ```
-用户输入需求
+用户输入需求（Workflow args: {change, task}）
     ↓
 ┌───────────────────────────────────────────────────────────────┐
-│ 阶段 0: dispatch 入口 + 工作量分级 (Owner Agent 内联执行)      │
-│ ├─ 读取: CLAUDE.md, owner-agent.md, dispatch.md              │
-│ ├─ 分级: S→轻量Pipeline / M→Pipeline / L→OpenSpec             │
-│ └─ 输出: request.md (分级 + 路由 + 理由 + 涉及服务)            │
+│ 阶段 0: dispatch 工作量分级（自动判定）                         │
+│ ├─ 判定: S/M/L（按 dispatch.md 信号表 A-H）                    │
+│ ├─ S/M → 短路阶段 1-4，直接阶段 5（轻量编码）                  │
+│ ├─ L → 走完整 OpenSpec 全流程                                 │
+│ └─ 产出: request.md（分级 + 路由 + 涉及服务）                  │
 └───────────────────────────────────────────────────────────────┘
     ↓
 ┌───────────────────────────────────────────────────────────────┐
-│ 阶段 1: 需求分析 (子Agent: requirement-analyst)                │
-│ ├─ 工具: Agent({subagent_type: "general-purpose"})            │
-│ ├─ 读取: CLAUDE.md, design.md, graph-context.md              │
-│ ├─ 输出: proposal.md + specs/emergency-contact-spec.md       │
-│ └─ 门禁: 追溯表全✅ + Self-Review PASS                         │
+│ 阶段 1: 需求分析（自动 + HITL）                               │
+│ ├─ 澄清: brainstorming 产出问题清单 → ⏸️ stage1_clarify 等用户拍板│
+│ ├─ 分析: requirement-analyst 产出 proposal + specs            │
+│ └─ 门禁: 追溯表全✅ + 无占位符                                 │
 └───────────────────────────────────────────────────────────────┘
     ↓
 ┌───────────────────────────────────────────────────────────────┐
-│ 阶段 2: 需求评审 (3个子Agent并行)                              │
-│ ├─ 工具: 3 × Agent({subagent_type: "general-purpose"})       │
-│ │   ├─ coverage-reviewer (覆盖性)                             │
-│ │   ├─ structure-reviewer (结构性)                            │
-│ │   └─ clarity-reviewer (清晰度)                              │
-│ ├─ 读取: proposal.md, specs/*.md, review.md                  │
-│ ├─ 输出: review/spec_review_coverage_v1.md (×3)              │
-│ └─ 门禁: 2/3 APPROVED                                         │
+│ 阶段 2: 需求评审（自动 + HITL）                               │
+│ ├─ 3 视角并行 (coverage/structure/clarity) → 投票 2/3         │
+│ ├─ 0/3 → 自动回退阶段 1（≤3 轮）→ 超限 stage2_escalate 升级人工│
+│ └─ 通过 → ⏸️ stage2_done 等用户裁决                            │
 └───────────────────────────────────────────────────────────────┘
     ↓
 ┌───────────────────────────────────────────────────────────────┐
-│ 阶段 3: 架构设计 (子Agent: architecture-designer)              │
-│ ├─ 工具: Agent({subagent_type: "general-purpose"})            │
-│ ├─ 读取: proposal.md, specs/*.md, api-proto/, design.md      │
-│ ├─ 写入: design.md (更新), tasks.md                          │
-│ └─ 门禁: 记忆注入完成 + 零占位符 + TDD步骤明确                 │
+│ 阶段 3: 架构设计（自动 + HITL）                               │
+│ ├─ architecture-designer 产出 design + tasks                  │
+│ ├─ 门禁: 零占位符 + TDD 步骤                                  │
+│ └─ ⏸️ stage3_done 等用户确认服务归属 + Proto 清单              │
 └───────────────────────────────────────────────────────────────┘
     ↓
 ┌───────────────────────────────────────────────────────────────┐
-│ 阶段 4: Proto 变更 (Owner Agent 内联执行)                      │
-│ ├─ 读取: tasks.md (提取Proto变更部分)                         │
-│ ├─ 修改: api-proto/community/v1/emergency_contact.proto      │
-│ ├─ 脚本: cd api-proto && make ci                             │
-│ │   ├─ make lint (buf lint)                                  │
-│ │   ├─ make breaking-check (buf breaking)                    │
-│ │   └─ make generate (protoc + buf generate)                 │
-│ └─ 门禁: lint PASS + breaking-check PASS                      │
+│ 阶段 4: Proto 变更（HITL）                                    │
+│ ├─ 解析 tasks.md「全局/Proto」段 → ⏸️ stage4_proto             │
+│ └─ Owner 执行 make ci（lint + breaking + generate）→ resume   │
 └───────────────────────────────────────────────────────────────┘
     ↓
 ┌───────────────────────────────────────────────────────────────┐
-│ 阶段 5: 编码+测试 (2个Workflow并行)                            │
-│                                                               │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ Workflow 1: community-hub-service                        │ │
-│ │ ├─ 工具: Workflow({scriptPath: "harness-pipeline.js"}) │ │
-│ │ ├─ 参数: {serviceName, serviceDir, task: "Task 1.1-1.5"}│ │
-│ │ └─ 内部循环 ↓                                            │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│      ↓                                                        │
-│   ┌─────────────────────────────────────────────────────┐   │
-│   │ Iteration 1:                                         │   │
-│   │   Phase: Develop                                    │   │
-│   │   ├─ Agent: Generator (TDD + Memory)               │   │
-│   │   │   ├─ 读取: CLAUDE.md, design.md, tasks.md     │   │
-│   │   │   ├─ 搜索记忆: memory-index-query.sh           │   │
-│   │   │   ├─ 编写代码: model/*, logic/*, handler/*     │   │
-│   │   │   ├─ 编写测试: *_test.go (RED→GREEN→REFACTOR) │   │
-│   │   │   └─ 更新: CHANGELOG.md                        │   │
-│   │   ↓                                                 │   │
-│   │   Phase: QA                                        │   │
-│   │   ├─ Agent: QA (Verification-Before-Completion)   │   │
-│   │   │   ├─ 脚本: harness-checks.sh --service xxx --json│ │
-│   │   │   │   ├─ check_go_build                       │   │
-│   │   │   │   ├─ check_go_vet                         │   │
-│   │   │   │   ├─ check_go_test (含0/0检测)            │   │
-│   │   │   │   ├─ check_proto_jstype                   │   │
-│   │   │   │   ├─ check_json_string                    │   │
-│   │   │   │   ├─ check_cross_service_import           │   │
-│   │   │   │   ├─ check_error_codes                    │   │
-│   │   │   │   ├─ check_hardcoded_secrets              │   │
-│   │   │   │   ├─ check_graph_freshness                │   │
-│   │   │   │   ├─ check_claude_structural_data         │   │
-│   │   │   │   ├─ check_proto_ts_align                 │   │
-│   │   │   │   ├─ check_api_stubs                      │   │
-│   │   │   │   ├─ check_response_wrap                  │   │
-│   │   │   │   ├─ check_bench_regression               │   │
-│   │   │   │   └─ check_api_smoke                      │   │
-│   │   │   ├─ 运行: go build ./...                     │   │
-│   │   │   ├─ 运行: go vet ./...                       │   │
-│   │   │   ├─ 运行: go test ./... -count=1             │   │
-│   │   │   ├─ 检查: TDD证据 (RED→GREEN摘录)            │   │
-│   │   │   └─ 写入: _qa.md                             │   │
-│   │   ↓                                                 │   │
-│   │   判断: QA PASS?                                   │   │
-│   │   ├─ YES → Phase: Review                          │   │
-│   │   └─ NO → Phase: Debug                            │   │
-│   └─────────────────────────────────────────────────────┘   │
-│      ↓ (假设QA FAIL)                                       │
-│   ┌─────────────────────────────────────────────────────┐   │
-│   │   Phase: Debug                                      │   │
-│   │   ├─ Agent: Debug (Systematic Debugging)           │   │
-│   │   │   ├─ 读取: _qa.md (failures详情)              │   │
-│   │   │   ├─ 复现问题: 运行失败的命令                  │   │
-│   │   │   ├─ 分析根因: git diff + 依赖链追溯          │   │
-│   │   │   └─ 输出: {rootCause, evidence, fixSuggestions}│ │
-│   │   └─ 回到 Iteration 2: Develop (修复模式)         │   │
-│   └─────────────────────────────────────────────────────┘   │
-│      ↓                                                        │
-│   ┌─────────────────────────────────────────────────────┐   │
-│   │ Iteration 2:                                         │   │
-│   │   Phase: Develop (修复)                             │   │
-│   │   ├─ Agent: Generator (debt模式)                   │   │
-│   │   │   ├─ 读取: Debug输出的fixSuggestions          │   │
-│   │   │   ├─ 修复问题                                  │   │
-│   │   │   └─ 补回归测试                                │   │
-│   │   ↓                                                 │   │
-│   │   Phase: QA (FRESH run)                            │   │
-│   │   └─ 重新执行15项检查                               │   │
-│   │   ↓                                                 │   │
-│   │   判断: QA PASS? → YES                             │   │
-│   └─────────────────────────────────────────────────────┘   │
-│      ↓                                                        │
-│   ┌─────────────────────────────────────────────────────┐   │
-│   │   Phase: Review (3视角并行)                         │   │
-│   │   ├─ Agent: security-arch-reviewer                 │   │
-│   │   │   ├─ 读取: CLAUDE.md, design.md, _qa.md       │   │
-│   │   │   ├─ 审查: 架构一致性、安全性、变更完整性      │   │
-│   │   │   └─ 写入: _review_security-arch.md           │   │
-│   │   ├─ Agent: standards-eng-reviewer                 │   │
-│   │   │   ├─ 读取: 项目编码规范.md, MEMORY.md          │   │
-│   │   │   ├─ 审查: 规范遵循、复用性、测试覆盖、记忆遵守│   │
-│   │   │   │   ├─ M1: grep "// SEE: \[\[" (收集引用)   │   │
-│   │   │   │   ├─ M2: 验证引用准确性                   │   │
-│   │   │   │   ├─ M3: memory-index-query.sh (检查遗漏) │   │
-│   │   │   │   └─ M4: 建议新记忆 (memorySuggestions)   │   │
-│   │   │   └─ 写入: _review_standards-eng.md           │   │
-│   │   └─ Agent: design-biz-reviewer                    │   │
-│   │       ├─ 读取: design.md, business-flows.md       │   │
-│   │       ├─ 审查: 设计一致性、代码质量、Migration安全 │   │
-│   │       └─ 写入: _review_design-biz.md              │   │
-│   │   ↓                                                 │   │
-│   │   判断: 2/3 PASS?                                  │   │
-│   │   ├─ YES → 返回 SUCCESS {confidence: 0.85}        │   │
-│   │   └─ NO → Iteration 3 (修复CRITICAL)              │   │
-│   └─────────────────────────────────────────────────────┘   │
-│                                                               │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ Workflow 2: web/pc (并行运行)                           │ │
-│ │ ├─ 工具: Workflow({scriptPath: "harness-pipeline.js"}) │ │
-│ │ ├─ 参数: {serviceName: "PC前端", serviceDir: "web/pc"}  │ │
-│ │ └─ 内部循环 (类似Workflow 1)                            │ │
-│ │     ├─ Generator: 实现Vue组件                          │ │
-│ │     ├─ QA: harness-checks-frontend.sh (6项检查)       │ │
-│ │     │   ├─ check_type_check (vue-tsc)                 │ │
-│ │     │   ├─ check_unit_test (vitest)                   │ │
-│ │     │   ├─ check_build (vite build)                   │ │
-│ │     │   ├─ check_hardcoded_secrets                    │ │
-│ │     │   ├─ check_debug_artifacts (console.log)        │ │
-│ │     │   └─ check_type_safety (as any统计)             │ │
-│ │     └─ Review: 3视角 (前端焦点)                        │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                               │
-│ 等待两个Workflow完成...                                      │
-│ ↓                                                             │
-│ Owner收集结果:                                                │
-│ ├─ Workflow 1: {status: "SUCCESS", confidence: 0.85}        │
-│ └─ Workflow 2: {status: "SUCCESS", confidence: 0.82}        │
+│ 阶段 5: 编码+测试（HITL 委托）                                │
+│ ├─ ⏸️ stage5_dispatch: Owner 并行启动 N×harness-pipeline.js    │
+│ │   └─ 每服务: Generator → QA(15项) → (Debug) → Review        │
+│ ├─ 聚合: 全部 PASS → ⏸️ stage5_done 按置信度确认               │
+│ └─ 编码流水线 = harness-pipeline.js（Generator→QA→Review 循环） │
 └───────────────────────────────────────────────────────────────┘
     ↓
 ┌───────────────────────────────────────────────────────────────┐
-│ 阶段 6: 集成归档 (Owner Agent 内联执行)                       │
-│ ├─ 门禁检查: gate-engine.js validateGate(qa/review)    │
-│ │   ├─ 检查: 每个服务的_qa.md存在?                           │
-│ │   ├─ 检查: 每个服务的_review*.md存在?                      │
-│ │   ├─ 检查: QA PASS?                                        │
-│ │   ├─ 检查: Review PASS?                                    │
-│ │   └─ 检查: CHANGELOG更新?                                  │
-│ ├─ 全链路编译: cd $ROOT && go build ./...                    │
-│ ├─ 全链路静态分析: go vet ./...                              │
-│ ├─ 归档QA/Review:                                            │
-│ │   mkdir -p .harness/changes/<change>/impl/community-hub/  │
-│ │   mv services/community-hub-service/_qa.md → impl/        │
-│ │   mv services/community-hub-service/_review*.md → impl/   │
-│ │   mkdir -p .harness/changes/<change>/impl/web-pc/         │
-│ │   mv web/pc/_qa.md → impl/                                │
-│ │   mv web/pc/_review*.md → impl/                           │
-│ ├─ 运行时冒烟: harness-smoke.sh (非阻塞)                     │
-│ │   ├─ L1: 端口监听检查                                      │
-│ │   ├─ L2: gRPC连通性                                        │
-│ │   └─ L3: 依赖链检查                                        │
-│ ├─ 处理Memory建议:                                           │
-│ │   for suggestion in memorySuggestions:                    │
-│ │     if not exists(.harness/knowledge/memory/{slug}.md):   │
-│ │       create draft memory file                            │
-│ │       update MEMORY.md index                              │
-│ ├─ 生成summary.md: 基于impl/*/摘要                           │
-│ ├─ 门禁检查: gate-engine.js validateGate(verify)    │
-│ │   ├─ 检查: impl/目录存在?                                  │
-│ │   ├─ 检查: summary.md完整?                                 │
-│ │   └─ 检查: 包含关键章节?                                   │
-│ └─ 更新索引: 追加到.harness/changes/INDEX.md                 │
+│ 阶段 6: 集成归档（自动 + HITL）                               │
+│ ├─ 门禁: 全链路 build/vet + QA/Review 归档 impl/              │
+│ ├─ 生成 summary.md + 更新 INDEX.md                            │
+│ └─ ⏸️ stage6_done 最终交付确认 → 批准归档 → pass              │
 └───────────────────────────────────────────────────────────────┘
     ↓
-┌───────────────────────────────────────────────────────────────┐
-│ HITL 确认 (置信度自适应审查)                                  │
-│ ├─ 读取置信度: Workflow1=0.85, Workflow2=0.82                │
-│ ├─ 判断审查深度:                                              │
-│ │   ├─ ≥0.80 → 摘要审查 (读QA+Review summary)               │
-│ │   ├─ 0.50-0.79 → 抽查 (随机抽2个文件全文阅读)             │
-│ │   └─ <0.50 → 全文审查 (建议人工确认)                      │
-│ └─ 用户批准 → 进入交付                                        │
-└───────────────────────────────────────────────────────────────┘
-    ↓
-完成 ✅
+最终交付（status: pass）
+```
 
 ---
 
-## 流水线检视（pipeline-review）
+## HITL 暂停点（6 个，每阶段用户参与）
 
-> 对应 `pipeline-evolution.md` Phase 17（2026-08-10 ~ 08-13）
+| 暂停点 | 阶段 | 用户确认内容 |
+|--------|------|------------|
+| `stage1_clarify` | 1 | brainstorming 澄清问题拍板（边界/方案/安全） |
+| `stage2_done` / `stage2_escalate` | 2 | 评审裁决（进入 / 回退 / 放宽阈值 / 终止） |
+| `stage3_done` | 3 | 服务归属 + Proto 清单确认 |
+| `stage4_proto` | 4 | Owner 执行 make ci 后确认 |
+| `stage5_dispatch` / `stage5_done` | 5 | 委托启动 N×Pipeline + 编码确认 |
+| `stage6_done` | 6 | 最终交付归档确认 |
 
-流水线自身也需要「主动检视 + 持续进化」的闭环（区别于面向单个需求的开发流程）：
+## resume 机制
 
-1. **检视入口**：`pipeline-review` skill，以 `harness-design-principles.md` 的 16 条原则为标尺，对流水线做环节映射 + 目录规范检查。
-2. **问题登记**：检视发现的问题记入 Incident 记录，`evolve-pipeline.sh` 驱动整改。
-3. **闭环**：检视可重复执行，首轮即抓出 hardcoded secrets 漏检、文档滞后等真实问题并整改。
+每个暂停点返回 `need_input`（含 `ctx`）。Owner resume：
+
+```
+Workflow({scriptPath: "harness-spec-pipeline.js", args: {
+  change, task, resumeFromRunId,
+  resumeState: <上次返回的 ctx 原样传入>,
+  resumeWith: { decisions: { <对暂停点问题的决策> } }
+}})
+```
+
+详情见 owner-agent.md「如何 resume」。
+
+---
+
+## 失败路由（自动回退）
+
+| 失败类型 | 回退目标 |
+|---------|---------|
+| 方案不可行 / 用户否决 | 阶段 1（重新分析） |
+| 评审 ≤1/3 | 阶段 1（≤3 轮，超限升级人工） |
+| 设计不合理 | 阶段 1 |
+| Proto ci 失败 | 阶段 4 重试 |
+| 编码某服务 FAIL | 阶段 5 重跑该服务（≤3 轮） |
+| 集成门禁失败 | 阶段 6 修复重试 |
