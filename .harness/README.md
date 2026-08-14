@@ -7,7 +7,7 @@
 
 | 文件夹                        | 职责                                   | 关键文件                                                                                            |
 | -------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| [`agents/`](agents/)       | **执行者定义**：Owner + 子 Agent + Prompt 源 | `owner-agent.md`（调度总纲）、`prompts/templates/*.md` + `prompts/*-new.js`（Prompt 源码）                 |
+| [`agents/`](agents/)       | **执行者定义**：Owner + 子 Agent + Prompt 源 | `owner-agent.md`（调度总纲）、`prompts/{generator,qa,review,debug}.js`（Prompt 源）                 |
 | [`skills/`](skills/)       | **方法指导**：可复用流程技能                     | `dispatch.md`（统一入口）、`qa/`、`verify-before-deliver/`                                              |
 | [`workflows/`](workflows/) | **流水线编排**（Workflow 脚本）               | `harness-pipeline.js`（**已构建产物**）、`harness-spec-pipeline.js`、`gate-engine.js`                    |
 | [`scripts/`](scripts/)     | **工具脚本**（门禁/自检/知识加载）                 | `harness-checks.sh`（QA）、`harness-self-check.sh`（meta-CI）、`knowledge-load.sh`、`harness-tasks.sh` |
@@ -62,17 +62,16 @@
 - 新增**第三方** skill → 放 `.agents/skills/`，在 `skills/` 建软链 `ln -s ../../.agents/skills/<name> <name>`，**禁止复制文件**
 - **禁止**在 `.claude/skills/` 放物理文件——它是软链，物理文件会造成真冗余
 
-### Prompt 构建体系（双轨过渡期）
+### Prompt 构建体系（单一源）
 
-流水线 Prompt 有 **两套来源**，当前 `harness-pipeline.js` 内嵌的是旧 `.js` 版本（由 `scripts/build-pipeline.sh` 打包）；新模块化体系（`templates/*.md` 源 + `*-new.js` 加载器 + `build-pipeline-new.sh`）尚未重新构建产物。**迁移完成前两套都保留**。
+`harness-pipeline.js` 由 `scripts/build-pipeline.sh` 从 `agents/prompts/{generator,qa,review,debug}.js` 打包生成（pre-commit 改动 prompts 时自动重建）。**改 Prompt 请编辑这 4 个 `.js` 后运行 `build-pipeline.sh`**。
+
+> 2026-08-14 已收敛：原 `templates/*.md` + `*-new.js` + `build-pipeline-new.sh` 新轨契约与 core 断裂且从未接线（无任何调用点），整体归档至 `docs/_archive/prompts-new/`（git 历史可回溯），流水线回归单一 prompt 源，消除"误跑新构建生成坏流水线"风险。
 
 ```
-agents/prompts/templates/*.md   ← 新体系 Markdown 源
-agents/prompts/*-new.js         ← 新体系加载器（读模板）
-agents/prompts/{generator,qa,review,debug}.js  ← 旧体系内嵌 Prompt（当前产物在用）
-agents/prompts/template-renderer.js            ← 新体系渲染器
-scripts/build-pipeline.sh       → 旧打包
-scripts/build-pipeline-new.sh   → 新打包
+agents/prompts/{generator,qa,review,debug}.js  ← Prompt 源（唯一）
+scripts/build-pipeline.sh                      → 打包（pre-commit 触发）
+harness-pipeline.js                            ← 已构建产物（Workflow 加载）
 ```
 
 ### 统一归档家（docs/_archive/）
