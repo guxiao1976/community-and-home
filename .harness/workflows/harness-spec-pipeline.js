@@ -23,6 +23,8 @@ export const meta = {
 // ============================================================
 let fs = null, path = null
 try { fs = require('fs'); path = require('path') } catch (e) { /* sandbox: no Node API */ }
+// ROOT：绝对路径基准（与 harness-pipeline.js 一致，沙箱 cwd 可能非项目根）
+const ROOT = (typeof process !== 'undefined' && process.cwd) ? process.cwd() : '.'
 
 // ============================================================
 // Agent Schema（顶层常量，避免内联嵌套对象字面量解析歧义）
@@ -85,16 +87,16 @@ const TASK = (typeof args !== 'undefined' && args && args.task) || ''
 if (!CHANGE) throw new Error('harness-spec-pipeline: 缺少 args.change（变更名，如 access-control）')
 if (!TASK) throw new Error('harness-spec-pipeline: 缺少 args.task（用户需求描述）')
 
-const changeDir = () => `.harness/changes/${CHANGE}`
-const statePath = () => `${changeDir()}/pipeline-state.json`
+const changeDir = () => `${ROOT}/.harness/changes/${CHANGE}`
 
 const RESUME_FROM = (typeof args !== 'undefined' && args && args.resumeFromRunId) || ''
 const RESUME_WITH = (typeof args !== 'undefined' && args && args.resumeWith) || null
+// 沙箱无 fs：resume 状态经 args.resumeState 传入（非磁盘）
+const RESUME_STATE = (typeof args !== 'undefined' && args && args.resumeState) || null
 
-function loadState() {
-  // 沙箱无 fs 时返回内存默认状态（state 持久化降级为纯内存，不阻断）
-  // 注意：Workflow 脚本禁止 Date.now()/new Date()（会破坏 resume），state 不含时间戳
-  const defaultState = {
+// 注意：Workflow 脚本禁止 Date.now()/new Date()（会破坏 resume），state 不含时间戳
+function defaultState() {
+  return {
     schema: 1,
     change: CHANGE,
     task: TASK,
@@ -104,24 +106,22 @@ function loadState() {
     resumePending: null,
     resumeCount: 0,
   }
-  if (!fs) return defaultState
-  try {
-    if (fs.existsSync(statePath())) {
-      return JSON.parse(fs.readFileSync(statePath(), 'utf8'))
-    }
-  } catch (e) { /* 损坏则重新初始化 */ }
-  return defaultState
+}
+
+function loadState() {
+  // 沙箱无 fs：优先从 args.resumeState 恢复（Owner resume 时传入完整 ctx）
+  if (RESUME_STATE && typeof RESUME_STATE === 'object') {
+    return { ...defaultState(), ...RESUME_STATE }
+  }
+  return defaultState()
 }
 
 function saveState(s) {
-  if (!fs) return
-  try {
-    if (!fs.existsSync(changeDir())) fs.mkdirSync(changeDir(), { recursive: true })
-    fs.writeFileSync(statePath(), JSON.stringify(s, null, 2))
-  } catch (e) { /* state 写入失败不阻断（降级为纯内存） */ }
+  // 沙箱无 fs：状态只保存在 ctx 内存，随 pauseForInput 返回带出
+  s.__saved = true
 }
 
-// ── HITL 暂停：写状态 + 返回 need_input ──
+// ── HITL 暂停：记录暂停点 + 返回 need_input（含完整 ctx，供 Owner resume 传回）──
 function pauseForInput(ctx, checkpoint, payload) {
   ctx.resumePending = { checkpoint, questions: payload.questions, options: payload.options || {}, onResume: payload.onResume }
   ctx.currentStage = payload.stage
@@ -134,7 +134,7 @@ function pauseForInput(ctx, checkpoint, payload) {
     summary: payload.summary,
     questions: payload.questions,
     artifacts: payload.artifacts || {},
-    stateFile: statePath(),
+    ctx: ctx,             // 完整 ctx 返回给 Owner，resume 时经 args.resumeState 传回
     resumeFromRunId: RESUME_FROM,
     onResume: payload.onResume,
   }
@@ -519,8 +519,8 @@ async function stage6Integrate(ctx) {
   // 6.2 生成 summary.md（从 TEMPLATE）
   if (fs) {
     try {
-      const template = fs.existsSync('.harness/changes/TEMPLATE.md')
-        ? fs.readFileSync('.harness/changes/TEMPLATE.md', 'utf8')
+      const template = fs.existsSync(`${ROOT}/.harness/changes/TEMPLATE.md`)
+        ? fs.readFileSync(`${ROOT}/.harness/changes/TEMPLATE.md`, 'utf8')
         : '# 变更摘要 — ${CHANGE}\n\n## 阶段\n\n## 交付清单\n'
       const summary = template
         .replace(/<变更名>/g, CHANGE)
@@ -533,10 +533,10 @@ async function stage6Integrate(ctx) {
   // 6.3 更新 INDEX.md
   if (fs) {
     try {
-      const index = fs.existsSync('.harness/changes/INDEX.md') ? fs.readFileSync('.harness/changes/INDEX.md', 'utf8') : ''
+      const index = fs.existsSync(`${ROOT}/.harness/changes/INDEX.md`) ? fs.readFileSync(`${ROOT}/.harness/changes/INDEX.md`, 'utf8') : ''
       if (!index.includes(CHANGE)) {
         const entry = `\n## 2026-08-14 — ${CHANGE}\n\n**路径**: spec-pipeline 全流程\n**状态**: ✅ 已完成\n\n详见: [.harness/changes/${CHANGE}/](./${CHANGE}/)\n\n---\n`
-        fs.writeFileSync('.harness/changes/INDEX.md', index + entry)
+        fs.writeFileSync(`${ROOT}/.harness/changes/INDEX.md`, index + entry)
         log('  📄 更新 INDEX.md')
       }
     } catch (e) { /* INDEX 更新失败不阻断 */ }
@@ -604,17 +604,19 @@ while (ctx.currentStage <= 6) {
   ctx.lastStage = stage
 
   const result = await fn(ctx)
-  ctx.currentStage = ctx.currentStage + 1
-  saveState(ctx)
 
-  // 阶段函数请求 HITL 暂停 → 返回 need_input，终止本轮（resume 后从 currentStage 续跑）
+  // 阶段函数请求 HITL 暂停 → 返回 need_input（currentStage 已由 pauseForInput 设为待续阶段）
   if (result && result.status === 'need_input') {
     return result
   }
-  // 阶段门禁失败 → 返回 stage_fail
+  // 阶段门禁失败 → 返回 stage_fail（currentStage 已由阶段函数设为回退目标）
   if (result && result.status === 'stage_fail') {
     return result
   }
+
+  // 正常完成 → 推进到下一阶段
+  ctx.currentStage = ctx.currentStage + 1
+  saveState(ctx)
 }
 
 log('✅ 全流程完成')
