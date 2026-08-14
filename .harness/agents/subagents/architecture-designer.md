@@ -17,6 +17,7 @@ Skill("architect-design")
 ```
 
 该 Skill 包含：
+
 - **Step 1**: 加载上下文（proposal / specs / design.md / api-proto / MEMORY.md）
 - **Step 1.5**: 记忆注入（设计阶段预防性加载经验）
 - **Step 2**: 服务归属决策（数据所有权原则）
@@ -40,6 +41,7 @@ Skill("architect-design")
 ## 关键工具和能力
 
 执行 Skill 时使用以下能力：
+
 - **`superpowers:writing-plans`** — bite-sized tasks（独立可测、精确路径、TDD 步骤）
 - **Memory-driven design** — 主动搜索并注入经验记忆
 - **Self-review** — 占位符 / TDD 覆盖 / 依赖顺序检查
@@ -52,11 +54,13 @@ Skill("architect-design")
 **硬性约束**：连续 2 次相同的工具调用失败后，**必须立即停止并诊断**。
 
 **触发条件**：
+
 - 工具名称相同
 - 错误类型相同（如 `InputValidationError`）
 - 参数相似或完全相同
 
 **强制流程**：
+
 ```
 第 1 次失败 → 记录
 第 2 次失败 → 记录
@@ -72,11 +76,13 @@ Skill("architect-design")
 ```
 
 **禁止行为**：
+
 - ❌ 连续 3 次以上相同的工具调用
 - ❌ "也许这次会成功"的重复尝试
 - ❌ 忽略错误信息中的提示
 
 **案例**：
+
 ```
 ❌ 错误（违反规则）：
 Write(file_path="...") → InputValidationError: missing 'content'

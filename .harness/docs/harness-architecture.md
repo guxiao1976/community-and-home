@@ -115,22 +115,27 @@ Owner Agent 三层加载（`owner-agent.md` §2）：
 
 ## 5. 目录结构（.harness/ 全览）
 
+> 每个目录的用途、边界约定与清理规则详见 [`.harness/README.md`](../../README.md)（目录说明）。
+
 ```
 .harness/
-├─ agents/          # Owner + 子 Agent 定义（requirement-analyst/architecture-designer）
-├─ skills/          # 技能（dispatch/review/qa/requirement-analysis/pipeline-review...）
-├─ workflows/       # 流水线（spec-pipeline + harness-pipeline + gate-engine）
-├─ scripts/         # 工具（harness-checks/self-check/knowledge-load/graph-sync...）
-├─ config/          # 门禁配置（quality-gates.yml + project-policies.md）
-├─ rules/           # 硬性规则（编码规范/Proto管理/工程结构/Git治理）
+├─ agents/          # 执行者定义：Owner + 子 Agent + Prompt 源（prompts/templates/）
+├─ skills/          # 方法技能（dispatch/review/qa/requirement-analysis...）
+├─ workflows/       # 流水线编排（spec-pipeline + harness-pipeline + gate-engine）
+├─ scripts/         # 工具脚本（harness-checks/self-check/knowledge-load/graph-sync...）
+├─ config/          # 机器配置（quality-gates.yml + deterministic-rules.yml）
+├─ rules/           # 硬性规范（编码规范/Proto管理/工程结构/Git治理）
 ├─ registry/        # 服务注册（services.json）
 ├─ knowledge/       # 知识（memory/ + INDEX + business-flows）
 ├─ changes/         # 变更（每变更一个目录，含 OpenSpec 产物）
-├─ tasks/           # 待办（BACKLOG + task-*.md）
-├─ docs/            # 文档（本总纲 + pipeline-* 系列 + 设计原则）
-├─ logs/            # 运行日志（gates/incidents）
-└─ loop-runs/       # 循环运行记录
+├─ tasks/           # 任务（BACKLOG + task-*.md）
+├─ docs/            # 平台文档 + 统一归档家 _archive/（历史目录按原名分收）
+├─ logs/            # 运行日志（gates/incidents/judgments）
+├─ loop-runs/       # 循环运行记录（保留近 7 天）
+└─ tools/           # 小型工具源码（二进制不入库，go build 生成）
 ```
+
+> 2026-08-14 已收敛：`linters/` `validators/` `tests/` `templates/` `improvement-plans/` `workflows/prompts/` 均为无活跃引用的历史目录，整体归档至 `docs/_archive/`（详见 `.harness/README.md` 清理记录）。
 
 ---
 
@@ -145,6 +150,7 @@ Owner Agent 三层加载（`owner-agent.md` §2）：
 | pipeline-patterns.md / evolution.md | 模式/演进 | 子系统细节 |
 | owner-agent.md | Owner 调度规则 | 总纲 §1 调度员 + §2.3 上下文 |
 | docs/README.md | 文档索引 | 导航 |
+| .harness/README.md | 目录说明 | §5 的详参（每目录用途 + 清理规则） |
 
 > **替代关系**：本总纲替代「pipeline-architecture.md 作为架构入口」的角色（它降级为开发流水线子系统详参）。新增 harness 子系统（自检/知识/上下文）时，架构描述收敛到本总纲，不再散落。
 

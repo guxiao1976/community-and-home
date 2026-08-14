@@ -1,5 +1,7 @@
 # Harness 流水线改进方案总览
 
+> **⚠️ 历史归档（2026-08-14）**：本目录为 2026-06 的改进规划历史记录，全部方案文件已移入 [`_archive/`](./_archive/)，本文件保留用于追溯。多数方案此后已在各自位置落地（如 HITL 自适应审查 → `owner-agent.md`、前端机械化检查 → `scripts/frontend-checks.sh`、记忆索引 → `scripts/memory-index-build.sh`、任务调度 → `scripts/harness-tasks-*.sh`）。新改进请直接提至 `.harness/tasks/`。
+
 本目录包含针对当前 Harness 开发流水线的全面改进方案，基于 2026 年 6 月的深度评估。
 
 ## 📋 改进方案索引

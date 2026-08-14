@@ -40,11 +40,11 @@
 
 | 层 | 目录 | 职责 |
 |---|---|---|
-| 引擎层（通用，可移植） | `workflows/`、`scripts/`、`skills/`、`linters/`、`validators/`、`templates/`、`tools/`、`tests/`、`agents/` | 只放通用逻辑，禁止硬编码项目特定内容 |
+| 引擎层（通用，可移植） | `workflows/`、`scripts/`、`skills/`、`tools/`、`agents/` | 只放通用逻辑，禁止硬编码项目特定内容 |
 | 策略层（项目独有） | `config/`、`registry/`、`rules/`、`knowledge/`、`changes/`、`tasks/` | 所有项目独有的规则、配置、知识 |
-| 运行时层（运行产物） | `logs/`、`loop-runs/`、`backups/` | 运行产生，明确 gitignore 边界 |
+| 运行时层（运行产物） | `logs/`、`loop-runs/` | 运行产生，明确 gitignore 边界 |
 
-**现状缺口**：`scripts/`（harness-checks 硬编码 Snowflake）、`skills/`（dispatch 硬编码服务名）、`agents/`（owner-agent 混入项目职责）需逐步把项目策略外提到 `config/` / `registry/` / `rules/`。
+**现状缺口**：`scripts/`（harness-checks 硬编码 Snowflake）、`agents/`（owner-agent 混入项目职责）需逐步把项目策略外提到 `config/` / `registry/` / `rules/`。~~`skills/`（dispatch 硬编码服务名）~~ 已于 2026-08-14 落地：`dispatch.md` 与 `harness-loop.sh` 均改为从 `registry/services.json`（单一数据源）读取服务名映射。
 
 ## 四、流程衔接规则（harness-pipeline vs superpowers）
 

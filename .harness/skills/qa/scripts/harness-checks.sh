@@ -385,7 +385,7 @@ check_proto_jstype() {
     local why="Snowflake ID 是 19 位整数，超过 JavaScript Number.MAX_SAFE_INTEGER（约 16 位），JSON 传输时会精度丢失。"
     local fix="在 proto 文件的 int64 ID 字段后添加 [(gogoproto.jstype) = JS_STRING] 选项，确保 protojson 序列化时以字符串输出。"
     local example="api-proto/api/user/v1/user.proto:15 | api-proto/api/auth/v1/auth.proto:22"
-    local reference=".harness/rules/项目编码规范.md §5 | .harness/linters/patterns/proto-jstype.md"
+    local reference=".harness/rules/项目编码规范.md §5 | .harness/docs/_archive/linters/patterns/proto-jstype.md"
     log_fail "proto_jstype" "${#violations[@]} violations: $detail" "$why" "$fix" "$example" "$reference"
   fi
 }
@@ -500,7 +500,7 @@ check_json_string() {
     local why="Go REST API 的 int64 ID 字段默认 JSON 序列化为数字，前端 JavaScript 解析时精度丢失。"
     local fix="在结构体的 int64 ID 字段的 json tag 中添加 string 选项：json:\\\"user_id,string\\\" 或 json:\\\"id,omitempty,string\\\""
     local example="services/user-service/api/internal/types/types.go:18 | services/auth-service/api/internal/types/types.go:25"
-    local reference=".harness/rules/项目编码规范.md §5 | .harness/linters/patterns/json-string.md"
+    local reference=".harness/rules/项目编码规范.md §5 | .harness/docs/_archive/linters/patterns/json-string.md"
     log_fail "json_string" "${#violations[@]} violations: $detail" "$why" "$fix" "$example" "$reference"
   fi
 }
@@ -568,7 +568,7 @@ check_cross_service_import() {
     local why="服务间通信必须通过 gRPC。直接访问其他服务的数据库破坏服务边界，造成紧耦合。"
     local fix="1. 移除跨服务的 model 包导入\\n2. 在 svcCtx 中添加对应的 RPC 客户端（如 UserRpc）\\n3. 通过 RPC 调用获取数据：svcCtx.UserRpc.GetUserInfo(ctx, req)\\n4. 将 RPC 响应映射到 Logic 返回类型"
     local example="services/auth-service/api/internal/logic/verify_token_logic.go:28-35"
-    local reference=".harness/rules/项目编码规范.md §1 | .harness/linters/patterns/cross-service-rpc.md"
+    local reference=".harness/rules/项目编码规范.md §1 | .harness/docs/_archive/linters/patterns/cross-service-rpc.md"
     log_fail "cross_service_import" "${#violations[@]} violations: $detail" "$why" "$fix" "$example" "$reference"
   fi
 }
@@ -894,7 +894,7 @@ check_response_wrap() {
     local why="Logic 返回 *types.XxxResponse（含 BaseResponse），Handler 再用 response.Success() 包装，造成双层嵌套：{code:0, data:{code:0, data:{...}}}"
     local fix="修改 Logic 返回类型为纯业务数据（struct 或 pointer），不使用 goctl 生成的 Response 类型。Handler 中用 response.Success(w, data) 包一层。"
     local example="services/ai-model-service/api/internal/logic/create_model_logic.go:25"
-    local reference=".harness/rules/项目编码规范.md §9 | .harness/linters/patterns/response-wrap.md"
+    local reference=".harness/rules/项目编码规范.md §9 | .harness/docs/_archive/linters/patterns/response-wrap.md"
     log_warn "response_wrap" "${count} Logic funcs return Response types (potential double-wrap): $detail" "$why" "$fix" "$example" "$reference"
   fi
 }
