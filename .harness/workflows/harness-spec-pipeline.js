@@ -142,6 +142,15 @@ function pauseForInput(ctx, checkpoint, payload) {
   }
 }
 
+// ── 服务名提取（兼容 string / {service} / {serviceDir,name} 三种形态）──
+function svcName(s) {
+  if (typeof s === 'string') return s
+  return (s && (s.service || s.serviceDir || s.name)) || ''
+}
+function svcBare(s) {
+  return svcName(s).replace(/^services\//, '')
+}
+
 // ── 门禁检查（内置实现，沙箱可用；gate-engine 完整版在非沙箱环境优先）──
 // 沙箱无法 require gate-engine（探针证实），故内置轻量门禁逻辑，保证自动化校验真实生效。
 function checkGate(phase, ctxForGate) {
@@ -597,7 +606,7 @@ async function stage5Coding(ctx) {
   }
 
   if (!ctx.decisions.stage5_dispatch) {
-    const svcList = services.map(s => typeof s === 'string' ? s : (s.serviceDir || s.name)).join('\n')
+    const svcList = services.map(svcName).join('\n')
     return pauseForInput(ctx, 'stage5_dispatch', {
       stage: 5,
       summary: `请为以下服务并行启动 Workflow harness-pipeline.js（每服务一个），全部 PASS 后确认：\n${svcList || '（无服务清单，请用 dispatch 阶段 ctx.services）'}`,
@@ -644,14 +653,14 @@ async function stage6Integrate(ctx) {
   // 6.1 全链路编译门禁
   const gate = checkGate('integration', {
     changeDir: changeDir(),
-    services: services.map(s => typeof s === 'string' ? s : (s.serviceDir || s.name)),
+    services: services.map(svcName),
     change: CHANGE,
     summary: `${CHANGE} 集成归档门禁`,
   })
   if (!gate.passed) {
     // 归档文件缺失（QA/Review 未归档）→ 尝试从 services/ 移动进来
     for (const s of services) {
-      const bare = typeof s === 'string' ? s.replace(/^services\//, '') : (s.serviceDir || s.name).replace(/^services\//, '')
+      const bare = svcBare(s)
       const implDir = `${changeDir()}/impl/${bare}`
       try {
         if (!fs.existsSync(implDir)) fs.mkdirSync(implDir, { recursive: true })
@@ -666,7 +675,7 @@ async function stage6Integrate(ctx) {
     }
     const gate2 = checkGate('integration', {
       changeDir: changeDir(),
-      services: services.map(s => typeof s === 'string' ? s : (s.serviceDir || s.name)),
+      services: services.map(svcName),
       change: CHANGE,
       summary: `${CHANGE} 集成归档门禁(归档后)`,
     })
