@@ -126,8 +126,8 @@ Workflow({ scriptPath: ".harness/workflows/harness-pipeline.js",
            args: { serviceName: "<中文名>", serviceDir: "services/<dir>", task: "<任务>" } })
 ```
 
-**L 级（跨服务 → OpenSpec 全流程）**：
-进入 OpenSpec：派发 `requirement-analyst` 子 Agent → `architecture-designer` 子 Agent → 按服务分组并行 N×Workflow（Proto 变更先由全局 Claude 执行）。详见 owner-agent §4 阶段表。
+**L 级（跨服务 → spec-pipeline 全流程自动化）**：
+启动 `harness-spec-pipeline.js` 全流程 Workflow（规范驱动）：自动走 路径选择→需求分析→需求评审→架构设计→Proto→编码→集成归档，每阶段末 HITL 暂停等用户确认后 `resumeFromRunId` 续跑。阶段 5 编码内部 HITL 委托 Owner 启动 N×Workflow（复用 harness-pipeline.js）。详见 owner-agent §4「全流程自动化（spec-pipeline）」。
 
 **跳过级（纯文案/配置）**：直接 Edit + build 验证，不进派发。
 

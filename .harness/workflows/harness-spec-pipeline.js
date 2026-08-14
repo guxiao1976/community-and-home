@@ -460,8 +460,82 @@ async function stage5Coding(ctx) {
   })
 }
 
-// 阶段 6: 集成归档（Phase 6 实现）
-async function stage6Integrate(ctx) { /* Phase 6 */ }
+// 阶段 6: 集成归档
+async function stage6Integrate(ctx) {
+  phase('6 集成归档')
+  const services = (ctx.stageResults[5] && ctx.stageResults[5].services) || []
+
+  // 6.1 全链路编译门禁
+  const gate = checkGate('integration', {
+    changeDir: changeDir(),
+    services: services.map(s => typeof s === 'string' ? s : (s.serviceDir || s.name)),
+    change: CHANGE,
+    summary: `${CHANGE} 集成归档门禁`,
+  })
+  if (!gate.passed) {
+    // 归档文件缺失（QA/Review 未归档）→ 尝试从 services/ 移动进来
+    for (const s of services) {
+      const bare = typeof s === 'string' ? s.replace(/^services\//, '') : (s.serviceDir || s.name).replace(/^services\//, '')
+      const implDir = `${changeDir()}/impl/${bare}`
+      try {
+        if (!fs.existsSync(implDir)) fs.mkdirSync(implDir, { recursive: true })
+        for (const f of ['_qa.md', '_review_security-arch.md', '_review_standards-eng.md', '_review_design-biz.md']) {
+          const src = `services/${bare}/${f}`
+          if (fs.existsSync(src) && !fs.existsSync(`${implDir}/${f}`)) {
+            fs.copyFileSync(src, `${implDir}/${f}`)
+            log(`  📦 归档 ${bare}/${f}`)
+          }
+        }
+      } catch (e) { /* 归档失败不阻断 */ }
+    }
+    const gate2 = checkGate('integration', {
+      changeDir: changeDir(),
+      services: services.map(s => typeof s === 'string' ? s : (s.serviceDir || s.name)),
+      change: CHANGE,
+      summary: `${CHANGE} 集成归档门禁(归档后)`,
+    })
+    if (!gate2.passed) {
+      log(`❌ 集成归档门禁 FAIL: ${gate2.failures.map(f => f.message).join('; ')}`)
+      return { status: 'stage_fail', stage: 6, change: CHANGE, failures: gate2.failures, stateFile: statePath() }
+    }
+  }
+
+  // 6.2 生成 summary.md（从 TEMPLATE）
+  if (fs) {
+    try {
+      const template = fs.existsSync('.harness/changes/TEMPLATE.md')
+        ? fs.readFileSync('.harness/changes/TEMPLATE.md', 'utf8')
+        : '# 变更摘要 — ${CHANGE}\n\n## 阶段\n\n## 交付清单\n'
+      const summary = template
+        .replace(/<变更名>/g, CHANGE)
+        .replace(/\*\*状态\*\*.*/, `**状态**: ✅ 已完成（spec-pipeline 全流程）`)
+      fs.writeFileSync(`${changeDir()}/summary.md`, summary)
+      log('  📄 生成 summary.md')
+    } catch (e) { /* summary 生成失败不阻断 */ }
+  }
+
+  // 6.3 更新 INDEX.md
+  if (fs) {
+    try {
+      const index = fs.existsSync('.harness/changes/INDEX.md') ? fs.readFileSync('.harness/changes/INDEX.md', 'utf8') : ''
+      if (!index.includes(CHANGE)) {
+        const entry = `\n## 2026-08-14 — ${CHANGE}\n\n**路径**: spec-pipeline 全流程\n**状态**: ✅ 已完成\n\n详见: [.harness/changes/${CHANGE}/](./${CHANGE}/)\n\n---\n`
+        fs.writeFileSync('.harness/changes/INDEX.md', index + entry)
+        log('  📄 更新 INDEX.md')
+      }
+    } catch (e) { /* INDEX 更新失败不阻断 */ }
+  }
+
+  ctx.stageResults[6] = { archived: true }
+  saveState(ctx)
+  log('  ✅ 集成归档完成')
+  return pauseForInput(ctx, 'stage6_done', {
+    stage: 6,
+    summary: `集成归档完成 — 最终交付确认？`,
+    questions: [{ id: 'deliver', text: '集成验证通过，批准归档交付？', options: ['批准归档', '需修复'] }],
+    onResume: '最终交付确认',
+  })
+}
 
 // ============================================================
 // 主循环

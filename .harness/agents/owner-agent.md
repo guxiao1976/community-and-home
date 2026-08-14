@@ -136,6 +136,15 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 | 4 | **Proto 变更** | 含Proto变更 | Owner 内联 | api-proto/ + make ci | lint+breaking全过 | — | 修复重试 |
 | 5 | **编码+测试** | 设计确认 | **N×Workflow 并行** `harness-pipeline.js`（每服务1个，无依赖并行） | 代码+`_qa.md`+`_review.md`（每服务独立） | 每服务 QA PASS + Review 2/3 PASS | 跟踪各 Workflow 摘要，全部 PASS → 下一阶段 | Debug→修复(≤3轮) |
 
+### 全流程自动化（spec-pipeline）
+
+> **阶段 0-6 现可由 `harness-spec-pipeline.js` 全流程自动编排**（规范驱动，每阶段 HITL 暂停等用户）。
+> Owner 输入 `Workflow({scriptPath:".harness/workflows/harness-spec-pipeline.js", args:{change, task}})`，
+> 自动走：路径选择→需求分析→需求评审→架构设计→Proto→编码→集成归档；每阶段末返回 `need_input` 暂停，
+> Owner 用 AskUserQuestion 问用户后 `resumeFromRunId` 续跑。
+>
+> **阶段 5 编码仍复用 `harness-pipeline.js`**（spec-pipeline 在阶段 5 HITL 委托 Owner 启动 N×Workflow），不重写。
+
 **⚠️ 阶段 5 硬性禁令**：
 
 - ❌ **禁止使用 superpowers `subagent-driven-development` / `executing-plans` / 任何外部技能替代 `harness-pipeline.js`**
