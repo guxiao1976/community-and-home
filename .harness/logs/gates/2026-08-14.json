@@ -94,5 +94,39 @@
     "failures": [],
     "warnings": [],
     "context": "requirement_analysis"
+  },
+  {
+    "timestamp": "2026-08-14T03:38:55.321Z",
+    "phase": "requirement_review",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "spec_review_min_approved",
+        "message": "需求评审需 ≥2/3 视角 APPROVED"
+      }
+    ],
+    "warnings": [],
+    "context": "requirement_review"
+  },
+  {
+    "timestamp": "2026-08-14T03:38:55.323Z",
+    "phase": "requirement_review",
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "context": "requirement_review"
+  },
+  {
+    "timestamp": "2026-08-14T03:38:55.323Z",
+    "phase": "requirement_review",
+    "passed": false,
+    "failures": [
+      {
+        "gate": "spec_review_min_approved",
+        "message": "需求评审需 ≥2/3 视角 APPROVED"
+      }
+    ],
+    "warnings": [],
+    "context": "requirement_review"
   }
 ]

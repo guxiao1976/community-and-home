@@ -1,6 +1,6 @@
 # 知识图谱上下文 — file-service
 
-> 自动生成于 2026-08-13 08:31:21 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-14 12:24:59 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -73,6 +73,7 @@
 | POST | /api/v1/model/fetch-provider-models | web/pc/src/api/aimodel.ts |
 | GET | /api/masterdata/divisions | web/pc/src/api/masterdata.ts |
 | GET | /api/v1/apikeys | web/pc/src/api/aimodel.ts |
+| GET | /api/users/me/app-state | web/mobile/src/api/user.ts |
 | GET | /api/v1/models | web/pc/src/api/aimodel.ts |
 | GET | /api/masterdata/configurations | web/pc/src/api/masterdata.ts |
 | GET | /api/community/contacts | web/mobile/src/api/community.ts |
@@ -118,6 +119,7 @@
 | DELETE | /api/perm/user-roles | web/pc/src/api/identity.ts |
 | POST | /api/auth/sms/send | web/pc/src/api/identity.ts |
 | POST | /api/auth/sms/send | web/mobile/src/api/identity.ts |
+| PUT | /api/users/me/current-community | web/mobile/src/api/user.ts |
 | POST | /api/moderation/review/submit | web/pc/src/api/moderation.ts |
 | POST | /api/v1/model/test-connection | web/pc/src/api/aimodel.ts |
 | POST | /api/moderation/pipeline/test | web/pc/src/api/moderation.ts |
