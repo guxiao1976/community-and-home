@@ -127,14 +127,15 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 
 **Owner Agent 是纯编排器。分析/设计阶段启动独立子 Agent，子 Agent 拥有干净上下文，通过 markdown 文件与 Owner 交接。Owner 只读产出文件做验收，不参与分析/设计过程。**
 
-| # | 阶段 | 触发 | 执行方式 | 产出（落盘文件） | 门禁 | Owner 验证 | 回退 |
-|---|------|------|:---:|------|------|------|------|
-| 0 | **工具选择** | 收到需求 | Owner 内联 | `.harness/changes/<change>/request.md`（用户原话+工作量分级+路径结论） | 选对工具 | — | — |
-| 1 | **需求分析** | OpenSpec | **先 `superpowers:brainstorming` 澄清（硬门禁）→ 再子 Agent `requirement-analyst`** | `proposal.md` + `specs/*/spec.md` | **brainstorming 产出用户确认的设计文档（硬门禁，缺失则回阶段0）+ 追溯表全✅ + Self-Review PASS** | 读 proposal 摘要，确认影响范围 | 方案不可行→阶段0 |
-| 2 | **需求评审** | 阶段1完成 | **3 子 Agent 并行** (coverage/structure/clarity) | `review/spec_review_{lens}_v1.md` ×3 | 2/3 APPROVED | 读 3 份评审摘要，投票裁决 | REVISION→阶段1(≤3轮) |
-| 3 | **架构设计** | 评审通过 | **子 Agent** `architecture-designer` | `design.md` + `tasks.md` | 记忆注入+零占位符+TDD步骤 | 读 design 摘要，确认服务归属 | 设计不合理→阶段1 |
-| 4 | **Proto 变更** | 含Proto变更 | Owner 内联 | api-proto/ + make ci | lint+breaking全过 | — | 修复重试 |
-| 5 | **编码+测试** | 设计确认 | **N×Workflow 并行** `harness-pipeline.js`（每服务1个，无依赖并行） | 代码+`_qa.md`+`_review.md`（每服务独立） | 每服务 QA PASS + Review 2/3 PASS | 跟踪各 Workflow 摘要，全部 PASS → 下一阶段 | Debug→修复(≤3轮) |
+| # | 阶段 | 执行方式（spec-pipeline 自动编排） | 产出（落盘文件） | 门禁 | Owner 介入（HITL/内联） | 回退 |
+|---|------|:---:|------|------|------|------|
+| 0 | **工具选择** | 自动：读 `args.workload`（Owner 入口判定）→ 写 request.md | `.harness/changes/<change>/request.md` | 分级有效 | Owner 入口判定 + 传 args.workload | SKIP→直接 Edit |
+| 1 | **需求分析** | 自动：澄清 agent 产出问题 → ⏸️ stage1_clarify → requirement-analyst | `proposal.md` + `specs/*/spec.md` | 追溯表全✅ + 无占位符 | **⏸️ HITL 澄清拍板** | 方案不可行→阶段0 |
+| 2 | **需求评审** | 自动：3 子 Agent 并行 → 投票 → ⏸️ stage2_done | `review/spec_review_{lens}_vN.md` ×3 | 2/3 APPROVED | **⏸️ HITL 评审裁决**（≤3轮→escalate） | REVISION→阶段1 |
+| 3 | **架构设计** | 自动：architecture-designer → ⏸️ stage3_done | `design.md` + `tasks.md` | 零占位符 + TDD步骤 | **⏸️ HITL 服务归属/Proto清单确认** | 设计不合理→阶段1 |
+| 4 | **Proto 变更** | 自动解析 protoChanges → ⏸️ stage4_proto → **Owner 内联 make ci** | api-proto/ + make ci | lint+breaking全过 | **⏸️ Owner 执行 make ci** | 修复重试 |
+| 5 | **编码+测试** | ⏸️ stage5_dispatch → **Owner 启动 N×`harness-pipeline.js`** | 代码+`_qa.md`+`_review.md` | 每服务 QA PASS + Review | **⏸️ HITL 委托编码 + 置信度确认** | Debug→修复(≤3轮) |
+| 6 | **集成归档** | 自动：门禁 + summary + INDEX → ⏸️ stage6_done | impl/ + summary.md + INDEX.md | 全链路通过 | **⏸️ HITL 最终交付确认**；Owner 补归档（沙箱限制） | 修复重试 |
 
 ### 全流程自动化（spec-pipeline）
 
