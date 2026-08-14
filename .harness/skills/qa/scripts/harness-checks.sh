@@ -16,6 +16,7 @@
 #   1. go build ./...          — compilation
 #   2. go vet ./...            — static analysis
 #   3. go test ./...           — unit tests (with 0/0 false-pass detection)
+#   3.5 gofmt — 变更 Go 文件必须已格式化（P3.1，对齐 pre-commit 提交门）
 #   4. Proto int64 jstype      — every int64 ID field must have [jstype = JS_STRING]
 #   5. Go json:",string"       — every int64 ID field must use json:"...,string"
 #   6. Cross-service DB import — no importing another service's model/ package
@@ -327,6 +328,37 @@ check_go_test() {
     log_warn "go_test" "${passed_packages} packages passed but 0 TestXxx functions found — verify tests exist"
   else
     log_pass "go_test" "${passed_packages} packages passed, ~${test_funcs} test functions"
+  fi
+}
+
+# ─── Check: gofmt（P3.1 — 对齐 pre-commit 提交门，变更 Go 文件必须已格式化）──
+
+check_go_fmt() {
+  echo "[gofmt] gofmt — 变更 Go 文件格式（对齐 pre-commit 提交门）" >&2
+  local changed_files unformatted rc
+  # 变更 = 未提交工作树（git diff HEAD）+ 已暂存（--cached）的 .go 文件
+  set +e
+  changed_files="$(
+    { git -C "$PROJECT_ROOT" diff --name-only HEAD -- '*.go' 2>/dev/null; git -C "$PROJECT_ROOT" diff --cached --name-only -- '*.go' 2>/dev/null; } | sort -u
+  )"
+  set -e
+  if [[ -z "$changed_files" ]]; then
+    log_pass "go_fmt" "无 Go 文件变更"
+    return
+  fi
+  set +e
+  unformatted="$(echo "$changed_files" | while read -r f; do
+    [[ -f "$PROJECT_ROOT/$f" ]] && gofmt -l "$PROJECT_ROOT/$f" 2>/dev/null
+  done)"
+  rc=$?
+  set -e
+  if [[ $rc -ne 0 ]] || [[ -n "$unformatted" ]]; then
+    local fmt_detail
+    fmt_detail="$(echo "$unformatted" | sed 's|^|  |' | head -8 | tr '\n' '; ')"
+    fmt_detail="$(json_escape "$fmt_detail")"
+    log_fail "go_fmt" "变更 Go 文件未按 gofmt 格式化：$fmt_detail（修复：go fmt ./... 或 gofmt -w <file>）"
+  else
+    log_pass "go_fmt" "变更 Go 文件全部已格式化"
   fi
 }
 
@@ -1245,6 +1277,7 @@ main() {
   check_go_build
   check_go_vet
   check_go_test
+  check_go_fmt
   check_proto_jstype
   check_json_string
   check_cross_service_import
@@ -1292,7 +1325,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "git hygiene" "mutation testing")
+    local labels=("go build" "go vet" "go test" "gofmt" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "git hygiene" "mutation testing")
     for result in "${RESULTS[@]}"; do
       local status label detail why fix example reference
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

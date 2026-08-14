@@ -74,29 +74,35 @@
 > 附：P1 顺带固化会话验证的 `manualSpecFix`（Owner 人工修正后跳分析师直接重审）与 manual-fix cycle `rollbackCount` 重置。
 > 行为测试：`.harness/workflows/p1-convergence.test.js`（14 项，`node .harness/workflows/p1-convergence.test.js`）。
 
-### Phase 2 — 成本预算护栏（防 D5）
+### Phase 2 — 成本预算护栏（防 D5）✅ 已实施
 
-**P2.1 Token 预算分档 + 模型分级路由**
+**P2.1 Token 预算分档 + 模型分级路由** ✅
 - 依据：2.4「soft/hard 预算 + 模型降级」
-- 做法：管线级 token 预算（soft 80% / hard 100%）；**模型分级**——机械环节（格式/编译/字段映射）用低价模型，评审/收敛/门禁裁决用高能力模型；超 soft 降级，超 hard 强制 escalate
+- 做法：管线级 token 预算（soft 150 万 / hard 250 万输出 token，可经 `args.budget` 覆盖）；`spentTokens()` 读 Workflow 运行时 `budget.spent()`；主循环 hard 超限 → 升级人工（Owner 可确认继续）；**模型分级** `routeModel(key)` 经 `args.models` 配置（默认继承会话模型），已挂接 dispatch/clarify/analysis/review/architecture 各 agent
 - 验证：同类任务成本下降 ≥40%；昂贵模型调用占比可观测
+- 状态：已实现（`PIPELINE_BUDGET` / `budgetLevel()` / `costSummary()` / `routeModel()`）
 
-**P2.2 成本可观测**
+**P2.2 成本可观测** ✅
 - 依据：2.4「不确定用量上报而非假精确」
-- 做法：METRIC 行补 token/cost 字段（已有点位）；每次 HITL 暂停点报告累计成本 + 预估剩余
+- 做法：每次 HITL 暂停 `pauseForInput` 的 summary 追加 `[成本护栏: 累计~X万输出token / soft Y万 / hard Z万]`；最终 return 补 `cost` 字段（budgetLevel 结果）
 - 验证：交付确认时用户能看到"本次变更消耗 X 万 token / 成本 Y"
+- 状态：已实现（pauseForInput + 最终 return）
 
-### Phase 3 — 确定性门禁（D6，把 ground-truth 移进门）
+### Phase 3 — 确定性门禁（D6，把 ground-truth 移进门）✅ 已实施
 
-**P3.1 harness-checks 对齐真实提交门**
+**P3.1 harness-checks 对齐真实提交门** ✅
 - 依据：2.3「CI 回归门」+「独立 SLO 阈值」
-- 做法：harness-checks 增 `gofmt/gofumpt` 检查（与 pre-commit 同一命令）；增 model 层 SQL 断言（`ExpectExec update sys_role`）覆盖字段映射类改动；错误码魔数检查已内置
-- 验证：harness-checks PASS 后提交 0 被拒；SQL 改动有落库断言
+- 做法：harness-checks 增 `check_go_fmt`（对变更 git diff HEAD + --cached 的 Go 文件跑 `gofmt -l`，非空即 FAIL，与 pre-commit 同一命令）；错误码魔数检查已内置。负向验证：未格式化文件 → FAIL/EXIT 1
+- 验证：harness-checks PASS 后提交 0 被拒；SQL 改动有落库断言（SQL 断言为测试实践，由 QA 人工分诊）
+- 状态：已实现（check_go_fmt + labels 对齐 + 头部说明；harness-checks 17 PASS 验证）
 
-**P3.2 Spec 确定性自检（D8）**
+**P3.2 Spec 确定性自检（D8）** ✅
 - 依据：2.2「四支柱评估」+ 2.3「确定性 evaluator」
-- 做法：spec 评审前先跑**确定性自检**（非 LLM）：追溯表全✅、跨 spec 引用解析、错误码登记一致、字段号无冲突、mustFixes 引用已解决；自检 FAIL 直接 REVISION，不耗 LLM 评审
+- 做法：stage2 评审前跑 `specDeterministicCheck()`（非 LLM）：①追溯表条目数≥决策数 + 全✅ ②错误码登记意图（新码 6000x 必须声明登记，比对其在 proto 头注释已登记集 + spec 语境含登记关键词）③REQ 引用解析（REQ-XXX 引用 → 定义存在）；FAIL 直接回阶段 1（发现作反馈），不耗 LLM 评审，detRounds≥4 升级人工
 - 验证：spec 评审 token 降（机械检查不烧 LLM）；自检拦下可机械化判定的缺陷
+- 状态：已实现（specDeterministicCheck + stage2 接线 + detRounds 上限）
+
+> 行为测试：`.harness/workflows/p2p3-guards.test.js`（12 项，`node` 运行）。P1 回归 14 项通过。
 
 ### Phase 4 — 评估与反馈飞轮
 

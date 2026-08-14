@@ -128,12 +128,13 @@ function pauseForInput(ctx, checkpoint, payload) {
   ctx.resumePending = { checkpoint, questions: payload.questions, options: payload.options || {}, onResume: payload.onResume }
   ctx.currentStage = payload.stage
   saveState(ctx)
-  log(`⏸️ 暂停等待输入: ${checkpoint}`)
+  const cost = costSummary()
+  log(`⏸️ 暂停等待输入: ${checkpoint}${cost ? ' ' + cost : ''}`)
   return {
     status: 'need_input',
     checkpoint,
     stage: payload.stage,
-    summary: payload.summary,
+    summary: cost ? `${payload.summary} ${cost}` : payload.summary,
     questions: payload.questions,
     artifacts: payload.artifacts || {},
     ctx: ctx,             // 完整 ctx 返回给 Owner，resume 时经 args.resumeState 传回
@@ -186,6 +187,92 @@ function specContentHash() {
 // ── P1.2: mustFix 签名（section+issue 首 80 字符），用于跨轮对比"是否有新发现" ──
 function mustFixKey(lens, mf) {
   return `${lens}|${mf.section || ''}|${String(mf.issue || mf.fix || '').slice(0, 80)}`
+}
+
+// ── P2: 管线成本预算护栏（soft/hard token 预算，可经 args.budget 覆盖）──
+const PIPELINE_BUDGET = {
+  soft: (typeof args !== 'undefined' && args && args.budget && args.budget.soft) || 1500000,  // 1.5M 输出 token
+  hard: (typeof args !== 'undefined' && args && args.budget && args.budget.hard) || 2500000,  // 2.5M
+}
+// budget.spent() = Workflow 运行时全局（当前 turn 主循环 + 所有 workflow 的输出 token）；不可用时返回 null
+function spentTokens() {
+  return (typeof budget !== 'undefined' && budget && typeof budget.spent === 'function') ? budget.spent() : null
+}
+function budgetLevel() {
+  const spent = spentTokens()
+  if (spent === null) return { level: 'unknown', spent: null, soft: PIPELINE_BUDGET.soft, hard: PIPELINE_BUDGET.hard }
+  if (spent >= PIPELINE_BUDGET.hard) return { level: 'hard', spent, soft: PIPELINE_BUDGET.soft, hard: PIPELINE_BUDGET.hard }
+  if (spent >= PIPELINE_BUDGET.soft) return { level: 'soft', spent, soft: PIPELINE_BUDGET.soft, hard: PIPELINE_BUDGET.hard }
+  return { level: 'ok', spent, soft: PIPELINE_BUDGET.soft, hard: PIPELINE_BUDGET.hard }
+}
+function costSummary() {
+  const b = budgetLevel()
+  if (b.spent === null) return ''
+  const w = (n) => (n / 10000).toFixed(1)
+  return `[成本护栏: 累计~${w(b.spent)}万输出token / soft ${w(b.soft)}万 / hard ${w(b.hard)}万]`
+}
+
+// ── P2.1: 模型分级路由（可经 args.models 配置；默认继承会话模型，不强制）──
+const MODEL_ROUTES = (typeof args !== 'undefined' && args && args.models) || {}
+function routeModel(key) {
+  return MODEL_ROUTES[key] || undefined  // undefined = 继承会话模型
+}
+
+// ── P3.2: spec 确定性自检（非 LLM 机械检查；FAIL 直接回阶段 1，不耗 LLM 评审）──
+function specDeterministicCheck(ctx) {
+  const findings = []
+  if (!fs) return findings  // 沙箱无 fs：跳过机械检查（由沙箱外 Owner/QA 兜底）
+  try {
+    const read = (p) => { try { return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '' } catch (e) { return '' } }
+
+    // ① 追溯表完整性：条目数 ≥ 决策数（防缺映射），且值含 ✅（防未解决项）
+    const trace = (ctx.stageResults[1] && ctx.stageResults[1].traceability) || {}
+    const decCount = Object.keys(ctx.decisions.stage1_clarify || {}).length
+    const traceCount = Object.keys(trace).length
+    if (decCount > 0 && traceCount < decCount) {
+      findings.push({ section: 'traceability', issue: `traceability 条目数（${traceCount}）少于已拍板决策数（${decCount}），存在决策未映射`, fix: '为每个已拍板决策（D1-D7 等）补 traceability 追溯条目' })
+    }
+    for (const [tk, tv] of Object.entries(trace)) {
+      if (typeof tv === 'string' && !tv.includes('✅')) findings.push({ section: 'traceability', issue: `追溯项「${tk}」未标 ✅`, fix: '确认该项已覆盖并标 ✅' })
+    }
+
+    // 收集 spec/proposal 文本（②③ 共用）
+    const specsDir = `${changeDir()}/specs`
+    const specTexts = []
+    if (fs.existsSync(specsDir)) {
+      for (const cap of fs.readdirSync(specsDir)) {
+        const capDir = `${specsDir}/${cap}`
+        if (!fs.existsSync(capDir) || !fs.statSync(capDir).isDirectory()) continue
+        for (const f of fs.readdirSync(capDir)) if (f.endsWith('.md')) specTexts.push(read(`${capDir}/${f}`))
+      }
+    }
+    const proposalText = read(`${changeDir()}/proposal.md`)
+    const allText = specTexts.join('\n') + '\n' + proposalText
+
+    // ② 错误码登记意图：新码（未在 proto 头注释登记）必须声明登记要求；已登记码（60001-60007）跳过
+    const protoText = read(`${ROOT}/api-proto/api/permission/v1/permission.proto`)
+    const registered = new Set((protoText.match(/0?6\d{4}/g) || []).map(c => c.replace(/^0/, '')))
+    const mentioned = [...new Set((allText.match(/\b0?6\d{4}\b/g) || []).map(c => c.replace(/^0/, '')))]
+    for (const code of mentioned) {
+      if (registered.has(code)) continue  // 既有码，无需登记声明
+      let declared = false
+      const re = new RegExp(code, 'g')
+      let m
+      while ((m = re.exec(allText)) !== null) {
+        const ctxNear = allText.slice(Math.max(0, m.index - 300), m.index + 300)
+        if (/(登记|注册|register|头注释|错误码表)/i.test(ctxNear)) { declared = true; break }
+      }
+      if (!declared) findings.push({ section: 'error-code', issue: `错误码 ${code} 在 spec 中使用但未声明登记要求（新码必须声明登记到 proto 头注释 + design.md 错误码表）`, fix: `在对应 REQ 中明确「新增业务错误码 ${code} 并登记到 permission.proto 头注释 + design.md 错误码表」` })
+    }
+
+    // ③ REQ 引用解析：spec 引用的 REQ-XXX 必须有对应定义
+    const refs = [...new Set((allText.match(/REQ-[A-Z]+-\d+/g) || []))]
+    const defined = new Set((specTexts.join('\n').match(/### Requirement: REQ-[A-Z]+-\d+/g) || []).map(s => s.replace('### Requirement: ', '').trim()))
+    for (const ref of refs) {
+      if (!defined.has(ref)) findings.push({ section: 'req-ref', issue: `引用了未定义的 ${ref}`, fix: '在对应 capability spec 定义该 Requirement 或修正引用' })
+    }
+  } catch (e) { /* 自检异常不阻断（LLM 评审兜底） */ }
+  return findings
 }
 
 // ── 服务名提取（兼容 string / {service} / {serviceDir,name} 三种形态）──
@@ -305,7 +392,7 @@ ${TASK}
 - reason: 一句话理由
 - route: 对应路由（SKIP→Edit / S→轻量Pipeline / M→Pipeline / L→OpenSpec）
 - services: 涉及的服务目录列表`,
-      { label: 'dispatch 分级', schema: DISPATCH_SCHEMA }
+      { label: 'dispatch 分级', schema: DISPATCH_SCHEMA, model: routeModel('dispatch') }
     )
     ctx.workload = res.workload
     ctx.route = res.route
@@ -365,7 +452,7 @@ ${TASK}
 - options: 候选选项数组（每项 label + 说明）
 - recommended: 推荐选项的 index
 - why: 为什么需要用户确认`,
-      { label: '需求澄清（brainstorming）', schema: CLARIFY_SCHEMA }
+      { label: '需求澄清（brainstorming）', schema: CLARIFY_SCHEMA, model: routeModel('clarify') }
     )
     ctx.stageResults[1] = { clarifySummary: clarify.summary }
     return pauseForInput(ctx, 'stage1_clarify', {
@@ -413,7 +500,7 @@ ${feedbackSection}
 - .harness/changes/${CHANGE}/.change.yaml
 
 完成后返回：{ traceability, specsCount, selfReview }（traceability=转换追溯表，全✅ 才能通过）`,
-      { label: 'requirement-analyst', schema: REQUIREMENT_SCHEMA }
+      { label: 'requirement-analyst', schema: REQUIREMENT_SCHEMA, model: routeModel('analysis') }
     )
 
     // 门禁：requirement_analysis（信任 agent 报告：traceability/specsCount）
@@ -478,6 +565,30 @@ async function stage2Review(ctx) {
     return
   }
 
+  // P3.2: spec 确定性自检（非 LLM 机械检查）——FAIL 直接回阶段 1（发现作反馈），不耗 LLM 评审
+  const detFindings = specDeterministicCheck(ctx)
+  if (detFindings.length > 0) {
+    ctx.detRounds = (ctx.detRounds || 0) + 1
+    log(`  ❌ Spec 确定性自检 FAIL（${detFindings.length} 项，机械检查，未跑 LLM 评审）— 回阶段 1`)
+    ctx.stageResults[2] = ctx.stageResults[2] || {}
+    ctx.stageResults[2].deterministicFindings = detFindings
+    // 发现作为反馈注入（reviewRounds），供分析师定向修正
+    const detMF = detFindings.map(f => ({ lens: 'deterministic', section: f.section, issue: f.issue, fix: f.fix }))
+    ctx.stageResults[2].reviewRounds = [...(ctx.stageResults[2]?.reviewRounds || []), { round: (ctx.stageResults[2].rounds || 0) + 1, mustFixes: detMF, keys: detMF.map(mf => mustFixKey(mf.lens, mf)) }]
+    if (ctx.detRounds >= 4) {
+      log(`  ⛔ 确定性自检连续 ${ctx.detRounds} 次未过，升级人工`)
+      return pauseForInput(ctx, 'stage2_escalate', {
+        stage: 2,
+        summary: `Spec 确定性自检 ${ctx.detRounds} 次未过 — 升级人工`,
+        questions: [{ id: 'escalate', text: '确定性自检多次未过，如何处理？', options: ['人工修正 spec 后重试', '终止变更', '放宽阈值'] }],
+        onResume: '按人工决策继续',
+      })
+    }
+    ctx.currentStage = 0  // 回阶段 1（分析师带反馈重写）
+    saveState(ctx)
+    return
+  }
+
   const lenses = [
     { key: 'coverage', label: '覆盖完整性' },
     { key: 'structure', label: '结构合理性' },
@@ -509,7 +620,7 @@ ${specHash}
 - verdict: APPROVED / REVISION（有 ≥1 MUST FIX 即 REVISION）
 - mustFixes: 必须修复项数组 {section, issue, fix}
 - summary: 一句话结论`,
-        { label: `Review:${lens.key}`, schema: SPEC_REVIEW_SCHEMA }
+        { label: `Review:${lens.key}`, schema: SPEC_REVIEW_SCHEMA, model: routeModel('review') }
       ).then(r => r ? { ...r, lens: lens.key } : null)
     )
   )
@@ -612,7 +723,7 @@ ${CHANGE}
 - .harness/changes/${CHANGE}/tasks.md（含「## 全局 / Proto」段标注 Proto 变更）
 
 完成后返回：{ services, protoChanges, tasksCount }（services=按服务分组的任务，protoChanges=proto 变更清单）`,
-    { label: 'architecture-designer', schema: ARCHITECT_SCHEMA }
+    { label: 'architecture-designer', schema: ARCHITECT_SCHEMA, model: routeModel('architecture') }
   )
 
   // 门禁：architecture_design（信任 agent 报告：tasksCount）
@@ -859,7 +970,25 @@ const STAGE_GATE = ['', 'requirement_analysis', 'requirement_review', 'architect
 ctx.rollbackCount = ctx.rollbackCount || 0
 const MAX_ROLLBACK = 10
 
+// P2.1: Owner 确认超预算继续 → 放行 hard 护栏（budget_hard checkpoint 决策即消费）
+const budgetAck = consumeDecision(ctx, 'budget_hard')
+if (budgetAck && budgetAck.continue) {
+  ctx.budgetAcknowledged = true
+  log('  ✅ Owner 已确认超预算继续')
+}
+
 while (ctx.currentStage <= 6) {
+  // P2.1: hard 预算超限且未确认 → 升级人工（成本护栏）
+  const bl = budgetLevel()
+  if (!ctx.budgetAcknowledged && bl.level === 'hard') {
+    log(`⛔ 成本护栏: 累计~${(bl.spent / 10000).toFixed(1)} 万输出token 超 hard 预算（${(bl.hard / 10000).toFixed(0)}万）— 升级人工`)
+    return pauseForInput(ctx, 'budget_hard', {
+      stage: ctx.currentStage,
+      summary: `成本超 hard 预算 — 继续或终止？`,
+      questions: [{ id: 'continue', text: '累计输出 token 已超 hard 预算，如何处理？', options: ['继续（已确认超预算）', '终止变更'] }],
+      onResume: '确认后按原流程继续',
+    })
+  }
   const stage = ctx.currentStage
   const fn = STAGE_FN[stage]
   // 空壳阶段：Phase 3-6 实现前直接推进
@@ -907,5 +1036,6 @@ return {
   status: 'pass',
   change: CHANGE,
   stageResults: ctx.stageResults,
+  cost: budgetLevel(),  // P2.2: 成本可观测
   stateFile: statePath(),
 }
