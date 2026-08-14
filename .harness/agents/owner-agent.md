@@ -145,6 +145,29 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 >
 > **阶段 5 编码仍复用 `harness-pipeline.js`**（spec-pipeline 在阶段 5 HITL 委托 Owner 启动 N×Workflow），不重写。
 
+#### 如何 resume（HITL 暂停后续跑）
+
+Workflow 返回 `need_input`（含 `checkpoint`、`questions`、`ctx`）后，Owner 续跑步骤：
+
+1. **问用户**：用 `AskUserQuestion` 把 `questions` 逐题抛给用户，收集决策。
+2. **构造 resume 调用**（沙箱无 fs，ctx 不能落盘，须经 `args.resumeState` 传回）：
+   ```javascript
+   Workflow({
+     scriptPath: ".harness/workflows/harness-spec-pipeline.js",
+     args: {
+       change: "<同 change>",
+       task: "<同 task>",
+       resumeFromRunId: "<上次 runId>",
+       resumeState: <上次返回的 ctx 原样传入>,   // 完整 ctx（含 currentStage/stageResults/decisions）
+       resumeWith: { decisions: { <对 questions 的决策> } },  // 只填用户拍板结果
+     },
+   })
+   ```
+3. **续跑行为**：workflow 入口 `loadState()` 从 `args.resumeState` 恢复 ctx → 检测 `resumePending` → 应用 `resumeWith.decisions` → 清 pending → 从 `currentStage` 续跑，**不重跑已完成阶段**。
+4. **裁决影响**：每阶段 resume 读对应 checkpoint 的决策分支——`回需求分析` → 回阶段 1；`进入 X` → 正常推进；`终止` → 结束；`放宽阈值` → 强制通过。
+
+> **关键**：`resumeState` 必须完整传回上次的 `ctx`（workflow 沙箱无 fs，无法自动持久化）。这是「每阶段 HITL 参与」的必要机制——不是缺陷，是让用户在每个决策点拍板的设计。
+
 **⚠️ 阶段 5 硬性禁令**：
 
 - ❌ **禁止使用 superpowers `subagent-driven-development` / `executing-plans` / 任何外部技能替代 `harness-pipeline.js`**
