@@ -547,8 +547,21 @@ async function stage4Proto(ctx) {
     })
   }
 
+  // resume 后：把 Owner 决策（proto_done）映射到 ctx.protoDone，供门禁校验
+  if (ctx.decisions.stage4_proto && ctx.decisions.stage4_proto.proto_done) {
+    const done = ctx.decisions.stage4_proto.proto_done
+    ctx.protoDone = done === '已执行并提交' || done === '无变更'
+    if (!ctx.protoDone) {
+      log('  ⛔ Owner 确认 proto 未完成，回阶段 3')
+      ctx.currentStage = 3
+      saveState(ctx)
+      return { status: 'stage_fail', stage: 4, change: CHANGE, failures: [{ gate: 'proto_not_done', message: 'Owner 确认 proto 未完成' }], stateFile: statePath() }
+    }
+    log(`  📋 Proto 已执行: ${done}`)
+  }
+
   // resume 后校验 proto_ci 门禁
-  const gate = checkGate('proto_ci', { changeDir: changeDir(), protoChangesRequired: true, summary: `${CHANGE} Proto 门禁` })
+  const gate = checkGate('proto_ci', { changeDir: changeDir(), protoChangesRequired: true, protoDone: ctx.protoDone, summary: `${CHANGE} Proto 门禁` })
   if (!gate.passed) {
     log(`❌ Proto 门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
     ctx.currentStage = 3  // 回阶段 3（主循环 +1 → 阶段 4 重试）
