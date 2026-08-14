@@ -315,14 +315,20 @@ Iteration 4+:
 | 5 | **编码+测试** | N×Workflow 并行 (harness-pipeline.js) | 代码 + `_qa.md` + `_review.md` | 每服务 QA PASS + Review 2/3 PASS |
 | 6 | **集成归档** | Owner 内联 | 移动 QA/Review 到 impl/ + INDEX + summary | 全链路通过 |
 
-### 5.3.1 Pipeline 边界澄清（狭义 vs 广义）
+### 5.3.1 双层流水线总览（命名统一）
 
-**「Pipeline」一词有歧义，本文统一如下**：
+**当前流水线分两层，命名全仓统一**：
 
-- **狭义 Pipeline = `harness-pipeline.js`**（Workflow）——**只负责编码+测试**一环：`Generator → QA → (Debug) → Reviewer`。它不含需求分析、设计。
-- **广义全流程 = OpenSpec**（L 级跨服务）——需求分析 + 需求评审 + 架构设计 + 编码 Pipeline + 集成归档。上文 §5.3 六阶段即广义全流程。
+| 层 | 名称 | 脚本 | 职责 |
+|----|------|------|------|
+| **全流程自动化** | `spec-pipeline` | `harness-spec-pipeline.js` | 0-6 阶段自动编排 + 每阶段 HITL 暂停 |
+| **编码流水线** | `harness-pipeline` | `harness-pipeline.js` | 阶段 5 编码：Generator → QA → (Debug) → Reviewer |
 
-**需求分析、设计是 Pipeline 的上游独立阶段，不由 Pipeline 执行**。
+- **spec-pipeline**：规范驱动全流程（dispatch → 需求分析 → 评审 → 架构 → Proto → 编码 → 归档），每阶段末 `need_input` 暂停等用户，`resumeFromRunId` 续跑。
+- **harness-pipeline**：spec-pipeline 阶段 5 委托的编码流水线（每服务一个，QA 15 项 + Review）。
+- 旧概念「广义 OpenSpec vs 狭义 Pipeline」已由「spec-pipeline vs harness-pipeline」取代（更精确）。
+
+**需求分析、设计是 spec-pipeline 的阶段 1-3，由它自动编排（子 Agent 在干净上下文执行）**。
 
 ### 5.3.1.1 全流程自动化（spec-pipeline）
 
