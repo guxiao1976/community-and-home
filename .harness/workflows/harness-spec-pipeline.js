@@ -228,11 +228,19 @@ async function stage0Dispatch(ctx) {
   const pureTextPattern = /(纯文案|注释|README|CHANGELOG|配置值|yml值|yaml值|json值|环境变量默认值)/i
   const isPure = pureTextPattern.test(TASK)
 
-  if (isPure) {
+  // 优先消费 Owner 入口分级结果（args.workload，避免重复判定）
+  // Owner（步骤①）按 dispatch.md 已判定 S/M/L 并经 args.workload 传入 → 直接复用
+  // 仅在 args.workload 缺失时（绕过 Owner 直接调 spec-pipeline）才自己判定（兜底）
+  const ARGS_WORKLOAD = (typeof args !== 'undefined' && args && args.workload) || ''
+  if (ARGS_WORKLOAD) {
+    ctx.workload = ARGS_WORKLOAD
+    ctx.route = ARGS_WORKLOAD === 'L' ? 'L → spec-pipeline' : `${ARGS_WORKLOAD} → spec-pipeline`
+    log(`  分级（复用 Owner 入口判定）: ${ctx.workload}`)
+  } else if (isPure) {
     ctx.route = 'SKIP'
     log('  ⏭️ 纯文案/配置 → 跳过 Pipeline')
   } else {
-    // LLM 判定 S/M/L（prompt 要求读 dispatch.md 权威规则）
+    // 兜底：LLM 判定 S/M/L（prompt 要求读 dispatch.md 权威规则）
     const res = await agent(
       `你是 Community-Home 的 dispatch 判定 Agent。请按 .harness/skills/dispatch.md 的「工作量分级」规则，
       对以下用户需求做 S/M/L 分级判定。必须先 Read .harness/skills/dispatch.md 获取权威规则。
@@ -251,7 +259,7 @@ ${TASK}
     ctx.workload = res.workload
     ctx.route = res.route
     ctx.services = res.services || []
-    log(`  分级: ${ctx.workload} (${ctx.route}) — ${res.reason}`)
+    log(`  分级（兜底判定）: ${ctx.workload} (${ctx.route}) — ${res.reason}`)
   }
 
   // 写 request.md（dispatch Step 2.4 分级块格式）

@@ -145,6 +145,18 @@ OpenSpec 模式下的标准产出路径（以变更名 `<change>` 为例）：
 >
 > **阶段 5 编码仍复用 `harness-pipeline.js`**（spec-pipeline 在阶段 5 HITL 委托 Owner 启动 N×Workflow），不重写。
 
+#### 如何启动
+
+```javascript
+// Owner ① 已按 dispatch.md 判定 workload，启动时传入 args.workload（消费入口判定，避免阶段 0 重复判定）
+Workflow({
+  scriptPath: ".harness/workflows/harness-spec-pipeline.js",
+  args: { change: "<变更名>", task: "<用户需求>", workload: "L" },  // workload: S/M/L（Owner 已判定）
+})
+```
+
+> 阶段 0 优先读 `args.workload`（复用 Owner 入口判定）；仅当未传时（绕过 Owner 直接调）才兜底自己判定。
+
 #### 如何 resume（HITL 暂停后续跑）
 
 Workflow 返回 `need_input`（含 `checkpoint`、`questions`、`ctx`）后，Owner 续跑步骤：
