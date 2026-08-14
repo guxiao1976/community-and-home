@@ -33,7 +33,7 @@ Harness Pipeline 是 Community-Home 项目的自动化质量保障系统，通�
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Layer 1: 机械化检查层 (Mechanized Checks)                    │
-│  ├─ Go 服务: 15 项检查 (harness-checks.sh)                   │
+│  ├─ Go 服务: 18 项检查 (harness-checks.sh)                   │
 │  ├─ 前端服务: 6 项检查 (harness-checks-frontend.sh)          │
 │  └─ 确定性验证层: deterministic-rules.yml（blocker 标记）    │
 └─────────────────────────────────────────────────────────────┘
@@ -64,7 +64,7 @@ Harness Pipeline 是 Community-Home 项目的自动化质量保障系统，通�
 
 ## 3. Layer 1: 机械化检查层
 
-### 3.1 Go 服务检查项 (15 项)
+### 3.1 Go 服务检查项 (18 项)
 
 | # | 检查项 | 目的 | 阻塞级别 |
 |---|--------|------|:---:|
@@ -296,8 +296,8 @@ Iteration 4+:
 
 | 分级 | 判定条件 | 执行方式 | QA | Review |
 |------|---------|---------|:---:|:---:|
-| **S（轻量）** | 单服务单文件 ≤20 行，不涉及 Proto/common，不新增公开 API | 轻量 Pipeline（`workload:"S"`） | ✅ 15 项 | ❌ 跳过 |
-| **M（单服务）** | 单服务代码改动，非 S 非 L | Pipeline（默认全流程） | ✅ 15 项 | 按 taskType |
+| **S（轻量）** | 单服务单文件 ≤20 行，不涉及 Proto/common，不新增公开 API | 轻量 Pipeline（`workload:"S"`） | ✅ 18 项 | ❌ 跳过 |
+| **M（单服务）** | 单服务代码改动，非 S 非 L | Pipeline（默认全流程） | ✅ 18 项 | 按 taskType |
 | **L（跨服务）** | 跨 2+ 服务 / 涉及 Proto/common / 新增公开 API / 架构决策 | OpenSpec → N×Pipeline | ✅ 每服务 | ✅ 每服务 3 视角 |
 | **跳过** | 纯文案/注释/配置值，无需编译验证 | Edit → build | ❌ | ❌ |
 
@@ -325,7 +325,7 @@ Iteration 4+:
 | **编码流水线** | `harness-pipeline` | `harness-pipeline.js` | 阶段 5 编码：Generator → QA → (Debug) → Reviewer |
 
 - **spec-pipeline**：规范驱动全流程（dispatch → 需求分析 → 评审 → 架构 → Proto → 编码 → 归档），每阶段末 `need_input` 暂停等用户，`resumeFromRunId` 续跑。
-- **harness-pipeline**：spec-pipeline 阶段 5 委托的编码流水线（每服务一个，QA 15 项 + Review）。
+- **harness-pipeline**：spec-pipeline 阶段 5 委托的编码流水线（每服务一个，QA 18 项 + Review）。
 - 旧概念「广义 OpenSpec vs 狭义 Pipeline」已由「spec-pipeline vs harness-pipeline」取代（更精确）。
 
 **需求分析、设计是 spec-pipeline 的阶段 1-3，由它自动编排（子 Agent 在干净上下文执行）**。

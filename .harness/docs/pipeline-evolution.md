@@ -693,6 +693,44 @@ graph_freshness 检查用「任何 commit 时间 > stamp」判 stale，把 graph
 
 ---
 
+## Phase 19: 全面评审 + 三梯队质量修复 + 执行记录 (2026-08-14)
+
+### 背景
+用户要求按 harness 思想全面评审流水线质量。4 个并行 agent 按 6 大子系统评审，产出发现清单；
+逐项代码验证甄别（5 处 agent 误报/夸大），识别出「声明 ≠ 实际」系统性漂移——多个机制文档宣称已生效、实际是死代码或半接线。
+
+### 第一梯队（高风险修复）
+- AST 检查死锁（清理删二进制引入的回归）→ 移除前置条件，AST 真执行
+- P1 自动派发死代码（auto_dispatch 只遍历 P0，combined 白构建）→ 遍历 combined，P1 限量派发生效
+- install-hooks 破坏 pre-commit（cp vs symlink 根解析）→ pre-commit 改 git rev-parse
+- changes/INDEX 补全（13 目录全覆盖）+ 悬空链接修复 + 自检加追溯链检查
+- 孤儿 P0 任务归档（P0-*.md 不匹配 task-*.md glob）
+
+### 第二梯队
+- prompt 双轨收敛：templates/*-new.js + build-pipeline-new.sh 契约与 core 断裂且 0 调用点 → 归档 docs/_archive/prompts-new/，回归单一 prompt 源
+- spec-pipeline 阶段机：S/M 短路 ctx.services 为空 → ARGS_WORKLOAD 分支读 args.services；S/M/L 路由文档统一
+- 记忆体检接入自检（knowledge-maintain.sh --check，第 8 项）
+- graph-populator 去硬编码：discoverServices() 扫描 services/*/go.mod 自动发现；pre-commit 支持 go.work 外模块
+
+### 第三梯队
+- gate-engine verify 接线标注修正（yml banner 声称 verify×5 已落地，实为死代码）
+- QA checkCount 从硬编码 6/14 改为从脚本派生（18/7）
+- L1 上下文预算统一（owner-agent ~800/≤600/knowledge-load 400 → 实际 734/预算 400）
+- QA 项数 15→18 同步
+
+### 自动化机制
+- post-commit 图谱自动同步 hook 修复（原硬编码错误路径从未执行）
+- graph-sync 幂等写 graph-context.md（消除"提交→sync→时间戳变→再提交"循环噪音）
+- 自检从 5 项扩到 8 项（+服务名同步 / 追溯链 / 记忆体检）
+- 执行记录系统：logs/usage/（脚本调用打点：knowledge-load/graph-query/harness-checks）+ logs/pipeline/metrics.jsonl（修复沙箱从未落地）+ config/tracking.yml 开关
+
+### 清理精简
+- .harness/ 307M→4.7M（删 backups 残片）、顶层目录 20→14、统一归档家 docs/_archive/
+- 服务名/模块映射外提 registry 单一数据源
+- 归档 4 个死脚本（harness-tasks-debug/score/deps + run-all-checks）+ cron 清理
+
+---
+
 ## 变更记录模板
 
 每次重大改进，在本文档追加新的 Phase，包含：

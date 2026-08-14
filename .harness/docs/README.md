@@ -52,8 +52,8 @@
 | Owner Agent 调度规则 | `/.harness/agents/owner-agent.md` | 路径选择、阶段编排 |
 | QA 技能定义 | `/.harness/skills/qa/SKILL.md` | QA Agent 执行步骤 |
 | Review 技能定义 | `/.harness/skills/review.md` | Review 9 维度定义 |
-| Go 检查脚本 | `/.harness/skills/qa/scripts/harness-checks.sh` | 15 项机械化检查 |
-| 前端检查脚本 | `/.harness/skills/qa/scripts/harness-checks-frontend.sh` | 6 项前端检查 |
+| Go 检查脚本 | `/.harness/skills/qa/scripts/harness-checks.sh` | 18 项机械化检查 |
+| 前端检查脚本 | `/.harness/skills/qa/scripts/harness-checks-frontend.sh` | 7 项前端检查 |
 | Pipeline 工作流 | `/.harness/workflows/harness-pipeline.js` | Generator→QA→Debug→Review 循环 |
 
 ### 项目规范

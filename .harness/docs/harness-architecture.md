@@ -101,7 +101,7 @@ Owner Agent 三层加载（`owner-agent.md` §2）：
 
 ## 4. 自检与一致性基准
 
-`harness-self-check.sh` 以本总纲 + 关键文档为「一致性基准」，查 5 类：
+`harness-self-check.sh` 以本总纲 + 关键文档为「一致性基准」，查 8 类：
 
 | 检查 | 基准 |
 |------|------|
@@ -110,6 +110,9 @@ Owner Agent 三层加载（`owner-agent.md` §2）：
 | 文档同步 | 核心文档均提到当前 spec-pipeline |
 | 配置漂移 | quality-gates.yml 无 not-implemented 残留 |
 | 调用链完整 | dispatch → spec-pipeline → harness-pipeline → gate-engine 契约在 |
+| 服务名同步 | registry/services.json ↔ dispatch 别名表（新增服务不漂移） |
+| 追溯链完整 | changes/INDEX 覆盖全部变更目录、无悬空链接 |
+| 记忆体检 | knowledge-maintain.sh 6 项（过期/死链/frontmatter/矛盾/索引/孤儿）|
 
 ---
 
@@ -130,7 +133,7 @@ Owner Agent 三层加载（`owner-agent.md` §2）：
 ├─ changes/         # 变更（每变更一个目录，含 OpenSpec 产物）
 ├─ tasks/           # 任务（BACKLOG + task-*.md）
 ├─ docs/            # 平台文档 + 统一归档家 _archive/（历史目录按原名分收）
-├─ logs/            # 运行日志（gates/incidents/judgments）
+├─ logs/            # 运行日志（gates 门禁判定 / incidents 事件 / usage 脚本调用打点 / pipeline 指标，usage+pipeline 为 gitignore 运行时产物）
 ├─ loop-runs/       # 循环运行记录（保留近 7 天）
 └─ tools/           # 小型工具源码（二进制不入库，go build 生成）
 ```
