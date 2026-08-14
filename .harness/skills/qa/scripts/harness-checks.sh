@@ -818,7 +818,14 @@ check_proto_ts_align() {
   set -e
 
   if [[ $rc -eq 0 ]]; then
-    log_pass "proto_ts_align" "all proto fields match TS interfaces"
+    if echo "$out" | grep -q 'AUTO-MISMATCH'; then
+      local auto_detail
+      auto_detail="$(echo "$out" | grep 'AUTO-MISMATCH' | head -5 | tr '\n' '; ')"
+      auto_detail="$(json_escape "$auto_detail")"
+      log_warn "proto_ts_align" "自动同名匹配发现 TS 滞后字段（前端类型未同步 proto）: $auto_detail"
+    else
+      log_pass "proto_ts_align" "all proto fields match TS interfaces"
+    fi
   else
     local detail
     detail="$(echo "$out" | grep -E '^(MISMATCH|MISSING)' | head -10 | tr '\n' '; ')"
