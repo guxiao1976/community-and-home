@@ -1,6 +1,6 @@
 # select-tool
 
-> **直接 Edit / Dev Agent 路径已废弃**，所有代码改动统一走 `dispatch` Skill。本 Skill 只负责判定"是不是开发任务 / 是否批量"，具体工作量分级（S/M/L）与路由见 [dispatch.md Step 0](dispatch.md)。
+> **绕过入口直接改代码已废弃**，所有代码改动统一走 `dispatch` Skill（S/M/L 分级路由）。本 Skill 只负责判定"是不是开发任务 / 是否批量"。
 
 ## 触发条件
 

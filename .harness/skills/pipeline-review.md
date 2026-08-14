@@ -29,6 +29,8 @@ git log -10 --format='  %cd  %s' --date=format:'%F %T' -- .harness/workflows .ha
 
 判定：人工判断「文档最后更新后，是否有实质引擎改动改变了文档描述的内容却未同步」→ 是 = FAIL；否 = PASS。
 
+**自动化增强**：直接跑 `bash .harness/scripts/harness-self-check.sh`（查流程引用/命名口径/文档同步/配置漂移/调用链），FAIL 项即「文档↔代码不一致」的可执行证据，替代纯人工判断。
+
 ### 维度 2 · 应用率
 
 抽查 `.harness/tasks/` 最近 N 个已完成任务（completed），确认是否走了 dispatch 分级 + spec-pipeline（全流程自动化）或 harness-pipeline（编码）。判定：应用率 ≥ 90%；S 级内联需有 dispatch 分级记录 + 门禁。
