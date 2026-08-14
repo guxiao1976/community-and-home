@@ -1,3 +1,0 @@
-package perm
-
-func  BadFormat()  {}
