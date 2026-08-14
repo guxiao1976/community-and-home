@@ -5,7 +5,14 @@
 
 ## 服务名映射（中英文均可）
 
-| 中文名 | 英文目录名 |
+> **权威数据源**：`.harness/registry/services.json`（由 `build-service-registry.sh` 自动扫描 `services/` 生成，含 `name` / `displayName` / `hasApi` / `hasRpc`）。**Step 1 解析服务名时，先读该文件**，以 `name`（英文目录名）与 `displayName`（中文名）做权威匹配；下表仅补充自然语言别名/简称，服务名以 registry 为准。
+
+```bash
+# Step 1 解析参数前，读取服务注册表（权威来源）
+cat .harness/registry/services.json
+```
+
+| 中文别名（自然语言解析用） | 服务名（registry.name） |
 |--------|-----------|
 | 用户服务 / 用户 | `user-service` |
 | 认证服务 / 认证 / 鉴权 | `auth-service` |
@@ -14,6 +21,10 @@
 | AI服务 / AI模型 / 模型服务 | `ai-model-service` |
 | 主数据服务 / 主数据 | `master-data-service` |
 | 审核服务 / 内容审核 / 审核 | `moderation-service` |
+| 社区枢纽服务 / 社区 / 枢纽 | `community-hub-service` |
+| 监控服务 / 监控 | `monitoring-service` |
+
+> **新增服务**：运行 `bash .harness/scripts/build-service-registry.sh` 更新 registry/services.json；如该服务有中文别名需求，在上表补一行。禁止硬编码 registry 中不存在的服务名。
 
 ## 触发条件
 

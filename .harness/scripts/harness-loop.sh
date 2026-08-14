@@ -160,44 +160,49 @@ _parse_sensor_results() {
   NEW_ISSUES=$(echo "$output" | grep -oP "Scan complete: \K\d+" | head -1 || echo "0")
 }
 
-# ─── Service Name Mapping ────────────────────────────────────────────
+# ─── Service Name Mapping（数据源：.harness/registry/services.json）───────
+
+# 从 registry/services.json 加载 服务名 ↔ 中文名 映射（单一数据源，build-service-registry.sh 生成）。
+# 要求 bash 4+（关联数组）；registry 缺失时退化显示原名，不影响主流程。
+declare -A SVC_LABEL=()           # name → displayName
+declare -A SVC_NAME_BY_LABEL=()   # displayName → name
+
+load_service_registry() {
+  local reg="$PROJECT_ROOT/.harness/registry/services.json"
+  [[ -f "$reg" ]] || return 0
+  while IFS=$'\t' read -r name label; do
+    SVC_LABEL["$name"]="$label"
+    SVC_NAME_BY_LABEL["$label"]="$name"
+  done < <(python3 -c '
+import json, sys
+d = json.load(open(sys.argv[1]))
+for s in d["services"]:
+    print(s["name"] + "\t" + s["displayName"])
+' "$reg" 2>/dev/null)
+}
+load_service_registry
 
 service_label() {
-  case "${1:-}" in
-    user-service) echo "用户服务" ;;
-    auth-service) echo "认证服务" ;;
-    permission-service) echo "权限服务" ;;
-    file-service) echo "文件服务" ;;
-    ai-model-service) echo "AI模型服务" ;;
-    master-data-service) echo "主数据服务" ;;
-    moderation-service) echo "内容审核服务" ;;
-    community-hub-service) echo "社区枢纽服务" ;;
-    monitoring-service) echo "监控服务" ;;
-    all) echo "全局" ;;
-    *) echo "${1:-unknown}" ;;
-  esac
+  local svc="${1:-}"
+  [[ "$svc" == "all" ]] && { echo "全局"; return; }
+  [[ -n "${SVC_LABEL[$svc]+x}" ]] && { echo "${SVC_LABEL[$svc]}"; return; }
+  echo "${svc:-unknown}"
 }
 
 # Resolve service directory from task file's service field
-# Handles: "services/xxx" -> "xxx", "xxx" -> "xxx", Chinese names
+# Handles: "services/xxx" -> "xxx", "xxx" -> "xxx", Chinese displayName
 resolve_service_dir() {
   local svc="$1"
   # Strip services/ prefix if present
   svc="${svc#services/}"
-  # Known mappings from Chinese/common names
-  case "$svc" in
-    用户服务|user-service) echo "services/user-service" ;;
-    认证服务|auth-service) echo "services/auth-service" ;;
-    权限服务|permission-service) echo "services/permission-service" ;;
-    文件服务|file-service) echo "services/file-service" ;;
-    AI模型服务|ai-model-service) echo "services/ai-model-service" ;;
-    主数据服务|master-data-service) echo "services/master-data-service" ;;
-    内容审核服务|moderation-service) echo "services/moderation-service" ;;
-    社区枢纽服务|community-hub-service) echo "services/community-hub-service" ;;
-    监控服务|monitoring-service) echo "services/monitoring-service" ;;
-    all|全局) echo "services/all" ;;
-    *) echo "services/${svc}" ;;
-  esac
+  [[ "$svc" == "all" || "$svc" == "全局" ]] && { echo "services/all"; return; }
+  if [[ -n "${SVC_LABEL[$svc]+x}" ]]; then
+    echo "services/$svc"
+  elif [[ -n "${SVC_NAME_BY_LABEL[$svc]+x}" ]]; then
+    echo "services/${SVC_NAME_BY_LABEL[$svc]}"
+  else
+    echo "services/${svc}"
+  fi
 }
 
 # ─── Auto-Dispatch ────────────────────────────────────────────────────
