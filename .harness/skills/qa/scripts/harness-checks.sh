@@ -548,15 +548,15 @@ check_cross_service_import() {
     done
     [[ -z "$owner_svc" ]] && continue
 
-    # Check imports for other services' model packages
-    # 文件级子串搜索：覆盖直连（"path/model"）与别名导入（import m "path/model"），
-    # 不再依赖行首引号（^\s*" 会漏别名形式）
+    # Check imports for other services' model/internal packages
+    # 文件级子串搜索：覆盖直连/别名导入（import m "path/model"），并补 /internal
+    # 盲区——此前只匹配 /model，跨服务 internal 包导入漏检
     for other_svc in "${!SVC_MODULE_MAP[@]}"; do
       [[ "$other_svc" == "$owner_svc" ]] && continue
       local mod_path="${SVC_MODULE_MAP[$other_svc]}"
-      if grep -q "\"${mod_path}/model\"" "$gofile" 2>/dev/null; then
+      if grep -qE "\"${mod_path}/(model|internal)" "$gofile" 2>/dev/null; then
         local rel="${gofile#$PROJECT_ROOT/}"
-        violations+=("$rel imports ${other_svc}/model")
+        violations+=("$rel imports ${other_svc}/(model|internal)")
       fi
     done
   done < <(echo "$go_files")
