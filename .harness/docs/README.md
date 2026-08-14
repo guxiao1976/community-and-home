@@ -1,25 +1,27 @@
 # Harness 文档中心
 
-> 开发流水线文档索引 · 人类开发者参考
+> Harness 平台文档索引 · 人类开发者参考
 
 ---
 
 ## 📚 架构与设计
 
-### 核心文档（流水线体系）
+### 核心文档
 
 | 文档 | 用途 | 目标读者 |
 |------|------|---------|
-| [pipeline-architecture.md](./pipeline-architecture.md) | 流水线架构设计（三层体系、21 项检查、Agent 机制） | 新成员、架构师 |
-| [pipeline-evolution.md](./pipeline-evolution.md) | 演进历史（11 个 Phase、改进效果） | 架构师、维护者 |
-| [pipeline-patterns.md](./pipeline-patterns.md) | 最佳实践（扩展指南、代码模板、故障排查） | 开发者、扩展者 |
+| **[harness-architecture.md](./harness-architecture.md)** | **Harness 整体架构总纲**（6 大子系统 + 协作 + 自检 + 目录） | 新成员、架构师 |
+| [pipeline-architecture.md](./pipeline-architecture.md) | 开发流水线子系统设计（spec-pipeline + harness-pipeline） | 架构师、维护者 |
 | [harness-design-principles.md](./harness-design-principles.md) | 权威设计原则（16 条 + 环节映射 + 目录规范） | 新成员、检视者 |
+| [pipeline-evolution.md](./pipeline-evolution.md) | 演进历史（Phase 1-18） | 架构师、维护者 |
+| [pipeline-patterns.md](./pipeline-patterns.md) | 最佳实践（扩展指南、代码模板、故障排查） | 开发者、扩展者 |
 
 **使用场景**：
-- 🎯 **新成员入职**：按顺序阅读三份文档，了解流水线全貌
+- 🎯 **新成员入职**：先读 `harness-architecture.md`（整体）→ `pipeline-architecture.md`（流水线）→ `harness-design-principles.md`（原则）
 - 🔧 **添加新检查**：查阅 `pipeline-patterns.md` § 2
 - 🔍 **故障排查**：查阅 `pipeline-patterns.md` § 6
 - 📖 **了解历史**：查阅 `pipeline-evolution.md`
+- 🛡️ **harness 自检**：`bash .harness/scripts/harness-self-check.sh`
 
 ---
 

@@ -75,9 +75,10 @@ check_naming() {
   [ "$hits" -eq 0 ] && pass "naming" "命名口径一致（无旧流程词）"
 }
 
-# 检查 3: 文档同步（核心文档应提到当前 spec-pipeline）
+# 检查 3: 文档同步（总纲 + 核心文档应提到当前 spec-pipeline）
 check_docs() {
   local docs=(
+    ".harness/docs/harness-architecture.md"
     ".harness/docs/pipeline-architecture.md"
     ".harness/docs/pipeline-flow-complete.md"
     ".harness/docs/pipeline-patterns.md"
@@ -89,7 +90,7 @@ check_docs() {
       stale=$((stale+1)); warn "docs_sync" "$f 未提到 spec-pipeline（可能过时）"
     fi
   done
-  [ "$stale" -eq 0 ] && pass "docs_sync" "核心文档均同步 spec-pipeline"
+  [ "$stale" -eq 0 ] && pass "docs_sync" "总纲 + 核心文档均同步 spec-pipeline"
 }
 
 # 检查 4: 配置漂移（quality-gates.yml 阶段标注 vs gate-engine 实现）
