@@ -111,16 +111,51 @@ function defaultState() {
 }
 
 function loadState() {
-  // 沙箱无 fs：优先从 args.resumeState 恢复（Owner resume 时传入完整 ctx）
+  // P5.2: 显式 args.resumeState 优先（会话既有机制）；未传且 fs 可用则读盘（schema+change 匹配）；否则 default
   if (RESUME_STATE && typeof RESUME_STATE === 'object') {
     return { ...defaultState(), ...RESUME_STATE }
+  }
+  if (fs) {
+    try {
+      if (fs.existsSync(statePath())) {
+        const disk = JSON.parse(fs.readFileSync(statePath(), 'utf8'))
+        if (disk && disk.schema === 1 && disk.change === CHANGE) {
+          log(`  📂 从盘恢复状态: ${statePath()}`)
+          return { ...defaultState(), ...disk }
+        }
+      }
+    } catch (e) { /* 盘状态缺失/损坏 → fallback */ }
   }
   return defaultState()
 }
 
 function saveState(s) {
-  // 沙箱无 fs：状态只保存在 ctx 内存，随 pauseForInput 返回带出
   s.__saved = true
+  // P5.2: fs 可用时落盘（沙箱无 fs 时仅随 ctx 内存带出）
+  if (fs) {
+    try {
+      if (!fs.existsSync(changeDir())) fs.mkdirSync(changeDir(), { recursive: true })
+      fs.writeFileSync(statePath(), JSON.stringify(s))
+    } catch (e) { /* 落盘失败不阻断 */ }
+  }
+}
+
+// ── P5.1: resume 状态完整性校验（防 D7 式「精简 ctx 静默丢状态」）──
+const REQUIRED_CTX_FIELDS = {
+  2: [['stageResults[1].traceability']],
+  3: [['stageResults[1].traceability'], ['decisions.stage1_clarify']],
+  4: [['stageResults[3].protoChanges']],          // D7: 缺 protoChanges 曾致 stage4 误跳「无 proto 变更」
+  5: [['stageResults[3].services', 'services']], // 单备选组内任一满足（L 走设计产物，S/M 走 dispatch 服务清单）
+  6: [['stageResults[5]']],
+}
+// 支持 a.b[3].c 路径（点 + 方括号）
+function getPath(obj, p) {
+  return p.replace(/\[(\d+)\]/g, '.$1').split('.').reduce((o, k) => (o ? o[k] : undefined), obj)
+}
+function validateResumeState(ctx) {
+  const reqs = REQUIRED_CTX_FIELDS[ctx.currentStage || 0] || []
+  const missing = reqs.filter(alts => !alts.some(p => getPath(ctx, p) !== undefined))
+  return missing.map(alts => alts.join(' 或 '))
 }
 
 // ── HITL 暂停：记录暂停点 + 返回 need_input（含完整 ctx，供 Owner resume 传回）──
@@ -584,6 +619,15 @@ async function stage2Review(ctx) {
         onResume: '按人工决策继续',
       })
     }
+    // P4.2: 确定性自检发现也结构化回填
+    if (fs) {
+      try {
+        const fbDir = `${ROOT}/.harness/review-feedback`
+        if (!fs.existsSync(fbDir)) fs.mkdirSync(fbDir, { recursive: true })
+        const detLines = detFindings.map(f => JSON.stringify({ type: 'warning', change: CHANGE, round: 'det', lens: 'deterministic', section: f.section, issue: f.issue, fix: f.fix })).join('\n')
+        fs.appendFileSync(`${fbDir}/${CHANGE}.warnings.jsonl`, detLines + '\n')
+      } catch (e) { /* 回填失败不阻断 */ }
+    }
     ctx.currentStage = 0  // 回阶段 1（分析师带反馈重写）
     saveState(ctx)
     return
@@ -644,10 +688,21 @@ ${specHash}
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
       const round = ctx.stageResults[2].rounds
       for (const r of valid) {
+        const mfText = (r.mustFixes || []).map(m => `- [${m.section || ''}] ${m.issue || ''}`).join('\n')
         fs.writeFileSync(`${dir}/spec_review_${r.lens}_v${round}.md`,
-          `# Plan Review — ${CHANGE}（${r.lens}视角）\n\n**VERDICT**: ${r.verdict}\n\n${r.summary}\n`)
+          `# Plan Review — ${CHANGE}（${r.lens}视角）\n\n**VERDICT**: ${r.verdict}\n\n${r.summary}${mfText ? `\n\n## mustFixes\n${mfText}` : ''}\n`)
       }
     } catch (e) { /* 报告写入失败不阻断 */ }
+  }
+
+  // P4.2: 评审发现（WARNING 级 mustFixes）结构化回填 → review-feedback 供 backfill 脚本路由
+  if (fs && roundMF.length > 0) {
+    try {
+      const fbDir = `${ROOT}/.harness/review-feedback`
+      if (!fs.existsSync(fbDir)) fs.mkdirSync(fbDir, { recursive: true })
+      const lines = roundMF.map(mf => JSON.stringify({ type: 'warning', change: CHANGE, round: rounds, lens: mf.lens, section: mf.section, issue: mf.issue, fix: mf.fix })).join('\n')
+      fs.appendFileSync(`${fbDir}/${CHANGE}.warnings.jsonl`, lines + '\n')
+    } catch (e) { /* 回填失败不阻断 */ }
   }
 
   // 投票：≥2/3 通过；否则回阶段 1（含 P1.2 收敛早停）
@@ -961,6 +1016,21 @@ if (ctx.resumePending && RESUME_WITH && RESUME_WITH.decisions) {
   ctx.resumeCount = (ctx.resumeCount || 0) + 1
   saveState(ctx)
   log(`🔄 resume: 应用 ${cp} 决策后从阶段 ${ctx.currentStage} 续跑`)
+}
+
+// P5.1: resume 状态完整性校验（当前 stage 必需字段缺失 → 拒绝 resume，防静默丢状态）
+{
+  const missing = validateResumeState(ctx)
+  if (missing.length > 0) {
+    log(`⛔ resume 状态不完整（stage ${ctx.currentStage} 缺: ${missing.join('; ')}）— 拒绝 resume`)
+    return {
+      status: 'escalated',
+      change: CHANGE,
+      checkpoint: 'resume_invalid',
+      summary: `resume ctx 缺少 stage ${ctx.currentStage} 必需字段: ${missing.join('; ')}。请提供完整 ctx（勿精简 resumeState），或删除 ${statePath()} 重新开始`,
+      stateFile: statePath(),
+    }
+  }
 }
 
 const STAGE_FN = [stage0Dispatch, stage1Requirement, stage2Review, stage3Architecture, stage4Proto, stage5Coding, stage6Integrate]

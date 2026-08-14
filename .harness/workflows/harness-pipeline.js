@@ -955,6 +955,19 @@ while (iteration <= MAX_ITERATIONS) {
       log(`💡 ${uniqueSuggestions.length} 条 Memory 建议: ${uniqueSuggestions.map(s => s.slug).join(', ')}`)
     }
 
+    // P4.2: 评审 Memory 建议结构化回填——写 review-feedback 供 backfill 脚本路由（不"报告即死"）
+    if (fs && uniqueSuggestions.length > 0) {
+      try {
+        // Agent 在 repo 根运行 → 用相对路径（与文件内其余 fs 写一致）
+        const dir = '.harness/review-feedback'
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+        const safeService = String(args.serviceName || 'service').replace(/[^\w一-龥-]/g, '_')
+        const lines = uniqueSuggestions.map(s => JSON.stringify({ type: 'memory', service: args.serviceName, ...s })).join('\n')
+        fs.appendFileSync(`${dir}/${safeService}.memory.jsonl`, lines + '\n')
+        log(`  📝 P4.2: ${uniqueSuggestions.length} 条 Memory 建议已写入 .harness/review-feedback/${safeService}.memory.jsonl`)
+      } catch (e) { /* 回填失败不阻断 */ }
+    }
+
     // PASS — 管线完成！
     const memoryMatchCount = validReviews.reduce((sum, r) => sum + (r.memorySuggestions || []).length, 0)
     const confidence = computeConfidence(iteration, passCount, validReviews.length, memoryMatchCount, qaFirstPass)

@@ -104,28 +104,34 @@
 
 > 行为测试：`.harness/workflows/p2p3-guards.test.js`（12 项，`node` 运行）。P1 回归 14 项通过。
 
-### Phase 4 — 评估与反馈飞轮
+### Phase 4 — 评估与反馈飞轮 ✅ 已实施
 
-**P4.1 管线自身 eval 语料**
+**P4.1 管线自身 eval 语料** ✅
 - 依据：2.3「eval 语料复合」+「反馈飞轮」
-- 做法：把本 session 的摩擦案例（盲循环、决策回环、缓存毒化、gofmt 门不一致、ctx 脆弱）固化为 `pipeline/evals/` 回归用例；管线改动后跑 eval 防回归
-- 验证：管线改动不破坏已修复行为（如回归断言"评审 mustFixes 必须注入"）
+- 做法：`pipeline/evals/` 语料库——`p1-convergence.eval.js`/`p2p3-guards.eval.js`/`p4p5-evals.eval.js` + `run-evals.sh` 运行器 + README（用例↔实战缺陷映射）
+- 验证：管线改动后 `bash .harness/pipeline/evals/run-evals.sh` 防回归（40 项全绿）
+- 状态：已实施（3 eval 文件迁移/新增 + 运行器 + 文档）
 
-**P4.2 评审发现 → 结构化回填（D9）**
+**P4.2 评审发现 → 结构化回填（D9）** ✅
 - 依据：2.1「捕获每个反馈信号，左移修复」
-- 做法：评审 WARNING/memory-suggestion 自动路由：WARNING → 对应服务的 backlog task（source=review）；memory-suggestion → 记忆系统；CRITICAL → 阻塞
-- 验证：评审产出不再"报告即死"，进入可执行闭环
+- 做法：管线评审把 WARNING（mustFixes/确定性自检发现）写 `.harness/review-feedback/<change>.warnings.jsonl`；memory 建议写 `<service>.memory.jsonl`；`backfill-review-feedback.sh` 把 WARNING 聚合为 backlog task（source=review）+ memory 追加 pending-suggestions.md（处理完归档 processed/，幂等）
+- 验证：评审产出不再"报告即死"，进入可执行闭环（已实测建任务 + memory 落盘）
+- 状态：已实施（spec-pipeline + harness-pipeline 写入 + 回填脚本）
 
-### Phase 5 — 状态可靠性（D7）
+### Phase 5 — 状态可靠性（D7）✅ 已实施
 
-**P5.1 ctx 版本化 + resume 完整性校验**
+**P5.1 ctx 版本化 + resume 完整性校验** ✅
 - 依据：2.4「checkpoint/resume」
-- 做法：ctx 增 `schema` 版本（已有 1）；resume 时校验**当前 stage 的必需字段**（如 stage3 后必需 protoChanges），缺失则拒绝 resume 并提示完整 ctx
+- 做法：`REQUIRED_CTX_FIELDS` 每 stage 必需字段（stage2 需 traceability / stage4 需 protoChanges（D7）/ stage5 需 services 任一）+ `validateResumeState` 在 loadState 后校验，缺失拒绝 resume 并提示完整 ctx
 - 验证：resume 缺字段静默跳过（本次 stage4 误跳）不再发生
+- 状态：已实现（getPath 支持 a.b[3].c + 校验接线）
 
-**P5.2 状态落盘（fs 可用时）**
-- 做法：非沙箱环境把 pipeline-state.json 落盘，resume 优先读盘，ctx 传参仅作沙箱 fallback
-- 验证：resume 不再依赖手传完整 ctx
+**P5.2 状态落盘（fs 可用时）** ✅
+- 做法：`saveState` 落盘 `pipeline-state.json`（schema+change 匹配）；`loadState` 优先 args.resumeState（既有机制），未传且 fs 可用时读盘；沙箱无 fs 时保持 ctx 传参 fallback
+- 验证：resume 不再依赖手传完整 ctx（fs 环境）；schema 不匹配拒绝盘状态
+- 状态：已实现（防御性落盘/读盘，沙箱优雅降级）
+
+> 行为测试：`p4p5-evals.eval.js`（14 项）。全量 `run-evals.sh` 40 项通过。
 
 ---
 

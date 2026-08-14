@@ -2,7 +2,7 @@
 // 运行: node .harness/workflows/p1-convergence.test.js
 const fs = require('fs')
 
-const SRC = fs.readFileSync(__dirname + '/harness-spec-pipeline.js', 'utf8')
+const SRC = fs.readFileSync(__dirname + '/../../workflows/harness-spec-pipeline.js', 'utf8')
 
 // 提取顶层函数定义（consumeDecision / specContentHash / mustFixKey）
 function extractFn(name) {
@@ -56,7 +56,7 @@ function assert(name, cond, detail = '') {
   // 改用真实项目 change 目录验证（内容敏感）
   const realStub = {
     fs, path: require('path'),
-    ROOT: fs.realpathSync(__dirname + '/../..'),
+    ROOT: fs.realpathSync(__dirname + '/../../..'),
     CHANGE: 'role-platforms-save', // 用真实 change 目录
     log: () => {},
   }

@@ -2,7 +2,7 @@
 // 运行: node .harness/workflows/p2p3-guards.test.js
 const fs = require('fs')
 
-const SRC = fs.readFileSync(__dirname + '/harness-spec-pipeline.js', 'utf8')
+const SRC = fs.readFileSync(__dirname + '/../../workflows/harness-spec-pipeline.js', 'utf8')
 
 function extractFn(name) {
   const re = new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\n\\}`, 'm')
@@ -27,7 +27,7 @@ function assert(name, cond, detail = '') {
   if (cond) { pass++; console.log(`  ✅ ${name}`) }
   else { fail++; console.log(`  ❌ ${name} ${detail}`) }
 }
-const ROOT = fs.realpathSync(__dirname + '/../..')
+const ROOT = fs.realpathSync(__dirname + '/../../..')
 const baseDeps = {
   fs, path: require('path'), ROOT, CHANGE: 'role-platforms-save', log: () => {},
   budget: null, PIPELINE_BUDGET: { soft: 1500000, hard: 2500000 }, MODEL_ROUTES: {},
