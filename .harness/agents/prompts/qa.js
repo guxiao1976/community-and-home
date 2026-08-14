@@ -31,7 +31,17 @@ function qaPrompt() {
   const checkScript = isFrontend
     ? `bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service ${SVC_NAME} --json`
     : `bash .harness/skills/qa/scripts/harness-checks.sh --service ${SVC_NAME} --json`
-  const checkCount = isFrontend ? '6' : '14'
+  // 检查数从脚本派生（防检查增减后漂移；原硬编码 6/14 已滞后为 18/7）。
+  // 沙箱无 fs → 兜底当前实际值；非沙箱（本机构建）读取脚本派生。
+  let goCount = 18, feCount = 7
+  try {
+    const fs = require('fs')
+    const goN = (fs.readFileSync('.harness/skills/qa/scripts/harness-checks.sh', 'utf8').match(/^check_[a-z_]+\(\)/gm) || []).length
+    const feN = (fs.readFileSync('.harness/skills/qa/scripts/harness-checks-frontend.sh', 'utf8').match(/^check_[a-z_]+\(\)/gm) || []).length
+    if (goN > 0) goCount = goN
+    if (feN > 0) feCount = feN
+  } catch (e) { /* 沙箱无 fs，用兜底值 */ }
+  const checkCount = isFrontend ? String(feCount) : String(goCount)
 
   return `你是 QA Engineer Agent（${isFrontend ? '前端' : 'Go'}服务）。
 
