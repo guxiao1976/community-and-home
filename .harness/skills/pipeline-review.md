@@ -11,7 +11,7 @@ description: 流水线检视与完善 —— 定期或按需检查开发流水�
 
 读 `.harness/docs/harness-design-principles.md`（16 条原则 + 环节映射 + 目录规范）。
 
-## Step 2: 检视 5 个维度
+## Step 2: 检视 6 个维度
 
 ### 维度 1 · 文档新鲜度（提示性检查，人工判断）
 
@@ -54,6 +54,19 @@ ls .harness/logs/incidents/*.yml | grep -v _template | wc -l   # Incident 条数
 
 对照 16 条原则 + 环节→skills/tools 映射，抽查近期 `docs/devlog/`、`.harness/changes/`、git log，确认各环节用了正确 skill/tool、无「主 agent 越界写代码」等违规。
 
+### 维度 6 · 运行数据分析（客观，读执行记录）
+
+```bash
+# 聚合 logs/usage + pipeline/metrics 输出运行分析报告（脚本调用/命中率/QA/轮次/图谱）
+bash .harness/scripts/analyze-usage.sh
+```
+
+判定：数据量 <3 条 → 标注「数据积累期，暂不评价」（执行记录开关 `config/tracking.yml` 需 `enabled: true`）；有数据则**基于实际数字**客观判断：
+- **知识检索命中率低**（matched=0 占比高）→ 记忆 triggers / 关键词匹配需优化
+- **QA 反复 FAIL** → 对应检查项或代码习惯问题
+- **pipeline 轮次 >1 多**（重试多）→ 需求/设计阶段问题（下游返工）
+- **图谱查询不可用多** → Neo4j 可用性关注
+
 ## Step 3: 测试（正向 + 负向）
 
 **正向**：跑一个最小无害样例任务（给某服务 model 加一行 `// Deprecated`），用 `harness-spec-pipeline.js` 走全流程（S 级轻量：dispatch → 阶段 5 编码 harness-pipeline → 阶段 6 归档），验证不卡死、产出 PASS。
@@ -64,7 +77,7 @@ ls .harness/logs/incidents/*.yml | grep -v _template | wc -l   # Incident 条数
 
 ## Step 4: 闭环
 
-1. 产出报告 `.harness/docs/pipeline-review-report-<日期>.md`（记录 5 维度 + 测试结果 + 结论）
+1. 产出报告 `.harness/docs/pipeline-review-report-<日期>.md`（记录 6 维度 + 测试结果 + 结论）
 2. 每个问题 → `bash .harness/scripts/harness-tasks.sh create ...` 回 BACKLOG
 3. Incident 达阈值 → `bash .harness/scripts/evolve-pipeline.sh`
 4. 报告归档作为下次检视基线
