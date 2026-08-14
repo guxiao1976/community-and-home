@@ -94,9 +94,10 @@ CRON_TASKS="
 # 注意: Neo4j 未启动时本任务会 exit 1 并写入日志（显式失败，非静默跳过）
 0 2 * * * cd $PROJECT_ROOT && bash .harness/scripts/graph-sync.sh >> /tmp/graph-sync.log 2>&1
 
-# 3. 完整质量检查 - 每周一上午9点
-# 运行完整的后端+前端质量检查套件
-0 9 * * 1 cd $PROJECT_ROOT && bash .harness/scripts/run-all-checks.sh >> /tmp/harness-weekly-check.log 2>&1
+# 3. Harness 自检 - 每周一上午9点
+# 运行 harness-self-check.sh（meta-CI：引用/命名/文档同步/配置漂移/调用链/追溯链/记忆体检）
+# 注：run-all-checks.sh 已废弃归档（tool-usage-rules 反例）
+0 9 * * 1 cd $PROJECT_ROOT && bash .harness/scripts/harness-self-check.sh >> /tmp/harness-weekly-check.log 2>&1
 
 # 4. 残留 worktree 清理 - 每周日凌晨3点
 # 清理 pipeline 隔离用 worktree 的残留（只删无未提交改动的）
@@ -112,7 +113,7 @@ CRON_TASKS="
 echo "  准备添加以下任务："
 echo "    • 传感器扫描: 每4小时 (0 */4 * * *)"
 echo "    • 知识图谱同步: 每天2:00 AM (0 2 * * *)"
-echo "    • 完整质量检查: 每周一9:00 AM (0 9 * * 1)"
+echo "    • Harness 自检: 每周一9:00 AM (0 9 * * 1)"
 echo "    • worktree 清理: 每周日3:00 AM (0 3 * * 0)"
 echo ""
 
