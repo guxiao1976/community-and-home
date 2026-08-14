@@ -140,6 +140,31 @@ check_registry() {
   [ "$missing" -eq 0 ] && pass "registry_sync" "registry ↔ dispatch 服务名同步"
 }
 
+# 检查 7: changes 追溯链完整性（INDEX 覆盖全部变更目录 + 无悬空链接）
+check_traceability() {
+  local index="$ROOT/.harness/changes/INDEX.md"
+  local cdir="$ROOT/.harness/changes"
+  if [ ! -f "$index" ]; then fail "traceability" "changes/INDEX.md 缺失"; return; fi
+  local missing=0 dangling=0
+  # 实际变更目录（排除 _archive/TEMPLATE）是否都登记到 INDEX
+  local indexed
+  indexed=$(grep -o '\./[a-z0-9-]*/' "$index" | sed 's|^\./||; s|/$||' | grep -v "change-name" | sort -u)
+  local dname
+  for d in "$cdir"/*/; do
+    dname=$(basename "$d")
+    [[ "$dname" == "_archive" || "$dname" == "TEMPLATE" ]] && continue
+    if ! echo "$indexed" | grep -qx "$dname"; then
+      missing=$((missing+1)); fail "traceability" "变更目录 $dname 未登记到 INDEX"
+    fi
+  done
+  # INDEX 登记的目录是否真实存在（无悬空链接）
+  local link
+  for link in $indexed; do
+    [ -d "$cdir/$link" ] || { dangling=$((dangling+1)); fail "traceability" "INDEX 悬空链接 $link（目录不存在）"; }
+  done
+  [ "$missing" -eq 0 ] && [ "$dangling" -eq 0 ] && pass "traceability" "changes 追溯链完整（INDEX 全覆盖、无悬空）"
+}
+
 # ── 执行 ──
 check_refs
 check_naming
@@ -147,6 +172,7 @@ check_docs
 check_config_drift
 check_chain
 check_registry
+check_traceability
 
 # ── 输出 ──
 if $OUTPUT_JSON; then
