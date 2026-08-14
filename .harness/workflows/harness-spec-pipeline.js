@@ -88,6 +88,8 @@ if (!CHANGE) throw new Error('harness-spec-pipeline: 缺少 args.change（变更
 if (!TASK) throw new Error('harness-spec-pipeline: 缺少 args.task（用户需求描述）')
 
 const changeDir = () => `${ROOT}/.harness/changes/${CHANGE}`
+// statePath 仅作展示（沙箱无 fs，resume 状态经 args.resumeState 传，不落盘）
+const statePath = () => `${changeDir()}/pipeline-state.json`
 
 const RESUME_FROM = (typeof args !== 'undefined' && args && args.resumeFromRunId) || ''
 const RESUME_WITH = (typeof args !== 'undefined' && args && args.resumeWith) || null
