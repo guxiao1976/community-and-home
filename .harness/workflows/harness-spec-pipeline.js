@@ -390,11 +390,75 @@ ${CHANGE}
   })
 }
 
-// 阶段 4: Proto 变更（Phase 5 实现）
-async function stage4Proto(ctx) { /* Phase 5 */ }
+// 阶段 4: Proto 变更（HITL：Owner 亲自执行 make ci）
+async function stage4Proto(ctx) {
+  phase('4 Proto 变更')
+  const protoChanges = (ctx.stageResults[3] && ctx.stageResults[3].protoChanges) || []
+  if (protoChanges.length === 0) {
+    log('  ⏭️ 无 Proto 变更，跳过')
+    ctx.stageResults[4] = { skipped: true }
+    return
+  }
 
-// 阶段 5: 编码测试（Phase 5 实现）
-async function stage5Coding(ctx) { /* Phase 5 */ }
+  if (!ctx.decisions.stage4_proto) {
+    return pauseForInput(ctx, 'stage4_proto', {
+      stage: 4,
+      summary: `需要修改 ${protoChanges.length} 个 proto 文件。请按硬规则由 Owner（全局 Claude）执行：`,
+      questions: [{
+        id: 'proto_done',
+        text: `请执行 api-proto 变更 + make ci（lint+breaking+generate），完成后确认`,
+        options: ['已执行并提交', '无变更', '需人工介入'],
+      }],
+      artifacts: { protoChanges, instructions: 'cd api-proto && 按 tasks.md「全局/Proto」修改 + make ci' },
+      onResume: '校验 make ci + git diff 后进入阶段 5',
+    })
+  }
+
+  // resume 后校验 proto_ci 门禁
+  const gate = checkGate('proto_ci', { changeDir: changeDir(), protoChangesRequired: true, summary: `${CHANGE} Proto 门禁` })
+  if (!gate.passed) {
+    log(`❌ Proto 门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
+    ctx.currentStage = 3  // 回阶段 3（主循环 +1 → 阶段 4 重试）
+    saveState(ctx)
+    return { status: 'stage_fail', stage: 4, change: CHANGE, failures: gate.failures, stateFile: statePath() }
+  }
+  ctx.stageResults[4] = { passed: true }
+  saveState(ctx)
+  log('  ✅ Proto 变更通过 make ci')
+}
+
+// 阶段 5: 编码测试（HITL 委托 Owner 启动 N×harness-pipeline.js）
+async function stage5Coding(ctx) {
+  phase('5 编码+测试')
+  const services = (ctx.stageResults[3] && ctx.stageResults[3].services) || ctx.services || []
+  if (services.length === 0) {
+    // 没有服务列表（S/M 短路或设计未产出）→ 用 ctx.services
+    log('  ⚠️ 无服务任务清单，使用 dispatch 阶段的服务列表')
+  }
+
+  if (!ctx.decisions.stage5_dispatch) {
+    const svcList = services.map(s => typeof s === 'string' ? s : (s.serviceDir || s.name)).join('\n')
+    return pauseForInput(ctx, 'stage5_dispatch', {
+      stage: 5,
+      summary: `请为以下服务并行启动 Workflow harness-pipeline.js（每服务一个），全部 PASS 后确认：\n${svcList || '（无服务清单，请用 dispatch 阶段 ctx.services）'}`,
+      questions: [{ id: 'pipelines_done', text: '所有服务 Pipeline 已全部 PASS？', options: ['全部 PASS', '有 FAIL'] }],
+      onResume: '聚合各服务 Pipeline 结果后进入阶段 6',
+    })
+  }
+
+  // resume 后聚合（Owner 在 decisions 里带回各服务结果）
+  const dispatchResult = ctx.decisions.stage5_dispatch
+  ctx.stageResults[5] = { dispatchResult, services }
+  saveState(ctx)
+  log(`  ✅ 编码阶段完成（${services.length} 服务，Owner 已确认 Pipeline 结果）`)
+
+  return pauseForInput(ctx, 'stage5_done', {
+    stage: 5,
+    summary: `编码完成（${services.length} 服务）— 按置信度确认后进入集成归档？`,
+    questions: [{ id: 'approve', text: '各服务 QA+Review 通过，进入集成归档？', options: ['进入集成归档', '需修复'] }],
+    onResume: '编码确认后进入阶段 6',
+  })
+}
 
 // 阶段 6: 集成归档（Phase 6 实现）
 async function stage6Integrate(ctx) { /* Phase 6 */ }
