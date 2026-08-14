@@ -142,7 +142,8 @@ function pauseForInput(ctx, checkpoint, payload) {
   }
 }
 
-// ── 门禁检查（gate-engine）──
+// ── 门禁检查（内置实现，沙箱可用；gate-engine 完整版在非沙箱环境优先）──
+// 沙箱无法 require gate-engine（探针证实），故内置轻量门禁逻辑，保证自动化校验真实生效。
 function checkGate(phase, ctxForGate) {
   try {
     const gateEngine = require('./gate-engine.js')
@@ -150,9 +151,91 @@ function checkGate(phase, ctxForGate) {
     if (r.warnings.length > 0) log(`  ⚠️ 门禁 WARN: ${r.warnings.map(w => w.message).join('; ')}`)
     return r
   } catch (e) {
-    log(`  ⚠️ gate-engine 不可用（门禁降级）: ${e.message}`)
-    return { passed: true, failures: [], warnings: [] }
+    // 沙箱降级：内置门禁（与 gate-engine 对应 phase 逻辑一致）
+    log(`  ⚠️ gate-engine 沙箱不可用，使用内置门禁: ${e.message}`)
+    return builtinGate(phase, ctxForGate)
   }
+}
+
+// 内置轻量门禁（沙箱用，逻辑与 gate-engine.js 对应 phase 一致）
+function builtinGate(phase, ctx) {
+  const failures = []
+  const warnings = []
+  const fileExists = (p) => {
+    try { return fs.existsSync(p) } catch { return false }
+  }
+  const read = (p) => {
+    try { return fs.readFileSync(p, 'utf8') } catch { return '' }
+  }
+  switch (phase) {
+    case 'requirement_analysis': {
+      const cd = ctx.changeDir || ''
+      if (!fileExists(`${cd}/proposal.md`)) failures.push({ gate: 'req_file_exists', message: 'proposal.md 必须存在' })
+      const proposal = read(`${cd}/proposal.md`)
+      for (const sec of ['为什么做', '做什么', '影响范围', '风险评估']) {
+        if (!proposal.includes(sec)) { failures.push({ gate: 'req_required_sections', message: `proposal 缺章节 ${sec}` }); break }
+      }
+      if (/TBD|TODO|待定|\[NEEDS CLARIFICATION\]/.test(proposal + read(`${cd}/.change.yaml`))) {
+        failures.push({ gate: 'req_no_placeholders', message: 'proposal 含占位符' })
+      }
+      try {
+        const specs = `${cd}/specs`
+        if (fs.existsSync(specs)) {
+          const has = fs.readdirSync(specs, { recursive: true }).some(f => String(f).endsWith('spec.md'))
+          if (!has) failures.push({ gate: 'req_specs_exist', message: 'specs/*/spec.md 至少 1 个' })
+        } else {
+          failures.push({ gate: 'req_specs_exist', message: 'specs 目录缺失' })
+        }
+      } catch { failures.push({ gate: 'req_specs_exist', message: 'specs 检查异常' }) }
+      break
+    }
+    case 'requirement_review': {
+      if ((ctx.passCount || 0) < 2) failures.push({ gate: 'spec_review_min_approved', message: `评审需 ≥2/3 APPROVED（当前 ${ctx.passCount}/${ctx.totalReviews}）` })
+      if ((ctx.rounds || 0) > 3) failures.push({ gate: 'spec_review_round_limit', message: `评审轮次 ≤3（当前 ${ctx.rounds}）` })
+      break
+    }
+    case 'architecture_design': {
+      const cd = ctx.changeDir || ''
+      if (!fileExists(`${cd}/design.md`)) failures.push({ gate: 'arch_design_exists', message: 'design.md 必须存在' })
+      const design = read(`${cd}/design.md`)
+      for (const sec of ['架构概述', '数据模型', '接口设计']) {
+        if (!design.includes(sec)) { failures.push({ gate: 'arch_design_sections', message: `design 缺章节 ${sec}` }); break }
+      }
+      if (!fileExists(`${cd}/tasks.md`)) failures.push({ gate: 'arch_tasks_exists', message: 'tasks.md 必须存在' })
+      const tasks = read(`${cd}/tasks.md`)
+      const taskCount = (tasks.match(/### Task /g) || []).length
+      if (taskCount < 3) failures.push({ gate: 'arch_task_count', message: `tasks ≥3（当前 ${taskCount}）` })
+      if (/TBD|TODO|待定|<\w+>/.test(tasks)) failures.push({ gate: 'arch_zero_placeholders', message: 'tasks 含占位符' })
+      break
+    }
+    case 'proto_ci': {
+      // 沙箱无法跑 make ci，用 git diff 检查 proto 有变更（如果要求变更）
+      if (ctx.protoChangesRequired) {
+        try {
+          const { execSync } = require('child_process')
+          const diff = execSync('cd api-proto && git diff --name-only 2>&1', { timeout: 10000, encoding: 'utf8' }).trim()
+          if (!diff) failures.push({ gate: 'proto_changes_present', message: '需要 proto 变更但 api-proto 无改动' })
+        } catch { failures.push({ gate: 'proto_ci_unavailable', message: '沙箱无法校验 proto ci' }) }
+      }
+      break
+    }
+    case 'integration': {
+      const cd = ctx.changeDir || ''
+      if (!fileExists(`${cd}/summary.md`)) failures.push({ gate: 'integ_summary_exists', message: 'summary.md 必须存在' })
+      const summary = read(`${cd}/summary.md`)
+      if (!summary.includes('阶段') || !summary.includes('交付清单')) failures.push({ gate: 'integ_summary_exists', message: 'summary 缺必填章节' })
+      // 归档检查：每服务 impl/<svc>/ 有 QA/Review
+      for (const s of (ctx.services || [])) {
+        const impl = `${cd}/impl/${s.replace(/^services\//, '')}`
+        if (!fileExists(`${impl}/_qa.md`)) warnings.push({ gate: 'integ_qa_archived', message: `${s} 的 _qa.md 未归档（WARN）` })
+      }
+      break
+    }
+    default:
+      // 未知阶段：不校验（降级通过）
+      break
+  }
+  return { passed: failures.length === 0, failures, warnings }
 }
 
 // ============================================================
