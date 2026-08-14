@@ -547,16 +547,16 @@ check_cross_service_import() {
     [[ -z "$owner_svc" ]] && continue
 
     # Check imports for other services' model packages
-    while IFS= read -r import_line; do
-      for other_svc in "${!SVC_MODULE_MAP[@]}"; do
-        [[ "$other_svc" == "$owner_svc" ]] && continue
-        local mod_path="${SVC_MODULE_MAP[$other_svc]}"
-        if echo "$import_line" | grep -q "\"${mod_path}/model\""; then
-          local rel="${gofile#$PROJECT_ROOT/}"
-          violations+=("$rel imports ${other_svc}/model")
-        fi
-      done
-    done < <(grep -P '^\s*"[^"]+' "$gofile" 2>/dev/null || true)
+    # 文件级子串搜索：覆盖直连（"path/model"）与别名导入（import m "path/model"），
+    # 不再依赖行首引号（^\s*" 会漏别名形式）
+    for other_svc in "${!SVC_MODULE_MAP[@]}"; do
+      [[ "$other_svc" == "$owner_svc" ]] && continue
+      local mod_path="${SVC_MODULE_MAP[$other_svc]}"
+      if grep -q "\"${mod_path}/model\"" "$gofile" 2>/dev/null; then
+        local rel="${gofile#$PROJECT_ROOT/}"
+        violations+=("$rel imports ${other_svc}/model")
+      fi
+    done
   done < <(echo "$go_files")
 
   if [[ ${#violations[@]} -eq 0 ]]; then
@@ -844,7 +844,13 @@ check_api_stubs() {
   fi
 
   local stubs
-  stubs=$(grep -rl "todo: add your logic here" "$target/api/internal/logic/" 2>/dev/null || true)
+  # 覆盖 api 与 rpc 两套 logic（goctl 也会为 gRPC handler 生成 stub）；
+  # 无 --service 时遍历所有服务的 logic 目录（原实现只查 services/ 导致空转）
+  if [[ -n "$SERVICE_NAME" ]]; then
+    stubs=$(grep -rl "todo: add your logic here" "$target/api/internal/logic/" "$target/rpc/internal/logic/" 2>/dev/null || true)
+  else
+    stubs=$(grep -rl "todo: add your logic here" services/*/api/internal/logic/ services/*/rpc/internal/logic/ 2>/dev/null || true)
+  fi
 
   if [[ -z "$stubs" ]]; then
     log_pass "api_stubs" "no TODO stubs found in API logic"
@@ -880,8 +886,13 @@ check_response_wrap() {
   fi
 
   # Find Logic files whose function signature returns *types.XxxResponse
+  # 覆盖 api 与 rpc 两套 logic（rpc logic 返回 types.Response 同样会 double-wrap）
   local violations
-  violations=$(grep -rn 'func (l \*.*Logic) .* \*types\.\w*Response' "$target/api/internal/logic/" 2>/dev/null | grep -v test || true)
+  if [[ -n "$SERVICE_NAME" ]]; then
+    violations=$(grep -rn 'func (l \*.*Logic) .* \*types\.\w*Response' "$target/api/internal/logic/" "$target/rpc/internal/logic/" 2>/dev/null | grep -v test || true)
+  else
+    violations=$(grep -rn 'func (l \*.*Logic) .* \*types\.\w*Response' services/*/api/internal/logic/ services/*/rpc/internal/logic/ 2>/dev/null | grep -v test || true)
+  fi
 
   if [[ -z "$violations" ]]; then
     log_pass "response_wrap" "no double-wrap risk detected"
