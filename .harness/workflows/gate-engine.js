@@ -16,9 +16,12 @@
 //   verify.compile/service_running/bin_fresh/panic_log/db_dupes  → gate:verify_*
 //   （交付前自验证门禁，对应 verify-before-deliver skill）
 //
-// 未接入 quality-gates.yml 阶段（yml 已标注 [status: not-implemented]）：
-//   requirement_analysis / architecture_design / coding / ci / deployment / documentation
-//   这 6 个阶段不在当前 harness-pipeline workflow（OpenSpec 设计预留），规则未被本引擎执行；
+// 接线状态（2026-08-14 更新）：
+//   harness-pipeline workflow：gate qa×2 / review（Generator→QA→Review 循环）
+//   spec-pipeline 全流程：checkGate 接入 requirement_analysis / requirement_review /
+//     architecture_design / proto_ci / integration（沙箱内降级 builtinGate 等价执行）
+//   verify（交付前自验证）段：未接线——由 verify-before-deliver skill + harness-checks
+//     的编译/测试检查覆盖，本段保留为设计参考
 //   coding 的编译/AST 由 harness-checks.sh 独立执行，不经 validateGate()。
 //
 // 使用：workflow 中 require('./gate-engine.js')（产物与源共用同一目录），

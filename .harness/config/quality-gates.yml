@@ -5,10 +5,12 @@
 # "If it can't be mechanically enforced, the agent will drift."
 # 所有门禁条件必须可程序化验证
 #
-# 实现状态说明（对齐 gate-engine.js）：
-#   本配置是「OpenSpec 全流程」设计预留，但当前 harness-pipeline workflow 只执行
-#   Generator→QA→Review 循环。gate-engine.js 实际落地 8 个 gate（qa×2 / review×1 /
-#   verify×5）。各阶段按实现状态标注（见下方 banner）：
+# 实现状态说明（对齐 gate-engine.js，2026-08-14 更新）：
+#   harness-pipeline workflow 执行 Generator→QA→Review 循环（gate: qa×2 / review）。
+#   spec-pipeline 全流程经 checkGate 接入 requirement_analysis / requirement_review /
+#   architecture_design / proto_ci / integration（沙箱内用 builtinGate 等价执行）。
+#   verify（交付前自验证 gate 段）未接线——由 verify-before-deliver skill + harness-checks
+#   的编译/测试检查覆盖，gate-engine 的 verify 段保留为设计参考。各阶段按实现状态标注：
 #
 #     [未接入]   阶段未接入当前 workflow，规则未被执行
 #     [部分接入] 阶段内仅部分规则接入 gate-engine.js
