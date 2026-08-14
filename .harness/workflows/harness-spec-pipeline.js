@@ -25,6 +25,55 @@ let fs = null, path = null
 try { fs = require('fs'); path = require('path') } catch (e) { /* sandbox: no Node API */ }
 
 // ============================================================
+// Agent Schema（顶层常量，避免内联嵌套对象字面量解析歧义）
+// ============================================================
+const DISPATCH_SCHEMA = {
+  type: 'object', additionalProperties: false, required: ['workload', 'reason', 'route', 'services'],
+  properties: {
+    workload: { type: 'string', enum: ['SKIP', 'S', 'M', 'L'] },
+    signals: { type: 'object', additionalProperties: true },
+    reason: { type: 'string' },
+    route: { type: 'string' },
+    services: { type: 'array', items: { type: 'string' } },
+  },
+}
+
+const CLARIFY_SCHEMA = {
+  type: 'object', additionalProperties: false, required: ['summary', 'questions'],
+  properties: {
+    summary: { type: 'string' },
+    questions: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['id', 'text', 'options'], properties: { id: { type: 'string' }, text: { type: 'string' }, options: { type: 'array', items: { type: 'string' } }, recommended: { type: 'number' }, why: { type: 'string' } } } },
+  },
+}
+
+const REQUIREMENT_SCHEMA = {
+  type: 'object', additionalProperties: false, required: ['traceability', 'specsCount', 'selfReview'],
+  properties: {
+    traceability: { type: 'object', additionalProperties: true },
+    specsCount: { type: 'number' },
+    selfReview: { type: 'string' },
+  },
+}
+
+const SPEC_REVIEW_SCHEMA = {
+  type: 'object', additionalProperties: false, required: ['verdict', 'summary'],
+  properties: {
+    verdict: { type: 'string', enum: ['APPROVED', 'REVISION'] },
+    mustFixes: { type: 'array', items: { type: 'object', additionalProperties: true } },
+    summary: { type: 'string' },
+  },
+}
+
+const ARCHITECT_SCHEMA = {
+  type: 'object', additionalProperties: false, required: ['services', 'protoChanges', 'tasksCount'],
+  properties: {
+    services: { type: 'array', items: { type: 'object', additionalProperties: true } },
+    protoChanges: { type: 'array', items: { type: 'string' } },
+    tasksCount: { type: 'number' },
+  },
+}
+
+// ============================================================
 // 持久化状态机（HITL 暂停/resume 的权威状态）
 // ============================================================
 
@@ -43,13 +92,9 @@ const RESUME_FROM = (typeof args !== 'undefined' && args && args.resumeFromRunId
 const RESUME_WITH = (typeof args !== 'undefined' && args && args.resumeWith) || null
 
 function loadState() {
-  if (!fs) return null
-  try {
-    if (fs.existsSync(statePath())) {
-      return JSON.parse(fs.readFileSync(statePath(), 'utf8'))
-    }
-  } catch (e) { /* 损坏则重新初始化 */ }
-  return {
+  // 沙箱无 fs 时返回内存默认状态（state 持久化降级为纯内存，不阻断）
+  // 注意：Workflow 脚本禁止 Date.now()/new Date()（会破坏 resume），state 不含时间戳
+  const defaultState = {
     schema: 1,
     change: CHANGE,
     task: TASK,
@@ -57,17 +102,21 @@ function loadState() {
     stageResults: {},
     decisions: {},
     resumePending: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
     resumeCount: 0,
   }
+  if (!fs) return defaultState
+  try {
+    if (fs.existsSync(statePath())) {
+      return JSON.parse(fs.readFileSync(statePath(), 'utf8'))
+    }
+  } catch (e) { /* 损坏则重新初始化 */ }
+  return defaultState
 }
 
 function saveState(s) {
   if (!fs) return
   try {
     if (!fs.existsSync(changeDir())) fs.mkdirSync(changeDir(), { recursive: true })
-    s.updatedAt = new Date().toISOString()
     fs.writeFileSync(statePath(), JSON.stringify(s, null, 2))
   } catch (e) { /* state 写入失败不阻断（降级为纯内存） */ }
 }
@@ -135,16 +184,7 @@ ${TASK}
 - reason: 一句话理由
 - route: 对应路由（SKIP→Edit / S→轻量Pipeline / M→Pipeline / L→OpenSpec）
 - services: 涉及的服务目录列表`,
-      { label: 'dispatch 分级', schema: {
-        type: 'object', additionalProperties: false, required: ['workload', 'reason', 'route', 'services'],
-        properties: {
-          workload: { type: 'string', enum: ['SKIP', 'S', 'M', 'L'] },
-          signals: { type: 'object', additionalProperties: true },
-          reason: { type: 'string' },
-          route: { type: 'string' },
-          services: { type: 'array', items: { type: 'string' } },
-        },
-      } }
+      { label: 'dispatch 分级', schema: DISPATCH_SCHEMA }
     )
     ctx.workload = res.workload
     ctx.route = res.route
@@ -197,22 +237,7 @@ ${TASK}
 - options: 候选选项数组（每项 label + 说明）
 - recommended: 推荐选项的 index
 - why: 为什么需要用户确认`,
-      { label: '需求澄清（brainstorming）', schema: {
-        type: 'object', additionalProperties: false, required: ['summary', 'questions'],
-        properties: {
-          summary: { type: 'string' },
-          questions: { type: 'array', items: {
-            type: 'object', additionalProperties: false, required: ['id', 'text', 'options'],
-            properties: {
-              id: { type: 'string' },
-              text: { type: 'string' },
-              options: { type: 'array', items: { type: 'string' } },
-              recommended: { type: 'number' },
-              why: { type: 'string' },
-            },
-          } },
-        },
-      } }
+      { label: '需求澄清（brainstorming）', schema: CLARIFY_SCHEMA }
     )
     ctx.stageResults[1] = { clarifySummary: clarify.summary }
     return pauseForInput(ctx, 'stage1_clarify', {
@@ -244,14 +269,7 @@ ${JSON.stringify(decisions, null, 2)}
 - .harness/changes/${CHANGE}/.change.yaml
 
 完成后返回：{ traceability, specsCount, selfReview }（traceability=转换追溯表，全✅ 才能通过）`,
-      { label: 'requirement-analyst', schema: {
-        type: 'object', additionalProperties: false, required: ['traceability', 'specsCount', 'selfReview'],
-        properties: {
-          traceability: { type: 'object', additionalProperties: true },
-          specsCount: { type: 'number' },
-          selfReview: { type: 'string' },
-        },
-      } }
+      { label: 'requirement-analyst', schema: REQUIREMENT_SCHEMA }
     )
 
     // 门禁：requirement_analysis
@@ -260,10 +278,12 @@ ${JSON.stringify(decisions, null, 2)}
       log(`❌ 需求分析门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
       return { status: 'stage_fail', stage: 1, change: CHANGE, failures: gate.failures, stateFile: statePath() }
     }
-    ctx.stageResults[1] = { ...ctx.stageResults[1], traceability: res.traceability, specsCount: res.specsCount, gatePassed: true }
+    ctx.stageResults[1] = ctx.stageResults[1] || {}
+    ctx.stageResults[1].traceability = res.traceability
+    ctx.stageResults[1].specsCount = res.specsCount
+    ctx.stageResults[1].gatePassed = true
     saveState(ctx)
     log(`  ✅ 需求分析完成: ${res.specsCount} specs, self-review ${res.selfReview}`)
-  }
 }
 
 // 阶段 2: 需求评审（3 视角并行 + 投票）
@@ -294,14 +314,7 @@ async function stage2Review(ctx) {
 - verdict: APPROVED / REVISION（有 ≥1 MUST FIX 即 REVISION）
 - mustFixes: 必须修复项数组 {section, issue, fix}
 - summary: 一句话结论`,
-        { label: `Review:${lens.key}`, schema: {
-          type: 'object', additionalProperties: false, required: ['verdict', 'summary'],
-          properties: {
-            verdict: { type: 'string', enum: ['APPROVED', 'REVISION'] },
-            mustFixes: { type: 'array', items: { type: 'object', additionalProperties: true } },
-            summary: { type: 'string' },
-          },
-        } }
+        { label: `Review:${lens.key}`, schema: SPEC_REVIEW_SCHEMA }
       ).then(r => r ? { ...r, lens: lens.key } : null)
     )
   )
@@ -369,14 +382,7 @@ ${CHANGE}
 - .harness/changes/${CHANGE}/tasks.md（含「## 全局 / Proto」段标注 Proto 变更）
 
 完成后返回：{ services, protoChanges, tasksCount }（services=按服务分组的任务，protoChanges=proto 变更清单）`,
-    { label: 'architecture-designer', schema: {
-      type: 'object', additionalProperties: false, required: ['services', 'protoChanges', 'tasksCount'],
-      properties: {
-        services: { type: 'array', items: { type: 'object', additionalProperties: true } },
-        protoChanges: { type: 'array', items: { type: 'string' } },
-        tasksCount: { type: 'number' },
-      },
-    } }
+    { label: 'architecture-designer', schema: ARCHITECT_SCHEMA }
   )
 
   // 门禁：architecture_design
