@@ -1,6 +1,6 @@
 # Harness Pipeline Architecture
 
-> 开发流水线架构设计文档 · 最后更新 2026-06-22
+> 开发流水线架构设计文档 · 最后更新 2026-08-14
 
 ---
 
@@ -323,6 +323,17 @@ Iteration 4+:
 - **广义全流程 = OpenSpec**（L 级跨服务）——需求分析 + 需求评审 + 架构设计 + 编码 Pipeline + 集成归档。上文 §5.3 六阶段即广义全流程。
 
 **需求分析、设计是 Pipeline 的上游独立阶段，不由 Pipeline 执行**。
+
+### 5.3.1.1 全流程自动化（spec-pipeline）
+
+> **`harness-spec-pipeline.js` 将广义全流程自动化编排**（2026-08-14 真实 L 级端到端验证通过）。
+
+- **输入**：`Workflow({scriptPath:".harness/workflows/harness-spec-pipeline.js", args:{change, task}})`。
+- **编排**：0 dispatch → 1 需求分析（澄清+分析）→ 2 需求评审 → 3 架构设计 → 4 Proto → 5 编码（委托 harness-pipeline.js）→ 6 集成归档。
+- **HITL**：每阶段末 `need_input` 暂停，Owner 用 AskUserQuestion 问用户，`resumeFromRunId + resumeState(ctx) + resumeWith(decisions)` 续跑（SOP 见 owner-agent.md「如何 resume」）。
+- **门禁**：沙箱内纯逻辑门禁（评审投票/轮次）；文件级门禁由子 Agent 完整环境跑 harness-checks + Owner 事后验证（沙箱无 fs 的架构限制）。
+- **状态**：`pipeline-state.json` 存 ctx（沙箱无 fs 实际经 args.resumeState 传回）。
+- **验证**：真实需求（角色列表排序）完整跑通 0→6，修复 6+ bug（门禁 fs/proto_done/svcName/反引号等）。
 
 ### 5.3.2 各阶段工具与技能
 
