@@ -99,6 +99,38 @@ function checkDBDuplicates(dsn, table, uniqueColumn) {
   return out === '' || parseInt(out) === 0
 }
 
+// ── 全流程门禁 Helper（spec-pipeline 各阶段用）────────────────
+
+/** 检查文件存在 */
+function fileExists(p) {
+  return fs.existsSync(p)
+}
+
+/** 读取文件内容（不存在返回空串） */
+function readFile(p) {
+  try { return fs.readFileSync(p, 'utf8') } catch { return '' }
+}
+
+/** 检查 markdown 是否包含所有必填章节（## 或 ### 标题） */
+function hasSections(content, sections) {
+  return sections.every(sec => content.includes(sec))
+}
+
+/** 检查文件是否含占位符（TBD/TODO/待定/[NEEDS CLARIFICATION]/<描述>） */
+function hasPlaceholders(content) {
+  return /TBD|TODO|待定|\[NEEDS CLARIFICATION\]|<\w+>/g.test(content)
+}
+
+/** 执行命令，返回退出码 + stdout */
+function run(cmd) {
+  try {
+    const out = execSync(cmd, { timeout: 60000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+    return { rc: 0, out: out || '' }
+  } catch (e) {
+    return { rc: 1, out: e.stdout ? e.stdout.toString() : e.message }
+  }
+}
+
 // ── 可执行门禁定义 ─────────────────────────────────────────────
 const GATES = {
   qa: [
@@ -200,6 +232,179 @@ const GATES = {
         }
         return true
       },
+    },
+  ],
+
+  // ── 全流程阶段门禁（spec-pipeline）───────────────────────────
+  requirement_analysis: [
+    {
+      id: 'req_file_exists',
+      severity: 'BLOCK',
+      desc: 'proposal.md 必须存在',
+      check: (ctx) => fileExists(`${ctx.changeDir}/proposal.md`),
+    },
+    {
+      id: 'req_required_sections',
+      severity: 'BLOCK',
+      desc: 'proposal.md 必须含 背景/做什么/影响范围/风险评估',
+      check: (ctx) => hasSections(readFile(`${ctx.changeDir}/proposal.md`), ['为什么做', '做什么', '影响范围', '风险评估']),
+    },
+    {
+      id: 'req_specs_exist',
+      severity: 'BLOCK',
+      desc: 'specs/*/spec.md 至少 1 个',
+      check: (ctx) => {
+        const dir = `${ctx.changeDir}/specs`
+        if (!fs.existsSync(dir)) return false
+        return fs.readdirSync(dir, { recursive: true }).some(f => String(f).endsWith('spec.md'))
+      },
+    },
+    {
+      id: 'req_no_placeholders',
+      severity: 'BLOCK',
+      desc: 'proposal/specs 无 [NEEDS CLARIFICATION]/TBD/TODO/待定 占位符',
+      check: (ctx) => {
+        const content = readFile(`${ctx.changeDir}/proposal.md`) + readFile(`${ctx.changeDir}/.change.yaml`)
+        const specsDir = `${ctx.changeDir}/specs`
+        let specContent = ''
+        if (fs.existsSync(specsDir)) {
+          for (const f of fs.readdirSync(specsDir, { recursive: true })) {
+            if (String(f).endsWith('spec.md')) specContent += readFile(`${specsDir}/${f}`)
+          }
+        }
+        return !hasPlaceholders(content + specContent)
+      },
+    },
+  ],
+  requirement_review: [
+    {
+      id: 'spec_review_min_approved',
+      severity: 'BLOCK',
+      desc: '需求评审需 ≥2/3 视角 APPROVED',
+      check: (ctx) => (ctx.passCount || 0) >= 2,
+    },
+    {
+      id: 'spec_review_round_limit',
+      severity: 'BLOCK',
+      desc: '需求评审轮次 ≤3（超限升级人工）',
+      check: (ctx) => (ctx.rounds || 0) <= 3,
+    },
+  ],
+  architecture_design: [
+    {
+      id: 'arch_design_exists',
+      severity: 'BLOCK',
+      desc: 'design.md 必须存在',
+      check: (ctx) => fileExists(`${ctx.changeDir}/design.md`),
+    },
+    {
+      id: 'arch_design_sections',
+      severity: 'BLOCK',
+      desc: 'design.md 必须含 架构概述/数据模型/接口设计',
+      check: (ctx) => hasSections(readFile(`${ctx.changeDir}/design.md`), ['架构概述', '数据模型', '接口设计']),
+    },
+    {
+      id: 'arch_tasks_exists',
+      severity: 'BLOCK',
+      desc: 'tasks.md 必须存在',
+      check: (ctx) => fileExists(`${ctx.changeDir}/tasks.md`),
+    },
+    {
+      id: 'arch_task_count',
+      severity: 'BLOCK',
+      desc: 'tasks.md 至少 3 个任务',
+      check: (ctx) => {
+        const m = readFile(`${ctx.changeDir}/tasks.md`).match(/### Task /g)
+        return (m ? m.length : 0) >= 3
+      },
+    },
+    {
+      id: 'arch_zero_placeholders',
+      severity: 'BLOCK',
+      desc: 'tasks.md 无 TBD/TODO/<描述> 占位符',
+      check: (ctx) => !hasPlaceholders(readFile(`${ctx.changeDir}/tasks.md`)),
+    },
+    {
+      id: 'arch_tdd_steps',
+      severity: 'WARN',
+      desc: '含逻辑任务应有 RED→GREEN 步骤（WARN，不阻塞）',
+      check: (ctx) => {
+        const tasks = readFile(`${ctx.changeDir}/tasks.md`)
+        return !/TDD|RED|GREEN|测试/.test(tasks) || /RED/.test(tasks)
+      },
+    },
+  ],
+  proto_ci: [
+    {
+      id: 'proto_lint',
+      severity: 'BLOCK',
+      desc: 'cd api-proto && make lint 必须通过',
+      check: () => run('cd api-proto && make lint 2>&1').rc === 0,
+    },
+    {
+      id: 'proto_breaking',
+      severity: 'BLOCK',
+      desc: 'make breaking-check 必须通过（无破坏性变更）',
+      check: () => run('cd api-proto && make breaking-check 2>&1').rc === 0,
+    },
+    {
+      id: 'proto_changes_present',
+      severity: 'BLOCK',
+      desc: '需要 proto 变更时 api-proto 应有改动',
+      check: (ctx) => {
+        if (!ctx.protoChangesRequired) return true
+        return run('cd api-proto && git diff --name-only 2>&1').out.trim().length > 0
+      },
+    },
+  ],
+  integration: [
+    {
+      id: 'integ_full_build',
+      severity: 'BLOCK',
+      desc: '根目录 go build ./... 必须通过（全链路编译）',
+      check: () => run('go build ./... 2>&1').rc === 0,
+    },
+    {
+      id: 'integ_full_vet',
+      severity: 'BLOCK',
+      desc: '根目录 go vet ./... 必须通过',
+      check: () => run('go vet ./... 2>&1').rc === 0,
+    },
+    {
+      id: 'integ_qa_archived',
+      severity: 'BLOCK',
+      desc: '每服务 impl/<svc>/_qa.md 必须存在（QA 报告已归档）',
+      check: (ctx) => {
+        const services = ctx.services || []
+        if (services.length === 0) return true
+        return services.every(s => fileExists(`${ctx.changeDir}/impl/${s}/_qa.md`))
+      },
+    },
+    {
+      id: 'integ_review_archived',
+      severity: 'BLOCK',
+      desc: '每服务 impl/<svc>/_review*.md 必须存在',
+      check: (ctx) => {
+        const services = ctx.services || []
+        if (services.length === 0) return true
+        return services.every(s => {
+          const dir = `${ctx.changeDir}/impl/${s}`
+          if (!fs.existsSync(dir)) return false
+          return fs.readdirSync(dir).some(f => f.startsWith('_review'))
+        })
+      },
+    },
+    {
+      id: 'integ_summary_exists',
+      severity: 'BLOCK',
+      desc: 'summary.md 必须存在且含必填章节',
+      check: (ctx) => hasSections(readFile(`${ctx.changeDir}/summary.md`), ['阶段', '交付清单']),
+    },
+    {
+      id: 'integ_index_updated',
+      severity: 'WARN',
+      desc: 'INDEX.md 应包含该 change（WARN，不阻塞）',
+      check: (ctx) => readFile('.harness/changes/INDEX.md').includes(ctx.change || ''),
     },
   ],
 }
