@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# post-commit hook — 提交后自动增量同步知识图谱（后台运行，不阻塞提交）
+#
+# 修复历史 bug：旧 hook 硬编码了错误路径（community-home/scripts/graph-sync.sh，
+# 目录名与实际 community-and-home/.harness/ 不符），导致图谱从未自动同步、
+# QA graph_freshness 检查反复 FAIL。
+# 现在用 git rev-parse --show-toplevel 动态解析项目根，兼容任意 clone 路径。
+#
+# 行为：
+#   - 后台运行 .harness/scripts/graph-sync.sh（增量模式，仅同步 changed 文件）
+#   - Neo4j 不可达时 graph-sync.sh 会 fail loudly 写日志，但不影响本次提交
+#   - 无实质代码变更时增量 sync 自动跳过
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+[[ -n "$ROOT" ]] || exit 0
+SYNC="$ROOT/.harness/scripts/graph-sync.sh"
+[[ -x "$SYNC" ]] || exit 0
+
+nohup bash "$SYNC" > /tmp/graph-sync.log 2>&1 &
