@@ -266,11 +266,129 @@ ${JSON.stringify(decisions, null, 2)}
   }
 }
 
-// 阶段 2: 需求评审（Phase 4 实现）
-async function stage2Review(ctx) { /* Phase 4 */ }
+// 阶段 2: 需求评审（3 视角并行 + 投票）
+async function stage2Review(ctx) {
+  phase('2 需求评审')
+  const lenses = [
+    { key: 'coverage', label: '覆盖完整性' },
+    { key: 'structure', label: '结构合理性' },
+    { key: 'clarity', label: '清晰可执行' },
+  ]
+  const reviews = await parallel(
+    lenses.map(lens => () =>
+      agent(
+        `你是需求评审 Agent（${lens.label} 视角）。审查 ${CHANGE} 的需求规格。
+先 Read .harness/skills/review.md「模式一：计划评审」，再按你的视角审查。
 
-// 阶段 3: 架构设计（Phase 4 实现）
-async function stage3Architecture(ctx) { /* Phase 4 */ }
+## 视角：${lens.label}
+- coverage: 需求覆盖/场景完整性/边界识别
+- structure: 服务归属/依赖顺序/职责边界
+- clarity: 粒度/歧义/一致性（SHALL/MUST 唯一解释）
+
+## 审查对象（磁盘）
+- .harness/changes/${CHANGE}/request.md
+- .harness/changes/${CHANGE}/proposal.md
+- .harness/changes/${CHANGE}/specs/*/spec.md
+
+## 输出
+- verdict: APPROVED / REVISION（有 ≥1 MUST FIX 即 REVISION）
+- mustFixes: 必须修复项数组 {section, issue, fix}
+- summary: 一句话结论`,
+        { label: `Review:${lens.key}`, schema: {
+          type: 'object', additionalProperties: false, required: ['verdict', 'summary'],
+          properties: {
+            verdict: { type: 'string', enum: ['APPROVED', 'REVISION'] },
+            mustFixes: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            summary: { type: 'string' },
+          },
+        } }
+      ).then(r => r ? { ...r, lens: lens.key } : null)
+    )
+  )
+  const valid = reviews.filter(Boolean)
+  const pass = valid.filter(r => r.verdict === 'APPROVED').length
+  ctx.stageResults[2] = { pass, total: valid.length, rounds: (ctx.stageResults[2]?.rounds || 0) + 1 }
+  saveState(ctx)
+
+  // 写评审报告（审计轨迹）
+  if (fs) {
+    try {
+      const dir = `${changeDir()}/review`
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      const round = ctx.stageResults[2].rounds
+      for (const r of valid) {
+        fs.writeFileSync(`${dir}/spec_review_${r.lens}_v${round}.md`,
+          `# Plan Review — ${CHANGE}（${r.lens}视角）\n\n**VERDICT**: ${r.verdict}\n\n${r.summary}\n`)
+      }
+    } catch (e) { /* 报告写入失败不阻断 */ }
+  }
+
+  // 投票：≥2/3 通过；否则回阶段 1
+  const gate = checkGate('requirement_review', { passCount: pass, totalReviews: valid.length, rounds: ctx.stageResults[2].rounds })
+  if (gate.passed) {
+    log(`  ✅ 需求评审 ${pass}/${valid.length} APPROVED`)
+    return pauseForInput(ctx, 'stage2_done', {
+      stage: 2,
+      summary: `需求评审完成：${pass}/${valid.length} APPROVED — 批准进入架构设计？`,
+      questions: [{ id: 'approve', text: '评审结论 APPROVED，进入架构设计？', options: ['进入架构设计', '回需求分析修正'] }],
+      onResume: '评审裁决后进入阶段 3',
+    })
+  }
+  // 评审不过 → 回阶段 1（≤3 轮）
+  log(`  ❌ 需求评审 ${pass}/${valid.length}（阈值 2/3）— 回阶段 1`)
+  ctx.currentStage = 0  // 主循环 +1 → 阶段 1
+  saveState(ctx)
+}
+
+// 阶段 3: 架构设计
+async function stage3Architecture(ctx) {
+  phase('3 架构设计')
+  const res = await agent(
+    `你是 Community-Home 的架构设计师。执行 .harness/skills/architect-design.md 的完整流程，
+产出 design + tasks。**必须先 Read .harness/agents/subagents/architecture-designer.md 获取权威流程**。
+
+## 变更
+${CHANGE}
+
+## 输入（磁盘）
+- .harness/changes/${CHANGE}/proposal.md
+- .harness/changes/${CHANGE}/specs/*/spec.md
+
+## 产出（写入磁盘）
+- .harness/changes/${CHANGE}/design.md
+- .harness/changes/${CHANGE}/tasks.md（含「## 全局 / Proto」段标注 Proto 变更）
+
+完成后返回：{ services, protoChanges, tasksCount }（services=按服务分组的任务，protoChanges=proto 变更清单）`,
+    { label: 'architecture-designer', schema: {
+      type: 'object', additionalProperties: false, required: ['services', 'protoChanges', 'tasksCount'],
+      properties: {
+        services: { type: 'array', items: { type: 'object', additionalProperties: true } },
+        protoChanges: { type: 'array', items: { type: 'string' } },
+        tasksCount: { type: 'number' },
+      },
+    } }
+  )
+
+  // 门禁：architecture_design
+  const gate = checkGate('architecture_design', { changeDir: changeDir(), summary: `${CHANGE} 架构设计门禁` })
+  if (!gate.passed) {
+    log(`❌ 架构设计门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
+    ctx.currentStage = 0  // 回阶段 1
+    saveState(ctx)
+    return { status: 'stage_fail', stage: 3, change: CHANGE, failures: gate.failures, stateFile: statePath() }
+  }
+
+  ctx.stageResults[3] = { services: res.services, protoChanges: res.protoChanges, tasksCount: res.tasksCount }
+  saveState(ctx)
+  log(`  ✅ 架构设计完成: ${res.tasksCount} tasks, ${(res.protoChanges || []).length} proto 变更`)
+  return pauseForInput(ctx, 'stage3_done', {
+    stage: 3,
+    summary: `架构设计完成：${res.tasksCount} tasks, ${(res.protoChanges || []).length} proto 变更 — 确认服务归属与 Proto 清单？`,
+    questions: [{ id: 'approve', text: '服务归属正确？Proto 变更清单完整？', options: ['进入 Proto 阶段', '回需求分析修正'] }],
+    artifacts: { design: `${changeDir()}/design.md`, tasks: `${changeDir()}/tasks.md` },
+    onResume: '设计确认后进入阶段 4',
+  })
+}
 
 // 阶段 4: Proto 变更（Phase 5 实现）
 async function stage4Proto(ctx) { /* Phase 5 */ }
