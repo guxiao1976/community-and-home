@@ -38,7 +38,7 @@
 上下文按三层加载，让 Agent 在任何时刻拥有"刚好够用"的上下文（Just-enough Context），避免信息过载：
 
 ```
-L1 会话常驻 (~800行)  ← CLAUDE.md(~80) + owner-agent(469) + 项目编码规范(255)；目标 ≤600 行
+L1 会话常驻 (734行)  ← CLAUDE.md(83) + owner-agent(337) + 项目编码规范(314)；预算 ≤400 行（knowledge-load.sh --check-budget 执行，当前超标待压缩）
     始终在线，提供全局视野和基本约束，总量控制在 Anthropic 建议的 40% 填充率以下
 
 L2 阶段触发           ← §4 阶段表每行指定加载哪个 Skill
