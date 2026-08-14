@@ -1328,6 +1328,10 @@ main() {
     echo "=== Summary: $pass PASS, $fail FAIL, $warn WARN ==="
   fi
 
+  # ── 打点：记录 QA 门禁调用（服务 + PASS/FAIL 数，为流水线复盘提供第一手数据）──
+  bash "$PROJECT_ROOT/.harness/scripts/log-usage.sh" harness-checks \
+    service="${SERVICE_NAME:-all}" pass="$pass" fail="$fail" warn="$warn" 2>/dev/null || true
+
   return $EXIT_CODE
 }
 

@@ -603,7 +603,10 @@ function logMetrics(record) {
     const logDir = path.join(process.cwd(), '.harness/logs/pipeline')
     if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
     fs.appendFileSync(path.join(logDir, 'metrics.jsonl'), JSON.stringify(record) + '\n')
-  } catch (e) { /* silent */ }
+  } catch (e) {
+    // 沙箱无 fs：console 输出 METRIC 行（progress 可见；持久化由 bash 侧 usage 打点承载）
+    console.log('METRIC ' + JSON.stringify(record))
+  }
 }
 const VALID_SERVICES = ServiceRegistry.services
 const VALID_WEB = ServiceRegistry.web
@@ -948,6 +951,7 @@ while (iteration <= MAX_ITERATIONS) {
     const memoryMatchCount = validReviews.reduce((sum, r) => sum + (r.memorySuggestions || []).length, 0)
     const confidence = computeConfidence(iteration, passCount, validReviews.length, memoryMatchCount, qaFirstPass)
     log(`✅ Harness 管线完成！${args.serviceName} 通过全部检查 (${iteration} 轮, confidence: ${confidence})`)
+    logMetrics({ timestamp: args.timestamp || 'na', service: args.serviceName, taskType: TASK_TYPE, iterations: iteration, status: 'pass', reviewSkipped: false, confidence })
     const passNotifications = [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过, QA: ${qaResult.summary}, confidence: ${confidence}` }]
     if (failCount > 0) {
       passNotifications.push({ event: 'need_human', service: args.serviceName, detail: `多数 PASS (${passCount}/${validReviews.length}) 但 ${failingLenses} 有异议` })

@@ -27,6 +27,8 @@ if ! curl -sf -o /dev/null "$NEO4J_URI"; then
     echo "# 知识图谱上下文 — $SERVICE_NAME"
     echo ""
     echo "> ⚠️ Neo4j 不可用，无法查询知识图谱。请先启动 Neo4j: docker compose up -d neo4j"
+    # ── 打点：图谱查询失败（Neo4j 不可达）──
+    bash "$(dirname "$0")/log-usage.sh" graph-query service="$SERVICE_NAME" result=unavailable 2>/dev/null || true
     exit 0
 fi
 
@@ -320,3 +322,6 @@ except Exception as e:
 
 echo "---"
 echo "*此文件由 graph-sync.sh 自动生成，请勿手动编辑。*"
+
+# ── 打点：记录图谱查询调用（服务 + 成功）──
+bash "$(dirname "$0")/log-usage.sh" graph-query service="$SERVICE_NAME" result=success 2>/dev/null || true

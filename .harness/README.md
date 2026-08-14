@@ -18,7 +18,7 @@
 | [`changes/`](changes/)     | **变更追溯**：OpenSpec 产物                 | `INDEX.md`、`<change-name>/`                                                                     |
 | [`tasks/`](tasks/)         | **任务管理**                             | `BACKLOG.md`、`task-*.md`                                                                        |
 | [`docs/`](docs/)           | **平台文档** + **统一归档家**                 | `harness-architecture.md`、`pipeline-architecture.md`、`_archive/`                                |
-| [`logs/`](logs/)           | **运行日志**                             | `gates/*.json`、`incidents/*.yml`、`judgments/*.json`                                             |
+| [`logs/`](logs/)           | **运行日志**                             | `gates/*.json`、`incidents/*.yml`、`judgments/*.json`、`usage/`（脚本调用打点，gitignore）、`pipeline/`（metrics，gitignore）|
 | [`loop-runs/`](loop-runs/) | **循环运行记录**（保留近 7 天）                  | `run-*.md`、`_archive/<日期>/`                                                                     |
 | [`tools/`](tools/)         | **小型工具源码**（二进制不入库）                   | `go-ast-checker/`（main.go，脚本每次 `go build` 生成）                                                   |
 
@@ -33,6 +33,21 @@
 | **scripts/ vs tools/** | `scripts/` = shell/单文件工具；`tools/` = 需要独立构建的源码模块（Go 等）                                                                                             |
 
 ## 🧩 重点结构说明
+
+### 执行记录（流水线复盘数据）
+
+**位置**：`.harness/logs/usage/` + `.harness/logs/pipeline/`（JSONL：每行一个 JSON，**gitignore 运行时产物**）
+
+| 文件 | 记录内容 | 产生方 |
+|------|---------|--------|
+| `usage/knowledge-load.jsonl` | 知识检索：服务/关键词/命中记忆数 | knowledge-load.sh 调用时 |
+| `usage/graph-query.jsonl` | 图谱查询：服务/成功或不可用 | graph-query.sh 调用时 |
+| `usage/harness-checks.jsonl` | QA 门禁：服务/PASS/FAIL/WARN 数 | harness-checks.sh 运行时 |
+| `pipeline/metrics.jsonl` | pipeline 指标：任务类型/轮次/置信度/状态 | harness-pipeline（非沙箱写文件，沙箱 console 输出 METRIC）|
+
+**用途**：为流水线复盘提供第一手数据——哪个脚本被调用/频率、知识检索命中率、QA 通过率、pipeline 轮次分布。复盘时 `jq -s '.' <file>` 聚合分析。
+
+> 打点由 `scripts/log-usage.sh` 统一写入；改 `logs/` 下其他记录（gates 门禁判定、incidents 事件、judgments 判断）仍入库。
 
 ### skills/：自建 vs 第三方
 

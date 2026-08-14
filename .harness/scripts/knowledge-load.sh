@@ -287,3 +287,9 @@ else
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "加载 $(echo "$sorted" | wc -l | xargs) 条记忆 | must-follow: $must_follow_count | should-follow: $should_follow_count"
 fi
+
+# ── 打点：记录知识检索调用（为流水线复盘提供第一手数据：命中率/关键词/服务）──
+matched_count=$(echo "$sorted" | wc -l | xargs)
+bash "$SCRIPT_DIR/log-usage.sh" knowledge-load \
+  service="${SERVICE:-all}" top="$TOP_N" matched="$matched_count" \
+  "keywords=$(IFS=,; echo "${KEYWORDS[*]}")" 2>/dev/null || true
