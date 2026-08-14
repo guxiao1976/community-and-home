@@ -17,13 +17,14 @@ Skill("requirement-analysis")
 ```
 
 该 Skill 包含：
-- **Step 0**: 转换追溯（OpenSpec 路径）— brainstorming 决策 → spec 覆盖
-- **Step 1**: 加载上下文（CLAUDE.md / design.md / MEMORY.md）
-- **Step 2**: 需求澄清（使用 `superpowers:brainstorming`）
-- **Step 3**: 产出 proposal.md
-- **Step 4**: 产出 specs/\*/spec.md
-- **Step 5**: 创建 .change.yaml
-- **Step 6**: Spec Self-Review（占位符/一致性/歧义/场景完整性）
+- **Step 1**: 需求澄清（使用 `superpowers:brainstorming`）— 显式第一步，无设计文档则先澄清，产出用户确认的设计文档（硬门禁）
+- **Step 2**: 转换追溯 — brainstorming 决策 → spec 覆盖
+- **Step 3**: 加载上下文（CLAUDE.md / design.md / MEMORY.md）
+- **Step 4**: 理解需求
+- **Step 5**: 产出 proposal.md
+- **Step 6**: 产出 specs/\*/spec.md
+- **Step 7**: 创建 .change.yaml
+- **Step 8**: Spec Self-Review（占位符/一致性/歧义/场景完整性）
 
 ## 上下文加载清单（从磁盘读取）
 

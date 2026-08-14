@@ -4,28 +4,28 @@
 
 将 brainstorming 确认的设计方案转化为精确的、可验收的规格文档。触发词：`需求分析`、`分析需求`、`写 proposal`、`写 spec`、`新功能`、`需求`。
 
-## 前置条件（硬门禁）
-
-**OpenSpec 路径（L 级跨服务，唯一路径）**:
-- **必须**先完成 `Skill("superpowers:brainstorming")` 需求澄清，**必须**已有用户确认的设计文档（`docs/superpowers/specs/<date>-<topic>-design.md`）。
-- **缺少 brainstorming 产出 → 禁止进入本 Skill**。需先回到 Owner 派发 brainstorming，完成澄清并形成设计文档后再来。
-- 目的：L 级需求模糊度高，跳过澄清直接形式化 = 把「未探索的方案」固化成 spec，评审时才发现方向错了（历史教训：角色 pc/web/both 曾绕过澄清 inline 出方案，被用户纠正）。
-
-> **Dev Agent 路径已废弃**：此前允许「无 brainstorming 直接从需求产出 proposal」，是绕过澄清的后门，现移除。所有需求分析统一走 OpenSpec 路径（先 brainstorming 澄清 → 再本 Skill 形式化）。
-
 ## 角色
 
-你是需求分析师 — 将已确认的设计转化为形式化规格文档。**不写代码、不设计数据库、不猜测技术实现**。输入是 brainstorming 的设计结论（或用户直接给出的需求），输出是结构化的 proposal + spec。
+你是需求分析师 — **第一步做需求澄清（brainstorming），然后**将已确认的设计形式化为规格文档。**不写代码、不设计数据库、不猜测技术实现**。输入是用户需求（直接给出或 Owner 转发），输出是用户确认的设计文档 + 结构化的 proposal + spec。
 
 ## 执行步骤
 
-### Step 0: 接收输入（OpenSpec 路径）
+### Step 1: 需求澄清（superpowers:brainstorming）— 显式第一步
 
-如果存在 brainstorming 产出：
-1. 阅读 `docs/superpowers/specs/<date>-<topic>-design.md` — brainstorming 产出的设计方案
-2. 理解已确认的设计决策、方案对比结论、用户偏好
-3. 将设计要点映射到 proposal 和 spec 的对应章节
-4. **转换追溯（防信息丢失）** — 产出后立即自检，列出 brainstorming 关键决策 → spec 的覆盖表：
+**这是本 Skill 的第一步，不是外部前置**。目的：探索用户意图、对比方案、让用户拍板，形成「已确认的设计」再形式化。
+
+- 若已有用户确认的设计文档（`docs/superpowers/specs/<date>-<topic>-design.md`，Owner 已前置派发）→ 复用，直接进入 Step 2。
+- 若没有 → **先执行 `Skill("superpowers:brainstorming")` 完成需求澄清**：
+  1. 交互式提问（AskUserQuestion），逐项澄清：业务目标、边界、方案对比、偏好
+  2. 产出设计文档 `docs/superpowers/specs/<date>-<topic>-design.md` 并让用户确认
+  3. **未获得用户确认的设计文档 → 不得进入 Step 2**（澄清是硬门禁，跳过澄清直接形式化 = 把未探索的方案固化成 spec，历史教训：角色 pc/web/both 曾绕过澄清被纠正）
+
+### Step 2: 转换追溯（brainstorming 决策 → spec 覆盖）
+
+阅读 Step 1 的设计文档（或直接给出的需求）：
+1. 理解已确认的设计决策、方案对比结论、用户偏好
+2. 将设计要点映射到 proposal 和 spec 的对应章节
+3. **转换追溯（防信息丢失）** — 产出后立即自检，列出 brainstorming 关键决策 → spec 的覆盖表：
 
 | brainstorming 设计决策 | proposal 章节 | spec Requirement | 覆盖 |
 |----------------------|-------------|-----------------|:---:|
@@ -33,25 +33,26 @@
 | <决策2>               | §Y           | REQ-YY          | ⚠️ (原因) |
 
 任何 ⚠️ 项必须解释：刻意舍弃 / 移至后续迭代 / 遗漏需补充。
-全部 ✅ 才能进入 Step 1。
+全部 ✅ 才能进入 Step 3。
 
-### Step 1: 加载上下文
+### Step 3: 加载上下文
+
 
 按顺序：
 1. 根 `CLAUDE.md` — 项目架构、服务划分、全局约束
 2. `.harness/rules/项目编码规范.md` — 编码硬性约束（在分析阶段了解边界）
 3. 相关服务的 `docs/design.md` — 现有数据模型和业务流程
 4. `.harness/knowledge/memory/MEMORY.md` — 精读相关记忆，避免提出已知不可行的方案
-5. （OpenSpec 路径）Step 0 中读取的 brainstorming 设计文档
+5. （OpenSpec 路径）Step 1/2 中读取/追溯的 brainstorming 设计文档
 
-### Step 2: 理解需求
+### Step 4: 理解需求
 
 - 识别核心用户价值和业务目标
 - 识别隐含约束和边界条件
 - 不确定的地方标注 `[NEEDS CLARIFICATION: 具体问题]` 并列出选项
 - 判断影响范围：涉及哪些服务、哪些前端页面
 
-### Step 3: 产出 proposal.md
+### Step 5: 产出 proposal.md
 
 写入 `.harness/changes/<change-name>/proposal.md`：
 
@@ -76,7 +77,7 @@
 - <高层验收点>
 ```
 
-### Step 4: 产出 spec.md（每个功能一个）
+### Step 6: 产出 spec.md（每个功能一个）
 
 写入 `.harness/changes/<change-name>/specs/<capability>/spec.md`：
 
@@ -97,7 +98,7 @@ The system SHALL <行为描述，含 SHALL 或 MUST>.
 - **THEN** <预期结果>
 ```
 
-### Step 5: 创建 `.change.yaml`
+### Step 7: 创建 `.change.yaml`
 
 ```yaml
 schema: spec-driven
@@ -121,7 +122,7 @@ created: YYYY-MM-DD
 | "在 user 表加 nickname 列" | "The system SHALL allow users to set a display name" |
 | "用 JWT 做认证" | "The system SHALL authenticate requests" |
 
-### Step 6: Spec Self-Review（产出后自检，不跳过）
+### Step 8: Spec Self-Review（产出后自检，不跳过）
 
 写入 proposal.md 和 spec.md 后，**立即**逐项自检（参考 brainstorming 的 Spec Self-Review）：
 
@@ -156,7 +157,7 @@ created: YYYY-MM-DD
 
 ## 关联
 
-- **前置（硬门禁）**: `Skill("superpowers:brainstorming")` — 需求澄清+方案探索，L 级必须先行，产出用户确认的设计文档
+- **Step 1（显式第一步）**: `Skill("superpowers:brainstorming")` — 需求澄清+方案探索，无设计文档则先执行，产出用户确认的设计文档（硬门禁）
 - 架构设计：`.harness/skills/architect-design.md`
 - 经验记忆：`.harness/knowledge/memory/MEMORY.md`
 - 需求模板：`docs/requirements/TEMPLATE.md`
