@@ -236,6 +236,10 @@ if [ ${#MEM_SCORES[@]} -eq 0 ]; then
     echo ""
     echo "💡 建议：运行 bash .harness/scripts/memory-index-build.sh 重建索引"
   fi
+  # ── 打点：无匹配记忆也记录（matched=0，保证打点完整；否则复盘丢"零命中"样本）──
+  bash "$SCRIPT_DIR/log-usage.sh" knowledge-load \
+    service="${SERVICE:-all}" top="$TOP_N" matched="0" \
+    "keywords=$(IFS=,; echo "${KEYWORDS[*]}")" 2>/dev/null || true
   exit 0
 fi
 
