@@ -45,9 +45,11 @@ cat .harness/registry/services.json
 
 | 分级 | 执行方式 | QA | Review |
 |------|---------|:--:|:--:|
-| **S（轻量）** | `harness-spec-pipeline.js`（短路到阶段 5 编码 harness-pipeline） | ✅ 15项 | ❌ 跳过 |
-| **M（单服务）** | `harness-spec-pipeline.js`（全流程，阶段 5 编码） | ✅ 15项 | 按 taskType |
+| **S（轻量）** | `harness-pipeline.js`（轻量，`workload:"S"`） | ✅ 15项 | ❌ 跳过 |
+| **M（单服务）** | `harness-pipeline.js`（全流程） | ✅ 15项 | 按 taskType |
 | **L（跨服务）** | `harness-spec-pipeline.js`（全流程 0-6，每阶段 HITL） | ✅ 每服务 | ✅ 每服务 3视角 |
+
+> **路由口径**（2026-08-14 统一）：S/M 直连 `harness-pipeline.js`，L 走 `harness-spec-pipeline.js`（与 Step 4 一致）。spec-pipeline 的 S/M 短路仅作为「绕过 Owner 直接调」的兜底路径。
 
 QA 阶段默认只扫描本次 git diff 变更的文件。用户说以下词时切换为全量扫描：
 - **"全量" / "全量扫描" / "完整检查" / "全面检查"** → QA 使用 `--full`

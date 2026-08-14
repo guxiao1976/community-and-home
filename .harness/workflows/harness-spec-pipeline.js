@@ -235,7 +235,12 @@ async function stage0Dispatch(ctx) {
   if (ARGS_WORKLOAD) {
     ctx.workload = ARGS_WORKLOAD
     ctx.route = ARGS_WORKLOAD === 'L' ? 'L → spec-pipeline' : `${ARGS_WORKLOAD} → spec-pipeline`
-    log(`  分级（复用 Owner 入口判定）: ${ctx.workload}`)
+    // 修复：S/M 短路（跳过阶段 1-4）时 stage5 需要 ctx.services，而此前该分支从不设置
+    // → services 空数组导致编码无法派发。Owner 绕过 dispatch 直接调时应传 args.services。
+    if (typeof args !== 'undefined' && args && Array.isArray(args.services)) {
+      ctx.services = args.services
+    }
+    log(`  分级（复用 Owner 入口判定）: ${ctx.workload}${ctx.services && ctx.services.length ? `，服务: ${ctx.services.join(',')}` : '（未传 services——S/M 短路时 stage5 需服务清单）'}`)
   } else if (isPure) {
     ctx.route = 'SKIP'
     log('  ⏭️ 纯文案/配置 → 跳过 Pipeline')
@@ -581,7 +586,7 @@ async function stage4Proto(ctx) {
   const gate = checkGate('proto_ci', { changeDir: changeDir(), protoChangesRequired: true, protoDone: ctx.protoDone, summary: `${CHANGE} Proto 门禁` })
   if (!gate.passed) {
     log(`❌ Proto 门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
-    ctx.currentStage = 3  // 回阶段 3（主循环 +1 → 阶段 4 重试）
+    ctx.currentStage = 3  // 回阶段 3（resume 后重跑架构设计再进阶段 4；主循环遇 stage_fail 直接 return，不会 +1）
     saveState(ctx)
     return { status: 'stage_fail', stage: 4, change: CHANGE, failures: gate.failures, stateFile: statePath() }
   }
