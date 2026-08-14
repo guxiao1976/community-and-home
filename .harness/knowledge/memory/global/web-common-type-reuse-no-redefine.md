@@ -32,4 +32,4 @@ web/mobile/CLAUDE.md 规则#4「禁止在移动端目录中重复定义」在实
 
 ## 关联经验
 
-[[snake-camel-field-mismatch]] [[frontend-business-rule-hardcode]]
+[[frontend-business-rule-hardcode]]

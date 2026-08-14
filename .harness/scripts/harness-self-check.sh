@@ -165,6 +165,18 @@ check_traceability() {
   [ "$missing" -eq 0 ] && [ "$dangling" -eq 0 ] && pass "traceability" "changes 追溯链完整（INDEX 全覆盖、无悬空）"
 }
 
+# 检查 8: 知识系统健康（记忆过期/死链接/frontmatter/矛盾/索引/孤儿目录）
+check_memory_health() {
+  local out issues
+  out=$(bash "$ROOT/.harness/scripts/knowledge-maintain.sh" --check 2>&1 || true)
+  issues=$(echo "$out" | grep -oP '发现 \K\d+' | head -1 || echo "0")
+  if [ "${issues:-0}" -eq 0 ]; then
+    pass "memory_health" "知识系统健康（STALE/BROKEN/MISSING/INCONSISTENT/索引/孤儿目录 6 项体检全过）"
+  else
+    warn "memory_health" "知识系统发现 ${issues} 个问题（bash knowledge-maintain.sh --check --fix --auto 查看/修复）"
+  fi
+}
+
 # ── 执行 ──
 check_refs
 check_naming
@@ -173,6 +185,7 @@ check_config_drift
 check_chain
 check_registry
 check_traceability
+check_memory_health
 
 # ── 输出 ──
 if $OUTPUT_JSON; then
