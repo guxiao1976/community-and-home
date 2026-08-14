@@ -156,37 +156,47 @@ func parseViteConfig(path string) ([]map[string]any, []RelDef, error) {
 	return services, rels, nil
 }
 
+// discoverServices scans services/*/go.mod for module paths -> service names and service dir names.
+// 替代硬编码清单（此前缺 monitoring-service 等导致图数据不完整）；新增服务自动覆盖。
+func discoverServices(projectRoot string) (map[string]string, []string) {
+	known := make(map[string]string)
+	var dirs []string
+	servicesDir := filepath.Join(projectRoot, "services")
+	entries, err := os.ReadDir(servicesDir)
+	if err != nil {
+		return known, dirs
+	}
+	modRe := regexp.MustCompile(`^module\s+(\S+)`)
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		dirs = append(dirs, name)
+		data, err := os.ReadFile(filepath.Join(servicesDir, name, "go.mod"))
+		if err != nil {
+			continue
+		}
+		if m := modRe.FindStringSubmatch(string(data)); m != nil {
+			known[m[1]] = name
+		}
+	}
+	return known, dirs
+}
+
 // parseGoMods scans services/*/go.mod and the root go.mod for module paths and dependencies.
 func parseGoMods(projectRoot string) ([]map[string]any, []RelDef, error) {
 	var services []map[string]any
 	var rels []RelDef
 
-	// Service name patterns for known services
-	knownServices := map[string]string{
-		"github.com/guxiao1976/community-user":                    "user-service",
-		"github.com/guxiao1976/community-auth":                    "auth-service",
-		"github.com/guxiao1976/community-permission":              "permission-service",
-		"github.com/guxiao1976/community-file":                    "file-service",
-		"github.com/guxiao1976/community-master-data-service":     "master-data-service",
-		"github.com/guxiao1976/community-moderation-service":      "moderation-service",
-		"github.com/guxiao1976/community-common/v2":              "common",
-		"github.com/guxiao1976/api-proto":                        "api-proto",
-		"github.com/guxiao1976/community-community-hub-service":  "community-hub-service",
-	}
-
-	svcDirs := []string{
-		"services/auth-service",
-		"services/user-service",
-		"services/permission-service",
-		"services/file-service",
-		"services/master-data-service",
-		"services/moderation-service",
-		"services/community-hub-service",
-		"services/ai-model-service",
-	}
+	// 自动发现：扫描 services/*/go.mod（替代硬编码 knownServices + svcDirs，消除新增服务漂移）
+	knownServices, svcDirs := discoverServices(projectRoot)
+	// 补充非 services/ 的项目模块
+	knownServices["github.com/guxiao1976/community-common/v2"] = "common"
+	knownServices["github.com/guxiao1976/api-proto"] = "api-proto"
 
 	for _, svcDir := range svcDirs {
-		goModPath := filepath.Join(projectRoot, svcDir, "go.mod")
+		goModPath := filepath.Join(projectRoot, "services", svcDir, "go.mod")
 		data, err := os.ReadFile(goModPath)
 		if err != nil {
 			continue
@@ -201,7 +211,7 @@ func parseGoMods(projectRoot string) ([]map[string]any, []RelDef, error) {
 		}
 		modPath := modMatch[1]
 
-		svcName := filepath.Base(svcDir)
+		svcName := svcDir
 		if name, ok := knownServices[modPath]; ok {
 			svcName = name
 		}

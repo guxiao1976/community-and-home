@@ -1,6 +1,6 @@
 # 知识图谱上下文 — auth-service
 
-> 自动生成于 2026-08-14 12:24:58 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-14 16:07:37 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -50,7 +50,7 @@
 
 | 表名 | 列 |
 |------|-----|
-| auth_credential | updated_at (datetime), created_at (datetime), updated_time (datetime), created_time (datetime), credential (varchar), identifier (varchar), identity_type (varchar), user_id (bigint), id (bigint) |
+| auth_credential | updated_at (datetime), created_at (datetime), credential (varchar), identifier (varchar), identity_type (varchar), user_id (bigint), id (bigint) |
 
 ## 前端消费方
 
