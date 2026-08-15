@@ -1174,6 +1174,44 @@ check_memory_index() {
   fi
 }
 
+# ─── Check 16.5: 设计/代码一致性（model 列 vs 标准迁移源）───────────
+# 比对 Go model 的 db tag 列是否覆盖标准迁移源（migration/scripts/docs-specs）。
+# WARN 级：model 引用列缺失可能是历史手工迁移/legacy/建表源不在标准位置，
+# 提示风险而非误伤正常提交。
+
+check_design_consistency() {
+  echo "[16.5/18] Design/code consistency" >&2
+  local check_script="$PROJECT_ROOT/.harness/scripts/check-design-consistency.sh"
+
+  if [[ ! -f "$check_script" ]]; then
+    log_pass "design_consistency" "check script not found (skipped)"
+    return
+  fi
+
+  # 服务粒度：指定服务跑单服务；未指定则全服务体检
+  local target
+  if [[ -n "$SERVICE_NAME" ]]; then
+    target="--service $SERVICE_NAME"
+  else
+    target="--all"
+  fi
+
+  local out rc
+  set +e
+  out="$("$check_script" $target 2>&1)"
+  rc=$?
+  set -e
+
+  if echo "$out" | grep -q "^WARN"; then
+    local detail
+    detail="$(echo "$out" | grep "^WARN" | head -5 | tr '\n' '; ')"
+    detail="$(json_escape "$detail")"
+    log_warn "design_consistency" "$detail"
+  else
+    log_pass "design_consistency" "model 列覆盖标准迁移源"
+  fi
+}
+
 # ─── Check 17: Git hygiene ─────────────────────────────────────────
 
 check_git_hygiene() {
@@ -1311,6 +1349,7 @@ main() {
   check_bench_regression
   check_api_smoke
   check_memory_index
+  check_design_consistency
   check_git_hygiene
   check_mutation_testing
   check_pipeline_evals
@@ -1346,7 +1385,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "gofmt" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "git hygiene" "mutation testing" "pipeline evals")
+    local labels=("go build" "go vet" "go test" "gofmt" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "design consistency" "git hygiene" "mutation testing" "pipeline evals")
     for result in "${RESULTS[@]}"; do
       local status label detail why fix example reference
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

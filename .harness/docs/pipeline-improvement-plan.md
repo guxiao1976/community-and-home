@@ -285,3 +285,25 @@
 
 **验证**：脚本 `bash -n` 语法 OK；实测扫描 16 变更输出 17 项冲突（C1 服务重叠为主，C2 精确到真实文件）；`--change` 定向检测生效；harness 自检 9 PASS。
 **注**：C1 服务重叠对历史变更较多（共享 permission-service 等），属「需澄清」级预警而非一定冲突；C2 已过滤 `§x.x` 章节引用、归一 revises 到路径首 token。
+
+---
+
+## 十一、设计一致性三级检查机制（2026-08-15，已实施）
+
+> 来源：今日开发中多处发现「代码与设计/规范不一致」（user-service design.md 过期、rel_user_role 三列缺迁移、review.md vs review.js 漂移）。补齐「设计文档 ↔ 代码实现」这条此前缺失的一致性线。
+
+| 级 | 机制 | 位置 |
+|---|------|------|
+| 第一级 | `check-design-consistency.sh`：比对 Go model db tag 列 vs 标准迁移源（migration/scripts/docs-specs）列覆盖，WARN 报疑似缺列/建表源不在标准位置 | 新建脚本 |
+| 第一级 | 接入 `harness-checks.sh` check_design_consistency（提交时门禁，WARN 非 FAIL，labels 数组同步） | harness-checks.sh |
+| 第二级 | `--all` 全服务体检 + `--json` 结构化输出 + `--backlog` 自动登记过期项 | 脚本参数 |
+| 第三级 | architect-design.md 关键规则 13：改 model/Migration 需同步 design.md（源头消除漂移） | architect-design.md |
+
+**关键设计决策（克制）**：
+- **WARN 非 FAIL**：model 列缺失可能是历史手工迁移/legacy/建表源在别处，WARN 提示风险而非误伤提交
+- **联表 ViewModel 别名黑名单**（ur_status/role_status）：JOIN 别名非真实列，消除误报
+- **SIGPIPE 坑**：`grep -q` + 管道 + `set -o pipefail` 下会误判缺失（列集每次不同），改用 heredoc `<<<` 无管道
+- **labels 数组同步**：harness-checks 汇总 label 硬编码，新增检查项需同步
+
+**验证**：脚本连跑 5 次稳定（permission-service 只报真差异 deleted_at）；harness-checks 独立显示 `[WARN] 18. design consistency`；harness 自检 9 PASS。
+**实测发现**（脚本价值）：permission-service 的 `deleted_at`、master-data 全表列未覆盖标准迁移源（建表源不在全局 docs/specs）——正是今天那类不一致，现在可机械捕获。
