@@ -19,6 +19,12 @@
 ## P2 — 本月
 
 - [web/mobile 其余静默吞错点清理](task-2026-08-15-006.md) — web/mobile, P2, open, human
+- [日志埋点增强：skill 调用 + checks 结果明细，支撑脚本有效性分析](task-2026-08-15-010.md) — harness, P2, open, human
+- [设计一致性: auth-service model 列未覆盖标准迁移源](task-2026-08-15-011.md) — auth-service, P2, open, human
+- [设计一致性: master-data-service model 列未覆盖标准迁移源](task-2026-08-15-012.md) — master-data-service, P2, open, human
+- [设计一致性: moderation-service model 列未覆盖标准迁移源](task-2026-08-15-013.md) — moderation-service, P2, open, human
+- [设计一致性: permission-service model 列未覆盖标准迁移源](task-2026-08-15-014.md) — permission-service, P2, open, human
+- [设计一致性: user-service model 列未覆盖标准迁移源](task-2026-08-15-015.md) — user-service, P2, open, human
 
 
 ## P3 — 以后
@@ -43,16 +49,20 @@
 |:------:|:----:|
 | P0 | 0 |
 | P1 | 1 |
-| P2 | 1 |
+| P2 | 7 |
 | P3 | 1 |
 | 进行中 | 1 |
 | 已阻塞 | 0 |
-| **合计** | **4** |
+| **合计** | **10** |
 
 | 服务 | 数量 |
 |------|:----:|
+| moderation-service | 1 |
+| auth-service | 1 |
+| master-data-service | 1 |
 | web | 1 |
 | web/mobile | 1 |
-| harness | 1 |
-| permission-service | 1 |
+| harness | 2 |
+| permission-service | 2 |
+| user-service | 1 |
 

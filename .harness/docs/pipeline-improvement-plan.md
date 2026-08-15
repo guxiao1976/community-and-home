@@ -307,3 +307,4 @@
 
 **验证**：脚本连跑 5 次稳定（permission-service 只报真差异 deleted_at）；harness-checks 独立显示 `[WARN] 18. design consistency`；harness 自检 9 PASS。
 **实测发现**（脚本价值）：permission-service 的 `deleted_at`、master-data 全表列未覆盖标准迁移源（建表源不在全局 docs/specs）——正是今天那类不一致，现在可机械捕获。
+**历史清理（2026-08-15）**：quality-check 全量体检 + `check-design-consistency.sh --all --backlog` 批量登记 5 个服务的设计一致性欠账（auth-service 1 列 / master-data 34 列 / moderation 30 列 / permission 1 列 / user 1 列）为 P2 debt 任务（task-011~015）。同时发现并修复 quality-check skill 的 `--all` 误写（check-change-conflict.sh 无此参数，默认即全扫）。
