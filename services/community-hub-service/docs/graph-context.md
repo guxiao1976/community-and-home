@@ -1,6 +1,6 @@
 # 知识图谱上下文 — community-hub-service
 
-> 自动生成于 2026-08-14 16:15:52 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-15 18:15:49 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -72,6 +72,7 @@
 
 | 方法 | URL | 文件 |
 |------|-----|------|
+| GET | /api/community/lostfound | web/mobile/src/api/community.ts |
 | GET | /api/community/contacts | web/mobile/src/api/community.ts |
 | GET | /api/community/notices | web/mobile/src/api/community.ts |
 

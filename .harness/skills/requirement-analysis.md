@@ -18,6 +18,7 @@
    - 「修改 / 删除」类（针对已有 spec / 既有功能）→ 先加载目标 spec（`.harness/changes/*/specs/` 或已上线 spec），生成 **diff 差异说明**（原行为 → 新行为 / 删除范围），在 proposal 与 spec 中标注变更点，保留历史追溯。
    - 变更类型写入 `.change.yaml`（`change_type: new/modify/delete`）。
 2. **需求冲突预检**：与进行中变更（`.harness/changes/*/`）比对——是否存在同服务、同模块、同接口的重叠修改；与既有 spec / 既有规则比对——是否存在矛盾。检测到冲突 → 提前预警，并在澄清时同步给用户。
+   - **确定性脚本（优先）**：先跑 `bash .harness/scripts/check-change-conflict.sh --change <本变更名>`——机械化扫描同服务（C1）/ 同接口文件（C2）重叠，输出冲突预警清单；命中冲突则重点核对该变更对的 services/revises，而非重新 LLM 猜测。
 3. **可行性初判与需求拒收**：需求是否明显超出项目范围 / 违反架构原则 / 技术不可行 / 与现状冲突？
    - 是 → 输出《需求拒收说明》（理由：违反架构 / 超出范围 / 技术不可行 / 冲突），提交 Owner Agent 裁决，**不进入形式化环节**。
    - 否 → 进入 Step 1 澄清。

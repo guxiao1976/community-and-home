@@ -39,6 +39,7 @@ check_refs() {
     ".harness/workflows/harness-pipeline.js"
     ".harness/workflows/gate-engine.js"
     ".harness/scripts/build-pipeline.sh"
+    ".harness/scripts/check-change-conflict.sh"
     ".harness/skills/dispatch.md"
     ".harness/skills/review.md"
     ".harness/skills/requirement-analysis.md"
@@ -54,6 +55,16 @@ check_refs() {
     fi
   done
   [ "$missing" -eq 0 ] && pass "refs_exist" "关键文件全部存在"
+}
+
+# 检查 1.5: 需求冲突检测脚本可执行（确定性冲突检测）
+check_change_conflict() {
+  if bash -n "$ROOT/.harness/scripts/check-change-conflict.sh" 2>/dev/null \
+    && bash "$ROOT/.harness/scripts/check-change-conflict.sh" >/dev/null 2>&1; then
+    pass "change_conflict_check" "冲突检测脚本可执行"
+  else
+    fail "change_conflict_check" "check-change-conflict.sh 语法错误或运行失败"
+  fi
 }
 
 # 检查 2: 命名口径一致（skill 无残留旧流程词）
@@ -179,6 +190,7 @@ check_memory_health() {
 
 # ── 执行 ──
 check_refs
+check_change_conflict
 check_naming
 check_docs
 check_config_drift

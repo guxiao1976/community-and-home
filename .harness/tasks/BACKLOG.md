@@ -18,7 +18,6 @@
 
 ## P2 — 本月
 
-- [需求冲突检测确定性脚本（扫 .harness/changes/ 同服务/同接口重叠）](task-2026-08-15-003.md) — harness, P2, open, human
 - [web/mobile 其余静默吞错点清理](task-2026-08-15-006.md) — web/mobile, P2, open, human
 
 
@@ -44,16 +43,16 @@
 |:------:|:----:|
 | P0 | 0 |
 | P1 | 1 |
-| P2 | 2 |
+| P2 | 1 |
 | P3 | 1 |
 | 进行中 | 1 |
 | 已阻塞 | 0 |
-| **合计** | **5** |
+| **合计** | **4** |
 
 | 服务 | 数量 |
 |------|:----:|
 | web | 1 |
 | web/mobile | 1 |
-| harness | 2 |
+| harness | 1 |
 | permission-service | 1 |
 

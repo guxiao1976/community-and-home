@@ -270,3 +270,18 @@
 | G3 | spec 把「MySQL 迁移验证」定义成编码任务，Go 管线无法执行 | architect-design.md 关键规则 12：迁移/运维验证分类，标注「Owner 运维验证」不走 harness-pipeline |
 
 **验证**：`node --check` 两文件 OK；`run-evals.sh` 全绿；harness 自检 8 PASS；harness-pipeline.js 重新编译（1010 行，含 CRITICAL 一票否决）。
+
+---
+
+## 十、需求冲突检测确定性脚本（task-003，2026-08-15 已实施）
+
+> 来源：需求分析 agent 完善评审。requirement-analysis.md Step 0 冲突预检原为 LLM 判定，补确定性脚本机械化（非 LLM、便宜、客观），对齐 P3.2 specDeterministicCheck 模式。
+
+| # | 改动 | 位置 |
+|---|------|------|
+| CC1 | 新建 `check-change-conflict.sh`：扫描 `.harness/changes/*/.change.yaml` 的 services（C1 同服务重叠）+ revises（C2 同接口/文件重叠），两两比对输出冲突预警；支持 `--change <name>` 单变更检测、`--json` | 新建脚本 |
+| CC2 | 接入 `harness-self-check.sh`：refs 清单 + check_change_conflict（语法/可执行校验），自检 8→9 PASS | harness-self-check.sh |
+| CC3 | requirement-analysis.md Step 0 冲突预检：优先跑确定性脚本，命中再核对 | requirement-analysis.md |
+
+**验证**：脚本 `bash -n` 语法 OK；实测扫描 16 变更输出 17 项冲突（C1 服务重叠为主，C2 精确到真实文件）；`--change` 定向检测生效；harness 自检 9 PASS。
+**注**：C1 服务重叠对历史变更较多（共享 permission-service 等），属「需澄清」级预警而非一定冲突；C2 已过滤 `§x.x` 章节引用、归一 revises 到路径首 token。

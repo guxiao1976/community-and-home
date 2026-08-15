@@ -1,6 +1,6 @@
 # 知识图谱上下文 — file-service
 
-> 自动生成于 2026-08-14 16:15:52 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-15 18:15:49 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -82,7 +82,7 @@
 | GET | /api/masterdata/statistics/division-counts/realtime | web/pc/src/api/masterdata.ts |
 | GET | /api/v1/health-checks | web/pc/src/api/aimodel.ts |
 | GET | /api/monitoring/health | web/pc/src/api/monitoring.ts |
-| GET | /api/community/lost-found | web/mobile/src/api/community.ts |
+| GET | /api/community/lostfound | web/mobile/src/api/community.ts |
 | GET | /api/v1/models | web/pc/src/api/aimodel.ts |
 | GET | /api/v1/templates | web/pc/src/api/aimodel.ts |
 | GET | /api/community/notices | web/mobile/src/api/community.ts |
