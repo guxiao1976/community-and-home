@@ -256,3 +256,17 @@
 **验证**：`node --check` 三文件 OK；`run-evals.sh` 全绿；harness 自检 8 PASS；编译后 harness-pipeline.js 已 12 维度（:354/:361/:380）。
 **第 3 步（设计评审落盘 + 拆视角）已完成**：设计评审单 agent → 2 视角并行（data-model / interface-proto），落盘 `design_review_{lens}_v{round}.md`（SHOULD FIX/INFO 不再丢失）；review.md 模式一.5 补「视角分工」表。
 **遗留（待后续批）**：validity 视角真实跑测（找新 change 跑 4 视角验证）；qa-schema.js 同款死代码（loader.js:88 的 fallback 也是死分支，未处理，待确认后一并清理）。
+
+---
+
+## 九、真实 L 级变更暴露的 3 个流程 gap（2026-08-15，已修复）
+
+> 来源：rel-user-role-migration-publish-fix（真实 L 级 spec-pipeline 全流程跑测，阶段 0-6）。这是「测试流水线」的核心产出——不是流水线跑通了没 bug，而是跑通了但暴露了 3 个真实 gap。
+
+| # | gap | 修复 |
+|---|-----|------|
+| G1 | 评审报告/归档落盘在沙箱失效（spec-pipeline fs=null） | 评审报告（spec_review/design_review）改由评审 agent 用 Write 工具落盘（agent 在完整环境）；summary/INDEX 归档加 fs 失效提示（Owner 手动补） |
+| G2 | harness-pipeline 执行评审无 CRITICAL 一票否决（design-biz 报 snake/camel CRITICAL 被 2/3 放行） | harness-pipeline-core.js 投票逻辑加 `criticalCount > 0` 一票否决（对齐需求评审） |
+| G3 | spec 把「MySQL 迁移验证」定义成编码任务，Go 管线无法执行 | architect-design.md 关键规则 12：迁移/运维验证分类，标注「Owner 运维验证」不走 harness-pipeline |
+
+**验证**：`node --check` 两文件 OK；`run-evals.sh` 全绿；harness 自检 8 PASS；harness-pipeline.js 重新编译（1010 行，含 CRITICAL 一票否决）。

@@ -652,6 +652,7 @@ async function stage2Review(ctx) {
   ]
   // P1.3: 被审 spec 内容哈希进 prompt —— 文件变则 prompt 变，resume 缓存必然失效（杜绝旧 REVISION 缓存命中）
   const specHash = specContentHash() || `fallback:r${ctx.stageResults[2]?.rounds || 0}:rc${ctx.resumeCount || 0}`
+  const rounds = (ctx.stageResults[2]?.rounds || 0) + 1
   const reviews = await parallel(
     lenses.map(lens => () =>
       agent(
@@ -666,14 +667,16 @@ ${specHash}
 ## 输出
 - verdict: APPROVED / REVISION（有 ≥1 MUST FIX 即 REVISION）
 - mustFixes: 必须修复项数组 {severity, section, issue, fix}，severity 取 critical（架构违反/安全漏洞/数据丢失/业务不可用，一票否决）或 normal
-- summary: 一句话结论`,
+- summary: 一句话结论
+
+## 报告落盘（用 Write 工具，沙箱 workflow fs 不可用）
+审查完成后，用 Write 工具将报告写入 .harness/changes/${CHANGE}/review/spec_review_${lens.key}_v${rounds}.md，内容含 VERDICT + summary + mustFixes 列表`,
         { label: `Review:${lens.key}`, schema: SPEC_REVIEW_SCHEMA, model: routeModel('review') }
       ).then(r => r ? { ...r, lens: lens.key } : null)
     )
   )
   const valid = reviews.filter(Boolean)
   const pass = valid.filter(r => r.verdict === 'APPROVED').length
-  const rounds = (ctx.stageResults[2]?.rounds || 0) + 1
   // P1.2: 收集本轮 mustFix（签名 + 全量对象），供反馈注入（P1.1）与收敛早停判据使用
   const roundMF = valid.flatMap(r => (r.mustFixes || []).map(mf => ({ lens: r.lens, ...mf })))
   const roundKeys = roundMF.map(mf => mustFixKey(mf.lens, mf))
@@ -684,19 +687,7 @@ ${specHash}
   }
   saveState(ctx)
 
-  // 写评审报告（审计轨迹）
-  if (fs) {
-    try {
-      const dir = `${changeDir()}/review`
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-      const round = ctx.stageResults[2].rounds
-      for (const r of valid) {
-        const mfText = (r.mustFixes || []).map(m => `- [${m.section || ''}] ${m.issue || ''}`).join('\n')
-        fs.writeFileSync(`${dir}/spec_review_${r.lens}_v${round}.md`,
-          `# Plan Review — ${CHANGE}（${r.lens}视角）\n\n**VERDICT**: ${r.verdict}\n\n${r.summary}${mfText ? `\n\n## mustFixes\n${mfText}` : ''}\n`)
-      }
-    } catch (e) { /* 报告写入失败不阻断 */ }
-  }
+  // 评审报告已由评审 agent 用 Write 工具落盘（沙箱 workflow fs 不可用），此处不再用 fs 写
 
   // P4.2: 评审发现（WARNING 级 mustFixes）结构化回填 → review-feedback 供 backfill 脚本路由
   if (fs && roundMF.length > 0) {
@@ -830,24 +821,16 @@ ${designFeedback ? `\n## 上轮设计评审反馈（必须逐条修订）\n${des
 ## 输出
 - verdict: APPROVED / REVISION（有 ≥1 MUST FIX 即 REVISION）
 - mustFixes: 数组 {section, issue, fix}
-- summary: 一句话结论`,
+- summary: 一句话结论
+
+## 报告落盘（用 Write 工具，沙箱 workflow fs 不可用）
+审查完成后，用 Write 工具将报告写入 .harness/changes/${CHANGE}/review/design_review_${lens.key}_v${round}.md，内容含 VERDICT + summary + mustFixes 列表`,
           { label: `DesignReview:${lens.key}`, schema: SPEC_REVIEW_SCHEMA, model: routeModel('review') }
         ).then(r => r ? { ...r, lens: lens.key } : null)
       )
     )
     const validDesignReviews = designReviews.filter(Boolean)
-    // 设计评审落盘（审计轨迹，SHOULD FIX/INFO 不丢失）
-    if (fs) {
-      try {
-        const dir = `${changeDir()}/review`
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-        for (const r of validDesignReviews) {
-          const mfText = (r.mustFixes || []).map(m => `- [${m.section || ''}] ${m.issue || ''}${m.fix ? ` → ${m.fix}` : ''}`).join('\n')
-          fs.writeFileSync(`${dir}/design_review_${r.lens}_v${round}.md`,
-            `# Design Review — ${CHANGE}（${r.lens}视角）\n\n**VERDICT**: ${r.verdict}\n\n${r.summary}${mfText ? `\n\n## mustFixes\n${mfText}` : ''}\n`)
-        }
-      } catch (e) { /* 落盘失败不阻断 */ }
-    }
+    // 设计评审报告已由 design-review agent 用 Write 工具落盘（沙箱 workflow fs 不可用）
     // 判定：全部视角 APPROVED 才通过
     if (validDesignReviews.length === designLenses.length && validDesignReviews.every(r => r.verdict === 'APPROVED')) {
       designApproved = true
@@ -1061,12 +1044,17 @@ async function stage6Integrate(ctx) {
     } catch (e) { /* INDEX 更新失败不阻断 */ }
   }
 
-  ctx.stageResults[6] = { archived: true }
+  // 沙箱 fs 不可用时的归档提示（summary.md/INDEX.md 未落盘，由 Owner 在最终交付时手动补）
+  if (!fs) {
+    log('  ⚠️ 沙箱 fs 不可用：summary.md / INDEX.md 归档未落盘，由 Owner 手动补')
+  }
+
+  ctx.stageResults[6] = { archived: true, archivedByOwner: !fs }
   saveState(ctx)
   log('  ✅ 集成归档完成')
   return pauseForInput(ctx, 'stage6_done', {
     stage: 6,
-    summary: `集成归档完成 — 最终交付确认？`,
+    summary: `集成归档完成 — 最终交付确认？${fs ? '' : '（沙箱 fs 失效，summary.md/INDEX.md 归档由 Owner 手动补）'}`,
     questions: [{ id: 'deliver', text: '集成验证通过，批准归档交付？', options: ['批准归档', '需修复'] }],
     onResume: '最终交付确认',
   })

@@ -923,9 +923,13 @@ while (iteration <= MAX_ITERATIONS) {
     log(`  ${r.lens} (${r.label}): ${r.verdict} — ${r.summary}`)
   }
 
-  // 投票判定 — type-aware threshold
+  // 投票判定 — type-aware threshold + CRITICAL 一票否决（对齐需求评审）
+  const criticalCount = validReviews.reduce((sum, r) => sum + (r.criticalCount || 0), 0)
   const failingLenses = validReviews.filter(r => r.verdict === 'FAIL').map(r => r.label).join('、')
-  if (passCount >= REVIEW_PASS_THRESHOLD) {
+  if (criticalCount > 0) {
+    log(`⛔ CRITICAL 一票否决：${criticalCount} 个 CRITICAL（${failingLenses}视角），拒绝 2/3 放行`)
+  }
+  if (passCount >= REVIEW_PASS_THRESHOLD && criticalCount === 0) {
     if (failCount > 0) {
       log(`⚠️ ${failingLenses}视角有异议，但多数通过 (${passCount}/${validReviews.length})，管线继续`)
     }

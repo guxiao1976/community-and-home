@@ -288,6 +288,7 @@ CREATE TABLE <table_name> (
 9. **Snowflake ID**：所有新表主键用 BIGINT + Snowflake 生成，Go 端用 `json:",string"`
 10. **错误码**：新功能使用 5 位错误码 `XXYYY`（XX=服务中心），用 errx 命名常量
 11. **跨服务一致性**：跨服务数据交互必须通过接口调用，严禁跨服务直连数据库；多服务数据一致性场景必须在 design.md 明确一致性方案（最终一致性/Saga/事务消息）+ 失败补偿，并拆出补偿/对账任务
+12. **迁移/运维验证分类**：需要真实 DB 实例的验证（DDL 执行、三态库验证、从零建库验证、数据订正）不属于编码任务，不走 harness-pipeline（Go 管线无 DB 环境），在 tasks.md 标注「Owner 运维验证」并在派发 pipeline 时显式排除，由 Owner 在编码后单独执行
 
 ## 反例
 
