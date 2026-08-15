@@ -10,13 +10,26 @@
 
 ## 执行步骤
 
+### Step 0: 变更类型判定与冲突预检（先于澄清）
+
+**目的**：识别「修改/删除」类存量迭代需求、检测冲突、拦截不可行需求，避免盲跑澄清/形式化。
+
+1. **变更类型标识**：判定本次需求是「新增 / 修改 / 删除」。
+   - 「修改 / 删除」类（针对已有 spec / 既有功能）→ 先加载目标 spec（`.harness/changes/*/specs/` 或已上线 spec），生成 **diff 差异说明**（原行为 → 新行为 / 删除范围），在 proposal 与 spec 中标注变更点，保留历史追溯。
+   - 变更类型写入 `.change.yaml`（`change_type: new/modify/delete`）。
+2. **需求冲突预检**：与进行中变更（`.harness/changes/*/`）比对——是否存在同服务、同模块、同接口的重叠修改；与既有 spec / 既有规则比对——是否存在矛盾。检测到冲突 → 提前预警，并在澄清时同步给用户。
+3. **可行性初判与需求拒收**：需求是否明显超出项目范围 / 违反架构原则 / 技术不可行 / 与现状冲突？
+   - 是 → 输出《需求拒收说明》（理由：违反架构 / 超出范围 / 技术不可行 / 冲突），提交 Owner Agent 裁决，**不进入形式化环节**。
+   - 否 → 进入 Step 1 澄清。
+
 ### Step 1: 需求澄清（superpowers:brainstorming）— 显式第一步
 
 **这是本 Skill 的第一步，不是外部前置**。目的：探索用户意图、对比方案、让用户拍板，形成「已确认的设计」再形式化。
 
+- **只问未决点**：用户需求文本 / request.md / 既有设计文档中**已明确陈述的决策视为【已确认】**，澄清不要重复提问，只问真正需要拍板的点（边界、方案对比、范围取舍、安全权衡）。需求越清晰，问题越少。
 - 若已有用户确认的设计文档（`docs/superpowers/specs/<date>-<topic>-design.md`，Owner 已前置派发）→ 复用，直接进入 Step 2。
 - 若没有 → **先执行 `Skill("superpowers:brainstorming")` 完成需求澄清**：
-  1. 交互式提问（AskUserQuestion），逐项澄清：业务目标、边界、方案对比、偏好
+  1. **产出澄清问题清单**（每个问题含选项 + 推荐，每轮 ≤4 问），由 **Owner 用 AskUserQuestion 转交用户收敛**——澄清 agent 是子 agent，一次性运行、不直接与用户多轮交互
   2. 产出设计文档 `docs/superpowers/specs/<date>-<topic>-design.md` 并让用户确认
   3. **未获得用户确认的设计文档 → 不得进入 Step 2**（澄清是硬门禁，跳过澄清直接形式化 = 把未探索的方案固化成 spec，历史教训：角色 pc/web/both 曾绕过澄清被纠正）
 
@@ -36,20 +49,17 @@
 
 **用户故事地图（可选，复杂业务系统）**：当需求跨多角色/多环节（如 access-control 多角色链路）时，按用户完整旅程拆分功能，区分**主干流程**与**分支功能**，避免单点功能做了、整体流程走不通。单接口/单服务修复跳过。
 
-### Step 2: 转换追溯（brainstorming 决策 → spec 覆盖）
+### Step 2: 产出决策日志（澄清结论 → 待追溯清单）
 
-阅读 Step 1 的设计文档（或直接给出的需求）：
-1. 理解已确认的设计决策、方案对比结论、用户偏好
-2. 将设计要点映射到 proposal 和 spec 的对应章节
-3. **转换追溯（防信息丢失）** — 产出后立即自检，列出 brainstorming 关键决策 → spec 的覆盖表：
+记录 Step 1 澄清的每个决策点及其结论，作为后续形式化的唯一输入与追溯依据：
 
-| brainstorming 设计决策 | proposal 章节 | spec Requirement | 覆盖 |
-|----------------------|-------------|-----------------|:---:|
-| <决策1>               | §X           | REQ-XX          | ✅ |
-| <决策2>               | §Y           | REQ-YY          | ⚠️ (原因) |
+| 决策 ID | 决策内容（结论） | 依据（用户拍板 / 需求文本已明确 / 设计文档复用） |
+|---------|----------------|------------------------------------------------|
+| D1      | <结论>         | <来源>                                          |
 
-任何 ⚠️ 项必须解释：刻意舍弃 / 移至后续迭代 / 遗漏需补充。
-全部 ✅ 才能进入 Step 3。
+- 每条决策给稳定 ID（D1/D2/…），后续 proposal、spec、追溯矩阵都以它为准
+- 决策日志是 Step 6 写 spec、Step 8 转换追溯的**唯一输入**，防止澄清结论在形式化过程中丢失
+- 转换追溯本身在 **Step 8** 执行（spec 产出后做闭环核对），此处只记录、不追溯
 
 ### Step 3: 加载上下文
 
@@ -59,7 +69,12 @@
 2. `.harness/rules/项目编码规范.md` — 编码硬性约束（在分析阶段了解边界）
 3. 相关服务的 `docs/design.md` — 现有数据模型和业务流程
 4. `.harness/knowledge/memory/MEMORY.md` — 精读相关记忆，避免提出已知不可行的方案
-5. （OpenSpec 路径）Step 1/2 中读取/追溯的 brainstorming 设计文档
+5. （OpenSpec 路径）Step 1/2 中读取的 brainstorming 设计文档
+6. **业务 / 非功能上下文（按需加载，非默认全量）**：
+   - 跨链路 / 多角色需求 → 读 `.harness/knowledge/business-flows.md`（端到端流程与状态机）
+   - 涉及权限 / 角色 / 数据范围 → 读 `docs/specs/rbac-design.md` 对应章节
+   - 涉及安全 / 合规 / 非功能约束 → 读全局安全规范与质量要求；无显式约束则显式标注「无显式约束」
+   - 原则：只加载与本次需求相关的业务/非功能文档，避免无谓的上下文膨胀
 
 ### Step 4: 理解需求
 
@@ -74,6 +89,10 @@
 
 ```markdown
 # Proposal: <功能名称>
+
+> **优先级**: P0/P1/P2 · **改动规模**: 小/中/大 · **影响风险**: 低/中/高
+> **核心风险点**: <1-2 个关键风险，如涉及核心链路 / 跨多服务协同 / 数据迁移>
+> **变更类型**: new/modify/delete（modify/delete 需附 diff 说明，见 Step 0）
 
 ## 为什么做
 <1-2 段说明业务背景和用户价值>
@@ -109,7 +128,7 @@
 
 ## Requirements
 
-### Requirement: <需求名称>
+### Requirement: REQ-<capability>-<序号> — <需求名称>
 The system SHALL <行为描述，含 SHALL 或 MUST>.
 
 #### Scenario: <场景名称>
@@ -117,6 +136,8 @@ The system SHALL <行为描述，含 SHALL 或 MUST>.
 - **WHEN** <条件或触发>
 - **THEN** <预期结果>
 ```
+
+**稳定 ID 规则**：每个 Requirement 用 `REQ-<capability>-<序号>`（如 `REQ-P0-1`、`REQ-P1-PATH-2`）作为稳定 ID，是下游 architect 的 design、developer 的 tasks 追溯的**地基**——全文统一、不随需求重排而变。
 
 **异常场景穷举（防「异常漏了，后期返工」）**：每个 Requirement 除正常主流程外，按四类穷举异常场景（每个异常 = 一个 Scenario）：
 
@@ -131,9 +152,25 @@ The system SHALL <行为描述，含 SHALL 或 MUST>.
 
 ### Step 7: 创建 `.change.yaml`
 
+标准字段（供阶段 4/5/6 与 P4.2 回填消费，勿随意改名）：
+
 ```yaml
 schema: spec-driven
 created: YYYY-MM-DD
+change: <change-name>
+title: <一句话标题>
+size: 小/中/大           # 或 S/M/L
+priority: P0/P1/P2       # 优先级（Owner 排期用）
+change_type: new/modify/delete   # 变更类型（modify/delete 需在 proposal 附 diff）
+services: [...]         # 受影响服务/前端
+revises: [...]          # 被修改的文件清单（含既有 spec）
+specs:
+  - capability: <capability 名>
+    file: specs/<capability>/spec.md
+out_of_scope: [...]      # 明确不做的边界
+proto_change_required: false
+common_change_required: false
+data_migration_required: false
 ```
 
 ## 关键规则
@@ -167,7 +204,39 @@ created: YYYY-MM-DD
 
 5. **场景完整性** — 每个 Requirement 是否至少 1 正向 + 1 异常/边界 Scenario？
 
-发现任何问题 → 就地修复，无需重审。修复后重新确认 1-4 全部通过。
+6. **合规性检查** — 权限/安全/合规是否符合：
+   - 涉及角色 / 权限 / 数据范围的需求 → 是否对照 `docs/specs/rbac-design.md`（数据范围由 scope 决定，不引入冲突设计）
+   - 涉及敏感数据（手机号 / 身份证 / 密钥）→ 是否遵循加密 / 脱敏规范
+   - 非功能需求（性能 / 可观测性 / 兼容性）→ 是否显式声明，或显式标注「无显式约束」
+   - 与全局规则冲突的设计（如违反「前端不定义业务逻辑」「服务间仅 gRPC」）→ 必须修正
+
+发现任何问题 → 就地修复，无需重审。修复后重新确认 1-6 全部通过。
+
+### 转换追溯（闭环核对，防信息丢失 + 防幻觉）
+
+把 Step 2 的**决策日志**逐条映射到 spec，产出追溯表：
+
+| 决策 ID | 决策内容 | proposal 章节 | spec Requirement | 覆盖 |
+|---------|---------|--------------|------------------|:---:|
+| D1      | <结论>  | §X           | REQ-<capability>-<序号> | ✅ |
+
+**双向核对**：
+- **正向（防丢失）**：每个决策点都有 spec 覆盖，⚠️ = 0（任何 ⚠️ 必须解释：刻意舍弃 / 移至后续迭代 / 遗漏需补充）
+- **反向（防幻觉）**：每条 spec Requirement 都有决策依据——不是凭空捏造的、用户从未确认过的行为
+
+### Definition of Done（交付硬性清单，逐条核对）
+
+全部满足才算完成，缺任一即未完成：
+
+1. 所有 `[NEEDS CLARIFICATION]` / 占位符已消除（或显式标注并列出影响）
+2. 每个 Requirement 带稳定 ID（REQ-<capability>-<序号>），且 ≥1 正向 + 1 异常 Scenario（Given/When/Then）
+3. 非目标（不做清单）已定义，范围无蔓延
+4. 影响范围覆盖的每个服务都有对应 spec
+5. 追溯矩阵：正向 ⚠️ = 0，反向每条 spec 有决策依据
+6. Self-Review 六项全部通过
+7. .change.yaml 标准字段齐全
+
+> 注：本 Self-Review 是**自查**，非最终质量保证。规格还需经阶段 2 独立评审（3 视角 LLM + 确定性自检 P3.2）通过，自查通过 ≠ 评审通过。
 
 ## 产出物
 

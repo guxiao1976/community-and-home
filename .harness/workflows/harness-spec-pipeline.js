@@ -472,7 +472,17 @@ async function stage1Requirement(ctx) {
   if (!ctx.decisions.stage1_clarify) {
     const clarify = await agent(
       `你是需求澄清 Agent。对以下用户需求做 brainstorming 澄清（superpowers:brainstorming 思路）：
-先探索现状、识别关键决策点，然后产出「待用户确认的澄清问题清单」。不要直接产出 spec。
+先做最小现状核验，再识别关键决策点，产出「待用户确认的澄清问题清单」。不要直接产出 spec。
+
+## 澄清前必做的最小现状核验（grounding，防提问偏离现状）
+1. 读 .harness/changes/${CHANGE}/request.md（若存在）——以原始需求为准，避免重复问已写明的信息
+2. 读相关服务 docs/design.md 摘要 + .harness/knowledge/memory/MEMORY.md 触发词——了解既有设计与已知约束
+3. 用 Bash/Grep 核实关键引用（文件/行号/现有接口/路由），只对现状不确定处提问
+
+## 只问未决点（不重复已确认项）
+- 下方「用户需求」文本中已明确陈述的决策视为【已确认】，不要重复提问
+- 只产出真正需要用户拍板的问题（边界/方案对比/影响范围/安全权衡/范围取舍）
+- 若需求文本已含可执行的完整决策，问题数应显著少于未决点，甚至可以为空
 
 ## 变更
 ${CHANGE}

@@ -145,3 +145,26 @@
 | P2 | P2.2 成本上报 / P3.2 spec 自检 / P4.1 eval 语料 / P4.2 发现回填 / P5.2 状态落盘 | 中-大 | 评估飞轮 + 长期自进化 |
 
 > 已建立：BACKLOG task-2026-08-14-002（盲循环）；本方案为完整路线图，建议拆分为独立 dispatch 任务逐项实施（每项走对应分级管线）。
+
+---
+
+## 五、需求分析 Agent 完善（2026-08-15，已实施）
+
+> 来源：rel-user-role-migration-publish-fix（L 级 spec-pipeline 实战）+ 外部意见评审。聚焦**需求分析 agent 质量**，与 P1-P5（编排/门禁/成本）互补。
+
+| # | 改动 | 位置 | 理由 |
+|---|------|------|------|
+| A1 | 澄清 prompt 加「最小现状核验 + 只问未决点」 | `harness-spec-pipeline.js` stage1a | 澄清 agent 的 grounding 从"靠模型自觉"变为显式要求；任务文本已决项不重复问（本会话 11 问中若干已隐含在任务文本） |
+| A2 | 新增 Step 0：变更类型判定（new/modify/delete）+ 冲突预检 + 需求拒收 | `requirement-analysis.md` | 覆盖存量迭代 diff、进行中变更冲突、不可行需求拒收三个真实缺口 |
+| A3 | Step 1 补「只问未决点」 | `requirement-analysis.md` | 需求越清晰问题越少，降沟通成本 |
+| A4 | Step 3 补「业务/非功能按需加载」 | `requirement-analysis.md` | business-flows / rbac-design 按需读，避免默认全量膨胀上下文 |
+| A5 | Step 5 proposal 头加 优先级/规模/风险/变更类型 元数据 | `requirement-analysis.md` | Owner 排期免读全文 |
+| A6 | Step 7 .change.yaml 标准字段（priority/change_type 等） | `requirement-analysis.md` | 字段规范化，供阶段 4/5/6 与 P4.2 消费 |
+| A7 | Step 8 Self-Review 加「合规性」第 6 项 | `requirement-analysis.md` | 补齐权限/安全/非功能自检 |
+| A8 | Step 2 改为「产出决策日志」，转换追溯移到 Step 8 闭环（正向防丢失 + 反向防幻觉） | `requirement-analysis.md` + subagent | 修正 skill 文本时序错误——追溯本应在 spec 产出后，而非产出前 |
+| A9 | Step 1 澄清角色分工：agent 产出问题清单，Owner 用 AskUserQuestion 收敛（≤4 问/轮） | `requirement-analysis.md` | 修正文本误导——子 agent 一次性运行，不直接多轮交互 |
+| A10 | Step 6 spec 模板强制稳定 ID `REQ-<capability>-<序号>` | `requirement-analysis.md` | 下游 architect/developer trace 的地基 |
+| A11 | Step 8 加 Definition of Done（7 条硬性清单）+「自查非终审」声明 | `requirement-analysis.md` | 交付有明确完成判据，且不误导自查=评审 |
+
+**未做（另立任务）**：需求冲突检测**确定性脚本**（现为 Skill 步骤，机械化版本见 BACKLOG task-2026-08-15-003）；P3 级小缺口（受影响服务定位 / graph-context 用途边界 / 历史变更参考 / 隐私合规段落）记 backlog 待办，未立即改。
+**验证**：`node --check` 语法过；`run-evals.sh` 41 项全绿（workflow 改动无回归）；skill 文档 Step 0-8 + 转换追溯 + DoD 结构连贯、无残留旧措辞。

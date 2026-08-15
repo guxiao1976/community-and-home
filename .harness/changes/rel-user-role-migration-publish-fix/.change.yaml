@@ -1,0 +1,63 @@
+schema: spec-driven
+created: 2026-08-15
+change: rel-user-role-migration-publish-fix
+title: rel_user_role 生命周期列迁移 + 移动端寻失列表路径/静默错误修复
+size: M
+route: Pipeline
+services:
+  - permission-service
+  - web/mobile
+docs:
+  - docs/specs/migration.sql
+design_basis: 用户已确认的设计决策（D1-D11，见 proposal.md §已确认的设计决策）
+design_basis_sections:
+  - "D1 p0-migration-idempotency"
+  - "D2 p0-backfill-status"
+  - "D3 p0-doc-fix-scope"
+  - "D4 p0-sibling-table"
+  - "D5 p0-runner-verify"
+  - "D6 p1-path-direction"
+  - "D7 p1-publish-form"
+  - "D8 p1-publish-extra-pages"
+  - "D9 p1-error-handling"
+  - "D10 p1-notice-publish"
+  - "D11 p1-publish-ux-gate"
+request_basis: 原始需求对照见 request.md（阶段 0 补回）；设计权威基线为 proposal.md 内嵌 D1-D11 + request.md 的 REVISION 驱动调整段
+revises:
+  - docs/specs/migration.sql §3.4 (rel_user_role 建表段：补 status/verified_at/expires_at 三列 / id 保留 AUTO_INCREMENT / created_time→created_at / idx_user_role_scope→uk_user_role_scope)
+  - services/permission-service/scripts/init_permissions.sql 从零建库可执行性（仅验证，不改 SQL）
+specs:
+  # capability 顺序 = 依赖序：p0-rel-user-role-lifecycle（迁移/DDL）独立先行；两个 P1 capability 互不依赖、可在 P0 后并行
+  - capability: p0-rel-user-role-lifecycle
+    file: specs/p0-rel-user-role-lifecycle/spec.md
+    priority: P0
+    description: 003 幂等迁移（guard 补三列 + ALTER-DEFAULT 回填 status=2，零 guard 外 UPDATE）+ migration.sql 权威 DDL 修正（id 保留自增）+ 从零建库验证
+  - capability: p1-lostfound-path-alignment
+    file: specs/p1-lostfound-path-alignment/spec.md
+    priority: P1
+    description: 前端寻失列表路径 /api/community/lost-found → /api/community/lostfound（后端路由不动，D6）
+  - capability: p1-mobile-silent-error-handling
+    file: specs/p1-mobile-silent-error-handling/spec.md
+    priority: P1
+    description: 三处静默 catch → toast + console.error，不 rethrow（并发不阻断，D9）
+out_of_scope:
+  - "D4 兄弟表（rel_role_permission 等）AUTO_INCREMENT/created_time 不一致，记入待办不动"
+  - "D5 迁移执行器（沿用 001/002 手动执行模式）"
+  - "REVISION #15 方案 a 之外：rel_user_role.id 不改为雪花 ID（保留自增）"
+  - "D7 移动端发布寻失入口"
+  - "D8 寻失浏览『全部→』页 + 寻失详情页"
+  - "D10 移动端发布通知入口"
+  - "D11 发布入口 UX 门禁（随发布功能延后，越权由后端 AssertPublishScope 兜底）"
+  - "后端 community-hub-service routes.go 路径（本次只改前端对齐后端）"
+  - "api-proto / common 变更"
+proto_change_required: false
+common_change_required: false
+data_migration_required: true
+data_migrations:
+  - "services/permission-service/migration/003_add_role_lifecycle.sql（information_schema guard 幂等补 status/verified_at/expires_at；存量回填由 ALTER DEFAULT 在 guard 分支内完成，零 guard 外 UPDATE）"
+memory_refs:
+  - "[[migration-must-execute]]"
+  - "[[verify-api-before-calling]]"
+  - "[[auto-grant-unverified-grant-confers-scope-level0]]"
+  - "[[cross-service-seed-deployment-order]]"
+  - "[[unique-index-migration-dup-precheck]]"

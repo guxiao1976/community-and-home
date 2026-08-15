@@ -17,14 +17,15 @@ Skill("requirement-analysis")
 ```
 
 该 Skill 包含：
+
 - **Step 1**: 需求澄清（使用 `superpowers:brainstorming`）— 显式第一步，无设计文档则先澄清，产出用户确认的设计文档（硬门禁）
-- **Step 2**: 转换追溯 — brainstorming 决策 → spec 覆盖
+- **Step 2**: 产出决策日志 — 澄清结论 → 待追溯清单（稳定 ID D1/D2/…）
 - **Step 3**: 加载上下文（CLAUDE.md / design.md / MEMORY.md）
 - **Step 4**: 理解需求
 - **Step 5**: 产出 proposal.md
-- **Step 6**: 产出 specs/\*/spec.md
+- **Step 6**: 产出 specs/\*/spec.md（Requirement 带稳定 ID REQ-<capability>-<序号>）
 - **Step 7**: 创建 .change.yaml
-- **Step 8**: Spec Self-Review（占位符/一致性/歧义/场景完整性）
+- **Step 8**: Spec Self-Review + 转换追溯（双向核对）+ DoD 清单
 
 ## 上下文加载清单（从磁盘读取）
 
@@ -42,6 +43,7 @@ Skill("requirement-analysis")
 ## 关键工具
 
 执行 Skill 时使用以下工具：
+
 - **`superpowers:brainstorming`** — 交互式需求澄清（逐项提问、方案对比）
 - **`AskUserQuestion`** — 结构化提问（多选/单选，含 preview）
 - **`Read`** — 加载上下文文档
@@ -53,11 +55,13 @@ Skill("requirement-analysis")
 **硬性约束**：连续 2 次相同的工具调用失败后，**必须立即停止并诊断**。
 
 **触发条件**：
+
 - 工具名称相同
 - 错误类型相同（如 `InputValidationError`）
 - 参数相似或完全相同
 
 **强制流程**：
+
 ```
 第 1 次失败 → 记录
 第 2 次失败 → 记录
@@ -73,11 +77,13 @@ Skill("requirement-analysis")
 ```
 
 **禁止行为**：
+
 - ❌ 连续 3 次以上相同的工具调用
 - ❌ "也许这次会成功"的重复尝试
 - ❌ 忽略错误信息中的提示
 
 **正确示例**：
+
 ```
 Write(file_path="...") → InputValidationError: missing 'content'
 Write(file_path="...") → InputValidationError: missing 'content'
