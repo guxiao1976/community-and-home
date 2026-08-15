@@ -18,7 +18,7 @@
 | 流水线 / harness / 自身 | harness 基础设施一致性（引用/命名/文档同步/配置漂移/调用链/追溯/记忆/冲突检测） | `bash .harness/scripts/harness-self-check.sh` |
 | 服务代码 / 规范 | 指定服务或全服务的构建/规范/安全/测试/设计一致性 | `bash .harness/skills/qa/scripts/harness-checks.sh [--service <name>]` |
 | 设计一致性 / model / 迁移 | 设计↔代码一致（model 列 vs 迁移源） | `bash .harness/scripts/check-design-consistency.sh --all` |
-| 需求冲突 / 变更重叠 | 两个变更同服务/同接口重叠 | `bash .harness/scripts/check-change-conflict.sh --all` |
+| 需求冲突 / 变更重叠 | 两个变更同服务/同接口重叠 | `bash .harness/scripts/check-change-conflict.sh` |
 | 管线回归 / eval | 流水线自身不回归 | `bash .harness/pipeline/evals/run-evals.sh` |
 | 不确定 / "全部" | 全量体检（依次跑下 4 项） | 见 Step 2 |
 
@@ -45,7 +45,7 @@ echo "=== 2/4 设计↔代码一致性 ==="
 bash .harness/scripts/check-design-consistency.sh --all
 
 echo "=== 3/4 需求冲突预检 ==="
-bash .harness/scripts/check-change-conflict.sh --all
+bash .harness/scripts/check-change-conflict.sh
 
 echo "=== 4/4 管线自身回归 ==="
 bash .harness/pipeline/evals/run-evals.sh
