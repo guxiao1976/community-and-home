@@ -108,9 +108,9 @@
 
 **P4.1 管线自身 eval 语料** ✅
 - 依据：2.3「eval 语料复合」+「反馈飞轮」
-- 做法：`pipeline/evals/` 语料库——`p1-convergence.eval.js`/`p2p3-guards.eval.js`/`p4p5-evals.eval.js` + `run-evals.sh` 运行器 + README（用例↔实战缺陷映射）
-- 验证：管线改动后 `bash .harness/pipeline/evals/run-evals.sh` 防回归（40 项全绿）
-- 状态：已实施（3 eval 文件迁移/新增 + 运行器 + 文档）
+- 做法：`pipeline/evals/` 语料库——`p1-convergence.eval.js`/`p2p3-guards.eval.js`/`p4p5-evals.eval.js` + `run-evals.sh` 运行器 + README（用例↔实战缺陷映射）；**已接入 harness-checks #20「pipeline evals」**（每次 QA 顺带验证管线自身不回归）
+- 验证：管线改动后 `bash .harness/pipeline/evals/run-evals.sh` 防回归（41 项全绿）；harness-checks 18 PASS
+- 状态：已实施（3 eval 文件迁移/新增 + 运行器 + 文档 + harness-checks 门禁；eval 夹具自包含，不依赖真实变更目录）
 
 **P4.2 评审发现 → 结构化回填（D9）** ✅
 - 依据：2.1「捕获每个反馈信号，左移修复」

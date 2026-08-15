@@ -32,6 +32,7 @@
 #  16. Memory index freshness — memory 索引与记忆文件保持同步
 #  17. Git hygiene — gitlink/.gitmodules 一致、无孤儿 worktree 分支
 #  18. Mutation testing — 有逻辑函数的测试有效性（变异测试，工具未装则 SKIP）
+#  19. Pipeline evals — 管线自身回归语料库（P4.1，跑 .harness/pipeline/evals/run-evals.sh 防管线改动回归）
 #
 # ─── 项目策略 vs 通用引擎 边界 ────────────────────────────────────────
 # 以下检查为 Community-Home 项目特有策略（非通用引擎逻辑），迁移本脚本到
@@ -1264,6 +1265,25 @@ check_mutation_testing() {
   fi
 }
 
+# ─── Check: pipeline evals（P4.1 — 管线自身回归语料库，防管线改动回归）──
+
+check_pipeline_evals() {
+  echo "[pipeline-evals] 管线自身 eval 回归（run-evals.sh）" >&2
+  local out rc
+  set +e
+  out="$(bash "$PROJECT_ROOT/.harness/pipeline/evals/run-evals.sh" 2>&1)"
+  rc=$?
+  set -e
+  if [[ $rc -eq 0 ]]; then
+    log_pass "pipeline_evals" "管线 eval 全部通过（.harness/pipeline/evals/）"
+  else
+    local ev_detail
+    ev_detail="$(echo "$out" | grep '❌' | head -5 | tr '\n' '; ')"
+    ev_detail="$(json_escape "$ev_detail")"
+    log_fail "pipeline_evals" "管线 eval 有失败：$ev_detail（运行 bash .harness/pipeline/evals/run-evals.sh 查看）"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -1293,6 +1313,7 @@ main() {
   check_memory_index
   check_git_hygiene
   check_mutation_testing
+  check_pipeline_evals
   # Note: frontend checks use separate script: harness-checks-frontend.sh
 
   # Count results
@@ -1325,7 +1346,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "gofmt" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "git hygiene" "mutation testing")
+    local labels=("go build" "go vet" "go test" "gofmt" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "git hygiene" "mutation testing" "pipeline evals")
     for result in "${RESULTS[@]}"; do
       local status label detail why fix example reference
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

@@ -10,6 +10,8 @@ bash .harness/pipeline/evals/run-evals.sh   # 跑全部，任一失败 exit 非 
 node .harness/pipeline/evals/<name>.eval.js  # 跑单个
 ```
 
+> 已接入 `harness-checks.sh` #20「pipeline evals」——每次 QA 跑门禁时顺带验证管线自身不回归。eval 夹具全部自包含（临时目录），不依赖真实变更目录。
+
 ## 用例清单（↔ 实战缺陷）
 
 | 文件 | 覆盖 | 对应实战缺陷 |

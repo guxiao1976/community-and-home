@@ -71,11 +71,24 @@ const baseDeps = {
   assert('未配置键 → undefined', configured('architecture') === undefined)
 }
 
-// ── 4. specDeterministicCheck: 真实 spec 应通过；构造缺陷应检出（P3.2）──
+// ── 4. specDeterministicCheck: 有效 spec 应通过；构造缺陷应检出（P3.2，自包含夹具）──
 {
   console.log('\n[P3.2] specDeterministicCheck')
-  const det = loadFn('specDeterministicCheck', { ...baseDeps })
-  // 真实 role-platforms-save specs（已通过 3 轮评审）→ 应无发现
+  // 自包含夹具：ROOT 含 .harness/changes/fixture/（proposal+specs）+ api-proto 头注释（已登记码 060001-060008）
+  const root = '/tmp/p2p3-det-root'
+  const changeDirPath = `${root}/.harness/changes/fixture`
+  fs.rmSync(root, { recursive: true, force: true })
+  fs.mkdirSync(changeDirPath + '/specs/cap1', { recursive: true })
+  fs.mkdirSync(root + '/api-proto/api/permission/v1', { recursive: true })
+  fs.writeFileSync(changeDirPath + '/proposal.md', '提案：实现角色允许登录端（platforms）配置功能')
+  fs.writeFileSync(changeDirPath + '/specs/cap1/spec.md',
+    '# Spec\n\n### Requirement: REQ-PLAT-1\n新增业务错误码 60008 非法登录端，并登记 060008 到 permission.proto 头注释。\n\n引用 REQ-PLAT-1 行为一致。\n\n' +
+    '（填充段：将登记关键词与文件尾部缺陷注入隔开 >300 字符，避免同窗口误判登记意图）' +
+    '填充内容填充内容填充内容填充内容填充内容填充内容填充内容填充内容填充内容填充内容填充内容填充内容填充内容填充内容填充内容填充内容'.repeat(30))
+  fs.writeFileSync(root + '/api-proto/api/permission/v1/permission.proto',
+    '// 错误码\n//   060001 — 角色不存在\n//   060002 — 权限不存在\n//   060003 — 无权访问\n//   060004 — 角色已被分配\n//   060005 — 数据范围类型不支持\n//   060006 — 角色编码已存在\n//   060007 — 数据权限拒绝\n//   060008 — 非法登录端\n')
+
+  const det = loadFn('specDeterministicCheck', { ...baseDeps, ROOT: root, CHANGE: 'fixture', changeDir: () => changeDirPath })
   const realCtx = {
     stageResults: { 1: { traceability: {
       design_d1: 'proposal D1 → REQ-UPDATE-4 → ✅',
@@ -90,9 +103,9 @@ const baseDeps = {
     decisions: { stage1_clarify: { 'sys-role-edit-policy': 'A', 'http-read-path-gap': 'A', 'update-platforms-empty-semantics': 'A', 'platforms-validation': 'A', 'base-check-audit': 'A', 'sortorder-latent-bug': 'A', 'column-width-plan': 'A' } },
   }
   const realFindings = det(realCtx)
-  assert('真实已评审 spec → 无确定性发现', realFindings.length === 0, JSON.stringify(realFindings))
+  assert('有效 spec（新码已声明登记）→ 无确定性发现', realFindings.length === 0, JSON.stringify(realFindings))
 
-  // 构造缺陷：traceability 缺一项 + 引用未定义 REQ
+  // 构造缺陷①：traceability 条目数少
   const brokenCtx = {
     stageResults: { 1: { traceability: { design_d1: 'D1 → ✅' } } },
     decisions: { stage1_clarify: { 'sys-role-edit-policy': 'A', 'base-check-audit': 'A' } },
@@ -100,14 +113,17 @@ const baseDeps = {
   const brokenFindings = det(brokenCtx)
   assert('traceability 条目少 → 检出', brokenFindings.some(f => f.section === 'traceability'))
 
-  // 错误码登记意图：往 spec 注入一个未声明登记的 06xxxx，应检出
-  const ctx2 = JSON.parse(JSON.stringify(realCtx))
-  const specFile = `${ROOT}/.harness/changes/role-platforms-save/specs/role-update-fix/spec.md`
-  const orig = fs.readFileSync(specFile, 'utf8')
+  // 构造缺陷②：spec 引用未定义 REQ → 检出 req-ref
+  const specFile = `${changeDirPath}/specs/cap1/spec.md`
+  fs.appendFileSync(specFile, '\n\n测试引用 REQ-ZZ-9 的场景描述\n')
+  const reqFindings = det(realCtx)
+  assert('引用未定义 REQ → 检出', reqFindings.some(f => f.section === 'req-ref' && String(f.issue).includes('REQ-ZZ-9')), JSON.stringify(reqFindings))
+
+  // 构造缺陷③：spec 引入未登记错误码（无登记声明）→ 检出 error-code
   fs.appendFileSync(specFile, '\n\n测试引用未知错误码 060099 的场景描述\n')
   const codeFindings = det(realCtx)
-  fs.writeFileSync(specFile, orig)
   assert('spec 引入未登记错误码 → 检出 error-code 发现', codeFindings.some(f => f.section === 'error-code' && String(f.issue).includes('60099')), JSON.stringify(codeFindings.filter(f => f.section === 'error-code')))
+  fs.rmSync(root, { recursive: true, force: true })
 }
 
 console.log(`\n==== P2/P3 行为测试: ${pass} 通过 / ${fail} 失败 ====`)

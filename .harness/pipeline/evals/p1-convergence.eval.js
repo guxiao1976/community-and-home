@@ -43,37 +43,29 @@ function assert(name, cond, detail = '') {
 // ── 2. specContentHash: 内容敏感 + 确定性（P1.3）──
 {
   console.log('\n[P1.3] specContentHash')
-  const dir = '/tmp/p1-hash-test'
-  fs.rmSync(dir, { recursive: true, force: true })
-  fs.mkdirSync(dir + '/specs/cap1', { recursive: true })
-  fs.writeFileSync(dir + '/request.md', 'req v1')
-  fs.writeFileSync(dir + '/proposal.md', 'proposal v1')
-  fs.writeFileSync(dir + '/.change.yaml', 'yaml v1')
-  fs.writeFileSync(dir + '/specs/cap1/spec.md', 'spec v1')
-  const stub = { fs, path: require('path'), ROOT: '/', CHANGE: dir, log: () => {} }
-  const fn = loadFn('specContentHash', stub)
-  // changeDir 用的是 ROOT + '/.harness/changes/' + CHANGE —— 这里 ROOT 无法直接指向 /tmp
-  // 改用真实项目 change 目录验证（内容敏感）
-  const realStub = {
-    fs, path: require('path'),
-    ROOT: fs.realpathSync(__dirname + '/../../..'),
-    CHANGE: 'role-platforms-save', // 用真实 change 目录
-    log: () => {},
-  }
-  const realFn = loadFn('specContentHash', realStub)
-  const h1 = realFn()
+  // 自包含夹具：构造 ROOT/.harness/changes/<CHANGE>/ 结构（changeDir 依赖此路径），不依赖真实变更目录
+  const root = '/tmp/p1-hash-root'
+  const changeDirPath = `${root}/.harness/changes/fixture`
+  fs.rmSync(root, { recursive: true, force: true })
+  fs.mkdirSync(changeDirPath + '/specs/cap1', { recursive: true })
+  fs.writeFileSync(changeDirPath + '/request.md', 'req v1')
+  fs.writeFileSync(changeDirPath + '/proposal.md', 'proposal v1')
+  fs.writeFileSync(changeDirPath + '/.change.yaml', 'yaml v1')
+  fs.writeFileSync(changeDirPath + '/specs/cap1/spec.md', 'spec v1')
+  const fn = loadFn('specContentHash', { fs, path: require('path'), ROOT: root, CHANGE: 'fixture', log: () => {} })
+  const h1 = fn()
   assert('返回非空哈希', typeof h1 === 'string' && h1.length > 0, h1)
-  const h2 = realFn()
+  const h2 = fn()
   assert('确定性（同内容同哈希）', h1 === h2)
   // 修改一个 spec 文件再验证哈希变化
-  const specFile = realStub.ROOT + '/.harness/changes/role-platforms-save/specs/role-update-fix/spec.md'
-  const orig = fs.readFileSync(specFile, 'utf8')
+  const specFile = `${changeDirPath}/specs/cap1/spec.md`
   fs.appendFileSync(specFile, '\n<!-- P1-hash-test-touch -->\n')
-  const h3 = realFn()
+  const h3 = fn()
   assert('内容变则哈希变', h1 !== h3)
-  fs.writeFileSync(specFile, orig) // 还原
-  const h4 = realFn()
+  fs.writeFileSync(specFile, 'spec v1') // 还原
+  const h4 = fn()
   assert('还原后哈希恢复', h1 === h4)
+  fs.rmSync(root, { recursive: true, force: true })
 }
 
 // ── 3. mustFixKey: 确定性签名（P1.2）──
