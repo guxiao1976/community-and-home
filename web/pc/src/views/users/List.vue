@@ -41,6 +41,14 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="角色" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            <template v-if="row.role_names && row.role_names.length > 0">
+              <el-tag v-for="r in row.role_names" :key="r" size="small" class="role-tag">{{ r }}</el-tag>
+            </template>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="创建时间" width="180">
           <template #default="{ row }">
             {{ formatTime(row.created_at) }}
@@ -226,5 +234,13 @@ onMounted(() => {
 .pagination {
   margin-top: 20px;
   justify-content: flex-end;
+}
+
+.role-tag {
+  margin-right: 4px;
+}
+
+.text-muted {
+  color: #86909c;
 }
 </style>

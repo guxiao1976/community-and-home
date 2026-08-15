@@ -60,19 +60,20 @@ type DeleteUserResp struct {
 // =============================================================================
 
 type UserInfo struct {
-	Id           int64  `json:"id,string"`
-	Phone        string `json:"phone"`
-	Nickname     string `json:"nickname"`
-	AvatarUrl    string `json:"avatar_url"`
-	RealName     string `json:"real_name"`
-	IdCardNumber string `json:"id_card_number"`
-	Gender       int32  `json:"gender"`
-	BirthDate    string `json:"birth_date"`
-	Status       int32  `json:"status"`
-	CreditScore  int32  `json:"credit_score"`
-	Preferences  string `json:"preferences"`
-	CreatedAt    int64  `json:"created_at"`
-	UpdatedAt    int64  `json:"updated_at"`
+	Id           int64    `json:"id,string"`
+	Phone        string   `json:"phone"`
+	Nickname     string   `json:"nickname"`
+	AvatarUrl    string   `json:"avatar_url"`
+	RealName     string   `json:"real_name"`
+	IdCardNumber string   `json:"id_card_number"`
+	Gender       int32    `json:"gender"`
+	BirthDate    string   `json:"birth_date"`
+	Status       int32    `json:"status"`
+	CreditScore  int32    `json:"credit_score"`
+	Preferences  string   `json:"preferences"`
+	RoleNames    []string `json:"role_names"`
+	CreatedAt    int64    `json:"created_at"`
+	UpdatedAt    int64    `json:"updated_at"`
 }
 
 type PageInfo struct {

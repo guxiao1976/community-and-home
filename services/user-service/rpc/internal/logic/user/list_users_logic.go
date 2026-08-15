@@ -4,6 +4,7 @@ import (
 	"context"
 
 	commonv1 "github.com/guxiao1976/api-proto/gen/go/common/v1"
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/crypto"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
@@ -80,9 +81,12 @@ func (l *ListUsersLogic) ListUsers(in *userv1.ListUsersRequest) (*userv1.ListUse
 		totalPages = int32((total + int64(pageSize) - 1) / int64(pageSize))
 	}
 
+	pbUsers := toProtoUsers(users)
+	l.fillRoleNames(l.ctx, pbUsers)
+
 	return &userv1.ListUsersResponse{
 		Base:  responsex.NewBaseResp(),
-		Users: toProtoUsers(users),
+		Users: pbUsers,
 		Page: &commonv1.PageResponse{
 			Page:       page,
 			PageSize:   pageSize,
@@ -90,4 +94,30 @@ func (l *ListUsersLogic) ListUsers(in *userv1.ListUsersRequest) (*userv1.ListUse
 			TotalPages: totalPages,
 		},
 	}, nil
+}
+
+// fillRoleNames 逐用户从 permission-service 聚合已分配角色名称（列表展示用）。
+// 单用户角色获取失败不影响整体列表（失败时该用户 role_names 为空）。
+func (l *ListUsersLogic) fillRoleNames(ctx context.Context, users []*userv1.User) {
+	if len(users) == 0 || l.svcCtx.PermissionClient == nil {
+		return
+	}
+	for _, u := range users {
+		if u == nil || u.Id == 0 {
+			continue
+		}
+		resp, err := l.svcCtx.PermissionClient.GetUserRoles(ctx, &permissionv1.GetUserRolesRequest{UserId: u.Id})
+		if err != nil || resp == nil || resp.Base == nil || resp.Base.Code != 0 {
+			continue
+		}
+		names := make([]string, 0, len(resp.Roles))
+		seen := make(map[string]bool)
+		for _, ur := range resp.Roles {
+			if ur != nil && ur.Role != nil && ur.Role.Name != "" && !seen[ur.Role.Name] {
+				seen[ur.Role.Name] = true
+				names = append(names, ur.Role.Name)
+			}
+		}
+		u.RoleNames = names
+	}
 }

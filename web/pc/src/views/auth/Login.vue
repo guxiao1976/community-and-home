@@ -21,8 +21,8 @@
                 placeholder="请输入手机号"
                 prefix-icon="Phone"
                 size="large"
-                autocomplete="off"
-                name="login-phone"
+                autocomplete="new-password"
+                name="uid_field"
               />
             </el-form-item>
             <el-form-item prop="password">
@@ -34,7 +34,7 @@
                 size="large"
                 show-password
                 autocomplete="new-password"
-                name="login-password"
+                name="pwd_field"
               />
             </el-form-item>
             <el-form-item>
@@ -66,8 +66,8 @@
                 placeholder="请输入手机号"
                 prefix-icon="Phone"
                 size="large"
-                autocomplete="off"
-                name="sms-phone"
+                autocomplete="new-password"
+                name="uid_sms"
               />
             </el-form-item>
             <el-form-item prop="smsCode">

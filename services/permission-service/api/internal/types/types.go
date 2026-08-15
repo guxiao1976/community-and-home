@@ -140,6 +140,7 @@ type RoleUserInfo struct {
 	UserId   int64  `json:"userId,string"`
 	Phone    string `json:"phone"`
 	Nickname string `json:"nickname"`
+	Status   int32  `json:"status"` // 用户状态：1-启用 2-禁用（与 user_base.status 一致）
 }
 
 type ListRoleUsersResp struct {

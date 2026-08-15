@@ -232,6 +232,7 @@ func toUserInfo(u *userv1.User) types.UserInfo {
 		Status:       u.Status,
 		CreditScore:  u.CreditScore,
 		Preferences:  u.Preferences,
+		RoleNames:    u.RoleNames,
 		CreatedAt:    u.CreatedAt,
 		UpdatedAt:    u.UpdatedAt,
 	}

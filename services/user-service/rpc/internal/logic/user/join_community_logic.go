@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
@@ -40,12 +41,41 @@ func (l *JoinCommunityLogic) JoinCommunity(in *userv1.JoinCommunityRequest) (*us
 		}, nil
 	}
 
-	// 0.05. 房屋地址必填：楼/单元/房号三字段缺一不可 → 10040
+	// 0.05. 房屋地址校验：楼/单元/房号必填 + 区间 + 房号格式 → 10040（权威校验，防前端绕过）
 	// SEE: [[api-required-field-marked-optional]]
 	if in.Building <= 0 || in.Unit <= 0 || in.Room <= 0 {
 		return &userv1.JoinCommunityResponse{
 			Base: responsex.NewBaseRespWithError(10040, "楼/单元/房号必填"),
 		}, nil
+	}
+	if in.Building > 200 {
+		return &userv1.JoinCommunityResponse{
+			Base: responsex.NewBaseRespWithError(10040, "楼号不能超过 200"),
+		}, nil
+	}
+	if in.Unit > 6 {
+		return &userv1.JoinCommunityResponse{
+			Base: responsex.NewBaseRespWithError(10040, "单元号不能超过 6"),
+		}, nil
+	}
+	// 房号：3或4位；楼号=除后2位外的前1-2位（1-55层），门牌号=后2位（01-04）
+	if roomStr := fmt.Sprintf("%d", in.Room); len(roomStr) < 3 || len(roomStr) > 4 {
+		return &userv1.JoinCommunityResponse{
+			Base: responsex.NewBaseRespWithError(10040, "房号须为3或4位数字（如 502 或 1102）"),
+		}, nil
+	} else {
+		door := roomStr[len(roomStr)-2:]
+		floor, _ := strconv.Atoi(roomStr[:len(roomStr)-2])
+		if floor < 1 || floor > 55 {
+			return &userv1.JoinCommunityResponse{
+				Base: responsex.NewBaseRespWithError(10040, "楼层不能超过 55 层"),
+			}, nil
+		}
+		if door != "01" && door != "02" && door != "03" && door != "04" {
+			return &userv1.JoinCommunityResponse{
+				Base: responsex.NewBaseRespWithError(10040, "门牌号须为 01-04"),
+			}, nil
+		}
 	}
 
 	// 0.1. 校验用户存在

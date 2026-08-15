@@ -26,22 +26,31 @@ describe('validateJoinForm', () => {
     expect(r.errors.ownership).toBeTruthy();
   });
 
-  it('rejects building <= 0 (positive required, no hardcoded range)', () => {
+  it('validates building: positive integer, ≤ 200', () => {
     expect(validateJoinForm({ building: '0', unit: '2', room: '301', ownership: 1 }).valid).toBe(false);
     expect(validateJoinForm({ building: '-3', unit: '2', room: '301', ownership: 1 }).valid).toBe(false);
+    expect(validateJoinForm({ building: '201', unit: '2', room: '301', ownership: 1 }).valid).toBe(false); // > 200
+    expect(validateJoinForm({ building: '200', unit: '2', room: '301', ownership: 1 }).valid).toBe(true); // 边界
     expect(validateJoinForm({ building: '12', unit: '2', room: '301', ownership: 1 }).valid).toBe(true);
   });
 
-  it('rejects unit <= 0 (positive required, no hardcoded range)', () => {
+  it('validates unit: positive integer, ≤ 6', () => {
     expect(validateJoinForm({ building: '1', unit: '0', room: '301', ownership: 1 }).valid).toBe(false);
     expect(validateJoinForm({ building: '1', unit: '-1', room: '301', ownership: 1 }).valid).toBe(false);
+    expect(validateJoinForm({ building: '1', unit: '7', room: '301', ownership: 1 }).valid).toBe(false); // > 6
+    expect(validateJoinForm({ building: '1', unit: '6', room: '301', ownership: 1 }).valid).toBe(true); // 边界
     expect(validateJoinForm({ building: '1', unit: '4', room: '301', ownership: 1 }).valid).toBe(true);
   });
 
-  it('rejects room <= 0 (positive required, no hardcoded 3-digit range)', () => {
-    expect(validateJoinForm({ building: '1', unit: '2', room: '0', ownership: 1 }).valid).toBe(false);
-    expect(validateJoinForm({ building: '1', unit: '2', room: '30', ownership: 1 }).valid).toBe(true);
-    expect(validateJoinForm({ building: '1', unit: '2', room: '999', ownership: 1 }).valid).toBe(true);
+  it('validates room: 3/4 位，楼层 1-55，门牌 01-04', () => {
+    // 合法：502=5层02室、1102=11层02室、301=3层01室、204=2层04室、101=1层01室、5502=55层02室
+    for (const room of ['502', '1102', '301', '204', '101', '5502']) {
+      expect(validateJoinForm({ building: '1', unit: '2', room, ownership: 1 }).valid).toBe(true);
+    }
+    // 非法：位数不对 / 门牌非01-04（如14、05、00、99）/ 楼层>55（如56）
+    for (const room of ['0', '30', '999', '1205', '552', '5602', '5514']) {
+      expect(validateJoinForm({ building: '1', unit: '2', room, ownership: 1 }).valid).toBe(false);
+    }
   });
 
   it('reports all errors at once when form is empty', () => {

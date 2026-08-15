@@ -152,7 +152,7 @@ func TestJoinCommunity_DefaultCommunityNotOverwritten(t *testing.T) {
 
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	_, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
-		UserId: 1005, CommunityId: 2002, Building: 2, Unit: 1, Room: 305,
+		UserId: 1005, CommunityId: 2002, Building: 2, Unit: 1, Room: 302,
 		Ownership: userv1.CommunityOwnership_COMMUNITY_OWNERSHIP_RENTED,
 	})
 	require.NoError(t, err)

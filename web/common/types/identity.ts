@@ -13,6 +13,7 @@ export interface User {
   created_at: string;
   updated_at: string;
   deleted_at: number;
+  role_names: string[];
 }
 
 export enum UserType {

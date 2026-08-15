@@ -14,6 +14,13 @@
           <template #default="{ row }">{{ maskPhone(row.phone) }}</template>
         </el-table-column>
         <el-table-column prop="nickname" label="昵称" />
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
       </el-table>
 
       <el-empty v-if="!loading && users.length === 0" description="该角色下暂无用户" />
@@ -44,7 +51,7 @@ const router = useRouter()
 
 const roleId = route.params.id as string
 const roleName = ref('')
-const users = ref<Array<{ userId: string; phone: string; nickname: string }>>([])
+const users = ref<Array<{ userId: string; phone: string; nickname: string; status?: number }>>([])
 const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(20)

@@ -24,6 +24,7 @@ type roleUserRow struct {
 	UserId   int64  `db:"user_id"`
 	Phone    string `db:"phone"`
 	Nickname string `db:"nickname"`
+	Status   int64  `db:"status"`
 }
 
 func (l *ListRoleUsersLogic) ListRoleUsers(req *types.ListRoleUsersReq) (*types.ListRoleUsersResp, error) {
@@ -50,7 +51,7 @@ func (l *ListRoleUsersLogic) ListRoleUsers(req *types.ListRoleUsersReq) (*types.
 	// Query page
 	var rows []roleUserRow
 	err := l.svcCtx.DB.QueryRowsCtx(l.ctx, &rows,
-		`SELECT u.id as user_id, u.phone, u.nickname
+		`SELECT u.id as user_id, u.phone, u.nickname, u.status
 		 FROM user.user_base u
 		 INNER JOIN permission.rel_user_role r ON r.user_id = u.id
 		 WHERE r.role_id = ? AND u.deleted_at IS NULL
@@ -74,6 +75,7 @@ func (l *ListRoleUsersLogic) ListRoleUsers(req *types.ListRoleUsersReq) (*types.
 			UserId:   r.UserId,
 			Phone:    phone,
 			Nickname: r.Nickname,
+			Status:   int32(r.Status),
 		})
 	}
 	return &types.ListRoleUsersResp{
