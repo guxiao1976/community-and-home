@@ -82,7 +82,7 @@
               </view>
               <view class="notice-time-row">
                 <text class="notice-time-icon">🕐</text>
-                <text class="notice-time">{{ formatTime(item.publishedAt || item.createdAt) }}</text>
+                <text class="notice-time">{{ formatTime(item.published_at || item.created_at) }}</text>
               </view>
             </view>
           </view>
@@ -171,8 +171,8 @@
             >
               <view class="lost-found-image-wrap">
                 <image
-                  v-if="item.imageUrls && item.imageUrls.length > 0 && !imageErrors.has(item.id)"
-                  :src="item.imageUrls[0]"
+                  v-if="item.image_urls && item.image_urls.length > 0 && !imageErrors.has(item.id)"
+                  :src="item.image_urls[0]"
                   class="lost-found-image"
                   mode="aspectFill"
                   @error="onImageError($event, item.id)"
@@ -187,7 +187,7 @@
               </view>
               <view class="lost-found-body">
                 <text class="lost-found-title">{{ item.title }}</text>
-                <text class="lost-found-time">{{ formatTime(item.createdAt) }}</text>
+                <text class="lost-found-time">{{ formatTime(item.created_at) }}</text>
               </view>
             </view>
           </view>
@@ -335,7 +335,11 @@ async function fetchNotices() {
   try {
     const data = await getNoticeList(cid);
     notices.value = data.notices || [];
-  } catch { /* silent */ }
+  } catch (e) {
+    // SEE: [[verify-api-before-calling]] — 禁止静默吞错，失败需 console.error + 区块提示
+    console.error('[notice] 通知加载失败', e);
+    uni.showToast({ title: '通知加载失败', icon: 'none' });
+  }
 }
 
 async function fetchContacts() {
@@ -344,7 +348,10 @@ async function fetchContacts() {
   try {
     const data = await getContacts(cid);
     contacts.value = data.contacts || [];
-  } catch { /* silent */ }
+  } catch (e) {
+    console.error('[notice] 联络加载失败', e);
+    uni.showToast({ title: '联络加载失败', icon: 'none' });
+  }
 }
 
 async function fetchLostFound() {
@@ -353,7 +360,10 @@ async function fetchLostFound() {
   try {
     const data = await getLostFoundList(cid);
     lostFoundItems.value = data.items || [];
-  } catch { /* silent */ }
+  } catch (e) {
+    console.error('[notice] 寻失加载失败', e);
+    uni.showToast({ title: '寻失加载失败', icon: 'none' });
+  }
 }
 
 async function loadAll() {

@@ -21,11 +21,11 @@
 
 ## 2026-08-15 — rel_user_role 迁移 + 寻失路径修复（rel-user-role-migration-publish-fix）
 
-**路径**: L 级 spec-pipeline（阶段 0-2）
-**状态**: ❌ 已终止（需求评审 3 轮 0/3，升级人工后用户终止）
+**路径**: L 级 spec-pipeline（阶段 0-6 全流程）
+**状态**: ✅ 已完成（需求评审 2 轮收敛 4/4，设计评审 2 视角，编码 3 服务 PASS）
 **涉及服务**: permission-service, web/mobile
 
-修复 rel_user_role 三列缺迁移（P0，从零建库 1054）+ 移动端寻失列表路径 404（P1）。需求分析产出 3 capability spec，评审 3 轮未收敛（核心残留：REQ-P0-2「旧结构 live 库」定义自相矛盾），用户选择终止。方案与评审发现（含「去 AUTO_INCREMENT 会断裂省略 id 的 INSERT」决策级漏判）已转 backlog task-2026-08-15-001/002。
+修复 rel_user_role 三列缺迁移（P0，从零建库 1054）+ 移动端寻失列表路径 404 + snake/camel 字段不匹配（P1）。需求评审第 1 轮 validity/clarity 抓到「REQ-P0-2 旧结构定义自相矛盾」，反馈注入后第 2 轮 4/4 收敛；执行评审 design-biz 抓到「前端 camelCase vs 后端 snake_case」CRITICAL，字段对齐后修复。本变更同时作为「检验完善后流水线」的真实 L 级样本，暴露 3 个流程 gap（评审报告落盘沙箱失效 / 执行评审无 CRITICAL 一票否决 / MySQL 迁移验证无法走 Go 管线）。
 
 详见: [.harness/changes/rel-user-role-migration-publish-fix/](./rel-user-role-migration-publish-fix/)
 

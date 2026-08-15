@@ -1,5 +1,56 @@
 # CHANGELOG — web/mobile
 
+## 2026-08-15 — 字段名对齐后端 snake_case JSON tag（Task 3.4）
+
+### 分诊
+- `community.ts` 三套 interface 字段名（camelCase → snake_case）：**字段映射/纯接线**（对齐后端 community-hub-service `types.go` JSON tag），无 RED 摘录
+- `notice.vue` / `notice-detail.vue` / `notice-browse.vue` 消费点同步改名：**字段映射/纯接线**，无 RED 摘录
+
+### 做了什么
+- **3.4** `src/api/community.ts` 四套 interface 字段名对齐后端 `types.go` JSON tag（snake_case）：
+  - `Notice`：`communityId→community_id`、`publisherId→publisher_id`、`isPinned→is_pinned`、`publishedAt→published_at`、`createdAt→created_at`、`updatedAt→updated_at`
+  - `NoticeAttachment`：`fileName→file_name`、`fileUrl→file_url`、`fileSize→file_size`
+  - `Contact`：`communityId→community_id`、`sortOrder→sort_order`
+  - `LostFoundItem`：`communityId→community_id`、`imageUrls→image_urls`、`contactPhone→contact_phone`、`publisherId→publisher_id`、`createdAt→created_at`
+- 同步消费点：`notice.vue`（`item.published_at`/`created_at`/`image_urls`）、`notice-detail.vue`（`notice.published_at`/`created_at`、`att.file_name`/`file_url`/`file_size`）、`notice-browse.vue`（`currentNotice.published_at`/`created_at`、`n.published_at`/`created_at`）
+- 后端 `types.go` 零改动（契约方）
+- **3.3 门禁**：`npm run test:unit` 35 PASS、`npm run type-check` 0 error、`npm run build` PASS
+
+### 新增测试
+- `src/pages/notice/notice.spec.ts` 新增 1 用例：`snake_case 字段渲染：通知 created_at 回退 + 寻失 image_urls[0]`（mock 镜像后端 JSON tag，验证改名后渲染不坏）
+
+### 记忆应用
+- `[[snake-camel-field-mismatch]]` — Go snake_case 与 TS camelCase 字段名不匹配
+
+---
+
+## 2026-08-15 — 寻失列表路径对齐 + 静默 catch 消除（Task 3.1-3.3）
+
+### 分诊
+- `community.ts` `getLostFoundList` 请求路径 `/api/community/lost-found` → `/api/community/lostfound`：**字段映射/纯接线**（单路径字符串对齐后端已注册路由），无 RED 摘录
+- `notice.vue` 三处 `catch { /* silent */ }` → `console.error`（错误对象 + 区块标识）+ `uni.showToast`（icon:'none'）：**有逻辑函数**（错误处理分支），TDD RED→GREEN
+
+### 做了什么
+- **3.1** `src/api/community.ts:156` 请求路径对齐后端 `GET /api/community/lostfound`（无连字符）；后端 community-hub-service 零改动。全仓 web 源码无 `/api/community/lost-found` 调用残留（仅 `services/*/docs/graph-context.md` Neo4j 自动生成文档含旧路径，非调用点，随下一次 graph 同步刷新，不在本服务范围）
+- **3.2** `src/pages/notice/notice.vue` 三处静默 catch 消除：失败时 `console.error('[notice] <区块>加载失败', e)` + `uni.showToast({ title: '<区块>加载失败', icon: 'none' })`，不 rethrow；成功路径不弹错误 toast
+- **3.3** 门禁：`npm run test:unit` 34 PASS（含 notice.spec.ts 新增 6 用例）、`npm run type-check` 0 error、`npm run build` PASS
+
+### 新增测试（RED → GREEN）
+- `src/pages/notice/notice.spec.ts` 新增 6 用例（`notice page — fetch 静默 catch 消除`）：
+  - `getLostFoundList`/`getNoticeList`/`getContacts` 各自失败 → 对应区块 toast + `console.error`
+  - 三请求并发全部失败 → toast ≥1 次 + `console.error` 恰好 3 次 + loading 复位页面不崩
+  - 局部失败（通知失败 + 其余成功）→ 成功区块数据仍渲染
+  - 成功场景 → 无错误 toast
+
+### TDD RED 证据
+- RED：4 个失败路径用例在实现前运行 FAIL（`uni.showToast` Number of calls: 0 / `toHaveBeenCalled` at least once 失败），GREEN 后 9/9 通过。摘录见本节（`expected "vi.fn()" to be called ... Number of calls: 0`）。
+
+### 记忆应用
+- `[[change-verification-checklist]]` — 改后全量门禁验证（test:unit/type-check/build）
+- `[[verify-api-before-calling]]` — 调用 API 前验证路由存在（lostfound 无连字符对齐后端注册路由）
+
+---
+
 ## 2026-08-13 — access-control 前端 TDD 缺口修复（Task 7.1-7.3 补测）
 
 ### 分诊纠正

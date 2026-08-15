@@ -9,7 +9,7 @@ services:
   - web/mobile
 docs:
   - docs/specs/migration.sql
-design_basis: 用户已确认的设计决策（D1-D11，见 proposal.md §已确认的设计决策）
+design_basis: 用户已确认的设计决策（D1-D15，见 proposal.md §已确认的设计决策）
 design_basis_sections:
   - "D1 p0-migration-idempotency"
   - "D2 p0-backfill-status"
@@ -22,7 +22,11 @@ design_basis_sections:
   - "D9 p1-error-handling"
   - "D10 p1-notice-publish"
   - "D11 p1-publish-ux-gate"
-request_basis: 原始需求对照见 request.md（阶段 0 补回）；设计权威基线为 proposal.md 内嵌 D1-D11 + request.md 的 REVISION 驱动调整段
+  - "D12 p0-env-taxonomy"
+  - "D13 p1-silent-backlog-carrier"
+  - "D14 p0-verify-environment"
+  - "D15 changelog-convention"
+request_basis: 原始需求对照见 request.md（阶段 0 补回）；设计权威基线为 proposal.md 内嵌 D1-D15 + request.md 的 REVISION 驱动调整段
 revises:
   - docs/specs/migration.sql §3.4 (rel_user_role 建表段：补 status/verified_at/expires_at 三列 / id 保留 AUTO_INCREMENT / created_time→created_at / idx_user_role_scope→uk_user_role_scope)
   - services/permission-service/scripts/init_permissions.sql 从零建库可执行性（仅验证，不改 SQL）
@@ -49,12 +53,13 @@ out_of_scope:
   - "D10 移动端发布通知入口"
   - "D11 发布入口 UX 门禁（随发布功能延后，越权由后端 AssertPublishScope 兜底）"
   - "后端 community-hub-service routes.go 路径（本次只改前端对齐后端）"
+  - "D13 其余静默点（stores/community.ts、join-community.vue、onCommunitySwitch 非 10015 分支）——仅登记待办，本次不改动"
   - "api-proto / common 变更"
 proto_change_required: false
 common_change_required: false
 data_migration_required: true
 data_migrations:
-  - "services/permission-service/migration/003_add_role_lifecycle.sql（information_schema guard 幂等补 status/verified_at/expires_at；存量回填由 ALTER DEFAULT 在 guard 分支内完成，零 guard 外 UPDATE）"
+  - "services/permission-service/migration/003_add_role_lifecycle.sql（information_schema guard 幂等补 status/verified_at/expires_at；存量回填由 ALTER DEFAULT 在 guard 分支内完成，零 guard 外 UPDATE；环境：旧从零库补列+回填，生产 live 库/修正后从零库 no-op）"
 memory_refs:
   - "[[migration-must-execute]]"
   - "[[verify-api-before-calling]]"

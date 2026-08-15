@@ -32,7 +32,7 @@
           >
             <text class="role-text" :style="{ color: roleColor }">{{ roleName }}</text>
           </view>
-          <text class="meta-time">{{ formatTime(currentNotice.publishedAt || currentNotice.createdAt) }}</text>
+          <text class="meta-time">{{ formatTime(currentNotice.published_at || currentNotice.created_at) }}</text>
           <text class="meta-publisher">{{ currentNotice.publisher }}</text>
         </view>
 
@@ -111,7 +111,7 @@ onMounted(async () => {
     // Filter recent 3 months
     const threeMonthsAgo = Math.floor(Date.now() / 1000) - 90 * 24 * 3600;
     notices.value = (result.notices || []).filter(
-      (n: Notice) => (n.publishedAt || n.createdAt) >= threeMonthsAgo,
+      (n: Notice) => (n.published_at || n.created_at) >= threeMonthsAgo,
     );
   } catch {
     notices.value = [];

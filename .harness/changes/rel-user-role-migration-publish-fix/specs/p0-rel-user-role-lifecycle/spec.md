@@ -22,15 +22,27 @@ permission-service SHALL ship a migration file at `services/permission-service/m
 - **WHEN** 在已含三列的库上执行该迁移
 - **THEN** 报 Duplicate column 错误，验收不通过（guard 是本变更的幂等硬性要求）
 
+#### Scenario: changelog 只登记 003（边界）
+
+- **GIVEN** 001/002 迁移已存在并已在历史 changelog 中登记
+- **WHEN** 本变更登记迁移变更（permission-service CHANGELOG.md）
+- **THEN** 只登记新增的 `003_add_role_lifecycle.sql`，不重复登记 001/002（q3 约定：不把历史迁移当作本次新增）
+
 ### Requirement: REQ-P0-2 三列幂等添加
 
-The migration SHALL add columns `status`, `verified_at`, and `expires_at` to table `rel_user_role` such that execution succeeds without error on a legacy live database (columns missing) and on an already-migrated or freshly-created database (columns present); a re-run SHALL NOT alter the table structure or the data already present. The migration SHALL add exactly these three columns and nothing else — it SHALL NOT rename or introduce `created_at` on an existing database (specifically SHALL NOT perform a `created_time` → `created_at` column migration); the `created_time` (legacy DDL) vs `created_at` (Go model) difference on non-fresh databases is accepted because `RelUserRole.CreatedTime` (`db:"created_at"`) is never consumed by any code, and fresh builds get `created_at` from the corrected `docs/specs/migration.sql`.
+The migration SHALL add columns `status`, `verified_at`, and `expires_at` to table `rel_user_role` such that execution succeeds without error on every known database state: (a) a legacy from-scratch database built from the pre-fix `docs/specs/migration.sql` (the three columns missing, `created_time` present, unique index `idx_user_role_scope`), and (b) a database where the three columns already exist (the production live database per `rel.go` L248, or a freshly-created database built from the corrected `migration.sql`); in state (b) the migration SHALL be a no-op — the guard detects the columns exist and skips both ADD COLUMN and backfill. A re-run SHALL NOT alter the table structure or the data already present. The migration SHALL add exactly these three columns and nothing else — it SHALL NOT rename or introduce `created_at` on an existing database (specifically SHALL NOT perform a `created_time` → `created_at` column migration); the `created_time` (legacy DDL) vs `created_at` (Go model) difference on non-fresh databases is accepted because `RelUserRole.CreatedTime` (`db:"created_at"`) is never consumed by any code, and fresh builds get `created_at` from the corrected `docs/specs/migration.sql`.
 
-#### Scenario: 旧结构 live 库正常补列（正向）
+#### Scenario: 旧 migration.sql 从零库（缺三列 + created_time）正常补列（正向）
 
-- **GIVEN** 旧结构 live 库 = 生产库实际结构（对齐 `rel.go` L248 注释：live 库仅有 `id`/`user_id`/`role_id`/`scope_type`/`scope_id`/`status`/`verified_at`/`expires_at`/`created_at`），即 `created_at` 已存在、仅缺 `status`/`verified_at`/`expires_at` 三列
+- **GIVEN** 库由修正前 `docs/specs/migration.sql` §3.4 从零建立，`rel_user_role` 仅有 `id`/`user_id`/`role_id`/`scope_type`/`scope_id`/`created_time` 六列、唯一索引 `idx_user_role_scope`，缺 `status`/`verified_at`/`expires_at` 三列
 - **WHEN** 执行 003
-- **THEN** 三列被添加，无 MySQL 1054 或 Duplicate column 报错；补列后列结构与 Go 模型 `RelUserRole` 的 db tag 兼容（`status` int64 / `verified_at` sql.NullTime / `expires_at` sql.NullTime；`created_at` 已存在，与 `db:"created_at"` 匹配）
+- **THEN** 三列被添加（`status INT NOT NULL DEFAULT 2` / `verified_at DATETIME NULL` / `expires_at DATETIME NULL`），无 MySQL 1054 或 Duplicate column 报错；补列后列结构与 Go 模型 `RelUserRole` 的 db tag 兼容（`status` int64 / `verified_at` sql.NullTime / `expires_at` sql.NullTime）；`created_time` 不被重命名为 `created_at`
+
+#### Scenario: 生产 live 库（已含三列）安全通过（no-op）
+
+- **GIVEN** 生产 live 库已含 `id`/`user_id`/`role_id`/`scope_type`/`scope_id`/`status`/`verified_at`/`expires_at`/`created_at` 九列（对齐 `rel.go` L248 注释：`FindByRoleId` 的 need_human 修复已确认 live 库含 `status`/`verified_at`/`expires_at`，历史 1054 源于不存在的 `assign_time` 列而非这三列）
+- **WHEN** 执行 003
+- **THEN** guard 探测三列已存在 → 跳过 ADD COLUMN 与存量回填，003 无 Duplicate column 报错，表结构与存量数据不变（003 在 live 库为 no-op，不发生回填）
 
 #### Scenario: 幂等重跑（列已存在）跳过补列与回填
 
@@ -50,15 +62,15 @@ The migration SHALL add columns `status`, `verified_at`, and `expires_at` to tab
 - **WHEN** 执行 003
 - **THEN** 只补 `status`（逐列 guard），已有列不重复添加，最终三列齐全
 
-#### Scenario: 旧 migration.sql 建库（created_time 旧结构）仅补列不重命名（边界）
+#### Scenario: 旧从零库 created_time 不重命名（边界）
 
-- **GIVEN** 库由修正前的 `docs/specs/migration.sql` 建立，`rel_user_role` 使用 `created_time` 列、缺三列（即 request.md 描述的「缺三列且为 AUTO_INCREMENT/created_time 旧结构」）
+- **GIVEN** 库由修正前 `docs/specs/migration.sql` 建立（`created_time` + 缺三列）
 - **WHEN** 执行 003
-- **THEN** 003 仅补 `status`/`verified_at`/`expires_at` 三列，**不做 `created_time` → `created_at` 重命名**；`created_at` 缺失差异被显式接受——`RelUserRole.CreatedTime`（`db:"created_at"`）无任何代码消费（`helpers.go` 仅读 `SysRole`/`SysPermission` 的 `CreatedTime`，见 L143/L177，rel_user_role 的 `CreatedTime` 零值无害）；从零建库的 `created_at` 由 Task 1.1 修正后的 migration.sql 保证，实现者不得借 003 顺手改 `created_time`
+- **THEN** 003 仅补 `status`/`verified_at`/`expires_at` 三列，**不做 `created_time` → `created_at` 重命名**；`created_at` 缺失差异被显式接受——`RelUserRole.CreatedTime`（`db:"created_at"`）无任何代码消费（`helpers.go` 仅读 `SysRole`/`SysPermission` 的 `CreatedTime`，rel_user_role 的 `CreatedTime` 零值无害）；从零建库的 `created_at` 由 Task 1.1 修正后的 migration.sql 保证，实现者不得借 003 顺手改 `created_time`
 
 ### Requirement: REQ-P0-3 列定义语义与模型一致
 
-The added column definitions SHALL preserve the semantic contract consumed by `rel_user_role` reads and writes: `status` SHALL be `INT NOT NULL DEFAULT 2` (non-null integer whose default does not silently deactivate a grant written without an explicit value — default `2`, not `0`); `verified_at` and `expires_at` SHALL be nullable `DATETIME` (`DATETIME NULL`) where NULL respectively means "not yet verified" and "permanent (never expires)".
+The added column definitions SHALL preserve the semantic contract consumed by `rel_user_role` reads and writes: `status` SHALL be `INT NOT NULL DEFAULT 2` (non-null integer whose default does not silently deactivate a grant written without an explicit value — default `2`, not `0`); `verified_at` and `expires_at` SHALL be nullable `DATETIME` (`DATETIME NULL`) where NULL respectively means "not yet verified" and "permanent (never expires)". The `status` column DEFAULT SHALL remain `2` permanently (not a one-off backfill-only value), consistent with the `init_permissions.sql` seed precedent `sys_admin(0,8,'global',0,2)`.
 
 #### Scenario: 默认值不静默失效授权（正向）
 
@@ -80,11 +92,11 @@ The added column definitions SHALL preserve the semantic contract consumed by `r
 
 ### Requirement: REQ-P0-4 存量行回填（唯一机制，零 guard 外 UPDATE）
 
-The migration SHALL backfill every row present at the moment the columns are first added to `status=2` (verified), `verified_at=NULL`, `expires_at=NULL`, preserving the legacy "grant exists = active" semantics, and SHALL NOT backfill to `status=0`. Backfill SHALL be effectuated solely by the column definitions applied inside the guard branch: `status INT NOT NULL DEFAULT 2` makes MySQL set existing rows to `2` at `ADD COLUMN` time, and `verified_at`/`expires_at DATETIME NULL` makes existing rows `NULL`. The migration SHALL NOT contain any `UPDATE` statement on `rel_user_role` that runs outside this guard branch; consequently rows written after migration (including explicit `status`/`verified_at`/`expires_at` values) are never rewritten, and pre-existing explicit lifecycle values on databases where the columns already exist are never overwritten.
+The migration SHALL backfill every row present at the moment the columns are first added to `status=2` (verified), `verified_at=NULL`, `expires_at=NULL`, preserving the legacy "grant exists = active" semantics, and SHALL NOT backfill to `status=0`. Backfill SHALL be effectuated solely by the column definitions applied inside the guard branch: `status INT NOT NULL DEFAULT 2` makes MySQL set existing rows to `2` at `ADD COLUMN` time, and `verified_at`/`expires_at DATETIME NULL` makes existing rows `NULL`. The migration SHALL NOT contain any `UPDATE` statement on `rel_user_role` that runs outside this guard branch; consequently rows written after migration (including explicit `status`/`verified_at`/`expires_at` values) are never rewritten, and pre-existing explicit lifecycle values on databases where the columns already exist are never overwritten. **适用环境唯一化**：回填仅发生在「缺三列且有存量行」的库——即由修正前 `migration.sql` 从零建立、且在生命周期列引入前已写入存量行的旧从零库；生产 live 库已含三列，003 对其为 no-op，不发生回填。
 
 #### Scenario: 存量行统一回填为已认证（正向）
 
-- **GIVEN** 迁移执行前 `rel_user_role` 存在存量行（三列缺失，无 status 值）
+- **GIVEN** 旧 migration.sql 从零库存在存量行（缺三列，存量行系生命周期列引入前写入、无 status 值）
 - **WHEN** 003 首次执行（guard 探测列缺失 → 补列）
 - **THEN** 存量行经 ALTER DEFAULT 变为 `status=2, verified_at=NULL, expires_at=NULL`，存量授权在 `FindActiveByUserId`（status=2 严格判定）下继续生效，不静默失效
 
@@ -96,9 +108,9 @@ The migration SHALL backfill every row present at the moment the columns are fir
 
 #### Scenario: 已存在显式 status 的存量行不被改写（边界）
 
-- **GIVEN** 库已含三列（生产库恢复/半迁移环境），且存量行带显式 `status=0`（未认证）或 `status=4`（已过期）等值
+- **GIVEN** 库已含三列（生产 live 库或已执行过 003 的库），且存量行带显式 `status=0`（未认证）或 `status=4`（已过期）等值
 - **WHEN** 执行 003
-- **THEN** guard 探测列已存在 → 跳过 ADD 与回填，存量行的显式 status/verified_at/expires_at 不被改写（未认证 grant 不被静默提升为已认证，过期 grant 不被重置为永久）
+- **THEN** guard 探测列已存在 → 跳过 ADD 与回填（no-op），存量行的显式 status/verified_at/expires_at 不被改写（未认证 grant 不被静默提升为已认证，过期 grant 不被重置为永久）
 
 #### Scenario: 回填语义与 sys_admin 先例一致（正向）
 
@@ -130,13 +142,19 @@ The authoritative from-scratch DDL `docs/specs/migration.sql` (§3.4 `rel_user_r
 
 ### Requirement: REQ-P0-6 从零建库流程可执行
 
-The from-scratch database build sequence (apply `docs/specs/migration.sql`, then `init_permissions.sql`) SHALL complete without MySQL error 1054, specifically for the `rel_user_role` INSERT at `init_permissions.sql:238` that references the `status` column. If verification surfaces a failure in `init_permissions.sql` unrelated to the `rel_user_role` lifecycle columns, that failure is out of scope unless it is a direct consequence of this change's DDL correction: failures traceable to this change's `rel_user_role` DDL SHALL be fixed in `docs/specs/migration.sql`; other failures SHALL be recorded as backlog, not silently absorbed or fixed by expanding this change's migration scope.
+The from-scratch database build sequence (apply `docs/specs/migration.sql`, then `init_permissions.sql`) SHALL complete without MySQL error 1054, specifically for the `rel_user_role` INSERT at `init_permissions.sql:238` that references the `status` column. Verification SHALL cover the three known database states (q2): the legacy from-scratch library (columns missing), the production live library (columns present), and the corrected from-scratch library (columns present) — the migration behaves correctly (add vs no-op) in each. If verification surfaces a failure in `init_permissions.sql` unrelated to the `rel_user_role` lifecycle columns, that failure is out of scope unless it is a direct consequence of this change's DDL correction: failures traceable to this change's `rel_user_role` DDL SHALL be fixed in `docs/specs/migration.sql`; other failures SHALL be recorded as backlog, not silently absorbed or fixed by expanding this change's migration scope.
 
 #### Scenario: 从零建库完整流程无 1054（正向）
 
 - **GIVEN** 数据库由修正后 migration.sql 从零建立，`rel_user_role` 含 `status` 列
 - **WHEN** 按序执行 `init_permissions.sql`（含 :238 的 `INSERT INTO rel_user_role (user_id, role_id, scope_type, scope_id, status) VALUES ...`）
 - **THEN** 执行成功，无 `MySQL 1054 Unknown column 'status'`
+
+#### Scenario: 三态库验证覆盖（正向）
+
+- **GIVEN** 需验证 003 在三种库状态下的行为
+- **WHEN** 临时构造三种库状态并各执行一次 003：(a) 旧从零库（缺三列）、(b) 生产 live 库（已含三列）、(c) 修正后从零库（已含三列）
+- **THEN** (a) 补列且回填 status=2；(b)(c) guard 跳过、no-op、无报错；三态行为与 REQ-P0-2/REQ-P0-4 契约一致
 
 #### Scenario: 建表/种子顺序约束（权限场景）
 

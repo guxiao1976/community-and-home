@@ -1,5 +1,30 @@
 # CHANGELOG — permission-service
 
+## 2026-08-15 — rel-user-role-migration-publish-fix：rel_user_role 生命周期三列补齐迁移（003_add_role_lifecycle.sql）
+
+### 类型
+运维/DDL 任务（无逻辑函数）：003 迁移为 information_schema guard 幂等 DDL 脚本，字段映射类免 RED。执行验证（三态库补列 vs no-op + 存量回填）由 Task 2.2 三态库覆盖，本 Pipeline 范围为写文件 + Go 门禁（Task 2.4）。
+
+### 做了什么
+- **T2.1 Migration**：`migration/003_add_role_lifecycle.sql` — 为 `rel_user_role` 逐列 guard 补三列（对齐 `model/rel.go` `RelUserRole` db tag，消除从零建库 `init_permissions.sql:238` 的 1054 Unknown column 'status'）：
+  - `status INT NOT NULL DEFAULT 2 COMMENT '个体角色生命周期: 0=未认证 1=待审 2=已认证 3=已驳回 4=已过期'`（DEFAULT 2 保留「有 grant 即活跃」语义，不静默失效）
+  - `verified_at DATETIME NULL COMMENT '个体认证通过时间'`（NULL = 未认证）
+  - `expires_at DATETIME NULL COMMENT '个体角色到期时间, NULL=永久'`（与 `expires_at IS NULL OR expires_at > NOW()` 谓词一致）
+  - 幂等 guard 沿用 001/002 写法（`SET @col := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='rel_user_role' AND COLUMN_NAME=...)` + `IF(...)` + `PREPARE/EXECUTE`），**逐列 guard**（status/verified_at/expires_at 各一段）
+  - **零 guard 外 UPDATE**：存量回填由 ALTER DEFAULT 在补列当次自动完成（`status` 存量置 2，`verified_at`/`expires_at` 置 NULL），不改写迁移后新行/已存在显式 status=0/4 的存量行（REQ-P0-4）
+  - 末尾 SELECT 验证三列存在（COUNT(*)=3 → ✅ PASS/❌ FAIL）
+
+### 影响
+- Proto: 无（`proto_change_required=false`）
+- 调用方: 无行为变更（对齐模型与真实表结构；生产 live 库已含三列 → 003 no-op）
+- 数据库: `rel_user_role` 补 `status`/`verified_at`/`expires_at` 三列（幂等；不动时间列，不 rename `created_time`）
+- 门禁: `go build ./...` + `go test ./...` + `harness-checks.sh` 全绿（003 迁移 + 文档修正不引入 Go 代码回归）
+
+### 应用的记忆
+- [[migration-must-execute]] (must-follow) — 迁移三步闭环；003 末尾 SELECT 验证列存在（执行验证由 Task 2.2 三态库覆盖）
+
+---
+
 ## 2026-08-14 — role-platforms-save：platforms 允许登录端写链路 + 系统角色字段级策略 + 500 panic 修复（Task 1.1-1.11）
 
 ### 类型

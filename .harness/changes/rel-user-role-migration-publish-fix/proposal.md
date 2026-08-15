@@ -14,8 +14,8 @@
 
 ### P0 — rel_user_role 生命周期三列补齐
 
-- **003 迁移**（D1）：新增 `services/permission-service/migration/003_add_role_lifecycle.sql`，沿用 001/002 的 information_schema 幂等 guard 写法（逐列探测列存在后 `IF` 执行），为 `rel_user_role` 添加 `status`/`verified_at`/`expires_at` 三列。live 库与从零库都能安全跑（重复执行不报错）。**「旧结构 live 库」定义**：仅缺 `status`/`verified_at`/`expires_at` 三列、`created_at` 已存在（对齐 rel.go L248 注释所述生产库实际结构）；003 **不在任何既有库上做 `created_time` → `created_at` 重命名**——该差异被接受（`RelUserRole.CreatedTime` 无任何代码消费，helpers.go 仅读 SysRole/Permission 的 CreatedTime，零值无害；从零建库的 `created_at` 由修正后 migration.sql 保证），REVISION #3 已用边界 Scenario 固化。
-- **存量回填**（D2）：回填 `status=2`（已认证）、`verified_at=NULL`、`expires_at=NULL`——保留「有 grant 即活跃」的旧语义，避免存量授权在 `status=2` 严格判定下静默失效；**不回填 status=0**。回填唯一机制（REVISION #1/#6/#16）：**由 ADD COLUMN 的列定义在 guard 分支内自动完成**（`status INT NOT NULL DEFAULT 2` 使存量行 ALTER 时即置 2；`verified_at`/`expires_at DATETIME NULL` 使存量行置 NULL），003 **不含 guard 外运行的 UPDATE**；幂等重跑命中 guard=列已存在时同时跳过补列与回填，迁移后 Insert 写入的新行（含 status=0/4 显式值）不被触碰。
+- **003 迁移**（D1）：新增 `services/permission-service/migration/003_add_role_lifecycle.sql`，沿用 001/002 的 information_schema 幂等 guard 写法（逐列探测列存在后 `IF` 执行），为 `rel_user_role` 添加 `status`/`verified_at`/`expires_at` 三列。**库状态唯一化（REVISION #1/#2 已解决）**：(a) 旧 migration.sql 从零库（缺三列 + `created_time`）→ 003 补列并回填 status=2；(b) 生产 live 库（已含三列 + `created_at`，对齐 rel.go L248 注释——live 库本就含三列，历史 1054 源于不存在的 `assign_time` 列而非这三列）→ 003 no-op；(c) 修正后 migration.sql 从零库（已含三列）→ 003 no-op。003 **不在任何既有库上做 `created_time` → `created_at` 重命名**——该差异被接受（`RelUserRole.CreatedTime` 无任何代码消费，helpers.go 仅读 SysRole/Permission 的 CreatedTime，零值无害；从零建库的 `created_at` 由修正后 migration.sql 保证）。
+- **存量回填**（D2）：回填 `status=2`（已认证）、`verified_at=NULL`、`expires_at=NULL`——保留「有 grant 即活跃」的旧语义，避免存量授权在 `status=2` 严格判定下静默失效；**不回填 status=0**。回填唯一机制（REVISION #1/#6/#16）：**由 ADD COLUMN 的列定义在 guard 分支内自动完成**（`status INT NOT NULL DEFAULT 2` 使存量行 ALTER 时即置 2；`verified_at`/`expires_at DATETIME NULL` 使存量行置 NULL），003 **不含 guard 外运行的 UPDATE**；幂等重跑命中 guard=列已存在时同时跳过补列与回填，迁移后 Insert 写入的新行（含 status=0/4 显式值）不被触碰。**回填适用环境唯一化**：仅发生在「缺三列且有存量行」的旧从零库；生产 live 库已含三列、003 对其为 no-op，不发生回填。
 - **权威建表脚本修正**（D3）：同步修正 `docs/specs/migration.sql` §3.4 的 `rel_user_role` 段——补齐三列（`status INT NOT NULL DEFAULT 2` / `verified_at DATETIME NULL` / `expires_at DATETIME NULL`）；**id 保留 AUTO_INCREMENT**（REVISION #15 方案 a：映射表 id 全仓代码从不消费，且 rel.go 与 init_permissions.sql 种子均省略 id，去自增会破坏运行时代理写入与种子写入）；`created_time` → `created_at`；索引名 `idx_user_role_scope` → `uk_user_role_scope`（与 001 对齐）。
 - **从零建库验证**（D3/D4）：验证 `init_permissions.sql:238` 在修复后的从零建库流程（`docs/specs/migration.sql` → `init_permissions.sql`）可执行，不再报 1054。
 
@@ -51,17 +51,21 @@
 | D9 | p1-error-handling | 三处统一 toast 提示 + 控制台日志 |
 | D10 | p1-notice-publish | 不在本次范围，另开后续任务 |
 | D11 | p1-publish-ux-gate | 有当前小区即显示发布入口，越权由后端 AssertPublishScope 兜底（本次无发布入口，随发布功能延后） |
+| D12 | p0-env-taxonomy | 库状态唯一化（REVISION #1/#2）：旧从零库缺三列+created_time → 003 补列+回填；生产 live 库已含三列 → 003 no-op；修正后从零库已含三列 → 003 no-op |
+| D13 | p1-silent-backlog-carrier | 其余静默点（stores/community.ts、join-community.vue、onCommunitySwitch 非 10015 分支）补 task 登记 BACKLOG 另开任务，本次不动（q1） |
+| D14 | p0-verify-environment | 临时构造三态库（旧从零/生产 live/修正后从零）验证 003 各态行为（q2） |
+| D15 | changelog-convention | 只登记 003 迁移，不重复登记 001/002（q3） |
 
 **上轮计划评审 REVISION 驱动调整（本版本已吸收）**：
 
 **早轮已吸收**：
 1. **回填机制唯一化**（REVISION #1/#6/#16）：存量回填**由 ADD COLUMN 的 ALTER 默认值在 guard 分支内自动完成**，003 不含 guard 外运行的 UPDATE——幂等重跑与迁移后新行天然不被触碰。原草稿「显式 UPDATE 回填」的两种实现歧义被消除。
 2. **rel_user_role.id 保留 AUTO_INCREMENT**（REVISION #15 方案 a）：取消原草稿「去 AUTO_INCREMENT 改雪花 ID」。理由：该映射表 id 全仓代码从不消费，无雪花语义；rel.go Insert/BatchInsertUserRoles 与 init_permissions.sql:238 种子 INSERT 均省略 id、依赖自增，去自增会在严格模式报 MySQL 1364、非严格模式 id=0 触发主键冲突致 INSERT IGNORE 静默丢弃种子行，直接违背「不改 init_permissions.sql」约束。
+3. **验收标准（c）补执行载体**（REVISION #1，已解决）：验收标准「003 在（c）从修复后 migration.sql 新建的库上执行一次不报错」原无对应 task——现 Task 1.2 追加一步：从零建库 + init_permissions.sql 后**再执行一次 003** → guard 探测三列已存在、跳过 ADD 与回填、无报错、表结构与存量种子数据不变。验收标准（c）明确映射到该 task。
+4. **REQ-P1-ERR-1 唯一解释 + 并发全失败场景**（REVISION #2，已解决）：原「每个失败 SHALL 呈现用户可见 toast」与「showToast 单实例替换不堆叠」在并发全失败场景无单一解释。现 REQ-P1-ERR-1 收敛为唯一解释——「失败时刻各触发区块 toast + console.error；并发失败时可见 toast 收敛为最后一次调用（单实例替换，至少一个可见 toast），每失败各一次 console.error，被覆盖不算违反」；REQ-P1-ERR-1 新增「三请求并发全部失败（toast 收敛）」场景、REQ-P1-ERR-2 新增「三请求并发全失败（核心触发场景）」场景。
 
-**本轮（REVISION #1/#2/#3）已解决**：
-3. **验收标准（c）补执行载体**（REVISION #1，已解决）：验收标准「003 在（c）从修复后 migration.sql 新建的库上执行一次不报错」原无对应 task——Task 0.2 只覆盖旧结构 live 库/幂等重跑/部分列缺失，Task 1.2 从零建库后仅跑 init_permissions.sql 与省略 id 写入，未显式执行 003。现 Task 1.2 追加一步：从零建库 + init_permissions.sql 后**再执行一次 003** → guard 探测三列已存在、跳过 ADD 与回填、无报错、表结构与存量种子数据不变。验收标准（c）明确映射到该 task。
-4. **REQ-P1-ERR-1 唯一解释 + 并发全失败场景**（REVISION #2，已解决）：原「每个失败 SHALL 呈现用户可见 toast」与「showToast 单实例替换不堆叠」在并发全失败场景无单一解释，且 spec 无对应场景。现 REQ-P1-ERR-1 收敛为唯一解释——「失败时刻各触发区块 toast + console.error；并发失败时可见 toast 收敛为最后一次调用（单实例替换，至少一个可见 toast），每失败各一次 console.error，被覆盖不算违反」；REQ-P1-ERR-1 新增「三请求并发全部失败（toast 收敛）」场景、REQ-P1-ERR-2 新增「三请求并发全失败（核心触发场景）」场景。
-5. **「旧结构」定义唯一化 + created_time 不重命名**（REVISION #3，已解决）：原 REQ-P0-2 Scenario 1 的「旧结构」是否含 created_time 无唯一解释。现明确「旧结构 live 库」= 仅缺三列、created_at 已存在（对齐 rel.go L248 注释）；003 不在 live 库做 created_time→created_at 重命名（RelUserRole.CreatedTime 零值无害），REQ-P0-2 新增边界 Scenario 固化该结论。
+**本轮（REVISION [clarity] #1 + [validity] #2，均已解决）**：
+5. **「旧结构 live 库」定义矛盾修复（本轮 [clarity] #1 + [validity] #2，已解决）**：上轮把「旧结构 live 库」定义为「仅缺三列、created_at 已存在（对齐 rel.go L248 注释）」，但 rel.go L248 注释明确 live 库**已含** `status`/`verified_at`/`expires_at` 三列（历史 1054 源于不存在的 `assign_time` 列），导致 GIVEN 列清单「含三列」↔「缺三列」↔ THEN「补三列」自相矛盾，且「回填适用环境」失去依据。现按 D12 唯一化：**生产 live 库已含三列 + created_at → 003 no-op（不回填）**；**旧 migration.sql 从零库缺三列 + created_time → 003 补列 + 回填 status=2**；**修正后从零库已含三列 → 003 no-op**。REQ-P0-2 Scenario 1 改为「旧 migration.sql 从零库正常补列」，新增「生产 live 库（已含三列）安全通过（no-op）」场景，REQ-P0-4 明确回填仅适用「缺三列且有存量行」的旧从零库；验收标准 (a) 与 Task 0.2 的「旧结构 live 库」表述同步修正。
 
 ## 风险评估
 
@@ -91,8 +95,8 @@
 ## 验收标准
 
 - [ ] 新增 `services/permission-service/migration/003_add_role_lifecycle.sql`，沿用 001/002 的 information_schema guard 写法（逐列探测）。
-- [ ] 003 在（a）旧结构 live 库、（b）已执行过 003 的库、（c）从修复后 migration.sql 新建的库上各执行一次均不报错，且 rel_user_role 三列存在。（a/b 由 Task 0.2 执行；**c 由 Task 1.2 覆盖**：从零建库 + init_permissions.sql 后显式重跑 003 → guard 探测三列已存在、跳过 ADD 与回填、无报错、表结构与存量种子数据不变。）
-- [ ] 003 首跑于旧结构库后，存量 rel_user_role 行全部 `status=2, verified_at=NULL, expires_at=NULL`；003 **无 guard 外 UPDATE**，幂等重跑不触碰迁移后 Insert 显式写入的 status 值（含 status=0/4）。
+- [ ] 003 在（a）旧 migration.sql 从零库（缺三列）、（b）生产 live 库（已含三列）、（c）从修复后 migration.sql 新建的库（已含三列）上各执行一次均不报错，且 rel_user_role 三列存在；（a）补列并回填 status=2，（b）(c) guard 跳过、no-op。（a/b 由 Task 0.2 执行；**c 由 Task 1.2 覆盖**：从零建库 + init_permissions.sql 后显式重跑 003 → guard 探测三列已存在、跳过 ADD 与回填、无报错、表结构与存量种子数据不变。）
+- [ ] 003 首跑于旧从零库（缺三列）后，存量 rel_user_role 行全部 `status=2, verified_at=NULL, expires_at=NULL`；003 **无 guard 外 UPDATE**，幂等重跑不触碰迁移后 Insert 显式写入的 status 值（含 status=0/4）；生产 live 库执行 003 不发生回填。
 - [ ] `docs/specs/migration.sql` §3.4 rel_user_role 段含三列（`status INT NOT NULL DEFAULT 2` / `verified_at DATETIME NULL` / `expires_at DATETIME NULL`）、id 保留 AUTO_INCREMENT、`created_at` 时间列、唯一索引名 `uk_user_role_scope`，文档无 `idx_user_role_scope` 残留。
 - [ ] 从修复后 migration.sql 建库 → 执行 init_permissions.sql 成功（含 :238 的 rel_user_role INSERT），无 MySQL 1054 Unknown column 'status'；省略 id 的运行时代理 Insert（仿 rel.go）可写入（无 1364/主键冲突）。
 - [ ] `web/mobile/src/api/community.ts` 中寻失列表请求路径为 `/api/community/lostfound`，全仓无 `/api/community/lost-found` 调用残留。
@@ -100,3 +104,5 @@
 - [ ] `harness-checks.sh --service permission-service` 通过（003 迁移 + 文档修正不引入 Go 代码回归）。
 - [ ] **P1 前端门禁**：`cd web/mobile && npm run test:unit` 通过（notice.spec.ts 覆盖失败 toast + `console.error` + 不阻断并发），`npm run type-check` 通过（或等价前端门禁）。
 - [ ] 兄弟表不一致项已登记待办（`.harness/tasks/BACKLOG.md` 或既有任务系统）。
+- [ ] 其余静默点（`stores/community.ts`、`join-community.vue`、`onCommunitySwitch` 非 10015 分支）已登记 `.harness/tasks/BACKLOG.md` 为独立后续任务，本次未改动（q1）。
+- [ ] permission-service CHANGELOG 只登记 `003_add_role_lifecycle.sql`，不重复登记 001/002（q3）。

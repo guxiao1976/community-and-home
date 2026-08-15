@@ -9,23 +9,23 @@
 
 ## P0 — 立即处理（阻塞性问题）
 
-- [P0: rel_user_role 生命周期三列缺建库 SQL（从零建库 1054）](task-2026-08-15-001.md) — permission-service, P0, open, human
-
+（暂无）
 
 ## P1 — 本周
 
 - [修复 harness-spec-pipeline 需求评审盲循环（REVISION 反馈未注入分析师）](task-2026-08-14-002.md) — harness, P1, review, review
-- [P1: 移动端寻失列表路径不匹配（/lost-found vs /lostfound）导致 404 + 静默吞错](task-2026-08-15-002.md) — web/mobile, P1, open, human
 
 
 ## P2 — 本月
 
 - [需求冲突检测确定性脚本（扫 .harness/changes/ 同服务/同接口重叠）](task-2026-08-15-003.md) — harness, P2, open, human
+- [web/mobile 其余静默吞错点清理](task-2026-08-15-006.md) — web/mobile, P2, open, human
 
 
 ## P3 — 以后
 
-（暂无）
+- [permission-service 兄弟表 AUTO_INCREMENT/created_time 结构不一致收敛](task-2026-08-15-005.md) — permission-service, P3, open, human
+
 
 ## 进行中
 
@@ -42,10 +42,10 @@
 
 | 优先级 | 数量 |
 |:------:|:----:|
-| P0 | 1 |
-| P1 | 2 |
-| P2 | 1 |
-| P3 | 0 |
+| P0 | 0 |
+| P1 | 1 |
+| P2 | 2 |
+| P3 | 1 |
 | 进行中 | 1 |
 | 已阻塞 | 0 |
 | **合计** | **5** |

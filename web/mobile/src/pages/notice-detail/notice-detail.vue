@@ -12,7 +12,7 @@
         >
           <text class="role-text">{{ getNoticeRoleName(notice.role) }}</text>
         </view>
-        <text class="detail-time">{{ formatTime(notice.publishedAt || notice.createdAt) }}</text>
+        <text class="detail-time">{{ formatTime(notice.published_at || notice.created_at) }}</text>
         <text v-if="notice.publisher" class="detail-publisher">{{ notice.publisher }}</text>
       </view>
 
@@ -32,12 +32,12 @@
             v-for="att in notice.attachments"
             :key="att.id"
             class="attachment-item"
-            @click="onDownload(att.fileUrl, att.fileName)"
+            @click="onDownload(att.file_url, att.file_name)"
           >
             <text class="attachment-icon">📎</text>
             <view class="attachment-info">
-              <text class="attachment-name">{{ att.fileName }}</text>
-              <text class="attachment-size">{{ formatSize(att.fileSize) }}</text>
+              <text class="attachment-name">{{ att.file_name }}</text>
+              <text class="attachment-size">{{ formatSize(att.file_size) }}</text>
             </view>
           </view>
         </view>

@@ -5,48 +5,50 @@ import request from '@/utils/request';
 // Type Definitions
 // =============================================================================
 
+// 字段名对齐后端 community-hub-service types.go JSON tag（snake_case）
+// SEE: [[snake-camel-field-mismatch]]
 export interface NoticeAttachment {
   id: string;
-  fileName: string;
-  fileUrl: string;
-  fileSize: number;
+  file_name: string;
+  file_url: string;
+  file_size: number;
 }
 
 export interface Notice {
   id: string;
-  communityId: string;
+  community_id: string;
   title: string;
   content: string;
   role: number;
   publisher: string;
-  publisherId: string;
-  isPinned: boolean;
-  publishedAt: number;
-  createdAt: number;
-  updatedAt: number;
+  publisher_id: string;
+  is_pinned: boolean;
+  published_at: number;
+  created_at: number;
+  updated_at: number;
   attachments: NoticeAttachment[];
 }
 
 export interface Contact {
   id: string;
-  communityId: string;
+  community_id: string;
   category: number;
   name: string;
   phone: string;
-  sortOrder: number;
+  sort_order: number;
 }
 
 export interface LostFoundItem {
   id: string;
-  communityId: string;
+  community_id: string;
   type: number;
   title: string;
   description: string;
-  imageUrls: string[];
-  contactPhone: string;
+  image_urls: string[];
+  contact_phone: string;
   status: number;
-  publisherId: string;
-  createdAt: number;
+  publisher_id: string;
+  created_at: number;
 }
 
 // =============================================================================
@@ -147,13 +149,14 @@ export async function getContacts(
 
 /**
  * Get lost & found list for a community.
+ * SEE: [[verify-api-before-calling]] — 路径对齐后端已注册路由（无连字符 lostfound）
  */
 export async function getLostFoundList(
   communityId: string,
   page: number = 1,
   pageSize: number = 3,
 ): Promise<{ items: LostFoundItem[]; total: string }> {
-  const res = await request.get('/api/community/lost-found', {
+  const res = await request.get('/api/community/lostfound', {
     params: { community_id: communityId, page, page_size: pageSize },
   });
   return res as unknown as { items: LostFoundItem[]; total: string };

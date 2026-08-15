@@ -61,3 +61,25 @@ The error handling SHALL NOT rethrow after surfacing the failure, so that the co
 - **GIVEN** 用户下拉刷新触发第二次 `loadAll`
 - **WHEN** 某请求再次失败
 - **THEN** 再次 toast + console 提示（幂等反馈）；toast 由单实例替换语义保证不出现重复堆叠的错误提示块
+
+### Requirement: REQ-P1-ERR-3 其余静默点仅登记待办不动
+
+The change SHALL fix exactly the three silent `catch` blocks in `notice.vue` (`fetchNotices`/`fetchContacts`/`fetchLostFound`); other silent-swallow sites (`web/mobile/src/stores/community.ts`, `web/mobile/src/pages/join-community/join-community.vue`, and the non-`10015` branch of `onCommunitySwitch`) SHALL NOT be modified in this change and SHALL be recorded as backlog for a separate follow-up task.
+
+#### Scenario: 只修三处静默 catch（正向）
+
+- **GIVEN** `notice.vue` 三处 `catch { /* silent */ }` 已改为 toast + console.error
+- **WHEN** 本变更完成
+- **THEN** `stores/community.ts`、`join-community.vue`、`onCommunitySwitch` 非 10015 分支的静默点未被改动
+
+#### Scenario: 其余静默点登记待办（正向）
+
+- **GIVEN** 存在 `stores/community.ts`、`join-community.vue`、`onCommunitySwitch` 非 10015 分支等静默吞错点
+- **WHEN** 本变更完成
+- **THEN** 这些静默点已登记到 `.harness/tasks/BACKLOG.md`（或既有任务系统）为独立后续任务，本次不落库（q1 约定）
+
+#### Scenario: 变更引入其余静默点改动（回归防护）
+
+- **GIVEN** `notice.vue` 三处静默 catch 已处理完毕
+- **WHEN** 评审 diff 时发现 `stores/community.ts`/`join-community.vue`/`onCommunitySwitch` 非 10015 分支被顺带修改
+- **THEN** 该改动被拒绝（超出范围），其余静默点仅允许登记待办、不允许在本次变更中修改
