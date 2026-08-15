@@ -18,13 +18,15 @@ Skill("architect-design")
 
 该 Skill 包含：
 
-- **Step 1**: 加载上下文（proposal / specs / design.md / api-proto / MEMORY.md）
-- **Step 1.5**: 记忆注入（设计阶段预防性加载经验）
-- **Step 2**: 服务归属决策（数据所有权原则）
-- **Step 3**: 产出 design.md（数据模型 / 接口设计 / 业务流程 / Proto 变更 / 安全考虑）
+- **Step 0**: 输入门禁（校验 proposal/specs 齐备 + 无占位符）
+- **Step 1**: 加载上下文（含 graph-context，对齐本文件加载清单）
+- **Step 1.5**: 记忆注入（slug 自验 + 不适用项记录排除理由）
+- **Step 2**: 服务归属决策（数据所有权原则 + 存疑标注）
+- **Step 3**: 产出 design.md（追溯矩阵 / 数据模型 / 接口契约 / Proto / 非功能 / ADR）
+- **Step 3.5**: Design Self-Review（先于拆任务校验 design 质量）
 - **Step 4**: 产出 tasks.md（使用 `superpowers:writing-plans` bite-sized 原则）
 - **Step 5**: Tasks Self-Review（占位符 / TDD 覆盖 / 依赖顺序 / 记忆引用）
-- **Step 6**: 产出各服务 fix_plan.md（可选，用于 Ralph 模式）
+- **Step 6**: 产出各服务 fix_plan.md（仅 Ralph 模式）
 
 ## 上下文加载清单（从磁盘读取）
 

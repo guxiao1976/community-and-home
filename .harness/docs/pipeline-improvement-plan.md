@@ -201,3 +201,41 @@
 | R16 | 阶段 2 去 tasks.md（只审 specs）+ 阶段 3 加「设计评审」循环（architect→design-review→REVISION 回 architect，≤3 轮） | `review.md`（模式一.5）+ `harness-spec-pipeline.js` stage3 |
 
 **验证**：`node --check` 语法过；`run-evals.sh` 41 项全绿；harness 自检 8 PASS；无「3 视角」残留。设计评审复用了 stage2 的 SPEC_REVIEW_SCHEMA，REVISION 反馈注入 architect prompt（同 P1.1 收敛闭环）。
+
+| R17 | 分层统一：评审补 subagent 层（新建 `reviewer.md`），review.md 瘦身（角色/服务名映射/上下文清单/工具熔断抽到 subagent），workflow 三处引用统一为「先 Read subagent → subagent 内部 Skill()」 | `reviewer.md`（新建）+ `review.md` + `harness-spec-pipeline.js` |
+
+**分层统一说明**：明确「subagent=角色层（我是谁/权限/上下文加载/服务名映射/熔断/交接），skill=流程层（SOP/视角/报告格式/分级）」。需求分析（requirement-analyst.md + requirement-analysis.md）、架构设计（architecture-designer.md + architect-design.md）、评审（reviewer.md + review.md）三环节结构对齐；workflow 三处 agent 入口统一引 subagent。
+
+---
+
+## 七、架构设计 Skill 完善（2026-08-15）
+
+> 来源：架构设计意见评审。聚焦设计正确性（追溯链断裂、加载清单漂移、模板颗粒度），改 `architect-design.md` + `architecture-designer.md`。
+
+### 必须修（6 条）
+
+| # | 改动 | 位置 |
+|---|------|------|
+| AD1 | Step 1 加载清单补 graph-context.md + request.md（对齐 subagent 7 项，消除漂移） | Step 1 |
+| AD2 | design.md 加「需求追溯矩阵」（spec→design 双向绑定，防遗漏/蔓延） | Step 3 模板 |
+| AD3 | 新增 Step 0 输入门禁（校验 proposal/specs 齐备 + 无占位符，否则 RETURN_TO_OWNER） | Step 0 |
+| AD4 | Proto 变更表加「破坏性(是/否)」列 + 影响评估段（对齐规则 7） | Step 3 模板 |
+| AD5 | 数据模型补 deleted_at（软删除，对齐编码规范 §5.1）+ 字段约束补充 | Step 3 模板 |
+| AD6 | 接口契约补「鉴权/幂等/性能约束/错误码语义」 | Step 3 模板 |
+
+### 建议修（9 条）
+
+| # | 改动 | 位置 |
+|---|------|------|
+| AD7 | 任务粒度量化（不跨层级/文件≤3/Proto+Migration 独立/测试≤10）替代主观「2-5 分钟」 | 关键规则 3 |
+| AD8 | TDD 覆盖场景（1 正常+2 异常+错误码），前端 TDD 可选 | 关键规则 4 |
+| AD9 | Step 3.5 Design Self-Review（审 design 本身：追溯/归属/规范/非功能/破坏性/记忆） | Step 3.5 |
+| AD10 | 业务流程补「异常/失败路径 + 跨服务一致性」 | Step 3 模板 |
+| AD11 | 记忆 slug 注入时自验存在 + 不适用项记录排除理由 | Step 1.5 |
+| AD12 | 服务归属存疑标注「待定+候选+推荐」 | Step 2 |
+| AD13 | fix_plan 触发条件写清（仅 Ralph 模式） | Step 6 |
+| AD14 | 非功能设计精简 checklist（可靠性/性能/可观测性） | Step 3 模板 |
+| AD15 | 关键规则 11 跨服务一致性（走接口禁直连 DB + 一致性方案 + 补偿任务） | 关键规则 |
+
+**同步**：`architecture-designer.md` Step 摘要更新（Step 0 / Step 3.5 新增）。
+**验证**：harness 自检 8 PASS；architect-design.md Step 0-6 结构完整。注：意见 P1.2（design 正确性真空区）已由上轮「设计评审」循环解决，本批不再重复。

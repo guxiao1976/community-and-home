@@ -529,7 +529,7 @@ ${TASK}
 
   const res = await agent(
     `你是 Community-Home 的需求分析师。执行 .harness/skills/requirement-analysis.md 的完整流程（Step 2-8），
-产出 proposal + specs。**必须先 Read .harness/skills/requirement-analysis.md 获取权威流程**。
+产出 proposal + specs。**必须先 Read .harness/agents/subagents/requirement-analyst.md 获取权威流程**。
 
 ## 变更
 ${CHANGE}
@@ -656,7 +656,7 @@ async function stage2Review(ctx) {
     lenses.map(lens => () =>
       agent(
         `你是需求评审 Agent（${lens.label} 视角）。审查 ${CHANGE} 的需求规格。
-先 Read .harness/skills/review.md「模式一：计划评审」，再按你的视角审查。
+先 Read .harness/agents/subagents/reviewer.md（角色/权限/上下文/熔断），再按 .harness/skills/review.md「模式一：计划评审」审查。
 
 ## 视角：${lens.label}
 - coverage: 需求覆盖/场景完整性/边界识别
@@ -824,7 +824,7 @@ ${designFeedback ? `\n## 上轮设计评审反馈（必须逐条修订）\n${des
     // 设计评审（审 design + tasks 的设计正确性）
     const review = await agent(
       `你是设计评审 Agent。审 ${CHANGE} 的 design.md + tasks.md 的设计正确性。
-先 Read .harness/skills/review.md「模式一.5：设计评审」，再审查。
+先 Read .harness/agents/subagents/reviewer.md（角色/权限/上下文/熔断），再按 .harness/skills/review.md「模式一.5：设计评审」审查。
 
 ## 审查对象（磁盘）
 - .harness/changes/${CHANGE}/design.md（数据模型/接口设计/业务流程/Proto 变更）
