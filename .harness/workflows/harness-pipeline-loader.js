@@ -86,7 +86,7 @@ function loadAllPrompts() {
 
     // Schema
     QA_SCHEMA: loadPrompt('qa').QA_SCHEMA || require('./schemas/qa-schema.js'),
-    REVIEW_SCHEMA: loadPrompt('review').REVIEW_SCHEMA || require('./schemas/review-schema.js')
+    REVIEW_SCHEMA: loadPrompt('review').REVIEW_SCHEMA
   }
 }
 

@@ -110,6 +110,13 @@ VERDICT: APPROVED / REVISION
 - `.harness/changes/<name>/design.md` — 数据模型 / 接口设计 / 业务流程 / Proto 变更 / 安全考虑
 - `.harness/changes/<name>/tasks.md` — 任务拆分 / 依赖顺序
 
+### 视角分工（2 视角并行，降低单 agent 确认偏差）
+
+| 视角 | 负责维度 |
+|------|---------|
+| **data-model** 数据模型 | 数据模型、服务归属 |
+| **interface-proto** 接口契约+Proto | 接口契约、Proto 破坏性、依赖顺序 |
+
 ### 审查焦点
 
 | 维度 | 审查焦点 |

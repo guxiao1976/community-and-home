@@ -239,3 +239,20 @@
 
 **同步**：`architecture-designer.md` Step 摘要更新（Step 0 / Step 3.5 新增）。
 **验证**：harness 自检 8 PASS；architect-design.md Step 0-6 结构完整。注：意见 P1.2（design 正确性真空区）已由上轮「设计评审」循环解决，本批不再重复。
+
+---
+
+## 八、执行评审 source of truth 收敛（2026-08-15）
+
+> 来源：review 体系盘点（读执行代码 + 真实产物）。发现「文档 review.md 已 12 维度，但执行评审 prompt 源 review.js 还停在 9 维度」的跨文件漂移——根因是 review.md（文档）与 review.js（执行源）两条线靠 build-pipeline.sh 手动编译同步，改文档不同步源。
+
+| # | 改动 | 位置 |
+|---|------|------|
+| ST1 | review.js 9→12 维度：可观测性#9→standards-eng、依赖变更#10+配置变更#11→security-arch、记忆遵守#9→#12 | `review.js` REVIEW_LENSES + 分工表 |
+| ST2 | 重新编译 harness-pipeline.js（build-pipeline.sh，1006 行） | `harness-pipeline.js` |
+| ST3 | 删 review-schema.js 死代码 + loader 死 fallback（loadPrompt 永不返回 undefined，`|| require(schema)` 是死分支） | `harness-pipeline-loader.js` + 删 `review-schema.js` |
+
+**根因**：执行评审的真实 prompt 在 `agents/prompts/review.js`（源）+ `harness-pipeline.js`（AUTO-GENERATED 编译版），`review.md` 只是文档。前几轮改 review.md 没同步 review.js → 漂移。
+**验证**：`node --check` 三文件 OK；`run-evals.sh` 全绿；harness 自检 8 PASS；编译后 harness-pipeline.js 已 12 维度（:354/:361/:380）。
+**第 3 步（设计评审落盘 + 拆视角）已完成**：设计评审单 agent → 2 视角并行（data-model / interface-proto），落盘 `design_review_{lens}_v{round}.md`（SHOULD FIX/INFO 不再丢失）；review.md 模式一.5 补「视角分工」表。
+**遗留（待后续批）**：validity 视角真实跑测（找新 change 跑 4 视角验证）；qa-schema.js 同款死代码（loader.js:88 的 fallback 也是死分支，未处理，待确认后一并清理）。

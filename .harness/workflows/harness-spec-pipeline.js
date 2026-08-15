@@ -656,22 +656,12 @@ async function stage2Review(ctx) {
     lenses.map(lens => () =>
       agent(
         `你是需求评审 Agent（${lens.label} 视角）。审查 ${CHANGE} 的需求规格。
-先 Read .harness/agents/subagents/reviewer.md（角色/权限/上下文/熔断），再按 .harness/skills/review.md「模式一：计划评审」审查。
-
-## 视角：${lens.label}
-- coverage: 需求覆盖/场景完整性/边界识别
-- structure: 服务归属/依赖顺序/职责边界
-- clarity: 粒度/歧义/一致性（SHALL/MUST 唯一解释）
-- validity: 业务逻辑自洽性/非功能需求/合规性/风险识别（需求本身是否成立，而非拆得规不规范）
+先 Read .harness/agents/subagents/reviewer.md（角色/权限/上下文/熔断），
+再按 .harness/skills/review.md「模式一：计划评审」——从「四个视角」表确定你这一视角的审查焦点，从「输入」确定审查对象。
 
 ## 审查版本（P1.3）
 ${specHash}
 若此哈希与历史轮次不同，说明 spec 已更新——必须按磁盘最新内容独立重新审查，勿沿用旧轮结论或缓存。
-
-## 审查对象（磁盘）
-- .harness/changes/${CHANGE}/request.md
-- .harness/changes/${CHANGE}/proposal.md
-- .harness/changes/${CHANGE}/specs/*/spec.md
 
 ## 输出
 - verdict: APPROVED / REVISION（有 ≥1 MUST FIX 即 REVISION）
@@ -821,35 +811,50 @@ ${designFeedback ? `\n## 上轮设计评审反馈（必须逐条修订）\n${des
       return { status: 'stage_fail', stage: 3, change: CHANGE, failures: gate.failures, stateFile: statePath() }
     }
 
-    // 设计评审（审 design + tasks 的设计正确性）
-    const review = await agent(
-      `你是设计评审 Agent。审 ${CHANGE} 的 design.md + tasks.md 的设计正确性。
-先 Read .harness/agents/subagents/reviewer.md（角色/权限/上下文/熔断），再按 .harness/skills/review.md「模式一.5：设计评审」审查。
+    // 设计评审（2 视角并行：数据模型 / 接口契约+Proto，降低单 agent 确认偏差）
+    const designLenses = [
+      { key: 'data-model', label: '数据模型' },
+      { key: 'interface-proto', label: '接口契约+Proto' },
+    ]
+    const designReviews = await parallel(
+      designLenses.map(lens => () =>
+        agent(
+          `你是设计评审 Agent（${lens.label} 视角）。审 ${CHANGE} 的 design.md + tasks.md 的设计正确性。
+先 Read .harness/agents/subagents/reviewer.md（角色/权限/上下文/熔断），
+再按 .harness/skills/review.md「模式一.5：设计评审」——从「审查焦点」确定审查维度，从「审查对象」确定要读的文件。
 
-## 审查对象（磁盘）
-- .harness/changes/${CHANGE}/design.md（数据模型/接口设计/业务流程/Proto 变更）
-- .harness/changes/${CHANGE}/tasks.md（任务拆分/依赖顺序）
-
-## 审查焦点
-- 服务归属：tasks 分服务是否合理？谁拥有数据谁提供接口？
-- 数据模型：是否满足 spec 需求？
-- 接口契约：gRPC/Proto 是否自洽？
-- Proto 破坏性：是否向后兼容（不删/改字段号、不改字段类型）？
-- 任务粒度：不跨服务 / Proto+Migration 独立 / 测试 1-10
+## 你的视角：${lens.label}
+- data-model: 数据模型是否满足 spec 需求？字段/关系是否正确？Snowflake ID/时间字段/软删除是否符合规范？
+- interface-proto: gRPC/Proto 接口是否自洽？Proto 破坏性是否标注+评估兼容？接口鉴权/幂等/错误码语义是否完整？
 
 ## 输出
 - verdict: APPROVED / REVISION（有 ≥1 MUST FIX 即 REVISION）
 - mustFixes: 数组 {section, issue, fix}
 - summary: 一句话结论`,
-      { label: 'design-reviewer', schema: SPEC_REVIEW_SCHEMA, model: routeModel('review') }
+          { label: `DesignReview:${lens.key}`, schema: SPEC_REVIEW_SCHEMA, model: routeModel('review') }
+        ).then(r => r ? { ...r, lens: lens.key } : null)
+      )
     )
-
-    if (review && review.verdict === 'APPROVED') {
+    const validDesignReviews = designReviews.filter(Boolean)
+    // 设计评审落盘（审计轨迹，SHOULD FIX/INFO 不丢失）
+    if (fs) {
+      try {
+        const dir = `${changeDir()}/review`
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+        for (const r of validDesignReviews) {
+          const mfText = (r.mustFixes || []).map(m => `- [${m.section || ''}] ${m.issue || ''}${m.fix ? ` → ${m.fix}` : ''}`).join('\n')
+          fs.writeFileSync(`${dir}/design_review_${r.lens}_v${round}.md`,
+            `# Design Review — ${CHANGE}（${r.lens}视角）\n\n**VERDICT**: ${r.verdict}\n\n${r.summary}${mfText ? `\n\n## mustFixes\n${mfText}` : ''}\n`)
+        }
+      } catch (e) { /* 落盘失败不阻断 */ }
+    }
+    // 判定：全部视角 APPROVED 才通过
+    if (validDesignReviews.length === designLenses.length && validDesignReviews.every(r => r.verdict === 'APPROVED')) {
       designApproved = true
       break
     }
-    designFeedback = ((review && review.mustFixes) || []).map(m => `[${m.section || ''}] ${m.issue || ''}${m.fix ? ` → ${m.fix}` : ''}`).join('\n')
-    log(`  🔄 设计评审 REVISION（第 ${round}/${MAX_DESIGN_ROUNDS} 轮），回架构设计师修订`)
+    designFeedback = validDesignReviews.flatMap(r => (r.mustFixes || []).map(m => `[${r.lens}] ${m.section || ''} — ${m.issue || ''}${m.fix ? ` → ${m.fix}` : ''}`)).join('\n')
+    log(`  🔄 设计评审 REVISION（第 ${round}/${MAX_DESIGN_ROUNDS} 轮，${validDesignReviews.filter(r => r.verdict === 'REVISION').length}/${designLenses.length} 视角 REVISION），回架构设计师修订`)
   }
 
   if (!designApproved) {

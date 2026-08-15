@@ -45,16 +45,16 @@ const REVIEW_LENSES = [
   {
     key: 'security-arch',
     label: '安全架构',
-    dimensions: '架构一致性(#1)、安全性(#5)、变更完整性(#8)',
-    focusGo: '你关注架构决策的正确性和安全风险。检查 Proto/gRPC 规范、服务边界、跨服务 DB 访问、硬编码密钥、SQL 注入、输入校验、CHANGELOG 完整性。',
-    focusFrontend: '你关注前端架构的正确性和安全风险。检查组件分层合理性、API 调用权限校验、Token 存储安全（localStorage/cookie）、XSS 防护（v-html）、CORS 配置、硬编码密钥、敏感信息泄露到前端、CHANGELOG 完整性。',
+    dimensions: '架构一致性(#1)、安全性(#5)、变更完整性(#8)、依赖变更(#10)、配置变更(#11)',
+    focusGo: '你关注架构决策的正确性和安全风险。检查 Proto/gRPC 规范、服务边界、跨服务 DB 访问、硬编码密钥、SQL 注入、输入校验、CHANGELOG 完整性、依赖变更(License 合规/已知安全漏洞/版本与全局技术栈兼容)、配置变更(敏感配置加密/多环境区分/默认值兜底/灰度生效策略)。',
+    focusFrontend: '你关注前端架构的正确性和安全风险。检查组件分层合理性、API 调用权限校验、Token 存储安全（localStorage/cookie）、XSS 防护（v-html）、CORS 配置、硬编码密钥、敏感信息泄露到前端、CHANGELOG 完整性、依赖变更(License/漏洞/版本兼容)、配置变更(敏感配置不泄露到前端)。',
   },
   {
     key: 'standards-eng',
     label: '规范工程',
-    dimensions: '规范遵循(#3)、复用性(#6)、测试覆盖(#7)、记忆遵守(#9)',
-    focusGo: '你关注编码规范和工程质量。检查 Snowflake ID 序列化(jstype/json:\\",string\\")、错误码格式(5位)、API 响应格式、代码复用、测试覆盖(新增函数是否有测试)、记忆遵守(M1-M4)。',
-    focusFrontend: '你关注前端编码规范和工程质量。检查 Snowflake ID string 类型、no `as any`（type-safety）、no console.log/debugger、hardcoded secrets、web/common/ 复用（勿重复定义类型）、API 响应直接使用（勿 res.data 双解包）、Vue 模板勿嵌套 {{ }}、测试覆盖(新增组件/函数)、记忆遵守(M1-M4)。',
+    dimensions: '规范遵循(#3)、复用性(#6)、测试覆盖(#7)、可观测性(#9)、记忆遵守(#12)',
+    focusGo: '你关注编码规范和工程质量。检查 Snowflake ID 序列化(jstype/json:\\",string\\")、错误码格式(5位)、API 响应格式、代码复用、测试覆盖(新增函数是否有测试)、可观测性(关键链路日志埋点/错误日志完整上下文/核心指标埋点/告警阈值)、记忆遵守(M1-M4)。',
+    focusFrontend: '你关注前端编码规范和工程质量。检查 Snowflake ID string 类型、no `as any`（type-safety）、no console.log/debugger、hardcoded secrets、web/common/ 复用（勿重复定义类型）、API 响应直接使用（勿 res.data 双解包）、Vue 模板勿嵌套 {{ }}、测试覆盖(新增组件/函数)、可观测性(前端错误上报/关键操作埋点)、记忆遵守(M1-M4)。',
   },
   {
     key: 'design-biz',
@@ -71,7 +71,7 @@ function reviewLensPrompt(lens) {
   return `你是 Code Reviewer Agent — ${lens.label}视角。
 
 ## 角色定义（必须先读）
-阅读 .harness/skills/review.md — 了解完整的 9 维度审查规则。但你只需要聚焦在 ${lens.dimensions} 维度。
+阅读 .harness/skills/review.md — 了解完整的 12 维度审查规则。但你只需要聚焦在 ${lens.dimensions} 维度。
 
 ## 审查目标
 从 **${lens.label}** 视角审查 ${SVC_DIR}/ 的代码变更（QA 已通过，_qa.md 可供参考）。
@@ -130,7 +130,10 @@ ${lens.key === 'standards-eng' ? `
 | 复用性 (#6) | ${lens.key === 'standards-eng' ? '✅ 审查' : '—'} | ${lens.key !== 'standards-eng' ? '✅' : '—'} |
 | 测试覆盖 (#7) | ${lens.key === 'standards-eng' ? '✅ 审查' : '—'} | ${lens.key !== 'standards-eng' ? '✅' : '—'} |
 | 变更完整性 (#8) | ${lens.key === 'security-arch' || lens.key === 'design-biz' ? '✅ 审查' : '—'} | ${lens.key !== 'security-arch' && lens.key !== 'design-biz' ? '✅' : '—'} |
-| 记忆遵守 (#9) | ${lens.key === 'standards-eng' ? '✅ 审查' : '—'} | ${lens.key !== 'standards-eng' ? '✅' : '—'} |
+| 可观测性 (#9) | ${lens.key === 'standards-eng' ? '✅ 审查' : '—'} | ${lens.key !== 'standards-eng' ? '✅' : '—'} |
+| 依赖变更 (#10) | ${lens.key === 'security-arch' ? '✅ 审查' : '—'} | ${lens.key !== 'security-arch' ? '✅' : '—'} |
+| 配置变更 (#11) | ${lens.key === 'security-arch' ? '✅ 审查' : '—'} | ${lens.key !== 'security-arch' ? '✅' : '—'} |
+| 记忆遵守 (#12) | ${lens.key === 'standards-eng' ? '✅ 审查' : '—'} | ${lens.key !== 'standards-eng' ? '✅' : '—'} |
 
 ## 审查报告格式
 
