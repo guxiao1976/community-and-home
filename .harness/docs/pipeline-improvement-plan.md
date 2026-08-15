@@ -165,6 +165,39 @@
 | A9 | Step 1 澄清角色分工：agent 产出问题清单，Owner 用 AskUserQuestion 收敛（≤4 问/轮） | `requirement-analysis.md` | 修正文本误导——子 agent 一次性运行，不直接多轮交互 |
 | A10 | Step 6 spec 模板强制稳定 ID `REQ-<capability>-<序号>` | `requirement-analysis.md` | 下游 architect/developer trace 的地基 |
 | A11 | Step 8 加 Definition of Done（7 条硬性清单）+「自查非终审」声明 | `requirement-analysis.md` | 交付有明确完成判据，且不误导自查=评审 |
+| A12 | Step 3 + subagent 清单精准性修正：删 graph-context（HOW 层）/ design.md 只读数据模型+业务流程章节 / 补「先定位服务再加载」/ 两处清单同步 | `requirement-analysis.md` + `requirement-analyst.md` | 贯彻「WHAT 不 HOW」到加载清单，必要的不缺、HOW 层不碰（graph-context 留架构/编码阶段） |
 
-**未做（另立任务）**：需求冲突检测**确定性脚本**（现为 Skill 步骤，机械化版本见 BACKLOG task-2026-08-15-003）；P3 级小缺口（受影响服务定位 / graph-context 用途边界 / 历史变更参考 / 隐私合规段落）记 backlog 待办，未立即改。
-**验证**：`node --check` 语法过；`run-evals.sh` 41 项全绿（workflow 改动无回归）；skill 文档 Step 0-8 + 转换追溯 + DoD 结构连贯、无残留旧措辞。
+**未做（另立任务）**：需求冲突检测**确定性脚本**（现为 Skill 步骤，机械化版本见 BACKLOG task-2026-08-15-003）；P3 级小缺口（历史变更参考 / 隐私合规段落）记 backlog 待办，未立即改。
+**验证**：`node --check` 语法过；`run-evals.sh` 41 项全绿（workflow 改动无回归）；skill 文档 Step 0-8 + 转换追溯 + DoD 结构连贯、无残留旧措辞；harness 自检 8 PASS。
+
+---
+
+## 六、Review Skill 完善（2026-08-15，第一批：文档精度）
+
+> 来源：两轮 review 意见评审。聚焦**计划评审 + 执行评审的文档精度**（权限矛盾、分级混乱、检查清单泛化），纯改 `review.md`，不涉及 spec-pipeline.js 的流程层（validity 视角 / 设计评审阶段为第二、三批，另议）。
+
+| # | 改动 | 位置 |
+|---|------|------|
+| R1 | 权限边界重写：只读 + 仅允许写评审报告，严禁改被审对象 | `review.md` 角色 |
+| R2 | 分级统一：MUST FIX↔CRITICAL / SHOULD FIX↔WARNING / INFO↔NOTE 三档对照表 | `review.md` 分级统一 |
+| R3 | 9 维度→12 维度：补二级检查项 + 新增可观测性/依赖变更/配置变更 | `review.md` Step 3 |
+| R4 | Migration + 跨服务兼容性 + 废弃删除三类专项检查清单 | `review.md` 特殊规则 |
+| R5 | M3 打分召回（knowledge-load.sh）+ 冲突优先级 + M4 由 Owner 落库 | `review.md` Step 4 |
+| R6 | 报告自检（定位文件+行号 / 建议可落地 / 维度逐项标注） | `review.md` |
+| R7 | 增量复审范围 + 强制回归（公共函数/核心链路扩调用方） | `review.md` VERDICT |
+| R8 | 任务粒度刚性规则（不跨服务 / Proto+Migration 独立 / 测试 1-10） | `review.md` 模式一 |
+| R9 | 计划评审预加载 CLAUDE.md + design.md（structure 判断基准） | `review.md` 模式一输入 |
+| R10 | 工具熔断（复用需求分析 Agent 的 2 次失败熔断 + 空结果/格式不符） | `review.md` |
+| R11 | QA 联动（加载 QA 报告 / 审未覆盖分支 / 覆盖率<80% WARNING / 不重跑构建） | `review.md` Step 2 |
+| R12 | 服务名映射标注「以 registry/services.json 为准」 | `review.md` |
+
+### 第二三批（2026-08-15，流程层 + 架构层）
+
+| # | 改动 | 位置 |
+|---|------|------|
+| R13 | 加 validity 视角（4 视角并行，+33% 评审 token） | `harness-spec-pipeline.js` lenses + prompt + `review.md` |
+| R14 | CRITICAL 一票否决（mustFixes 加 severity=critical）+ stage2_done 呈现少数 MUST FIX | `harness-spec-pipeline.js` 投票逻辑 |
+| R15 | 2/3 阈值动态化：写死 `>=2` → `ceil(totalReviews*2/3)`（3视角=2，4视角=3） | `gate-engine.js` + `builtinGate` |
+| R16 | 阶段 2 去 tasks.md（只审 specs）+ 阶段 3 加「设计评审」循环（architect→design-review→REVISION 回 architect，≤3 轮） | `review.md`（模式一.5）+ `harness-spec-pipeline.js` stage3 |
+
+**验证**：`node --check` 语法过；`run-evals.sh` 41 项全绿；harness 自检 8 PASS；无「3 视角」残留。设计评审复用了 stage2 的 SPEC_REVIEW_SCHEMA，REVISION 反馈注入 architect prompt（同 P1.1 收敛闭环）。

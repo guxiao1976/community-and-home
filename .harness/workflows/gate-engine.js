@@ -283,8 +283,8 @@ const GATES = {
     {
       id: 'spec_review_min_approved',
       severity: 'BLOCK',
-      desc: '需求评审需 ≥2/3 视角 APPROVED',
-      check: (ctx) => (ctx.passCount || 0) >= 2,
+      desc: '需求评审需 ≥2/3 视角 APPROVED（阈值随视角数动态：3视角=2，4视角=3）',
+      check: (ctx) => (ctx.passCount || 0) >= Math.ceil((ctx.totalReviews || 3) * 2 / 3),
     },
     {
       id: 'spec_review_round_limit',

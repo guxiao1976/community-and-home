@@ -64,17 +64,20 @@
 ### Step 3: 加载上下文
 
 
-按顺序：
+**先定位受影响服务，再精准加载**，按顺序：
 1. 根 `CLAUDE.md` — 项目架构、服务划分、全局约束
 2. `.harness/rules/项目编码规范.md` — 编码硬性约束（在分析阶段了解边界）
-3. 相关服务的 `docs/design.md` — 现有数据模型和业务流程
-4. `.harness/knowledge/memory/MEMORY.md` — 精读相关记忆，避免提出已知不可行的方案
-5. （OpenSpec 路径）Step 1/2 中读取的 brainstorming 设计文档
-6. **业务 / 非功能上下文（按需加载，非默认全量）**：
+3. **定位受影响服务**：从需求文本 + CLAUDE.md 服务划分，确定涉及哪些服务/前端；不确定的列为澄清问题，不凭感觉全量加载
+4. 受影响服务的 `docs/design.md` — **只读「数据模型」+「业务流程」章节**（现有能力边界，WHAT 层）；跳过「Go 数据模型 / 缓存 / 实现细节」等 HOW 层章节
+5. `.harness/knowledge/memory/MEMORY.md` — 按触发词精读相关记忆（`knowledge-load.sh --service <名> --task "<描述>"` 取 top，非全文）
+6. `.harness/tasks/BACKLOG.md` — 当前待办，检测重复/冲突（配合 Step 0 冲突预检）
+7. （OpenSpec 路径）Step 1/2 中读取的 brainstorming 设计文档
+8. **业务 / 非功能上下文（按需加载，非默认全量）**：
    - 跨链路 / 多角色需求 → 读 `.harness/knowledge/business-flows.md`（端到端流程与状态机）
    - 涉及权限 / 角色 / 数据范围 → 读 `docs/specs/rbac-design.md` 对应章节
    - 涉及安全 / 合规 / 非功能约束 → 读全局安全规范与质量要求；无显式约束则显式标注「无显式约束」
-   - 原则：只加载与本次需求相关的业务/非功能文档，避免无谓的上下文膨胀
+
+> **不加载**（HOW 层，需求分析不碰，留到架构设计/编码阶段）：`docs/graph-context.md`（API 路由 / gRPC 接口 / 数据表等技术清单）——违反「WHAT 不 HOW」，读了诱导陷入实现细节。
 
 ### Step 4: 理解需求
 

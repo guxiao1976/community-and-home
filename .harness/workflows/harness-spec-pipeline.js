@@ -10,7 +10,7 @@ export const meta = {
   phases: [
     { title: '0 路径选择', detail: 'dispatch 分级 S/M/L → request.md' },
     { title: '1 需求分析', detail: 'brainstorming 澄清（HITL）→ requirement-analyst → proposal/specs' },
-    { title: '2 需求评审', detail: '3 视角并行 (coverage/structure/clarity) → 2/3 投票' },
+    { title: '2 需求评审', detail: '4 视角并行 (coverage/structure/clarity/validity) → 2/3 投票' },
     { title: '3 架构设计', detail: 'architecture-designer → design/tasks' },
     { title: '4 Proto 变更', detail: 'Owner 执行 make ci（HITL）→ proto_ci 门禁' },
     { title: '5 编码测试', detail: 'Owner 委托 N×harness-pipeline.js（HITL）' },
@@ -352,7 +352,8 @@ function builtinGate(phase, ctx) {
       break
     }
     case 'requirement_review': {
-      if ((ctx.passCount || 0) < 2) failures.push({ gate: 'spec_review_min_approved', message: `评审需 ≥2/3 APPROVED（当前 ${ctx.passCount}/${ctx.totalReviews}）` })
+      const requiredApproved = Math.ceil((ctx.totalReviews || 3) * 2 / 3)
+      if ((ctx.passCount || 0) < requiredApproved) failures.push({ gate: 'spec_review_min_approved', message: `评审需 ≥${requiredApproved}/${ctx.totalReviews} APPROVED（当前 ${ctx.passCount}/${ctx.totalReviews}）` })
       if ((ctx.rounds || 0) > 3) failures.push({ gate: 'spec_review_round_limit', message: `评审轮次 ≤3（当前 ${ctx.rounds}）` })
       break
     }
@@ -567,7 +568,7 @@ ${feedbackSection}
     log(`  ✅ 需求分析完成: ${res.specsCount} specs, self-review ${res.selfReview}`)
 }
 
-// 阶段 2: 需求评审（3 视角并行 + 投票）
+// 阶段 2: 需求评审（4 视角并行 + 投票）
 async function stage2Review(ctx) {
   phase('2 需求评审')
 
@@ -647,6 +648,7 @@ async function stage2Review(ctx) {
     { key: 'coverage', label: '覆盖完整性' },
     { key: 'structure', label: '结构合理性' },
     { key: 'clarity', label: '清晰可执行' },
+    { key: 'validity', label: '业务有效性' },
   ]
   // P1.3: 被审 spec 内容哈希进 prompt —— 文件变则 prompt 变，resume 缓存必然失效（杜绝旧 REVISION 缓存命中）
   const specHash = specContentHash() || `fallback:r${ctx.stageResults[2]?.rounds || 0}:rc${ctx.resumeCount || 0}`
@@ -660,6 +662,7 @@ async function stage2Review(ctx) {
 - coverage: 需求覆盖/场景完整性/边界识别
 - structure: 服务归属/依赖顺序/职责边界
 - clarity: 粒度/歧义/一致性（SHALL/MUST 唯一解释）
+- validity: 业务逻辑自洽性/非功能需求/合规性/风险识别（需求本身是否成立，而非拆得规不规范）
 
 ## 审查版本（P1.3）
 ${specHash}
@@ -672,7 +675,7 @@ ${specHash}
 
 ## 输出
 - verdict: APPROVED / REVISION（有 ≥1 MUST FIX 即 REVISION）
-- mustFixes: 必须修复项数组 {section, issue, fix}
+- mustFixes: 必须修复项数组 {severity, section, issue, fix}，severity 取 critical（架构违反/安全漏洞/数据丢失/业务不可用，一票否决）或 normal
 - summary: 一句话结论`,
         { label: `Review:${lens.key}`, schema: SPEC_REVIEW_SCHEMA, model: routeModel('review') }
       ).then(r => r ? { ...r, lens: lens.key } : null)
@@ -715,17 +718,23 @@ ${specHash}
     } catch (e) { /* 回填失败不阻断 */ }
   }
 
-  // 投票：≥2/3 通过；否则回阶段 1（含 P1.2 收敛早停）
+  // 投票：CRITICAL 一票否决 + ≥2/3 通过；否则回阶段 1（含 P1.2 收敛早停）
+  const criticalMFs = valid.flatMap(r => (r.mustFixes || []).filter(m => m.severity === 'critical').map(m => ({ lens: r.lens, ...m })))
   const gate = checkGate('requirement_review', { passCount: pass, totalReviews: valid.length, rounds })
-  if (gate.passed) {
+  if (gate.passed && criticalMFs.length === 0) {
     ctx.manualSpecFix = false
     log(`  ✅ 需求评审 ${pass}/${valid.length} APPROVED`)
+    const minorityMFs = valid.filter(r => r.verdict === 'REVISION').flatMap(r => (r.mustFixes || []).map(m => `[${r.lens}] ${m.section || ''} — ${m.issue || ''}`))
     return pauseForInput(ctx, 'stage2_done', {
       stage: 2,
-      summary: `需求评审完成：${pass}/${valid.length} APPROVED — 批准进入架构设计？`,
+      summary: `需求评审完成：${pass}/${valid.length} APPROVED${minorityMFs.length ? `（少数派遗留 ${minorityMFs.length} 条 MUST FIX）` : ''} — 批准进入架构设计？`,
       questions: [{ id: 'approve', text: '评审结论 APPROVED，进入架构设计？', options: ['进入架构设计', '回需求分析修正'] }],
+      artifacts: minorityMFs.length ? { minorityMustFixes: minorityMFs } : {},
       onResume: '评审裁决后进入阶段 3',
     })
+  }
+  if (criticalMFs.length > 0) {
+    log(`  ⛔ 出现 ${criticalMFs.length} 条 CRITICAL 级 MUST FIX（一票否决，拒绝 2/3 票决放行）`)
   }
   // P1.2: 语义收敛早停——本轮无任何「新 mustFix」（相对历史轮次）→ 收敛停滞，提前升级人工（不再盲跑满 3 轮）
   const historyKeys = new Set(ctx.stageResults[2].reviewRounds.slice(0, -1).flatMap(r => r.keys || []))
@@ -772,8 +781,15 @@ async function stage3Architecture(ctx) {
     return
   }
 
-  const res = await agent(
-    `你是 Community-Home 的架构设计师。执行 .harness/skills/architect-design.md 的完整流程，
+  // 架构设计 + 设计评审循环（≤3 轮，REVISION 回架构设计师修订）
+  const MAX_DESIGN_ROUNDS = 3
+  let res = null
+  let designFeedback = ''
+  let designApproved = false
+
+  for (let round = 1; round <= MAX_DESIGN_ROUNDS; round++) {
+    res = await agent(
+      `你是 Community-Home 的架构设计师。执行 .harness/skills/architect-design.md 的完整流程，
 产出 design + tasks。**必须先 Read .harness/agents/subagents/architecture-designer.md 获取权威流程**。
 
 ## 变更
@@ -782,31 +798,70 @@ ${CHANGE}
 ## 输入（磁盘）
 - .harness/changes/${CHANGE}/proposal.md
 - .harness/changes/${CHANGE}/specs/*/spec.md
+${designFeedback ? `\n## 上轮设计评审反馈（必须逐条修订）\n${designFeedback}` : ''}
 
 ## 产出（写入磁盘）
 - .harness/changes/${CHANGE}/design.md
 - .harness/changes/${CHANGE}/tasks.md（含「## 全局 / Proto」段标注 Proto 变更）
 
 完成后返回：{ services, protoChanges, tasksCount }（services=按服务分组的任务，protoChanges=proto 变更清单）`,
-    { label: 'architecture-designer', schema: ARCHITECT_SCHEMA, model: routeModel('architecture') }
-  )
+      { label: 'architecture-designer', schema: ARCHITECT_SCHEMA, model: routeModel('architecture') }
+    )
 
-  // 门禁：architecture_design（信任 agent 报告：tasksCount）
-  const gate = checkGate('architecture_design', {
-    changeDir: changeDir(),
-    tasksCount: res.tasksCount,
-    summary: `${CHANGE} 架构设计门禁`,
-  })
-  if (!gate.passed) {
-    log(`❌ 架构设计门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
-    ctx.currentStage = 0  // 回阶段 1
+    // 门禁：architecture_design（信任 agent 报告：tasksCount）
+    const gate = checkGate('architecture_design', {
+      changeDir: changeDir(),
+      tasksCount: res.tasksCount,
+      summary: `${CHANGE} 架构设计门禁`,
+    })
+    if (!gate.passed) {
+      log(`❌ 架构设计门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
+      ctx.currentStage = 0  // 回阶段 1
+      saveState(ctx)
+      return { status: 'stage_fail', stage: 3, change: CHANGE, failures: gate.failures, stateFile: statePath() }
+    }
+
+    // 设计评审（审 design + tasks 的设计正确性）
+    const review = await agent(
+      `你是设计评审 Agent。审 ${CHANGE} 的 design.md + tasks.md 的设计正确性。
+先 Read .harness/skills/review.md「模式一.5：设计评审」，再审查。
+
+## 审查对象（磁盘）
+- .harness/changes/${CHANGE}/design.md（数据模型/接口设计/业务流程/Proto 变更）
+- .harness/changes/${CHANGE}/tasks.md（任务拆分/依赖顺序）
+
+## 审查焦点
+- 服务归属：tasks 分服务是否合理？谁拥有数据谁提供接口？
+- 数据模型：是否满足 spec 需求？
+- 接口契约：gRPC/Proto 是否自洽？
+- Proto 破坏性：是否向后兼容（不删/改字段号、不改字段类型）？
+- 任务粒度：不跨服务 / Proto+Migration 独立 / 测试 1-10
+
+## 输出
+- verdict: APPROVED / REVISION（有 ≥1 MUST FIX 即 REVISION）
+- mustFixes: 数组 {section, issue, fix}
+- summary: 一句话结论`,
+      { label: 'design-reviewer', schema: SPEC_REVIEW_SCHEMA, model: routeModel('review') }
+    )
+
+    if (review && review.verdict === 'APPROVED') {
+      designApproved = true
+      break
+    }
+    designFeedback = ((review && review.mustFixes) || []).map(m => `[${m.section || ''}] ${m.issue || ''}${m.fix ? ` → ${m.fix}` : ''}`).join('\n')
+    log(`  🔄 设计评审 REVISION（第 ${round}/${MAX_DESIGN_ROUNDS} 轮），回架构设计师修订`)
+  }
+
+  if (!designApproved) {
+    log(`  ⛔ 设计评审 ${MAX_DESIGN_ROUNDS} 轮未通过，回阶段 1`)
+    ctx.currentStage = 0  // 回阶段 1（需求分析）
     saveState(ctx)
-    return { status: 'stage_fail', stage: 3, change: CHANGE, failures: gate.failures, stateFile: statePath() }
+    return { status: 'stage_fail', stage: 3, change: CHANGE, failures: [{ gate: 'design_review_round_limit', message: `设计评审 ${MAX_DESIGN_ROUNDS} 轮未通过` }], stateFile: statePath() }
   }
 
   ctx.stageResults[3] = { services: res.services, protoChanges: res.protoChanges, tasksCount: res.tasksCount }
   saveState(ctx)
-  log(`  ✅ 架构设计完成: ${res.tasksCount} tasks, ${(res.protoChanges || []).length} proto 变更`)
+  log(`  ✅ 架构设计 + 设计评审通过: ${res.tasksCount} tasks, ${(res.protoChanges || []).length} proto 变更`)
   return pauseForInput(ctx, 'stage3_done', {
     stage: 3,
     summary: `架构设计完成：${res.tasksCount} tasks, ${(res.protoChanges || []).length} proto 变更 — 确认服务归属与 Proto 清单？`,

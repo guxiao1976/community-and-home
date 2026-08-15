@@ -27,18 +27,21 @@ Skill("requirement-analysis")
 - **Step 7**: 创建 .change.yaml
 - **Step 8**: Spec Self-Review + 转换追溯（双向核对）+ DoD 清单
 
-## 上下文加载清单（从磁盘读取）
+## 上下文加载清单（精准加载：必要的不缺，HOW 层不碰）
 
-在执行 Skill 之前，加载以下文件作为上下文：
+执行 Skill 时按「先定位受影响服务 → 再精准加载」顺序：
 
 1. `.harness/changes/<change>/request.md` — 用户原始需求（Owner 阶段0 写入）
 2. `CLAUDE.md` — 项目架构、服务划分、全局约束
 3. `.harness/rules/项目编码规范.md` — 硬性约束（边界条件）
-4. 受影响服务的 `services/<name>/docs/design.md` — 现有数据模型
-5. 受影响服务的 `services/<name>/docs/graph-context.md` — 技术清单（API路由/gRPC接口/数据表/服务依赖，Neo4j自动生成）
-6. `.harness/knowledge/memory/MEMORY.md` — 相关经验记忆
+4. **定位受影响服务**：从需求文本 + CLAUDE.md 服务划分确定涉及的服务/前端（不确定列为澄清问题）
+5. 受影响服务的 `services/<name>/docs/design.md` — 只读「数据模型」+「业务流程」章节（WHAT 层现有能力）
+6. `.harness/knowledge/memory/MEMORY.md` — 按触发词精读（`knowledge-load.sh` 取 top，非全文）
 7. `.harness/tasks/BACKLOG.md` — 当前待办（避免重复工作）
-8. （OpenSpec 路径）`docs/superpowers/specs/<date>-<topic>-design.md` — brainstorming 产出
+8. 业务/非功能按需：跨链路 → `business-flows.md`；权限 → `rbac-design.md`；安全合规 → 全局规范
+9. （OpenSpec 路径）`docs/superpowers/specs/<date>-<topic>-design.md` — brainstorming 产出
+
+> **不加载**：`docs/graph-context.md`（HOW 层技术清单，违反「WHAT 不 HOW」，需求分析不读，留到架构设计/编码阶段）。
 
 ## 关键工具
 
