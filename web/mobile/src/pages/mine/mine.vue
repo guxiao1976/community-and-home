@@ -76,17 +76,17 @@ onMounted(async () => {
 <style scoped lang="scss">
 .page {
   min-height: 100vh;
-  padding: 32px 24px;
+  padding: 2rem 1.5rem;
 }
 
 .loading-wrap {
   display: flex;
   justify-content: center;
-  padding: 200rpx 0;
+  padding: 6.25rem 0;
 }
 
 .loading-text {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: $uni-text-color-placeholder;
 }
 
@@ -94,25 +94,25 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 120rpx 0;
+  padding: 3.75rem 0;
 
   .avatar-placeholder {
-    width: 120rpx;
-    height: 120rpx;
+    width: 3.75rem;
+    height: 3.75rem;
     border-radius: 50%;
     background-color: $uni-bg-color-grey;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 20rpx;
+    margin-bottom: 0.625rem;
 
     .avatar-icon {
-      font-size: 60rpx;
+      font-size: 1.875rem;
     }
   }
 
   .login-text {
-    font-size: 32rpx;
+    font-size: 1rem;
     color: $uni-color-primary;
   }
 }
@@ -121,17 +121,17 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 60rpx 0;
+  padding: 1.875rem 0;
 
   .avatar {
-    width: 120rpx;
-    height: 120rpx;
+    width: 3.75rem;
+    height: 3.75rem;
     border-radius: 50%;
     background-color: $uni-bg-color-grey;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 20rpx;
+    margin-bottom: 0.625rem;
     overflow: hidden;
 
     .avatar-img {
@@ -140,34 +140,34 @@ onMounted(async () => {
     }
 
     .avatar-icon {
-      font-size: 60rpx;
+      font-size: 1.875rem;
     }
   }
 
   .nickname {
-    font-size: 36rpx;
+    font-size: 1.125rem;
     font-weight: 600;
     color: $uni-text-color;
   }
 }
 
 .community-info {
-  margin-top: 12rpx;
+  margin-top: 0.375rem;
 }
 
 .community-count {
-  font-size: 26rpx;
+  font-size: 0.8125rem;
   color: $uni-color-primary;
 }
 
 .menu-section {
-  margin-top: 48rpx;
+  margin-top: 1.5rem;
   display: flex;
   justify-content: center;
 }
 
 .menu-placeholder {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: $uni-text-color-placeholder;
 }
 </style>

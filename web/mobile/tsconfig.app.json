@@ -16,7 +16,7 @@
       "@/*": ["./src/*"],
       "@common/*": ["../common/*"]
     },
-    "types": ["@dcloudio/types"]
+    "types": ["@dcloudio/types", "node"]
   },
   "include": [
     "src/**/*.ts",

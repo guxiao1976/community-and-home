@@ -1,5 +1,36 @@
 # CHANGELOG — user-service
 
+## 2026-08-16 — 修复 profile 端点本人手机号被脱敏（接线类型）
+
+### 做了什么
+- **GetProfileLogic 补传 ViewerId**：`api/internal/logic/user/user_logic.go` 的 `GetProfile()` 调 `UserRpc.GetUser` 时补 `ViewerId: userId`（原为 0）。
+- **效果**：`GET /api/users/profile`（本人查自身）→ user-service `GetUser` 命中 `viewerId == in.Id` 分支，返回**明文手机号 + 自身房屋号**；移动端【我的】页 `user.phone` 有值，不再显示「未绑定手机号」。
+- **不变量保持**：未改动 `get_user_logic.go` 的 masking 语义——他人查看仍按 `viewer_id==0`（脱敏）或同屋判定脱敏；仅本人查看路径解封。
+
+### 测试（TDD）
+| 测试文件 | 用例 | 类型 |
+|---|---|---|
+| `api/internal/logic/user/user_logic_test.go` | GetProfileLogic：RPC 请求断言 `viewer_id==userId`（自定义 gomock.Matcher）/ RPC Base 10001 透出 error / 未登录 error / RPC 调用失败 error | 接线（断言请求参数） |
+
+### RED 摘录
+```
+controller.go:269: missing call(s) to *mocks.MockUserServiceClient.GetUser(is anything, GetUserRequest{id=1001, viewer_id=1001})
+  controller.go:269: ... because: expected call at user_logic_test.go:227 doesn't match the argument at index 1.
+  Got: id:1001 (*userv1.GetUserRequest)
+```
+（GREEN：补 `ViewerId: userId` 后 `go test ./...` 全绿，~143 测试函数 PASS，harness-checks 18 PASS / 0 FAIL）
+
+### 为什么
+`GetProfileLogic` 原未传 `ViewerId`（=0）→ RPC 层按「无查看上下文」走 `maskPhone` 脱敏（默认安全），导致本人查自己 profile 也拿不到明文手机号。
+
+### 影响
+- Proto: 无（复用 `GetUserRequest.viewer_id`，Owner 已生成）
+- 调用方: 移动端【我的】页（手机号展示恢复）
+- 数据库: 无
+- 备注: 本仓库 golang/mock v1.6.0 未导出 `gomock.MatchedBy`，测试用自定义 Matcher 断言 RPC 请求参数
+
+---
+
 ## 2026-08-13 — 访问控制与数据权限改造（user-service 部分，Task 3.1-3.7）
 
 ### 做了什么

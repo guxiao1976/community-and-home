@@ -9,7 +9,7 @@
     {
       "path": "pages/notice/notice",
       "style": {
-        "navigationBarTitleText": "公告信息"
+        "navigationBarTitleText": "我的小区"
       }
     },
     {
@@ -57,12 +57,6 @@
       }
     },
     {
-      "path": "pages/account-security/account-security",
-      "style": {
-        "navigationBarTitleText": "账号安全"
-      }
-    },
-    {
       "path": "pages/notice-browse/notice-browse",
       "style": {
         "navigationBarTitleText": "通知公告"
@@ -72,6 +66,12 @@
       "path": "pages/contact-list/contact-list",
       "style": {
         "navigationBarTitleText": "便民联络"
+      }
+    },
+    {
+      "path": "pages/agreement/agreement",
+      "style": {
+        "navigationBarTitleText": "注册协议"
       }
     },
     {
@@ -95,7 +95,7 @@
     "list": [
       {
         "pagePath": "pages/notice/notice",
-        "text": "公告信息",
+        "text": "我的小区",
         "iconPath": "static/tabbar/notice.png",
         "selectedIconPath": "static/tabbar/notice-active.png"
       },

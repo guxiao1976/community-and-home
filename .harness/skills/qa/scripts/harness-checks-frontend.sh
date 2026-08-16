@@ -460,6 +460,99 @@ check_type_safety() {
   fi
 }
 
+# ─── Check 8: 前端单位规范（rem，§13 项目编码规范）──────────────────
+# 硬性规则：长度/字号一律 rem，禁止 rpx/px（web/mobile 604 处 rpx 已换算为 rem）。
+# 例外：① 根字号声明 html { font-size: 16px }（rem 体系的唯一 px 基准）；
+#       ② env(safe-area-inset-bottom, 0px) 的 0px 兜底；③ 注释行。
+# 修复（2026-08-16）：① 跳过 *.spec.*/*.test.* 测试文件（对齐 check_type_safety）；
+#     ② 注释剥离改为逐行状态化，多行块注释续行一并剔除（对齐守卫测试 stripComments 语义）。
+check_unit_standard() {
+  echo "[8/8] Unit standard (rem only, mobile)" >&2
+
+  # 本轮仅约束 mobile（web/pc 仍 px 体系，含 Element Plus，后续单独评估 —— 决策 2026-08-16 (b)）
+  if [[ -n "$SERVICE_NAME" && "$SERVICE_NAME" != "mobile" ]]; then
+    log_pass "unit_standard" "scoped to mobile only (${SERVICE_NAME} skipped this round)"
+    return
+  fi
+
+  local search_dir="$WEB_DIR/mobile"
+  local violations=()
+  local file line_no in_block line code stripped iter before rest i prev rel
+
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    [[ "$file" == *".spec."* ]] && continue
+    [[ "$file" == *".test."* ]] && continue
+    [[ "$file" == *"node_modules"* ]] && continue
+
+    rel="${file#$PROJECT_ROOT/}"
+    line_no=0
+    in_block=0
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line_no=$((line_no + 1))
+      code="$line"
+
+      # ── 剥除注释（状态化，跨行块注释续行一并剔除）──
+      # 1) 处于跨行 /* */ 块注释内：先找闭注释符 */，闭合后剩余部分继续当代码
+      if [[ "$in_block" == "1" ]]; then
+        if [[ "$code" == *"*/"* ]]; then
+          code="${code#*"*/"}"
+          in_block=0
+        else
+          continue  # 整行仍在块注释内
+        fi
+      fi
+      # 2) 同行 /* ... */（可多个）与跨行块注释开启
+      iter=0
+      while [[ "$code" == *"/*"* ]] && (( iter < 20 )); do
+        iter=$((iter + 1))
+        before="${code%%"/*"*}"
+        rest="${code#*"/*"}"
+        if [[ "$rest" == *"*/"* ]]; then
+          rest="${rest#*"*/"}"
+          code="${before}${rest}"
+        else
+          code="$before"
+          in_block=1
+          break
+        fi
+      done
+      # 3) // 行注释（仅当位于行首或前导空白之后，避免误伤 url(http://...)）
+      for ((i = 0; i + 1 < ${#code}; i++)); do
+        if [[ "${code:i:2}" == "//" ]]; then
+          if (( i == 0 )); then
+            code=""
+          else
+            prev="${code:i-1:1}"
+            [[ "$prev" == [[:space:]] ]] && code="${code:0:i}"
+          fi
+          break
+        fi
+      done
+
+      # ── 例外剔除后判定残留 ──
+      # 例外①：根字号 html { font-size: 16px }（rem 唯一 px 基准）
+      stripped="${code//font-size: 16px/}"
+      stripped="${stripped//font-size:16px/}"
+      # 例外②：env(safe-area-inset-bottom, 0px) 兜底
+      stripped="${stripped//env(safe-area-inset-bottom, 0px)/}"
+      if [[ "$stripped" =~ [0-9.]+(rpx|px) ]]; then
+        violations+=("$rel:$line_no:$line")
+      fi
+    done < "$file"
+  done < <(find "$search_dir/src" -type f \( -name '*.vue' -o -name '*.scss' -o -name '*.ts' \) 2>/dev/null || true)
+
+  if [[ ${#violations[@]} -eq 0 ]]; then
+    log_pass "unit_standard" "units are rem only (no rpx/px)"
+  else
+    local detail
+    detail="$(printf '%s; ' "${violations[@]}" | head -c 2000)"
+    detail="$(json_escape "$detail")"
+    log_fail "unit_standard" "${#violations[@]} rpx/px violations: $detail"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -478,6 +571,7 @@ main() {
   check_debug_artifacts
   check_type_safety
   check_api_field_align
+  check_unit_standard
   set -e
 
   # Count results
@@ -508,7 +602,7 @@ main() {
     printf '}\n'
   else
     local n=0
-    local labels=("type-check" "unit-test" "build" "hardcoded-secrets" "debug-artifacts" "type-safety" "api-field-align")
+    local labels=("type-check" "unit-test" "build" "hardcoded-secrets" "debug-artifacts" "type-safety" "api-field-align" "unit-standard")
     for result in "${RESULTS[@]}"; do
       local status label detail
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

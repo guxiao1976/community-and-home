@@ -141,3 +141,15 @@ export async function getUserProfile(): Promise<User> {
 export async function sendSmsCode(phone: string): Promise<void> {
   await request.post('/api/auth/sms/send', { phone });
 }
+
+/**
+ * Logout — revoke the current device session. Requires JWT.
+ * kickAllDevices=true 时同时撤销该用户所有设备会话（本机登出不影响其他设备）。
+ * 后端接口已存在：POST /api/auth/logout（401 时拦截器会处理 token 刷新/失效）。
+ */
+export async function logout(deviceId: string, kickAllDevices = false): Promise<void> {
+  await request.post('/api/auth/logout', {
+    deviceId,
+    kickAllDevices,
+  });
+}

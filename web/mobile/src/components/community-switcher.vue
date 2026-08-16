@@ -91,23 +91,23 @@ function select(id: string) {
 
 .cs-header {
   background: linear-gradient(160deg, $uni-color-primary-light 0%, #E8DCCF 25%, $uni-bg-color-card 50%, $uni-bg-color 75%);
-  padding: 24rpx 32rpx 18rpx;
+  padding: 0.75rem 1rem 0.5625rem;
 }
 
 .cs-trigger {
   display: flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.88);
-  border-radius: 12rpx;
-  padding: 16rpx 20rpx;
-  border: 1px solid $uni-border-color;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.625rem;
+  border: 0.0625rem solid $uni-border-color;
   box-shadow: $uni-shadow-sm;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(0.625rem);
 }
 
 .cs-trigger-icon {
-  font-size: 36rpx;
-  margin-right: 14rpx;
+  font-size: 1.125rem;
+  margin-right: 0.4375rem;
   flex-shrink: 0;
 }
 
@@ -118,14 +118,14 @@ function select(id: string) {
 
 .cs-trigger-label {
   display: block;
-  font-size: 20rpx;
+  font-size: 0.625rem;
   color: $uni-text-color-grey;
-  margin-bottom: 2rpx;
+  margin-bottom: 0.0625rem;
 }
 
 .cs-trigger-name {
   display: block;
-  font-size: 30rpx;
+  font-size: 0.9375rem;
   font-weight: 600;
   color: $uni-text-color;
   overflow: hidden;
@@ -134,21 +134,21 @@ function select(id: string) {
 }
 
 .cs-badge {
-  padding: 6rpx 16rpx;
-  border-radius: 20rpx;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 0.625rem;
   background: rgba($uni-color-primary, 0.1);
-  margin-right: 10rpx;
+  margin-right: 0.3125rem;
   flex-shrink: 0;
 
   text {
-    font-size: 22rpx;
+    font-size: 0.6875rem;
     color: $uni-color-primary;
     font-weight: 500;
   }
 }
 
 .cs-arrow {
-  font-size: 20rpx;
+  font-size: 0.625rem;
   color: $uni-text-color-grey;
   transition: transform 0.2s;
   flex-shrink: 0;
@@ -167,42 +167,42 @@ function select(id: string) {
 
 .cs-dropdown {
   position: absolute;
-  top: calc(100% - 4rpx);
-  left: 32rpx;
-  right: 32rpx;
+  top: calc(100% - 0.125rem);
+  left: 1rem;
+  right: 1rem;
   z-index: 200;
   background: #fff;
-  border-radius: 14rpx;
-  box-shadow: 0 8rpx 40rpx rgba(0, 0, 0, 0.1);
-  border: 1px solid $uni-border-color;
+  border-radius: 0.4375rem;
+  box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.1);
+  border: 0.0625rem solid $uni-border-color;
   overflow: hidden;
 }
 
 .cs-dropdown-header {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  padding: 20rpx 28rpx;
-  border-bottom: 1px solid $uni-bg-color-grey;
+  gap: 0.25rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 0.0625rem solid $uni-bg-color-grey;
 }
 
 .cs-dropdown-header-icon {
-  font-size: 24rpx;
+  font-size: 0.75rem;
 }
 
 .cs-dropdown-header-text {
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: $uni-text-color-grey;
 }
 
 .cs-dropdown-list {
-  max-height: 400rpx;
+  max-height: 12.5rem;
 }
 
 .cs-dropdown-item {
   display: flex;
   align-items: center;
-  padding: 20rpx 28rpx;
+  padding: 0.625rem 0.875rem;
 
   &--active {
     background: rgba($uni-color-primary, 0.05);
@@ -215,8 +215,8 @@ function select(id: string) {
 }
 
 .cs-dropdown-item-icon {
-  font-size: 36rpx;
-  margin-right: 16rpx;
+  font-size: 1.125rem;
+  margin-right: 0.5rem;
   flex-shrink: 0;
 }
 
@@ -227,22 +227,22 @@ function select(id: string) {
 
 .cs-dropdown-item-name {
   display: block;
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: $uni-text-color;
 }
 
 .cs-dropdown-item-addr {
   display: block;
-  font-size: 22rpx;
+  font-size: 0.6875rem;
   color: $uni-text-color-grey;
-  margin-top: 2rpx;
+  margin-top: 0.0625rem;
 }
 
 .cs-dropdown-item-check {
-  font-size: 34rpx;
+  font-size: 1.0625rem;
   color: $uni-color-primary;
   font-weight: 700;
   flex-shrink: 0;
-  margin-left: 16rpx;
+  margin-left: 0.5rem;
 }
 </style>

@@ -38,20 +38,17 @@
     <!-- 实际内容 -->
     <!-- REQ-HL-4 固定垂直全序：通知 → 4功能入口 → 邻里互助占位 → 寻失互助 → 底部广告集中区 -->
     <template v-else-if="communityStore.hasCommunities">
-      <!-- ① 通知公告（跑马灯同源 30 天数据 + 卡片） -->
+      <!-- ① 通知公告（标题栏 + 30 天卡片列表） -->
       <view class="section">
-        <view class="marquee-bar" @click="onMoreNotice">
-          <text class="marquee-icon">📢</text>
-          <view class="marquee-track">
-            <text class="marquee-text">{{ marqueeText }}</text>
+        <view class="section-header notice-header">
+          <view class="section-header-left">
+            <text class="section-icon">📢</text>
+            <text class="section-title">通知公告</text>
           </view>
-          <text class="marquee-more">更多 →</text>
+          <text class="section-more" @click="onMoreNotice">更多</text>
         </view>
-        <view v-if="notices.length === 0" class="empty-state">
-          <text class="empty-icon">📭</text>
-          <text class="empty-text">暂无通知公告</text>
-        </view>
-        <view v-else class="notice-list">
+        <!-- 通知为空时不渲染列表与空态块，仅保留标题栏，下方内容自然上移 -->
+        <view v-if="notices.length > 0" class="notice-list">
           <view
             v-for="item in notices"
             :key="item.id"
@@ -60,23 +57,12 @@
           >
             <view class="notice-bar" :style="{ backgroundColor: getNoticeRoleColor(item.role) }" />
             <view class="notice-body">
-              <view class="notice-card-header">
-                <text class="notice-title">{{ item.title }}</text>
-                <view
-                  class="notice-role-pill"
-                  :style="{
-                    backgroundColor: getNoticeRoleColor(item.role) + '18',
-                    borderColor: getNoticeRoleColor(item.role),
-                  }"
-                >
-                  <text class="role-text" :style="{ color: getNoticeRoleColor(item.role) }">
-                    {{ getNoticeRoleName(item.role) }}
-                  </text>
-                </view>
-              </view>
-              <view class="notice-time-row">
-                <text class="notice-time-icon">🕐</text>
-                <text class="notice-time">{{ formatTime(item.published_at || item.created_at) }}</text>
+              <!-- 标题行：全文显示、自然换行（不截断、无省略号） -->
+              <text class="notice-title">{{ item.title }}</text>
+              <!-- 元信息行：发布单位 + 发布日期（YYYY-MM-DD） -->
+              <view class="notice-meta">
+                <text class="notice-publisher">{{ getPublisherName(item) }}</text>
+                <text class="notice-date">{{ formatPublishDate(item.published_at || item.created_at) }}</text>
               </view>
             </view>
           </view>
@@ -211,7 +197,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { onPullDownRefresh } from '@dcloudio/uni-app';
 import { useCommunityStore } from '@/stores/community';
 import {
@@ -226,6 +212,15 @@ import CommunitySwitcher from '@/components/community-switcher.vue';
 import dayjs from 'dayjs';
 
 const communityStore = useCommunityStore();
+
+// ---- 首载守卫（REQ-DBL-1）：初始进入时同批接口（通知+寻失）只拉一遍 ----
+// loadMemberships 内 getAppState 服务端权威覆写 currentCommunityId 会触发 watch 一次；
+// 该标志默认 false，watch 在 `!membershipsResolved` 时直接忽略（守卫已就绪前的变更不加载）。
+// 关键时序（评审钉死）：标志只能在 notice.vue 的 onMounted 中 `await loadMemberships()`
+// 之后置 true —— 若放进 loadMemberships 内部（含 finally），getAppState 覆写触发的 watch
+// 会在标志已 true 时执行 → 双重加载依旧（正是本变更要修的缺陷）。
+// SEE: [[frontend-business-rule-hardcode]] — 当前小区权威在后端（getAppState），前端仅消费
+let membershipsResolved = false;
 
 // ---- Loading ----
 const loading = ref(true);
@@ -261,15 +256,21 @@ function onFuncEntry(entry: FuncEntry) {
   }
 }
 
-// ---- Marquee ----
-const marqueeText = computed(() => {
-  if (notices.value.length === 0) return '暂无通知公告';
-  return notices.value.map(n => n.title).join('  ·  ');
-});
+// ---- 通知两行布局（标题全文 + 元信息行）----
+// 发布日期：YYYY-MM-DD（年月日）。published_at=0 时回退 created_at。
+function formatPublishDate(ts: number): string {
+  if (!ts) return '';
+  return dayjs.unix(ts).format('YYYY-MM-DD');
+}
+
+// 发布单位：item.publisher 非空则用它，否则回退 getNoticeRoleName(item.role)。
+function getPublisherName(item: Notice): string {
+  return item.publisher && item.publisher.trim() ? item.publisher : getNoticeRoleName(item.role);
+}
 
 // ---- Actions ----
 function onMoreNotice() {
-  if (notices.value.length === 0) return;
+  // 空态也允许进浏览页（移除 notices.length===0 拦截）
   uni.navigateTo({ url: '/pages/notice-browse/notice-browse' });
 }
 
@@ -292,11 +293,16 @@ function onAdClick(_type: string) {
 async function onCommunitySwitch(id: string) {
   try {
     await communityStore.switchCommunity(id);
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const err = e as { code?: number };
     // 10015 目标小区不在数据范围：明确提示，当前小区保持不变
-    if (e?.code === 10015) {
+    if (err?.code === 10015) {
       uni.showToast({ title: '目标小区不在你的数据范围', icon: 'none', duration: 2500 });
+      return;
     }
+    // 非 10015 不再静默：console.error + 通用 toast
+    console.error('[notice] 切换小区失败', e);
+    uni.showToast({ title: '切换小区失败', icon: 'none' });
   }
 }
 
@@ -345,6 +351,9 @@ async function loadAll() {
 
 // ---- Lifecycle ----
 watch(() => communityStore.currentCommunityId, (newVal, oldVal) => {
+  // 首载守卫：loadMemberships 内 getAppState 覆写 currentCommunityId 的这次变更在
+  // 标志置位前触发，被忽略；用户手动切换小区时标志已 true，正常触发单次 loadAll。
+  if (!membershipsResolved) return;
   if (newVal && newVal !== oldVal) {
     loadAll();
   }
@@ -352,7 +361,17 @@ watch(() => communityStore.currentCommunityId, (newVal, oldVal) => {
 
 onMounted(async () => {
   await communityStore.loadMemberships();
-  loadAll();
+  // 守卫解除必须在 loadMemberships 完成后（见模块顶部注释），随后显式单次 loadAll。
+  // loadMemberships 整体失败时 communities 被清空（hasCommunities=false）→ 不发请求，
+  // 不以陈旧 currentCommunityId 拉数据（REQ-DBL-1 降级）；守卫已就绪，后续切换仍可触发。
+  membershipsResolved = true;
+  if (communityStore.hasCommunities) {
+    loadAll();
+  } else {
+    // 无小区：不发起数据加载（不以陈旧 cid 发请求，REQ-DBL-1 降级），
+    // 直接结束骨架屏，展示「请先加入小区」空态引导（既有行为不回归）
+    loading.value = false;
+  }
 });
 
 // ---- Pull to Refresh ----
@@ -366,7 +385,7 @@ onPullDownRefresh(async () => {
 .page {
   min-height: 100vh;
   background-color: $uni-bg-color;
-  padding-bottom: calc(100rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(3.125rem + env(safe-area-inset-bottom));
 }
 
 // ---- No Community Hint ----
@@ -375,50 +394,50 @@ onPullDownRefresh(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 120rpx 32rpx;
+  padding: 3.75rem 1rem;
 }
 
 .no-community-icon {
-  font-size: 80rpx;
-  margin-bottom: 24rpx;
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
   opacity: 0.6;
 }
 
 .no-community-text {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: $uni-text-color-grey;
-  margin-bottom: 24rpx;
+  margin-bottom: 0.75rem;
 }
 
 .no-community-link {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: $uni-color-primary;
   font-weight: 600;
-  padding: 16rpx 48rpx;
-  border-radius: 48rpx;
+  padding: 0.5rem 1.5rem;
+  border-radius: 1.5rem;
   background: rgba($uni-color-primary, 0.08);
 }
 
 // ---- Skeleton ----
 .skeleton-wrap {
-  padding: 0 32rpx;
+  padding: 0 1rem;
 }
 
 .skeleton-section {
-  margin-bottom: 32rpx;
+  margin-bottom: 1rem;
 }
 
 .skeleton-title {
-  width: 160rpx;
-  height: 34rpx;
-  border-radius: 8rpx;
+  width: 5rem;
+  height: 1.0625rem;
+  border-radius: 0.25rem;
   background: linear-gradient(90deg, $uni-bg-color-grey 25%, $uni-bg-color-card 50%, $uni-bg-color-grey 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
-  margin-bottom: 20rpx;
+  margin-bottom: 0.625rem;
 
   &.short {
-    width: 120rpx;
+    width: 3.75rem;
   }
 }
 
@@ -426,25 +445,25 @@ onPullDownRefresh(async () => {
   display: flex;
   align-items: center;
   background: $uni-bg-color-card;
-  border-radius: 12rpx;
-  padding: 24rpx;
-  margin-bottom: 12rpx;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  margin-bottom: 0.375rem;
 
   .skeleton-bar {
-    width: 8rpx;
-    height: 56rpx;
-    border-radius: 4rpx;
+    width: 0.25rem;
+    height: 1.75rem;
+    border-radius: 0.125rem;
     background: linear-gradient(180deg, $uni-bg-color-grey 25%, #E8E0D5 50%, $uni-bg-color-grey 75%);
     background-size: 100% 200%;
     animation: shimmer 1.5s infinite;
-    margin-right: 20rpx;
+    margin-right: 0.625rem;
     flex-shrink: 0;
   }
 
   .skeleton-text {
     flex: 1;
-    height: 28rpx;
-    border-radius: 6rpx;
+    height: 0.875rem;
+    border-radius: 0.1875rem;
     background: linear-gradient(90deg, $uni-bg-color-grey 25%, $uni-bg-color-card 50%, $uni-bg-color-grey 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
@@ -454,12 +473,12 @@ onPullDownRefresh(async () => {
 .skeleton-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12rpx;
+  gap: 0.375rem;
 }
 
 .skeleton-contact {
-  height: 72rpx;
-  border-radius: 10rpx;
+  height: 2.25rem;
+  border-radius: 0.3125rem;
   background: linear-gradient(90deg, $uni-bg-color-grey 25%, $uni-bg-color-card 50%, $uni-bg-color-grey 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
@@ -467,14 +486,14 @@ onPullDownRefresh(async () => {
 
 .skeleton-lf-row {
   display: flex;
-  gap: 20rpx;
+  gap: 0.625rem;
   justify-content: center;
 }
 
 .skeleton-lf-card {
-  width: 300rpx;
-  height: 200rpx;
-  border-radius: 14rpx;
+  width: 9.375rem;
+  height: 6.25rem;
+  border-radius: 0.4375rem;
   background: linear-gradient(90deg, $uni-bg-color-grey 25%, $uni-bg-color-card 50%, $uni-bg-color-grey 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
@@ -487,85 +506,46 @@ onPullDownRefresh(async () => {
 
 // ---- Section Shared ----
 .section {
-  padding: 0 32rpx;
-  margin-bottom: 36rpx;
+  padding: 0 1rem;
+  margin-bottom: 1.125rem;
 }
 
-// ---- Marquee Bar ----
-.marquee-bar {
-  display: flex;
-  align-items: center;
-  background: #FAF8F5;
-  border-radius: 12rpx;
-  padding: 16rpx 20rpx;
-  margin-bottom: 16rpx;
-  overflow: hidden;
-}
-
-.marquee-icon {
-  font-size: 32rpx;
-  flex-shrink: 0;
-  margin-right: 12rpx;
-}
-
-.marquee-track {
-  flex: 1;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.marquee-text {
-  display: inline-block;
-  font-size: 26rpx;
-  color: #3D3226;
-  animation: marquee-scroll 20s linear infinite;
-  padding-right: 40rpx;
-}
-
-@keyframes marquee-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-.marquee-more {
-  font-size: 24rpx;
-  color: #B8956A;
-  flex-shrink: 0;
-  margin-left: 12rpx;
-  font-weight: 500;
+// ---- Notice Header（标题栏，任务 4）----
+.notice-header {
+  margin-bottom: 0.5rem;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16rpx;
+  margin-bottom: 0.5rem;
 }
 
 .section-header-left {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 0.25rem;
 }
 
 .section-icon {
-  font-size: 36rpx;
+  font-size: 1.125rem;
 }
 
 .section-title {
-  font-size: 34rpx;
+  font-size: 1.0625rem;
   font-weight: 600;
   color: $uni-text-color;
 }
 
 .section-more {
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: $uni-color-primary;
 
   &--center {
     display: block;
     text-align: center;
-    margin-top: 12rpx;
+    margin-top: 0.375rem;
   }
 }
 
@@ -575,95 +555,83 @@ onPullDownRefresh(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60rpx 0;
+  padding: 1.875rem 0;
 }
 
 .empty-icon {
-  font-size: 72rpx;
-  margin-bottom: 16rpx;
+  font-size: 2.25rem;
+  margin-bottom: 0.5rem;
   opacity: 0.6;
 }
 
 .empty-text {
-  font-size: 26rpx;
+  font-size: 0.8125rem;
   color: $uni-text-color-placeholder;
 }
 
-// ---- Notice Cards ----
+// ---- Notice Cards（两行布局：标题全文 + 元信息行）----
+// 简洁样式：透明底（与页面底色一致，无卡片背景/阴影/圆角），细分隔线区分行
 .notice-list {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
 }
 
 .notice-card {
   display: flex;
-  background-color: $uni-bg-color-card;
-  border-radius: 12rpx;
-  overflow: hidden;
-  box-shadow: $uni-shadow-sm;
+  padding: 0.6875rem 0;
+  border-bottom: 0.0625rem solid $uni-border-color;
+
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .notice-bar {
-  width: 10rpx;
+  width: 0.3125rem;
   flex-shrink: 0;
+  border-radius: 0.125rem;
 }
 
 .notice-body {
   flex: 1;
-  padding: 22rpx 24rpx 18rpx;
+  padding: 0 0 0 0.625rem;
+  min-width: 0;
 }
 
-.notice-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8rpx;
-}
-
+// 标题行：全文显示、自然换行（white-space normal，无 nowrap / JS 截断）
 .notice-title {
-  font-size: 28rpx;
+  display: block;
+  font-size: 0.9375rem;
   font-weight: 500;
+  line-height: 1.5;
   color: $uni-text-color;
-  flex: 1;
-  margin-right: 16rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-all;
 }
 
-.notice-role-pill {
-  border-radius: 20rpx;
-  padding: 4rpx 16rpx;
-  border: 1px solid;
-  flex-shrink: 0;
-}
-
-.role-text {
-  font-size: 20rpx;
-  font-weight: 500;
-}
-
-.notice-time-row {
+// 元信息行：发布单位 + 发布日期（YYYY-MM-DD）
+.notice-meta {
   display: flex;
   align-items: center;
-  gap: 4rpx;
+  margin-top: 0.25rem;
 }
 
-.notice-time-icon {
-  font-size: 20rpx;
-}
-
-.notice-time {
-  font-size: 22rpx;
+.notice-publisher {
+  font-size: 0.6875rem;
   color: $uni-text-color-grey;
+}
+
+.notice-date {
+  font-size: 0.6875rem;
+  color: $uni-text-color-placeholder;
+  margin-left: 0.5rem;
 }
 
 // ---- 4 Function Entries (REQ-FE-1) ----
 .func-entries {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16rpx;
+  gap: 0.5rem;
 }
 
 .func-entry {
@@ -672,18 +640,18 @@ onPullDownRefresh(async () => {
   align-items: center;
   justify-content: center;
   background-color: $uni-bg-color-card;
-  border-radius: 16rpx;
-  padding: 24rpx 8rpx;
+  border-radius: 0.5rem;
+  padding: 0.75rem 0.25rem;
   box-shadow: $uni-shadow-sm;
 }
 
 .func-entry-icon {
-  font-size: 44rpx;
-  margin-bottom: 10rpx;
+  font-size: 1.375rem;
+  margin-bottom: 0.3125rem;
 }
 
 .func-entry-label {
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: $uni-text-color;
   font-weight: 500;
 }
@@ -692,17 +660,17 @@ onPullDownRefresh(async () => {
 .ad-section {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
-  padding: 0 32rpx 32rpx;
+  gap: 0.75rem;
+  padding: 0 1rem 1rem;
 }
 
 .ad-banner {
-  height: 180rpx;
+  height: 5.625rem;
   background-size: cover;
   background-position: center;
   position: relative;
   overflow: hidden;
-  border-radius: 12rpx;
+  border-radius: 0.375rem;
 }
 
 .ad-overlay {
@@ -712,7 +680,7 @@ onPullDownRefresh(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28rpx;
+  padding: 0 0.875rem;
 }
 
 .ad-text {
@@ -721,31 +689,31 @@ onPullDownRefresh(async () => {
 }
 
 .ad-label {
-  font-size: 20rpx;
+  font-size: 0.625rem;
   color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 2rpx;
+  margin-bottom: 0.0625rem;
 }
 
 .ad-title {
-  font-size: 30rpx;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: #fff;
-  margin-bottom: 2rpx;
+  margin-bottom: 0.0625rem;
 }
 
 .ad-desc {
-  font-size: 22rpx;
+  font-size: 0.6875rem;
   color: rgba(255, 255, 255, 0.85);
 }
 
 .ad-btn {
-  padding: 10rpx 24rpx;
-  border-radius: 32rpx;
+  padding: 0.3125rem 0.75rem;
+  border-radius: 1rem;
   flex-shrink: 0;
 
   text {
     color: #fff;
-    font-size: 24rpx;
+    font-size: 0.75rem;
     font-weight: 600;
   }
 }
@@ -759,21 +727,21 @@ onPullDownRefresh(async () => {
 .lost-found-list {
   display: flex;
   justify-content: center;
-  gap: 24rpx;
+  gap: 0.75rem;
 }
 
 .lost-found-card {
-  width: 300rpx;
+  width: 9.375rem;
   flex-shrink: 0;
   background-color: $uni-bg-color-card;
-  border-radius: 14rpx;
+  border-radius: 0.4375rem;
   overflow: hidden;
   box-shadow: $uni-shadow-sm;
 }
 
 .lost-found-image-wrap {
   width: 100%;
-  height: 200rpx;
+  height: 6.25rem;
   background: linear-gradient(135deg, $uni-bg-color-grey, $uni-border-color);
   display: flex;
   align-items: center;
@@ -788,40 +756,40 @@ onPullDownRefresh(async () => {
 }
 
 .lost-found-placeholder {
-  font-size: 80rpx;
+  font-size: 2.5rem;
   opacity: 0.4;
 }
 
 .lost-found-tag {
   position: absolute;
-  top: 12rpx;
-  left: 12rpx;
-  border-radius: 8rpx;
-  padding: 4rpx 14rpx;
+  top: 0.375rem;
+  left: 0.375rem;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.4375rem;
 }
 
 .lost-found-tag-text {
-  font-size: 20rpx;
+  font-size: 0.625rem;
   color: #fff;
 }
 
 .lost-found-body {
-  padding: 14rpx 16rpx 18rpx;
+  padding: 0.4375rem 0.5rem 0.5625rem;
 }
 
 .lost-found-title {
   display: block;
-  font-size: 26rpx;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: $uni-text-color;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 4rpx;
+  margin-bottom: 0.125rem;
 }
 
 .lost-found-time {
-  font-size: 20rpx;
+  font-size: 0.625rem;
   color: $uni-text-color-grey;
 }
 </style>

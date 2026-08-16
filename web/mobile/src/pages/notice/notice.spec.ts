@@ -22,12 +22,14 @@ vi.mock('@/api/user', () => ({
   getUserMemberships: vi.fn().mockResolvedValue([]),
   getResidentialAreasByIds: vi.fn().mockResolvedValue([]),
   setCurrentCommunity: vi.fn(),
+  getAppState: vi.fn().mockResolvedValue({ current_community_id: '0', updated_at: 0 }),
 }));
 
-import { setCurrentCommunity, getUserMemberships } from '@/api/user';
-import { getNoticeList, getLostFoundList } from '@/api/community';
+import { setCurrentCommunity, getUserMemberships, getAppState } from '@/api/user';
+import { getNoticeList, getLostFoundList, getNoticeRoleName } from '@/api/community';
 import { useCommunityStore } from '@/stores/community';
 import NoticePage from './notice.vue';
+import dayjs from 'dayjs';
 
 let pinia: Pinia;
 
@@ -82,7 +84,8 @@ describe('notice page — onCommunitySwitch 10015 branch', () => {
     expect(store.currentCommunityId).toBe('c1');
   });
 
-  it('does not toast for a non-10015 switch error', async () => {
+  it('non-10015 switch error → console.error + 通用 toast（不再静默吞错）', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     (setCurrentCommunity as any).mockRejectedValue(
       Object.assign(new Error('服务不可用'), { code: 500 }),
     );
@@ -92,7 +95,12 @@ describe('notice page — onCommunitySwitch 10015 branch', () => {
 
     await (wrapper.vm as any).onCommunitySwitch('c2');
 
-    expect(uni.showToast).not.toHaveBeenCalled();
+    expect(errSpy).toHaveBeenCalled();
+    expect(uni.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: '切换小区失败' }),
+    );
+    // 当前小区保持不变（权威校验在后端，前端不吞错）
+    expect(store.currentCommunityId).toBe('c1');
   });
 
   it('does not toast and updates current community on successful switch', async () => {
@@ -159,9 +167,11 @@ describe('notice page — fetch 静默 catch 消除（REQ-P1-ERR）', () => {
 
     expect(uni.showToast).toHaveBeenCalled();
     expect(errSpy).toHaveBeenCalledTimes(2);
-    // 页面不崩：loading 复位 + 内容区（空态）渲染而非骨架屏
+    // 页面不崩：loading 复位 + 内容区（标题栏）渲染而非骨架屏
+    // 通知为空时不渲染空态块，仅保留标题栏；寻失空态保留
     expect((wrapper.vm as any).loading).toBe(false);
-    expect(wrapper.text()).toContain('暂无通知公告');
+    expect(wrapper.text()).toContain('通知公告');
+    expect(wrapper.find('.notice-list').exists()).toBe(false);
     expect(wrapper.text()).toContain('暂无寻失信息');
   });
 
@@ -204,8 +214,9 @@ describe('notice page — fetch 静默 catch 消除（REQ-P1-ERR）', () => {
     // 通知/寻失标题均从 snake_case mock 渲染
     expect(wrapper.text()).toContain('停水通知');
     expect(wrapper.text()).toContain('丢失的手表');
-    // published_at=0 时回退 created_at 渲染时间（year=2023）
-    expect(wrapper.text()).toMatch(/2023/);
+    // published_at=0 时回退 created_at 渲染时间 → YYYY-MM-DD（与组件同一 dayjs 计算，时间区鲁棒）
+    const expectedDate = dayjs.unix(1700000000).format('YYYY-MM-DD');
+    expect(wrapper.text()).toContain(expectedDate);
     // 寻失缩略图取 image_urls[0]
     const img = wrapper.find('.lost-found-image');
     expect(img.exists()).toBe(true);
@@ -308,6 +319,135 @@ describe('notice page — 4 功能图标入口（REQ-FE-1/2/3）', () => {
   });
 });
 
+describe('notice page — 通知模块标题栏 + 两行布局（标题全文 + 元信息行）', () => {
+  beforeEach(() => {
+    pinia = createPinia();
+    setActivePinia(pinia);
+    vi.clearAllMocks();
+    (getNoticeList as any).mockResolvedValue({ notices: [], total: '0' });
+    (getLostFoundList as any).mockResolvedValue({ items: [], total: '0' });
+    seedMemberships();
+    seedStoredCommunity();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('跑马灯已移除：页面无 .marquee-bar，替换为标题栏「通知公告」+「更多」', async () => {
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    expect(wrapper.find('.marquee-bar').exists()).toBe(false);
+    expect(wrapper.find('.notice-header').exists()).toBe(true);
+    expect(wrapper.text()).toContain('通知公告');
+    expect(wrapper.text()).toContain('更多');
+  });
+
+  it('通知为空 → 不渲染列表与空态块，仅保留标题栏', async () => {
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    expect(wrapper.find('.notice-list').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('暂无通知公告');
+    // 标题栏仍在
+    expect(wrapper.find('.notice-header').exists()).toBe(true);
+  });
+
+  it('点击「更多」→ 空态也允许进浏览页（无 notices.length===0 拦截）', async () => {
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    await (wrapper.vm as any).onMoreNotice();
+    expect(uni.navigateTo).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/pages/notice-browse/notice-browse' }),
+    );
+  });
+
+  it('两行布局：标题全文渲染 + 标题下方发布单位 + 发布日期(YYYY-MM-DD)', async () => {
+    const longTitle = '小区停水通知：因管道检修明日上午9点至下午5点停水';
+    (getNoticeList as any).mockResolvedValue({
+      notices: [{
+        id: 'n1', community_id: 'c1', title: longTitle, content: '',
+        role: 3, publisher: '物业管理处', publisher_id: 'p1', is_pinned: false,
+        published_at: 1700000000, created_at: 1700000000, updated_at: 1700000000, attachments: [],
+      }],
+      total: '1',
+    });
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    const card = wrapper.find('.notice-card');
+    expect(card.exists()).toBe(true);
+    // 标题全文渲染（不再 JS 截断，无省略号）
+    const title = card.find('.notice-title');
+    expect(title.exists()).toBe(true);
+    expect(title.text()).toBe(longTitle);
+    expect(title.text()).not.toContain('…');
+    // 元信息行：发布单位 + 发布日期（YYYY-MM-DD）
+    const meta = card.find('.notice-meta');
+    expect(meta.exists()).toBe(true);
+    expect(meta.text()).toContain('物业管理处');
+    const expectedDate = dayjs.unix(1700000000).format('YYYY-MM-DD');
+    expect(meta.text()).toContain(expectedDate);
+    // 角色色条保留行首
+    expect(card.find('.notice-bar').exists()).toBe(true);
+  });
+
+  it('publisher 为空 → 发布单位回退 getNoticeRoleName 角色名', async () => {
+    (getNoticeList as any).mockResolvedValue({
+      notices: [{
+        id: 'n1', community_id: 'c1', title: '电梯检修通知', content: '',
+        role: 2, publisher: '', publisher_id: 'p1', is_pinned: false,
+        published_at: 1700000000, created_at: 1700000000, updated_at: 1700000000, attachments: [],
+      }],
+      total: '1',
+    });
+    (getNoticeRoleName as any).mockReturnValue('业委会');
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    const meta = wrapper.find('.notice-meta');
+    expect(meta.exists()).toBe(true);
+    expect(meta.text()).toContain('业委会');
+  });
+
+  it('published_at=0 → 回退 created_at 渲染 YYYY-MM-DD', async () => {
+    (getNoticeList as any).mockResolvedValue({
+      notices: [{
+        id: 'n1', community_id: 'c1', title: '停水通知', content: '',
+        role: 1, publisher: '社区', publisher_id: 'p1', is_pinned: false,
+        published_at: 0, created_at: 1700000000, updated_at: 1700000000, attachments: [],
+      }],
+      total: '1',
+    });
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    const expectedDate = dayjs.unix(1700000000).format('YYYY-MM-DD');
+    expect(wrapper.find('.notice-meta').text()).toContain(expectedDate);
+  });
+
+  it('无单行布局残留：.notice-line 与 .notice-role-pill 已移除', async () => {
+    (getNoticeList as any).mockResolvedValue({
+      notices: [{
+        id: 'n1', community_id: 'c1', title: '停水通知', content: '',
+        role: 3, publisher: '物业', publisher_id: 'p1', is_pinned: false,
+        published_at: 1700000000, created_at: 1700000000, updated_at: 1700000000, attachments: [],
+      }],
+      total: '1',
+    });
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    expect(wrapper.find('.notice-line').exists()).toBe(false);
+    expect(wrapper.find('.notice-role-pill').exists()).toBe(false);
+    // 两行结构：标题行 + 元信息行均存在
+    expect(wrapper.find('.notice-title').exists()).toBe(true);
+    expect(wrapper.find('.notice-meta').exists()).toBe(true);
+  });
+});
+
 describe('notice page — 区块垂直全序（REQ-HL-4）', () => {
   beforeEach(() => {
     pinia = createPinia();
@@ -347,5 +487,69 @@ describe('notice page — 区块垂直全序（REQ-HL-4）', () => {
     expect(pos(funcEntries, neighborEl)).toBe(true);
     expect(pos(neighborEl, lostFoundEl)).toBe(true);
     expect(pos(lostFoundEl, adSectionEl)).toBe(true);
+  });
+});
+
+describe('notice page — 首页首载去重（REQ-DBL-1/2/3）', () => {
+  beforeEach(() => {
+    pinia = createPinia();
+    setActivePinia(pinia);
+    vi.clearAllMocks();
+    (getNoticeList as any).mockResolvedValue({ notices: [], total: '0' });
+    (getLostFoundList as any).mockResolvedValue({ items: [], total: '0' });
+    seedMemberships();
+    seedStoredCommunity();
+    // 复位 getAppState：本 describe 的覆写用例会把它改为权威 'c2'，clearAllMocks 不清实现，
+    // 若不复位会导致后续用例挂载时 currentCommunityId 也被覆写（跨用例 mock 泄漏）
+    (getAppState as any).mockResolvedValue({ current_community_id: '0', updated_at: 0 });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('loadMemberships 覆写 currentCommunityId（C1→C2）→ 通知/寻失接口各仅请求一次（以 C2 为维度，REQ-DBL-1）', async () => {
+    // 本地存储陈旧指向 c1，服务端 getAppState 权威返回 c2（在 memberships 内）
+    (getAppState as any).mockResolvedValue({ current_community_id: 'c2', updated_at: 0 });
+
+    mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    // 覆写触发的那次 watch 被首载守卫忽略 + onMounted 显式单次 loadAll → 各只请求一次
+    expect(getNoticeList).toHaveBeenCalledTimes(1);
+    expect(getNoticeList).toHaveBeenCalledWith('c2', 1, 3, 30);
+    expect(getLostFoundList).toHaveBeenCalledTimes(1);
+    expect(getLostFoundList).toHaveBeenCalledWith('c2');
+    expect(useCommunityStore().currentCommunityId).toBe('c2');
+  });
+
+  it('用户手动切换小区 → watch 正常触发 loadAll（新小区维度单次，REQ-DBL-2）', async () => {
+    (setCurrentCommunity as any).mockResolvedValue(undefined);
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+    // 首载已完成（c1 维度一次），清空计数以隔离手动切换触发的加载
+    (getNoticeList as any).mockClear();
+    (getLostFoundList as any).mockClear();
+
+    await (wrapper.vm as any).onCommunitySwitch('c2');
+    await flushPromises();
+
+    expect(getNoticeList).toHaveBeenCalledTimes(1);
+    expect(getNoticeList).toHaveBeenCalledWith('c2', 1, 3, 30);
+    expect(getLostFoundList).toHaveBeenCalledTimes(1);
+    expect(getLostFoundList).toHaveBeenCalledWith('c2');
+  });
+
+  it('loadMemberships 整体失败 → 不以陈旧 cid 发请求、无 double-load（REQ-DBL-1 降级）', async () => {
+    // 本地 storage 陈旧指向 c1，但 memberships 拉取网络失败 → communities 清空
+    (getUserMemberships as any).mockRejectedValue(new Error('memberships 接口不可用'));
+    const store = useCommunityStore();
+
+    mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    expect(getNoticeList).not.toHaveBeenCalled();
+    expect(getLostFoundList).not.toHaveBeenCalled();
+    expect(store.hasCommunities).toBe(false);
   });
 });

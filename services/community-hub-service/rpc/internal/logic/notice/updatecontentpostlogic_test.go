@@ -6,6 +6,7 @@ import (
 
 	communityv1 "github.com/guxiao1976/api-proto/gen/go/community/v1"
 	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
+	"github.com/guxiao1976/community-hub/internal/sanitize"
 	"github.com/guxiao1976/community-hub/model"
 	"github.com/guxiao1976/community-hub/rpc/internal/logic/scope"
 	"github.com/stretchr/testify/assert"
@@ -15,6 +16,7 @@ import (
 
 func strPtr(s string) *string { return &s }
 func boolPtr(b bool) *bool    { return &b }
+func int64Ptr(v int64) *int64 { return &v }
 
 // TestUpdateContentPost_NotFound 不存在 → 080001。
 func TestUpdateContentPost_NotFound(t *testing.T) {
@@ -145,6 +147,90 @@ func TestUpdateContentPost_Submit(t *testing.T) {
 	assert.Equal(t, []int64{1}, pusher.pushed, "提交成功后 Producer.Push")
 }
 
+// TestUpdateContentPost_ContentEdit_SanitizesText
+// 内容编辑分支（text 携带）：正文落库前白名单净化（REQ-XSS-1）；净化在非空校验后、DB 落库前执行。
+func TestUpdateContentPost_ContentEdit_SanitizesText(t *testing.T) {
+	conn, _ := beginCommitConn(t)
+	pm := &fakeContentPostModel{findItem: draftPost(1, 100)}
+	sc := noticeSvcCtx(pm, &fakeScopeModel{}, &fakeAttachmentModel{}, permAllowAll(), &fakeMD{}, &fakeFile{}, &fakeUser{}, nil)
+	sc.Conn = conn
+
+	l := NewUpdateContentPostLogic(ctxWithUserID(t, 100), sc)
+	resp, err := l.UpdateContentPost(&communityv1.UpdateContentPostRequest{
+		Id:   1,
+		Text: strPtr(`<script>alert(1)</script><iframe src=x></iframe>净化后正文`),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.GetBase().GetCode())
+	assert.True(t, pm.updateContentTx, "正文携带 → UpdateContentTx 执行")
+	assert.Equal(t, "净化后正文", pm.updateContentText, "落库正文为净化后内容")
+	assert.NotContains(t, pm.updateContentText, "<script", "落库正文不得残留 <script")
+	assert.NotContains(t, pm.updateContentText, "<iframe", "落库正文不得残留 <iframe")
+}
+
+// TestUpdateContentPost_ContentEdit_TextNotPresentNoResanitize
+// Update 正文未携带（proto3 presence）：不重写正文、不重净化，现值保持（REQ-XSS-6/D11 残余风险）。
+func TestUpdateContentPost_ContentEdit_TextNotPresentNoResanitize(t *testing.T) {
+	conn, _ := beginCommitConn(t)
+	pm := &fakeContentPostModel{findItem: draftPost(1, 100)}
+	sc := noticeSvcCtx(pm, &fakeScopeModel{}, &fakeAttachmentModel{}, permAllowAll(), &fakeMD{}, &fakeFile{}, &fakeUser{}, nil)
+	sc.Conn = conn
+
+	l := NewUpdateContentPostLogic(ctxWithUserID(t, 100), sc)
+	resp, err := l.UpdateContentPost(&communityv1.UpdateContentPostRequest{
+		Id:    1,
+		Title: strPtr("仅改标题"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.GetBase().GetCode())
+	assert.True(t, pm.updateContentTx, "标题携带 → UpdateContentTx 执行（title/text/section_code 三列）")
+	assert.Equal(t, "c", pm.updateContentText, "正文未携带 → text 保持现值，不重净化")
+}
+
+// TestUpdateContentPost_Submit_SanitizesDraftText
+// submit 发布分支（REQ-XSS-6/D9）：存量 draft 正文置公开前先净化，同一事务净化后正文 + 置公开。
+func TestUpdateContentPost_Submit_SanitizesDraftText(t *testing.T) {
+	conn, _ := beginCommitConn(t)
+	pm := &fakeContentPostModel{findItem: &model.ContentPost{
+		Id: 1, PublisherId: int64Ptr(100), Status: model.StatusDraft,
+		Title: "t", Text: `<script>alert(1)</script><img src=x onerror=alert(1)>存量正文`, SectionCode: "notice",
+	}}
+	am := &fakeAttachmentModel{findAtts: []*model.ContentPostAttachment{{Id: 11, PostId: 1, FileId: 5001}}}
+	pusher := &fakePusher{}
+	sc := noticeSvcCtx(pm, &fakeScopeModel{}, am, permAllowAll(), &fakeMD{}, &fakeFile{}, &fakeUser{}, pusher)
+	sc.Conn = conn
+
+	l := NewUpdateContentPostLogic(ctxWithUserID(t, 100), sc)
+	resp, err := l.UpdateContentPost(&communityv1.UpdateContentPostRequest{Id: 1, Status: 1})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.GetBase().GetCode())
+	assert.True(t, pm.updateContentTx, "置公开前先净化存量 draft 正文（UpdateContentTx）")
+	assert.Equal(t, "存量正文", pm.updateContentText, "净化后正文写入同一事务")
+	assert.Equal(t, int64(model.StatusApproved), pm.statusTxCalled, "随后 UpdateStatusAndPublish(approved)")
+	assert.Equal(t, []int64{1}, pusher.pushed, "提交成功后 Producer.Push")
+}
+
+// TestUpdateContentPost_Submit_AlreadySanitizedNoRewrite
+// 幂等（REQ-XSS-3）：既有已净化正文经 submit 不二次改写（不调用 UpdateContentTx）。
+func TestUpdateContentPost_Submit_AlreadySanitizedNoRewrite(t *testing.T) {
+	conn, _ := beginCommitConn(t)
+	pm := &fakeContentPostModel{findItem: &model.ContentPost{
+		Id: 1, PublisherId: int64Ptr(100), Status: model.StatusDraft,
+		Title: "t", Text: "已净化正文", SectionCode: "notice",
+	}}
+	am := &fakeAttachmentModel{findAtts: []*model.ContentPostAttachment{{Id: 11, PostId: 1, FileId: 5001}}}
+	pusher := &fakePusher{}
+	sc := noticeSvcCtx(pm, &fakeScopeModel{}, am, permAllowAll(), &fakeMD{}, &fakeFile{}, &fakeUser{}, pusher)
+	sc.Conn = conn
+
+	l := NewUpdateContentPostLogic(ctxWithUserID(t, 100), sc)
+	resp, err := l.UpdateContentPost(&communityv1.UpdateContentPostRequest{Id: 1, Status: 1})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.GetBase().GetCode())
+	assert.False(t, pm.updateContentTx, "净化前后一致 → 不二次改写正文（幂等）")
+	assert.Equal(t, int64(model.StatusApproved), pm.statusTxCalled, "仅置公开")
+}
+
 // TestUpdateContentPost_SubmitNonDraft non-draft submit → 080005。
 func TestUpdateContentPost_SubmitNonDraft(t *testing.T) {
 	pm := &fakeContentPostModel{findItem: approvedPost(1, 100)}
@@ -226,4 +312,31 @@ func TestUpdateContentPost_MixedFields_GoesToAuthorCheck(t *testing.T) {
 	resp, err := l.UpdateContentPost(&communityv1.UpdateContentPostRequest{Id: 1, IsPinned: boolPtr(true), Title: strPtr("x")})
 	require.NoError(t, err)
 	assert.Equal(t, int32(80002), resp.GetBase().GetCode(), "is_pinned+内容字段 → (a) 作者校验")
+}
+
+// TestUpdateContentPost_Submit_SanitizesTextBeforeKafkaPush
+// submit 发布路径：存量 draft 正文置公开前先白名单净化（REQ-XSS-6/D9），
+// 且 Kafka 推送 payload 必须反映落库后的净化值（禁止复用 FindOne 载入的未净化快照）。
+// SEE: [[kafka-event-payload-must-reflect-persisted-state]]
+func TestUpdateContentPost_Submit_SanitizesTextBeforeKafkaPush(t *testing.T) {
+	conn, _ := beginCommitConn(t)
+	malicious := "<p>你好</p><img src=x onerror=alert(1)><script>alert(2)</script>"
+	draft := draftPost(1, 100)
+	draft.Text = malicious
+	pm := &fakeContentPostModel{findItem: draft}
+	pusher := &fakePusher{}
+	sc := noticeSvcCtx(pm, &fakeScopeModel{}, &fakeAttachmentModel{}, permAllowAll(), &fakeMD{}, &fakeFile{}, &fakeUser{}, pusher)
+	sc.Conn = conn
+
+	l := NewUpdateContentPostLogic(ctxWithUserID(t, 100), sc)
+	resp, err := l.UpdateContentPost(&communityv1.UpdateContentPostRequest{Id: 1, Status: 1})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.GetBase().GetCode())
+
+	// 推送 payload 必须与落库净化值一致（post.Text 刷新为 sanitizedText，而非 FindOne 快照）
+	require.Len(t, pusher.pushedTexts, 1, "submit 提交成功后 Producer.Push 一次")
+	assert.NotContains(t, pusher.pushedTexts[0], "<img", "推送 payload 不得含未净化 img")
+	assert.NotContains(t, pusher.pushedTexts[0], "onerror", "推送 payload 不得含事件属性")
+	assert.NotContains(t, pusher.pushedTexts[0], "<script", "推送 payload 不得含 script")
+	assert.Equal(t, sanitize.ContentPostText(malicious), pusher.pushedTexts[0], "推送 payload == 落库净化值")
 }

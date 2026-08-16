@@ -55,63 +55,63 @@ function handleLogout() {
 .page {
   min-height: 100vh;
   background: #FFFFFF;
-  padding: 0 32rpx;
+  padding: 0 1rem;
 }
 
 .nav-bar {
   display: flex;
   align-items: center;
-  padding: 28rpx 0;
-  border-bottom: 1rpx solid #F0EBE3;
+  padding: 0.875rem 0;
+  border-bottom: 0.03125rem solid #F0EBE3;
 }
 
 .nav-back {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #B8956A;
-  margin-right: 16rpx;
+  margin-right: 0.5rem;
 }
 
 .nav-title {
-  font-size: 32rpx;
+  font-size: 1rem;
   font-weight: 600;
   color: #3D3226;
 }
 
 .section {
-  margin-top: 32rpx;
+  margin-top: 1rem;
 }
 
 .card {
   background: #FAF8F5;
-  border-radius: 16rpx;
-  padding: 28rpx 32rpx;
+  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
 }
 
 .card-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14rpx 0;
+  padding: 0.4375rem 0;
 }
 
 .row-label {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #3D3226;
 }
 
 .row-value {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #A6988A;
 }
 
 .btn-logout {
-  height: 88rpx;
-  border-radius: 44rpx;
+  height: 2.75rem;
+  border-radius: 1.375rem;
   background: linear-gradient(135deg, #D4958A, #C1786E);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32rpx;
+  font-size: 1rem;
   font-weight: 600;
   color: #fff;
 }

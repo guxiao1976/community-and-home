@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated_at": "2026-08-16T10:06:03Z",
-  "total_memories": 57,
+  "generated_at": "2026-08-16T22:42:10Z",
+  "total_memories": 62,
   "index": {
     "模板": [
       "ai-model-template-variable-content"
@@ -10,7 +10,8 @@
       "ai-model-template-variable-content"
     ],
     "变量": [
-      "ai-model-template-variable-content"
+      "ai-model-template-variable-content",
+      "cross-page-sensitive-temp-data-storage"
     ],
     "variable": [
       "ai-model-template-variable-content"
@@ -848,6 +849,7 @@
       "non-blocking-grant-requires-reconciliation"
     ],
     "缓存": [
+      "logout-clear-login-cache",
       "notfound-cache-sentinel-vs-transient-error",
       "redis-cache-soft-delete"
     ],
@@ -881,6 +883,7 @@
       "pii-plaintext-logging"
     ],
     "phone": [
+      "api-accessor-identity-from-url",
       "phone-encryption",
       "pii-plaintext-logging"
     ],
@@ -914,6 +917,7 @@
       "pii-plaintext-logging"
     ],
     "脱敏": [
+      "api-accessor-identity-from-url",
       "pii-plaintext-logging"
     ],
     "Infof": [
@@ -1323,6 +1327,111 @@
     "路由匹配": [
       "permission-seed-api-path-must-match-routes"
     ],
+    "viewer_id": [
+      "api-accessor-identity-from-url"
+    ],
+    "viewerId": [
+      "api-accessor-identity-from-url"
+    ],
+    "user-detail": [
+      "api-accessor-identity-from-url"
+    ],
+    "IDOR": [
+      "api-accessor-identity-from-url"
+    ],
+    "越权": [
+      "api-accessor-identity-from-url"
+    ],
+    "query参数": [
+      "api-accessor-identity-from-url"
+    ],
+    "访问者身份": [
+      "api-accessor-identity-from-url"
+    ],
+    "同屋互见": [
+      "api-accessor-identity-from-url"
+    ],
+    "跨页": [
+      "cross-page-sensitive-temp-data-storage",
+      "frontend-cross-page-storage-contract"
+    ],
+    "一次性": [
+      "cross-page-sensitive-temp-data-storage"
+    ],
+    "临时数据": [
+      "cross-page-sensitive-temp-data-storage"
+    ],
+    "敏感数据": [
+      "cross-page-sensitive-temp-data-storage"
+    ],
+    "内存态": [
+      "cross-page-sensitive-temp-data-storage"
+    ],
+    "模块级": [
+      "cross-page-sensitive-temp-data-storage"
+    ],
+    "sessionStorage": [
+      "cross-page-sensitive-temp-data-storage",
+      "frontend-cross-page-storage-contract",
+      "sms-code-persist-localstorage"
+    ],
+    "localStorage": [
+      "cross-page-sensitive-temp-data-storage",
+      "frontend-cross-page-storage-contract",
+      "sms-code-persist-localstorage"
+    ],
+    "持久化": [
+      "cross-page-sensitive-temp-data-storage",
+      "sms-code-persist-localstorage"
+    ],
+    "reg_pending": [
+      "cross-page-sensitive-temp-data-storage",
+      "sms-code-persist-localstorage"
+    ],
+    "暂存": [
+      "cross-page-sensitive-temp-data-storage"
+    ],
+    "navigateTo": [
+      "cross-page-sensitive-temp-data-storage"
+    ],
+    "cross-page": [
+      "frontend-cross-page-storage-contract"
+    ],
+    "storage": [
+      "frontend-cross-page-storage-contract",
+      "logout-clear-login-cache"
+    ],
+    "存储": [
+      "frontend-cross-page-storage-contract"
+    ],
+    "key": [
+      "frontend-cross-page-storage-contract"
+    ],
+    "magic string": [
+      "frontend-cross-page-storage-contract"
+    ],
+    "契约源": [
+      "frontend-cross-page-storage-contract"
+    ],
+    "共享模块": [
+      "frontend-cross-page-storage-contract"
+    ],
+    "setStorageSync": [
+      "frontend-cross-page-storage-contract",
+      "sms-code-persist-localstorage"
+    ],
+    "getStorageSync": [
+      "frontend-cross-page-storage-contract"
+    ],
+    "两端": [
+      "frontend-cross-page-storage-contract"
+    ],
+    "改名": [
+      "frontend-cross-page-storage-contract"
+    ],
+    "静默失效": [
+      "frontend-cross-page-storage-contract"
+    ],
     "UI": [
       "frontend-visual-development-workflow"
     ],
@@ -1346,6 +1455,46 @@
     ],
     "Visual Companion": [
       "frontend-visual-development-workflow"
+    ],
+    "logout": [
+      "logout-clear-login-cache"
+    ],
+    "退出登录": [
+      "logout-clear-login-cache"
+    ],
+    "user_phone": [
+      "logout-clear-login-cache"
+    ],
+    "共享设备": [
+      "logout-clear-login-cache",
+      "sms-code-persist-localstorage"
+    ],
+    "跨账号": [
+      "logout-clear-login-cache"
+    ],
+    "清理": [
+      "logout-clear-login-cache"
+    ],
+    "clearTokens": [
+      "logout-clear-login-cache"
+    ],
+    "兜底字段": [
+      "logout-clear-login-cache"
+    ],
+    "smsCode": [
+      "sms-code-persist-localstorage"
+    ],
+    "短信验证码": [
+      "sms-code-persist-localstorage"
+    ],
+    "一次性验证码": [
+      "sms-code-persist-localstorage"
+    ],
+    "残留": [
+      "sms-code-persist-localstorage"
+    ],
+    "OTP": [
+      "sms-code-persist-localstorage"
     ],
     "VITE_APP_TITLE": [
       "system-name-configurable"
@@ -2361,6 +2510,71 @@
         "路由匹配"
       ]
     },
+    "api-accessor-identity-from-url": {
+      "title": "禁止把 URL query 中的访问者身份传给权限/脱敏 API",
+      "file": "web/api-accessor-identity-from-url.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "web/mobile",
+      "triggers": [
+        "viewer_id",
+        "viewerId",
+        "user-detail",
+        "IDOR",
+        "越权",
+        "脱敏",
+        "phone",
+        "query参数",
+        "访问者身份",
+        "同屋互见"
+      ]
+    },
+    "cross-page-sensitive-temp-data-storage": {
+      "title": "跨页一次性敏感数据优先走内存态载体，而非持久化",
+      "file": "web/cross-page-sensitive-temp-data-storage.md",
+      "severity": "should-follow",
+      "type": "guideline",
+      "service": "all",
+      "triggers": [
+        "跨页",
+        "一次性",
+        "临时数据",
+        "敏感数据",
+        "内存态",
+        "模块级",
+        "变量",
+        "sessionStorage",
+        "localStorage",
+        "持久化",
+        "reg_pending",
+        "暂存",
+        "navigateTo"
+      ]
+    },
+    "frontend-cross-page-storage-contract": {
+      "title": "跨页共享存储的 key/结构必须收敛到单一共享模块，禁止两端各写 magic string",
+      "file": "web/frontend-cross-page-storage-contract.md",
+      "severity": "should-follow",
+      "type": "guideline",
+      "service": "all",
+      "triggers": [
+        "跨页",
+        "cross-page",
+        "storage",
+        "存储",
+        "key",
+        "magic string",
+        "契约源",
+        "共享模块",
+        "setStorageSync",
+        "getStorageSync",
+        "localStorage",
+        "sessionStorage",
+        "两端",
+        "改名",
+        "静默失效"
+      ]
+    },
     "frontend-visual-development-workflow": {
       "title": "前端开发优先使用浏览器可视化伴侣进行设计评审",
       "file": "web/frontend-visual-development-workflow.md",
@@ -2376,6 +2590,45 @@
         "mockup",
         "brainstorming",
         "Visual Companion"
+      ]
+    },
+    "logout-clear-login-cache": {
+      "title": "退出登录需清理登录期写入的本地缓存字段（如 user_phone），防共享设备跨账号残留",
+      "file": "web/logout-clear-login-cache.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "web/mobile",
+      "triggers": [
+        "logout",
+        "退出登录",
+        "缓存",
+        "user_phone",
+        "共享设备",
+        "跨账号",
+        "清理",
+        "storage",
+        "clearTokens",
+        "兜底字段"
+      ]
+    },
+    "sms-code-persist-localstorage": {
+      "title": "一次性短信验证码禁止落 localStorage 持久化残留",
+      "file": "web/sms-code-persist-localstorage.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "all",
+      "triggers": [
+        "smsCode",
+        "短信验证码",
+        "一次性验证码",
+        "localStorage",
+        "sessionStorage",
+        "持久化",
+        "残留",
+        "共享设备",
+        "OTP",
+        "setStorageSync",
+        "reg_pending"
       ]
     },
     "system-name-configurable": {

@@ -55,15 +55,12 @@ export async function encryptWithPublicKey(
 export async function getPublicKey(): Promise<string> {
   const cached = sessionStorage.getItem(PUBLIC_KEY_CACHE_KEY);
   if (cached) {
-    console.log('[Crypto] Using cached public key');
     return cached;
   }
 
   const { default: request } = await import('@/utils/request');
 
-  console.log('[Crypto] Fetching public key from /api/auth/public-key...');
   const raw = await (request as any).get('/api/auth/public-key');
-  console.log('[Crypto] Raw response:', typeof raw, JSON.stringify(raw).substring(0, 200));
 
   // Backend may return public_key or publicKey
   const publicKey = raw?.public_key || raw?.publicKey;

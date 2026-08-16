@@ -1,5 +1,59 @@
 # CHANGELOG — community-hub-service
 
+## 2026-08-16 — XSS 净化 Review 跟进：Kafka 推送 payload 修正 + 净化命中日志（must/should-follow 闭环）
+
+### 做了什么
+- **Kafka payload 用净化前旧值（must-follow bug 修复）**：`updatecontentpostlogic.go` submit 分支原在事务内把净化后正文写库、提交后 `Producer.Push(post)` 仍携带 FindOne 载入的**未净化** `post.Text` → DB 已封死的恶意 HTML 经 content-review 事件原样转发给下游消费者（重新打开传播通道）。修复：提交后先 `post.Text = sanitizedText`（净化命中时），再 Push——事件 payload 反映落库最终值。
+- **净化命中日志（should-follow）**：create / update-edit / update-submit 三条写路径，净化改写/剥离输入（`sanitized != 原始`）时记 `Infof`（含资源 ID 与长度变化）——安全改写可追溯、攻击信号可审计，禁止静默变换。
+
+### 新增测试（TDD RED→GREEN）
+- `TestUpdateContentPost_Submit_SanitizesTextBeforeKafkaPush`：draft 含 `<img onerror>/<script>` 注入 payload → submit → 断言推送 Text 无 img/onerror/script 且 == 落库净化值。RED 摘录：`expected: "<p>你好</p>"  actual: "<p>你好</p><img src=x onerror=alert(1)><script>alert(2)</script>"`（修复前推送未净化快照）。
+- `fakePusher` 扩展 `pushedTexts []string` 捕获完整消息 payload（原仅 post.Id）。
+
+### 记忆应用
+- [[kafka-event-payload-must-reflect-persisted-state]] — 事件 payload 必须反映落库最终值，禁止复用载入时快照
+- [[security-sanitization-must-log-transformation]] — 安全改写命中必须记日志
+
+### 门禁
+- `go build ./...` + `go vet ./...` + `go test ./...`（14 包）全绿；`harness-checks.sh --service community-hub-service` 19 PASS / 0 FAIL / 2 WARN（既有 gitlink/proto_ts_align 存量）
+
+---
+
+# CHANGELOG — community-hub-service
+
+## 2026-08-16 — 公告正文存储型 XSS 净化（notice-xss-sanitize-and-frontend-fixes / xss-sanitization）
+
+### 做了什么（类型：安全净化逻辑改造 + 新增依赖 + 新增包）
+
+**新增净化器包（逻辑函数 TDD，RED→GREEN 摘录见 `_tdd_evidence.md`）**
+- `internal/sanitize/sanitize.go`（D4：净化器放本服务，不引 community-common）：`sanitize.ContentPostText(text)` 白名单 HTML 净化器，**单例化**（REQ-XSS-3，`sync.Once`，进程内仅构建一次，Sanitize 纯函数并发安全）。
+- 白名单策略（REQ-XSS-2 穷举）：允许 `p/div/h1-h6/blockquote/ul/ol/li/pre/hr/strong/em/b/i/u/s/span/br`；`a` 仅允许 `href`（`AllowURLSchemes(http,https,mailto)` 白名单，`javascript:/data:/vbscript:` href 移除、`a` 文本保留）+ `title`；`target` 一律剔除（评审钉死，不允许 target 属性）；`style/class/id/on*` 一律剔除；`img/script/iframe/object/embed/form/input/button/link/meta/video/svg` 等白名单外标签整体剔除（script/iframe 原始内容一并清除，`<script>alert(1)</script>` → 空串）。
+- `a` rel 归一化（评审钉死）：`RequireNoFollowOnLinks` + `RequireNoReferrerOnLinks` 强制 nofollow/noreferrer，经 `normalizeAnchorRel` 后处理将单令牌归一化为完整 `rel="noopener noreferrer nofollow"`（target 已剔除故 bluemonday 不自动补 noopener，后处理强制）；**幂等**（REQ-XSS-3，`s(s(a))==s(a)`）。
+- 依赖：`go.mod` +`github.com/microcosm-cc/bluemonday v1.0.27`（BSD-3，go 1.25 兼容，锁版本）+ go.sum（间接 `aymerick/douceur`/`gorilla/css`）。
+
+**写路径接入（REQ-XSS-1/REQ-XSS-6，净化与非空校验顺序钉死 D7）**
+- `rpc/internal/logic/notice/createcontentpostlogic.go`：`CreateContentPost` 正文落库前净化。非空校验（080005）以**原始正文** `in.Text` 先行判定（语义不变），净化在通过后、DB 落库前执行；净化后为空接受空串落库（D7 唯一化）。
+- `rpc/internal/logic/notice/updatecontentpostlogic.go`：
+  - 内容编辑分支：`text` 携带时（proto3 presence）落库前净化；**未携带不重写不重净化**（REQ-XSS-6/D11）。
+  - submit 发布分支（status==1）：置公开前对既有 draft 正文追加一次净化（关闭「净化前存量草稿经 submit 发布」缺口，D9），同一事务先写净化后正文再 `UpdateStatusAndPublishTx`；幂等保证净化前后一致不二次改写（不调用 UpdateContentTx）。
+
+### 测试（TDD RED→GREEN 摘录见 `_tdd_evidence.md`）
+- `internal/sanitize/sanitize_test.go`：`TestContentPostText` table-driven 23 用例（`<img onerror>/<script>/<iframe>/on* 事件属性/javascript:/data:/vbscript: href` 注入剥离；`p/strong/em/br/a/div/h2/ul/li` 合法富文本保留；http/https/mailto 保留、target 剔除、rel 归一化；img/style 剔除；marquee 剥离子标签保留；纯文本与 HTML 实体转义渲染等价）+ `TestContentPostText_Idempotent`（幂等）。
+- `createcontentpostlogic_test.go`：`TestCreateContentPost_SanitizesText`（注入 payload 落库净化 + 原始正文非空过 080005）。
+- `updatecontentpostlogic_test.go`：`TestUpdateContentPost_ContentEdit_SanitizesText`（正文携带净化）、`TestUpdateContentPost_ContentEdit_TextNotPresentNoResanitize`（未携带保持现值不重净化）、`TestUpdateContentPost_Submit_SanitizesDraftText`（存量 draft 置公开前净化 + 同一事务置公开 + Push）、`TestUpdateContentPost_Submit_AlreadySanitizedNoRewrite`（幂等不二次改写）。
+
+### 白名单交叉核对（REQ-XSS-8 / D12）
+- 抽样 `content_posts.text` 存量 5 行（Task 6.2/D6/D20 运维验证发布数据）：**全部为纯文本，无任何 HTML 标签**。比对结论：白名单穷举集合（REQ-XSS-2）不存在对存量合法标签/属性的误杀，白名单可冻结；存量已发布正文无残留富文本风险。存量已发布恶意 HTML 回填属 out_of_scope（D5，仅新写入 + submit 发布路径净化）。
+
+### 影响
+- 配置：无新增。
+- 依赖：`github.com/microcosm-cc/bluemonday v1.0.27`（直接依赖）+ go.sum。
+- 兼容：wire 契约零变更（REQ-XSS-5，不新增公开 API、不改 api-proto）；净化仅作用于正文 content/text，title 等纯文本字段不受影响；读路径（详情/列表/跑马灯）无需改造，落库即净化后内容。
+- 跨服务：无新增。
+- 门禁：`go build ./...` + `go vet ./...` + `go test ./...` 全绿。
+
+---
+
 ## 2026-08-16 — QA 门禁修复（graph_freshness + memory-index 过期，运维类非源码缺陷）
 
 ### 做了什么（类型：运维操作，无源码逻辑改动）

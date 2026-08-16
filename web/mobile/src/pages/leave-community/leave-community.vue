@@ -134,68 +134,68 @@ async function confirmLeave() {
 .page {
   min-height: 100vh;
   background: #FAF8F5;
-  padding: 0 32rpx;
+  padding: 0 1rem;
 }
 
 // Header
 .header {
-  padding-top: 20rpx;
+  padding-top: 0.625rem;
 }
 
 .back-row {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  margin-bottom: 16rpx;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
 
   .back-icon {
-    font-size: 32rpx;
+    font-size: 1rem;
     color: $uni-color-primary;
   }
 
   .back-text {
-    font-size: 26rpx;
+    font-size: 0.8125rem;
     color: $uni-text-color-grey;
   }
 }
 
 .header-title {
   display: block;
-  font-size: 40rpx;
+  font-size: 1.25rem;
   font-weight: 700;
   color: $uni-text-color;
-  margin-bottom: 40rpx;
+  margin-bottom: 1.25rem;
 }
 
 // Warning Banner
 .warning-banner {
   display: flex;
   align-items: flex-start;
-  gap: 12rpx;
+  gap: 0.375rem;
   background: #FFF8F0;
-  border: 1rpx solid #F0DCC0;
-  border-radius: 12rpx;
-  padding: 24rpx;
-  margin-bottom: 32rpx;
+  border: 0.03125rem solid #F0DCC0;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
 
   .warning-icon {
-    font-size: 32rpx;
+    font-size: 1rem;
     flex-shrink: 0;
-    line-height: 40rpx;
+    line-height: 1.25rem;
   }
 
   .warning-text {
-    font-size: 24rpx;
+    font-size: 0.75rem;
     color: #8B7355;
-    line-height: 38rpx;
+    line-height: 1.1875rem;
   }
 }
 
 // Status
 .status-text {
   text-align: center;
-  padding: 120rpx 0;
-  font-size: 26rpx;
+  padding: 3.75rem 0;
+  font-size: 0.8125rem;
   color: $uni-text-color-placeholder;
 }
 
@@ -204,23 +204,23 @@ async function confirmLeave() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 120rpx 0;
+  padding: 3.75rem 0;
   text-align: center;
 
   .empty-icon {
-    font-size: 80rpx;
-    margin-bottom: 24rpx;
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
   }
 
   .empty-text {
-    font-size: 30rpx;
+    font-size: 0.9375rem;
     font-weight: 600;
     color: $uni-text-color;
-    margin-bottom: 12rpx;
+    margin-bottom: 0.375rem;
   }
 
   .empty-sub {
-    font-size: 24rpx;
+    font-size: 0.75rem;
     color: $uni-text-color-grey;
   }
 }
@@ -229,9 +229,9 @@ async function confirmLeave() {
 .community-list {
   .list-title {
     display: block;
-    font-size: 26rpx;
+    font-size: 0.8125rem;
     color: $uni-text-color-grey;
-    margin-bottom: 20rpx;
+    margin-bottom: 0.625rem;
   }
 }
 
@@ -239,9 +239,9 @@ async function confirmLeave() {
   display: flex;
   align-items: center;
   background: #FFFFFF;
-  border-radius: 16rpx;
-  padding: 28rpx 24rpx;
-  margin-bottom: 16rpx;
+  border-radius: 0.5rem;
+  padding: 0.875rem 0.75rem;
+  margin-bottom: 0.5rem;
   box-shadow: $uni-shadow-sm;
 
   .card-left {
@@ -252,16 +252,16 @@ async function confirmLeave() {
   .card-name-row {
     display: flex;
     align-items: center;
-    gap: 10rpx;
-    margin-bottom: 8rpx;
+    gap: 0.3125rem;
+    margin-bottom: 0.25rem;
   }
 
   .card-emoji {
-    font-size: 36rpx;
+    font-size: 1.125rem;
   }
 
   .card-name {
-    font-size: 30rpx;
+    font-size: 0.9375rem;
     font-weight: 600;
     color: $uni-text-color;
     overflow: hidden;
@@ -271,37 +271,37 @@ async function confirmLeave() {
 
   .current-tag {
     flex-shrink: 0;
-    padding: 4rpx 14rpx;
-    border-radius: 8rpx;
+    padding: 0.125rem 0.4375rem;
+    border-radius: 0.25rem;
     background: rgba(180, 150, 106, 0.12);
 
     text {
-      font-size: 20rpx;
+      font-size: 0.625rem;
       color: $uni-color-primary;
       font-weight: 500;
     }
   }
 
   .card-addr {
-    font-size: 24rpx;
+    font-size: 0.75rem;
     color: $uni-text-color-grey;
     display: block;
-    margin-left: 46rpx;
+    margin-left: 1.4375rem;
   }
 
   .card-right {
     flex-shrink: 0;
-    margin-left: 16rpx;
+    margin-left: 0.5rem;
   }
 
   .leave-btn {
-    padding: 12rpx 32rpx;
-    border-radius: 32rpx;
-    border: 2rpx solid #D4958A;
+    padding: 0.375rem 1rem;
+    border-radius: 1rem;
+    border: 0.0625rem solid #D4958A;
     background: #FFFFFF;
 
     text {
-      font-size: 24rpx;
+      font-size: 0.75rem;
       color: #D4958A;
       font-weight: 500;
     }
@@ -323,52 +323,52 @@ async function confirmLeave() {
 }
 
 .modal-card {
-  width: 560rpx;
+  width: 17.5rem;
   background: #FFFFFF;
-  border-radius: 20rpx;
-  padding: 48rpx 40rpx 36rpx;
+  border-radius: 0.625rem;
+  padding: 1.5rem 1.25rem 1.125rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.12);
 }
 
 .modal-icon {
-  font-size: 56rpx;
-  margin-bottom: 20rpx;
+  font-size: 1.75rem;
+  margin-bottom: 0.625rem;
 }
 
 .modal-title {
-  font-size: 34rpx;
+  font-size: 1.0625rem;
   font-weight: 700;
   color: $uni-text-color;
-  margin-bottom: 16rpx;
+  margin-bottom: 0.5rem;
 }
 
 .modal-desc {
-  font-size: 26rpx;
+  font-size: 0.8125rem;
   color: $uni-text-color-grey;
-  line-height: 40rpx;
-  margin-bottom: 36rpx;
+  line-height: 1.25rem;
+  margin-bottom: 1.125rem;
 }
 
 .modal-actions {
   display: flex;
-  gap: 24rpx;
+  gap: 0.75rem;
   width: 100%;
 }
 
 .modal-btn {
   flex: 1;
-  height: 80rpx;
-  border-radius: 40rpx;
+  height: 2.5rem;
+  border-radius: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
 
   text {
-    font-size: 28rpx;
+    font-size: 0.875rem;
     font-weight: 600;
   }
 

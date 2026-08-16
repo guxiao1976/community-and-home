@@ -185,7 +185,9 @@ func (l *GetProfileLogic) GetProfile() (*types.GetUserResp, error) {
 		return nil, fmt.Errorf("未登录或 token 无效")
 	}
 
-	resp, err := l.svcCtx.UserRpc.GetUser(l.ctx, &userv1.GetUserRequest{Id: userId})
+	// SEE: [[phone-encryption]] 本人查自身须传 ViewerId==userId，user-service 才返回明文手机号（而非 maskPhone 脱敏）
+	viewerID := userId
+	resp, err := l.svcCtx.UserRpc.GetUser(l.ctx, &userv1.GetUserRequest{Id: userId, ViewerId: &viewerID})
 	if err != nil {
 		return nil, err
 	}

@@ -17,6 +17,16 @@
 详见: [.harness/changes/<change-name>/](./<change-name>/)
 ```
 
+## 2026-08-17 — 公告 XSS 净化 + 移动端完善（notice-xss-sanitize-and-frontend-fixes）
+
+**路径**: L 级（spec-pipeline 阶段 0-2 需求分析+评审 → 因管线续跑 bug 改直派 2×harness-pipeline 编码）
+**状态**: ✅ 已完成（community-hub 净化 19 PASS/0 FAIL、user-service 18 PASS/0 FAIL、web/mobile 6 PASS/0 FAIL）
+**涉及服务**: community-hub-service, user-service, web/mobile
+
+存储型 XSS 治本（bluemonday 白名单，content_posts 三写路径净化）+ 首页 watch 双加载守卫 + 登录 toast 合并 + profile 本人返回明文手机号 + 我的页重构（图标网格/新增身份/退出登录）+ rem 单位体系改造（rpx/px→rem，根字号16px 固定）+ 前端单位规范 §13 + unit_standard 检查规则 + 若干 Review 安全跟进（Kafka payload/IDOR/logout 清缓存/孤儿页清理）。
+
+详见: [.harness/changes/notice-xss-sanitize-and-frontend-fixes/](./notice-xss-sanitize-and-frontend-fixes/)
+
 ---
 
 ## 2026-08-16 — 通用图文发布组件重构

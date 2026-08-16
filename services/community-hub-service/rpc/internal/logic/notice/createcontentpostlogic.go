@@ -8,6 +8,7 @@ import (
 	communityv1 "github.com/guxiao1976/api-proto/gen/go/community/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-common/v2/pkg/snowflake"
+	"github.com/guxiao1976/community-hub/internal/sanitize"
 	"github.com/guxiao1976/community-hub/model"
 	"github.com/guxiao1976/community-hub/rpc/internal/logic/scope"
 	"github.com/guxiao1976/community-hub/rpc/internal/svc"
@@ -131,13 +132,20 @@ func (l *CreateContentPostLogic) CreateContentPost(in *communityv1.CreateContent
 	}
 
 	// 7. 单事务落库
+	// 净化（REQ-XSS-1/2/3，D7 顺序）：非空校验（080005）已以原始正文 in.Text 先行判定（语义不变），
+	// 此处落库前白名单净化；净化后为空接受空串落库（D7 唯一化，不回判 080005）。
+	sanitizedText := sanitize.ContentPostText(in.Text)
+	// 净化命中（改写/剥离输入）记日志，安全改写可追溯（SEE: [[security-sanitization-must-log-transformation]]）
+	if sanitizedText != in.Text {
+		l.Infof("CreateContentPost: sanitize hit publisherId=%d textLen=%d->%d", userID, len(in.Text), len(sanitizedText))
+	}
 	id := snowflake.NextID()
 	entrySubmitted := in.EntryStatus == 1
 	now := time.Now()
 	post := &model.ContentPost{
 		Id:              id,
 		Title:           in.Title,
-		Text:            in.Text,
+		Text:            sanitizedText,
 		Role:            roleStr,
 		Publisher:       publisher,
 		PublisherId:     &userID,

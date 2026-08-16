@@ -83,28 +83,28 @@ onLoad(() => {
 .page {
   min-height: 100vh;
   background-color: $uni-bg-color;
-  padding: 24rpx 32rpx;
+  padding: 0.75rem 1rem;
 }
 
 // ---- 拨号网格 ----
 .contact-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16rpx;
+  gap: 0.5rem;
 }
 
 .contact-cell {
   display: flex;
   align-items: center;
   background-color: $uni-bg-color-card;
-  border-radius: 12rpx;
-  padding: 20rpx 18rpx;
+  border-radius: 0.375rem;
+  padding: 0.625rem 0.5625rem;
   box-shadow: $uni-shadow-sm;
 }
 
 .contact-icon {
-  font-size: 40rpx;
-  margin-right: 14rpx;
+  font-size: 1.25rem;
+  margin-right: 0.4375rem;
   flex-shrink: 0;
 }
 
@@ -115,9 +115,9 @@ onLoad(() => {
 
 .contact-name {
   display: block;
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: $uni-text-color-grey;
-  margin-bottom: 4rpx;
+  margin-bottom: 0.125rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -125,7 +125,7 @@ onLoad(() => {
 
 .contact-phone {
   display: block;
-  font-size: 30rpx;
+  font-size: 0.9375rem;
   font-weight: 500;
   color: $uni-text-color;
 }
@@ -136,17 +136,17 @@ onLoad(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 120rpx 0;
+  padding: 3.75rem 0;
 }
 
 .empty-icon {
-  font-size: 72rpx;
-  margin-bottom: 16rpx;
+  font-size: 2.25rem;
+  margin-bottom: 0.5rem;
   opacity: 0.6;
 }
 
 .status-text {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: $uni-text-color-placeholder;
 }
 </style>

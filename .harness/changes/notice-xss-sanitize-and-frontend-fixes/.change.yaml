@@ -1,0 +1,45 @@
+schema: spec-driven
+created: 2026-08-16
+change: notice-xss-sanitize-and-frontend-fixes
+title: 通知公告存储型XSS净化（community-hub写入路径bluemonday白名单）+ 首页双重加载修复 + 登录toast覆盖修复
+size: 中
+priority: P1
+change_type: modify
+services:
+  - community-hub-service
+  - web/mobile
+revises:
+  # 后端 XSS 净化（写入路径，REST 为 RPC 代理，RPC 层覆盖三入口：
+  #   CreateContentPost / UpdateContentPost 内容编辑分支 / UpdateContentPost submit 发布分支（D9，置公开前净化既有正文））
+  - services/community-hub-service/rpc/internal/logic/notice/createcontentpostlogic.go
+  - services/community-hub-service/rpc/internal/logic/notice/updatecontentpostlogic.go
+  # 新建：净化器单例（本服务，D4；引入 github.com/microcosm-cc/bluemonday）
+  - services/community-hub-service/rpc/internal/logic/notice/sanitize.go
+  - services/community-hub-service/go.mod
+  - services/community-hub-service/go.sum
+  # 前端两处修复
+  - web/mobile/src/pages/notice/notice.vue
+  - web/mobile/src/utils/auth-flow.ts
+  # 新逻辑函数 TDD RED→GREEN 证据 + CHANGELOG 同步
+  - services/community-hub-service/_tdd_evidence.md
+  - web/mobile/_tdd_evidence.md
+  - services/community-hub-service/CHANGELOG.md
+  - web/mobile/CHANGELOG.md
+specs:
+  - capability: xss-sanitization
+    file: specs/xss-sanitization/spec.md
+  - capability: notice-double-load-fix
+    file: specs/notice-double-load-fix/spec.md
+  - capability: auth-toast-fix
+    file: specs/auth-toast-fix/spec.md
+out_of_scope:
+  - 存量已发布公告数据回填净化（D5 用户拍板不做，接受残余风险，后续可单独发起数据清洗变更）
+  - 前端富文本渲染改为转义/消毒（依赖后端写入路径净化，移动端 rich-text 渲染不变）
+  - title 等纯文本字段净化（D3 范围仅公告/内容帖正文 content/text）
+  - 寻失 description / 便民联络等非公告内容字段（D3）
+  - 新增公开 API / api-proto 变更（净化为服务内部处理，wire 契约零变更）
+  - PC 端（web/pc）前台公告改造（本变更前端文件均位于 web/mobile）
+  - 后台管理端公告发布编辑器改造
+proto_change_required: false
+common_change_required: false
+data_migration_required: false

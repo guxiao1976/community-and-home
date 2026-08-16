@@ -51,8 +51,10 @@ async function load(options: Record<string, string | undefined> | undefined) {
     loading.value = false;
     return;
   }
-  // viewer_id 缺省 → 后端对手机号脱敏、无房屋号
-  const viewerId = options?.viewer_id || userStore.userId || undefined;
+  // 访问者身份一律以已认证用户为准——禁止从 URL 取 viewer_id（可手工构造 → IDOR 越权看他人手机号/房屋号）。
+  // 数据范围/脱敏决策在后端，前端只传自己的身份作上下文。
+  // SEE: [[api-accessor-identity-from-url]]
+  const viewerId = userStore.userId || undefined;
   try {
     const res = await getUser(id, viewerId);
     user.value = res.user;
@@ -74,10 +76,10 @@ async function load(options: Record<string, string | undefined> | undefined) {
 .state {
   display: flex;
   justify-content: center;
-  padding: 200rpx 0;
+  padding: 6.25rem 0;
 
   .state-text {
-    font-size: 28rpx;
+    font-size: 0.875rem;
     color: $uni-text-color-placeholder;
 
     &--error {
@@ -90,55 +92,55 @@ async function load(options: Record<string, string | undefined> | undefined) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 100rpx 40rpx;
+  padding: 3.125rem 1.25rem;
 }
 
 .avatar {
-  width: 140rpx;
-  height: 140rpx;
+  width: 4.375rem;
+  height: 4.375rem;
   border-radius: 50%;
   background-color: rgba(255, 255, 255, 0.8);
-  border: 3rpx solid rgba(184, 149, 106, 0.25);
-  box-shadow: 0 4rpx 20rpx rgba(184, 149, 106, 0.12);
+  border: 0.09375rem solid rgba(184, 149, 106, 0.25);
+  box-shadow: 0 0.125rem 0.625rem rgba(184, 149, 106, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24rpx;
+  margin-bottom: 0.75rem;
 }
 
 .avatar-emoji {
-  font-size: 72rpx;
+  font-size: 2.25rem;
 }
 
 .nickname {
-  font-size: 36rpx;
+  font-size: 1.125rem;
   font-weight: 600;
   color: $uni-text-color;
-  margin-bottom: 12rpx;
+  margin-bottom: 0.375rem;
 }
 
 .phone {
-  font-size: 30rpx;
+  font-size: 0.9375rem;
   color: $uni-text-color-grey;
-  margin-bottom: 32rpx;
+  margin-bottom: 1rem;
 }
 
 .house-card {
   background-color: #FAF8F5;
-  border-radius: 16rpx;
-  padding: 28rpx 40rpx;
+  border-radius: 0.5rem;
+  padding: 0.875rem 1.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
 
   .house-label {
-    font-size: 24rpx;
+    font-size: 0.75rem;
     color: $uni-text-color-grey;
-    margin-bottom: 8rpx;
+    margin-bottom: 0.25rem;
   }
 
   .house-addr {
-    font-size: 30rpx;
+    font-size: 0.9375rem;
     font-weight: 600;
     color: $uni-color-primary;
   }

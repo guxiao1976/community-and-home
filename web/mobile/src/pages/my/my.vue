@@ -13,7 +13,7 @@
       <text class="login-text">点击登录</text>
     </view>
 
-    <!-- Authenticated: Hierarchical List Layout -->
+    <!-- Authenticated: Icon Grid Layout -->
     <template v-else>
       <!-- Gradient Header -->
       <view class="header">
@@ -26,120 +26,86 @@
 
       <!-- 1. 小区管理 -->
       <view class="menu-section">
-        <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'community' ? '' : 'community')">
-          <view class="menu-left">
-            <text class="menu-icon">🏘️</text>
-            <view class="menu-text">
-              <text class="menu-title">小区管理</text>
-              <text class="menu-desc">加入小区 · 退出小区 · 已加入 {{ communityStore.communityCount }}/3</text>
-            </view>
-          </view>
-          <text class="menu-arrow" :class="{ 'menu-arrow--open': expanded === 'community' }">→</text>
+        <view class="section-header">
+          <text class="section-icon">🏘️</text>
+          <text class="section-title">小区管理</text>
         </view>
-        <view v-if="expanded === 'community'" class="sub-menu">
-          <view class="sub-item" hover-class="sub-item--hover" @click="goJoinCommunity">
-            <view class="sub-icon sub-icon--join">➕</view>
-            <text class="sub-label">加入小区</text>
-            <text class="sub-arrow">→</text>
+        <view class="func-entries">
+          <view class="func-entry" hover-class="func-entry--hover" @click="goJoinCommunity">
+            <text class="func-entry-icon">🏘️</text>
+            <text class="func-entry-label">加入小区</text>
           </view>
-          <view class="sub-item" hover-class="sub-item--hover" @click="goLeaveCommunity">
-            <view class="sub-icon sub-icon--leave">🚪</view>
-            <text class="sub-label">退出小区</text>
-            <text class="sub-arrow">→</text>
+          <view class="func-entry" hover-class="func-entry--hover" @click="goLeaveCommunity">
+            <text class="func-entry-icon">🚪</text>
+            <text class="func-entry-label">查看退出</text>
           </view>
         </view>
       </view>
 
       <!-- 2. 业主/租户登记 -->
       <view class="menu-section">
-        <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'registration' ? '' : 'registration')">
-          <view class="menu-left">
-            <text class="menu-icon">🏠</text>
-            <view class="menu-text">
-              <text class="menu-title">业主/租户登记</text>
-              <text class="menu-desc">业主登记 · 租户登记</text>
-            </view>
-          </view>
-          <text class="menu-arrow" :class="{ 'menu-arrow--open': expanded === 'registration' }">→</text>
+        <view class="section-header">
+          <text class="section-icon">🏠</text>
+          <text class="section-title">业主/租户登记</text>
         </view>
-        <view v-if="expanded === 'registration'" class="sub-menu">
-          <view v-if="communityStore.hasCommunities" class="sub-item" hover-class="sub-item--hover" @click="startOwnerAuth">
-            <text class="sub-label">业主登记</text>
-            <text class="item-hint">登记房号</text>
-            <text class="sub-arrow">→</text>
-          </view>
-          <view v-if="communityStore.hasCommunities" class="sub-item" hover-class="sub-item--hover" @click="startTenantAuth">
-            <text class="sub-label">租户登记</text>
-            <text class="item-hint">登记房号</text>
-            <text class="sub-arrow">→</text>
-          </view>
-          <view v-if="!communityStore.hasCommunities" class="sub-item sub-item--disabled">
-            <text class="sub-label sub-label--muted">请先加入小区</text>
+        <view class="func-entries">
+          <template v-if="communityStore.hasCommunities">
+            <view class="func-entry" hover-class="func-entry--hover" @click="startOwnerAuth">
+              <text class="func-entry-icon">🏠</text>
+              <text class="func-entry-label">业主登记</text>
+            </view>
+            <view class="func-entry" hover-class="func-entry--hover" @click="startTenantAuth">
+              <text class="func-entry-icon">🏠</text>
+              <text class="func-entry-label">租户登记</text>
+            </view>
+          </template>
+          <view v-else class="func-entry func-entry--disabled">
+            <text class="func-entry-icon">🏠</text>
+            <text class="func-entry-label">请先加入小区</text>
           </view>
         </view>
       </view>
 
-      <!-- 3. 身份认证 -->
+      <!-- 3. 新增身份 -->
       <view class="menu-section">
-        <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'identity' ? '' : 'identity')">
-          <view class="menu-left">
-            <text class="menu-icon">🪪</text>
-            <view class="menu-text">
-              <text class="menu-title">身份认证</text>
-              <text class="menu-desc">业委会 · 网格员 · 物业管理员 · 社区管理员 · 商家</text>
-            </view>
-          </view>
-          <text class="menu-arrow" :class="{ 'menu-arrow--open': expanded === 'identity' }">→</text>
+        <view class="section-header">
+          <text class="section-icon">🪪</text>
+          <text class="section-title">新增身份</text>
         </view>
-        <view v-if="expanded === 'identity'" class="sub-menu">
-          <view v-if="hasOwnerRole" class="sub-item" hover-class="sub-item--hover" @click="applyForRole('committee')">
-            <text class="sub-label">业委会认证</text>
-            <text class="item-hint">需先认证业主</text>
-            <text class="sub-arrow">→</text>
+        <view class="func-entries">
+          <view class="func-entry" hover-class="func-entry--hover" @click="onOwnerAuth">
+            <text class="func-entry-icon">🪪</text>
+            <text class="func-entry-label">业主认证</text>
           </view>
-          <view class="sub-item" hover-class="sub-item--hover" @click="applyForRole('grid_worker')">
-            <text class="sub-label">网格员认证</text>
-            <text class="sub-arrow">→</text>
+          <view class="func-entry" hover-class="func-entry--hover" @click="applyForRole('grid_worker')">
+            <text class="func-entry-icon">🪪</text>
+            <text class="func-entry-label">网格员认证</text>
           </view>
-          <view class="sub-item" hover-class="sub-item--hover" @click="applyForRole('property_admin')">
-            <text class="sub-label">物业管理员认证</text>
-            <text class="sub-arrow">→</text>
+          <view class="func-entry" hover-class="func-entry--hover" @click="applyForRole('property_admin')">
+            <text class="func-entry-icon">🪪</text>
+            <text class="func-entry-label">物业管理员认证</text>
           </view>
-          <view class="sub-item" hover-class="sub-item--hover" @click="applyForRole('community_admin')">
-            <text class="sub-label">社区管理员认证</text>
-            <text class="sub-arrow">→</text>
+          <view class="func-entry" hover-class="func-entry--hover" @click="applyForRole('community_admin')">
+            <text class="func-entry-icon">🪪</text>
+            <text class="func-entry-label">社区管理员认证</text>
           </view>
-          <view class="sub-item" hover-class="sub-item--hover" @click="applyForRole('merchant')">
-            <text class="sub-label">商家认证</text>
-            <text class="sub-arrow">→</text>
+          <view class="func-entry" hover-class="func-entry--hover" @click="applyForRole('merchant')">
+            <text class="func-entry-icon">🪪</text>
+            <text class="func-entry-label">商家认证</text>
           </view>
         </view>
       </view>
 
-      <!-- 4. 账户管理 -->
+      <!-- 4. 账号管理 -->
       <view class="menu-section">
-        <view class="menu-row" hover-class="menu-row--hover" @click="expanded = (expanded === 'account' ? '' : 'account')">
-          <view class="menu-left">
-            <text class="menu-icon">⚙️</text>
-            <view class="menu-text">
-              <text class="menu-title">账户管理</text>
-              <text class="menu-desc">个人信息 · 账号安全 · 关于我们</text>
-            </view>
-          </view>
-          <text class="menu-arrow" :class="{ 'menu-arrow--open': expanded === 'account' }">→</text>
+        <view class="section-header">
+          <text class="section-icon">⚙️</text>
+          <text class="section-title">账号管理</text>
         </view>
-        <view v-if="expanded === 'account'" class="sub-menu">
-          <view class="sub-item" hover-class="sub-item--hover" @click="showDevToast">
-            <text class="sub-label">个人信息</text>
-            <text class="sub-arrow">→</text>
-          </view>
-          <view class="sub-item" hover-class="sub-item--hover" @click="goAccountSecurity">
-            <text class="sub-label">账号安全</text>
-            <text class="sub-arrow">→</text>
-          </view>
-          <view class="sub-item" hover-class="sub-item--hover" @click="showDevToast">
-            <text class="sub-label">关于我们</text>
-            <text class="sub-arrow">→</text>
+        <view class="func-entries">
+          <view class="func-entry" hover-class="func-entry--hover" @click="onLogout">
+            <text class="func-entry-icon">🚪</text>
+            <text class="func-entry-label">退出登录</text>
           </view>
         </view>
       </view>
@@ -167,7 +133,7 @@
             <text>{{ communityStore.communities[0]?.communityName || '当前小区' }}</text>
           </view>
 
-          <text class="modal-label" style="margin-top: 24rpx;">登记房号</text>
+          <text class="modal-label" style="margin-top: 0.75rem;">登记房号</text>
           <view class="address-example">
             <text>示例：5号楼 2单元 301房间 → 5-2-301</text>
           </view>
@@ -198,12 +164,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useUserStore } from '@/stores/user';
 import { useCommunityStore } from '@/stores/community';
 import { isAuthenticated } from '@common/utils/auth';
-import { getUserProfile } from '@/api/identity';
+import { getUserProfile, logout } from '@/api/identity';
 import { applyRole, bindResidence, getUserMemberships, getUserRoles } from '@/api/user';
+import { getDeviceId } from '@/utils/device';
 
 const userStore = useUserStore();
 const communityStore = useCommunityStore();
@@ -211,9 +178,6 @@ const communityStore = useCommunityStore();
 const pageLoading = ref(true);
 // 用户已获取的角色列表（含认证状态 status：0未认证/1待审/2已认证/3驳回/4过期）
 const userRoles = ref<any[]>([]);
-
-// Hierarchical menu expansion state: '' | 'community' | 'identity' | 'account'
-const expanded = ref('');
 
 // Identity / role state
 const showBindResidence = ref(false);
@@ -233,6 +197,7 @@ const displayPhone = computed(() => {
   const phone = userStore.user?.phone;
   if (phone) return phone;
   try {
+    // user_phone 由 auth-flow.handleAuthSuccess 在登录/注册成功时写入（登录输入手机号兜底）
     return (uni.getStorageSync('user_phone') as string) || '未绑定手机号';
   } catch {
     return '未绑定手机号';
@@ -245,21 +210,11 @@ function goLogin() {
 }
 
 function goJoinCommunity() {
-  expanded.value = ''; // collapse sections before navigation
-  nextTick(() => { uni.navigateTo({ url: '/pages/join-community/join-community' }); });
+  uni.navigateTo({ url: '/pages/join-community/join-community' });
 }
 
 function goLeaveCommunity() {
-  expanded.value = '';
-  nextTick(() => { uni.navigateTo({ url: '/pages/leave-community/leave-community' }); });
-}
-
-function goAccountSecurity() {
-  uni.navigateTo({ url: '/pages/account-security/account-security' });
-}
-
-function showDevToast() {
-  uni.showToast({ title: '页面开发中', icon: 'none', duration: 1500 });
+  uni.navigateTo({ url: '/pages/leave-community/leave-community' });
 }
 
 // Identity / role actions
@@ -279,6 +234,16 @@ function startTenantAuth() {
   bindUnit.value = '';
   bindRoom.value = '';
   showBindResidence.value = true;
+}
+
+// 业主认证：与网格员等角色一致，直接申请 owner 角色；
+// 已有已认证业主角色（verf_status=2）则不重复申请（toast 提示）
+function onOwnerAuth() {
+  if (hasOwnerRole.value) {
+    uni.showToast({ title: '已是业主', icon: 'none' });
+    return;
+  }
+  applyForRole('owner');
 }
 
 async function submitBindAndApply() {
@@ -332,8 +297,6 @@ async function submitBindAndApply() {
 }
 
 function applyForRole(roleCode: string) {
-  // TODO: In production, this should call applyRole API with proper community_id
-  // For non-owner/tenant roles (no bind-residence needed), submit directly
   const currentCommunityId = communityStore.currentCommunityId;
   if (!currentCommunityId) {
     uni.showToast({ title: '请先加入小区', icon: 'none' });
@@ -349,6 +312,26 @@ function applyForRole(roleCode: string) {
   });
 }
 
+// 退出登录：showModal 确认 → 调后端注销当前设备会话 → 清本地 token/user → 回到登录页（=退出页）
+async function onLogout() {
+  uni.showModal({
+    title: '退出登录',
+    content: '确定要退出登录吗？',
+    success: async (res) => {
+      if (!res.confirm) return;
+      try {
+        await logout(getDeviceId());
+        userStore.logout();
+        uni.reLaunch({ url: '/pages/login/login' });
+      } catch (e) {
+        // SEE: [[axios-network-error-raw-message-toast]] — toast 用固定中文文案，不取 e.message 原文
+        console.error('[my] 退出登录失败', e);
+        uni.showToast({ title: '退出登录失败', icon: 'none' });
+      }
+    },
+  });
+}
+
 onMounted(async () => {
   // Ensure user profile is loaded (token may exist without user in store)
   if (isAuthenticated() && !userStore.user) {
@@ -361,7 +344,7 @@ onMounted(async () => {
   }
   if (userStore.isLoggedIn) {
     await communityStore.loadMemberships();
-    // 加载用户角色（用于判断是否已有 owner 角色，决定业委会入口显示）
+    // 加载用户角色（用于判断是否已有 owner 角色，决定业主认证是否可重复申请）
     try {
       userRoles.value = await getUserRoles();
     } catch (e) {
@@ -382,11 +365,11 @@ onMounted(async () => {
 .loading-wrap {
   display: flex;
   justify-content: center;
-  padding: 200rpx 0;
+  padding: 6.25rem 0;
 }
 
 .loading-text {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: $uni-text-color-placeholder;
 }
 
@@ -395,28 +378,28 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 200rpx 0;
+  padding: 6.25rem 0;
 }
 
 .login-avatar {
-  width: 140rpx;
-  height: 140rpx;
+  width: 4.375rem;
+  height: 4.375rem;
   border-radius: 50%;
   background-color: rgba(255, 255, 255, 0.8);
-  border: 3rpx solid rgba(184, 149, 106, 0.25);
-  box-shadow: 0 4rpx 20rpx rgba(184, 149, 106, 0.12);
+  border: 0.09375rem solid rgba(184, 149, 106, 0.25);
+  box-shadow: 0 0.125rem 0.625rem rgba(184, 149, 106, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24rpx;
+  margin-bottom: 0.75rem;
 }
 
 .login-avatar-emoji {
-  font-size: 72rpx;
+  font-size: 2.25rem;
 }
 
 .login-text {
-  font-size: 32rpx;
+  font-size: 1rem;
   color: #B8956A;
 }
 
@@ -425,178 +408,99 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 80rpx 0 60rpx;
+  padding: 2.5rem 0 1.875rem;
   background: linear-gradient(160deg, #D4B896 0%, #E8DCCF 30%, #FAF8F5 55%, #FFFFFF 80%);
 }
 
 .avatar-circle {
-  width: 140rpx;
-  height: 140rpx;
+  width: 4.375rem;
+  height: 4.375rem;
   border-radius: 50%;
   background-color: rgba(255, 255, 255, 0.8);
-  border: 3rpx solid rgba(184, 149, 106, 0.25);
-  box-shadow: 0 4rpx 20rpx rgba(184, 149, 106, 0.12);
+  border: 0.09375rem solid rgba(184, 149, 106, 0.25);
+  box-shadow: 0 0.125rem 0.625rem rgba(184, 149, 106, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20rpx;
+  margin-bottom: 0.625rem;
 }
 
 .avatar-emoji {
-  font-size: 72rpx;
+  font-size: 2.25rem;
 }
 
 .header-name {
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: #A6988A;
-  margin-bottom: 8rpx;
+  margin-bottom: 0.25rem;
 }
 
 .header-phone {
-  font-size: 32rpx;
+  font-size: 1rem;
   font-weight: 600;
   color: #3D3226;
 }
 
-// ---- Hierarchical Menu Sections ----
+// ---- Sections (title + icon grid) ----
 .menu-section {
-  padding: 0 40rpx;
-  margin-top: 20rpx;
+  padding: 0 1.25rem;
+  margin-top: 0.625rem;
 }
 
-.menu-row {
+.section-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background-color: #FAF8F5;
-  border-radius: 16rpx;
-  padding: 32rpx;
-
-  &--hover {
-    background-color: rgba(184, 149, 106, 0.06);
-    transition: background-color 0.15s ease;
-  }
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
-.menu-left {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  flex: 1;
-  min-width: 0;
+.section-icon {
+  font-size: 1.125rem;
 }
 
-.menu-icon {
-  font-size: 44rpx;
-  flex-shrink: 0;
-}
-
-.menu-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.menu-title {
-  font-size: 32rpx;
+.section-title {
+  font-size: 1.0625rem;
   font-weight: 600;
   color: #3D3226;
-  display: block;
 }
 
-.menu-desc {
-  font-size: 24rpx;
-  color: #A6988A;
-  margin-top: 6rpx;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+// 图标网格（参考首页 notice.vue .func-entries）：4 列，icon 1.375rem + label 0.75rem，卡片底
+.func-entries {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
 }
 
-.menu-arrow {
-  font-size: 28rpx;
-  color: #CCC4BA;
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
-
-  &--open {
-    transform: rotate(90deg);
-  }
-}
-
-// ---- Sub-menu (expanded items) ----
-.sub-menu {
-  padding: 12rpx 0 0 60rpx;
-}
-
-.sub-item {
+.func-entry {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 20rpx 24rpx;
+  justify-content: center;
   background-color: #FAF8F5;
-  border-radius: 12rpx;
-  margin-bottom: 8rpx;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
+  border-radius: 0.5rem;
+  padding: 0.75rem 0.25rem;
+  box-shadow: $uni-shadow-sm;
 
   &--hover {
     background-color: rgba(184, 149, 106, 0.08);
     transition: background-color 0.15s ease;
   }
-}
 
-.sub-icon {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 14rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30rpx;
-  color: #fff;
-  margin-right: 16rpx;
-  flex-shrink: 0;
-
-  &--join {
-    background: linear-gradient(135deg, #B8956A, #D4B896);
-  }
-
-  &--leave {
-    background: linear-gradient(135deg, #D4958A, #E0ADA5);
+  &--disabled {
+    opacity: 0.5;
   }
 }
 
-.sub-label {
-  font-size: 28rpx;
+.func-entry-icon {
+  font-size: 1.375rem;
+  margin-bottom: 0.3125rem;
+}
+
+.func-entry-label {
+  font-size: 0.75rem;
   color: #3D3226;
-  flex: 1;
-}
-
-.sub-arrow {
-  font-size: 24rpx;
-  color: #CCC4BA;
-  flex-shrink: 0;
-}
-
-.sub-item--disabled {
-  opacity: 0.5;
-}
-
-.sub-label--muted {
-  font-size: 26rpx;
-  color: #A6988A;
-}
-
-// ---- Identity hints ----
-.item-hint {
-  font-size: 20rpx;
-  color: #B8956A;
-  background: rgba(184, 149, 106, 0.08);
-  padding: 2rpx 10rpx;
-  border-radius: 8rpx;
-  margin-right: 8rpx;
+  font-weight: 500;
+  text-align: center;
 }
 
 // ---- Bind Residence Modal ----
@@ -614,54 +518,54 @@ onMounted(async () => {
 }
 
 .modal-box {
-  width: 640rpx;
+  width: 20rem;
   background: #fff;
-  border-radius: 20rpx;
-  padding: 40rpx 32rpx;
+  border-radius: 0.625rem;
+  padding: 1.25rem 1rem;
 }
 
 .modal-title {
-  font-size: 34rpx;
+  font-size: 1.0625rem;
   font-weight: 700;
   color: #3D3226;
   display: block;
   text-align: center;
-  margin-bottom: 8rpx;
+  margin-bottom: 0.25rem;
 }
 
 .modal-sub {
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: #A6988A;
   display: block;
   text-align: center;
-  margin-bottom: 24rpx;
+  margin-bottom: 0.75rem;
 }
 
 .modal-label {
-  font-size: 26rpx;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: #3D3226;
   display: block;
-  margin-bottom: 16rpx;
+  margin-bottom: 0.5rem;
 }
 
 // ---- Community Picker ----
 .community-picker {
-  max-height: 240rpx;
-  margin-bottom: 8rpx;
+  max-height: 7.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .community-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16rpx 20rpx;
+  padding: 0.5rem 0.625rem;
   background: #FAF8F5;
-  border-radius: 10rpx;
-  margin-bottom: 8rpx;
-  font-size: 26rpx;
+  border-radius: 0.3125rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.8125rem;
   color: #3D3226;
-  border: 2rpx solid transparent;
+  border: 0.0625rem solid transparent;
 
   &--selected {
     border-color: #B8956A;
@@ -670,31 +574,31 @@ onMounted(async () => {
 }
 
 .community-check {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #B8956A;
   font-weight: 700;
 }
 
 .community-single {
-  padding: 16rpx 20rpx;
+  padding: 0.5rem 0.625rem;
   background: #FAF8F5;
-  border-radius: 10rpx;
-  font-size: 26rpx;
+  border-radius: 0.3125rem;
+  font-size: 0.8125rem;
   color: #3D3226;
   text-align: center;
-  margin-bottom: 8rpx;
+  margin-bottom: 0.25rem;
 }
 
 .address-example {
   background: #FAF8F5;
-  border-radius: 10rpx;
-  padding: 16rpx 20rpx;
-  margin-bottom: 24rpx;
+  border-radius: 0.3125rem;
+  padding: 0.5rem 0.625rem;
+  margin-bottom: 0.75rem;
   text-align: center;
 }
 
 .address-example text {
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: #8C7B6B;
 }
 
@@ -702,8 +606,8 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: 12rpx;
-  margin-bottom: 32rpx;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
 }
 
 .input-col {
@@ -714,56 +618,56 @@ onMounted(async () => {
 }
 
 .input-label {
-  font-size: 22rpx;
+  font-size: 0.6875rem;
   color: #8C7B6B;
-  margin-bottom: 8rpx;
+  margin-bottom: 0.25rem;
 }
 
 .addr-input {
   width: 100%;
-  height: 72rpx;
+  height: 2.25rem;
   background: #FAF8F5;
-  border: 2rpx solid #E8DCCF;
-  border-radius: 12rpx;
+  border: 0.0625rem solid #E8DCCF;
+  border-radius: 0.375rem;
   text-align: center;
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #3D3226;
-  padding: 0 8rpx;
+  padding: 0 0.25rem;
 }
 
 .input-sep {
-  font-size: 32rpx;
+  font-size: 1rem;
   color: #CCC4BA;
-  line-height: 72rpx;
-  padding-top: 30rpx;
+  line-height: 2.25rem;
+  padding-top: 0.9375rem;
 }
 
 .modal-btns {
   display: flex;
-  gap: 16rpx;
+  gap: 0.5rem;
 }
 
 .btn-cancel {
   flex: 1;
-  height: 80rpx;
-  border-radius: 40rpx;
+  height: 2.5rem;
+  border-radius: 1.25rem;
   background: #F0EBE3;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #8C7B6B;
 }
 
 .btn-confirm {
   flex: 1;
-  height: 80rpx;
-  border-radius: 40rpx;
+  height: 2.5rem;
+  border-radius: 1.25rem;
   background: linear-gradient(135deg, #B8956A, #D4B896);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #fff;
   font-weight: 600;
 }

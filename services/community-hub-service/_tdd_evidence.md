@@ -136,3 +136,98 @@ git worktree remove <tmp>/red-repro --force
 cd services/community-hub-service && go test ./... -count=1 && echo $?   # 0
 bash .harness/skills/qa/scripts/harness-checks.sh --service community-hub-service --json   # 19P/0F/2W exit 0
 ```
+
+---
+
+## 公告正文 XSS 净化（notice-xss-sanitize-and-frontend-fixes / xss-sanitization）RED 摘录
+
+> 背景: 存储型 XSS 修复——新增 `internal/sanitize` 白名单净化器（bluemonday）+ Create/Update(submit) 写路径接入。RED 均为 `go test` 实际输出（先写测试、未实现时执行），非口头描述。
+
+## 1. RED — internal/sanitize 包（编译期：undefined ContentPostText）
+
+复现命令: `go test ./internal/sanitize/`（仅测试文件、无实现）
+
+```
+# github.com/guxiao1976/community-hub/internal/sanitize [github.com/guxiao1976/community-hub/internal/sanitize.test]
+internal/sanitize/sanitize_test.go:146:11: undefined: ContentPostText
+internal/sanitize/sanitize_test.go:166:11: undefined: ContentPostText
+internal/sanitize/sanitize_test.go:167:12: undefined: ContentPostText
+FAIL	github.com/guxiao1976/community-hub/internal/sanitize [build failed]
+FAIL
+```
+
+## 2. RED — CreateContentPost 落库未净化（行为断言失败）
+
+复现命令: `go test ./rpc/internal/logic/notice/ -run TestCreateContentPost_SanitizesText -count=1`
+
+```
+--- FAIL: TestCreateContentPost_SanitizesText (0.00s)
+    createcontentpostlogic_test.go:189:
+        	Error:      	Not equal:
+        	            	expected: "安全文本"
+        	            	actual  : "<script>alert(document.cookie)</script><img src=x onerror=alert(1)>安全文本"
+    createcontentpostlogic_test.go:190:
+        	Error:      	"<script>alert(document.cookie)</script><img src=x onerror=alert(1)>安全文本" should not contain "<script"
+    createcontentpostlogic_test.go:191:
+        	Error:      	"<script>alert(document.cookie)</script><img src=x onerror=alert(1)>安全文本" should not contain "onerror="
+```
+
+## 3. RED — UpdateContentPost 内容编辑分支落库未净化
+
+复现命令: `go test ./rpc/internal/logic/notice/ -run TestUpdateContentPost_ContentEdit_SanitizesText -count=1`
+
+```
+--- FAIL: TestUpdateContentPost_ContentEdit_SanitizesText (0.00s)
+    updatecontentpostlogic_test.go:165:
+        	Error:      	Not equal:
+        	            	expected: "净化后正文"
+        	            	actual  : "<script>alert(1)</script><iframe src=x></iframe>净化后正文"
+    updatecontentpostlogic_test.go:166:
+        	Error:      	"<script>alert(1)</script><iframe src=x></iframe>净化后正文" should not contain "<script"
+    updatecontentpostlogic_test.go:167:
+        	Error:      	"<script>alert(1)</script><iframe src=x></iframe>净化后正文" should not contain "<iframe"
+```
+
+## 4. RED — UpdateContentPost submit 发布分支存量 draft 未净化
+
+复现命令: `go test ./rpc/internal/logic/notice/ -run TestUpdateContentPost_Submit_SanitizesDraftText -count=1`
+
+```
+--- FAIL: TestUpdateContentPost_Submit_SanitizesDraftText (0.00s)
+    updatecontentpostlogic_test.go:221:
+        	Error:      	Should be true
+        	Messages:   	置公开前先净化存量 draft 正文（UpdateContentTx）
+    updatecontentpostlogic_test.go:223:
+        	Error:      	Not equal:
+        	            	expected: "存量正文"
+        	            	actual  : ""
+        	Messages:   	净化后正文写入同一事务
+```
+
+## GREEN 确认
+
+- `go test ./internal/sanitize/` : `TestContentPostText`（23 用例）+ `TestContentPostText_Idempotent` 全 PASS。
+- `go test ./rpc/internal/logic/notice/ -run 'Sanitizes|AlreadySanitized|TextNotPresent'` : 5 用例全 PASS（create 净化 / 内容编辑净化 / 未携带不重净化 / submit 净化 + 置公开 / 幂等不二次改写）。
+- 全量 `go build ./...` + `go vet ./...` + `go test ./... -count=1` : 13 包全绿，exit 0。
+
+## 2026-08-16 — Kafka 推送 payload 修正（Review must-follow 跟进）
+
+### RED — TestUpdateContentPost_Submit_SanitizesTextBeforeKafkaPush
+复现: 新增测试后运行（修复前 submit 分支 Push 复用 FindOne 未净化快照）。
+
+```
+--- FAIL: TestUpdateContentPost_Submit_SanitizesTextBeforeKafkaPush (0.00s)
+        	Messages:   	推送 payload 不得含 script
+        	Error:      	Not equal:
+        	            	expected: "<p>你好</p>"
+        	            	actual  : "<p>你好</p><img src=x onerror=alert(1)><script>alert(2)</script>"
+        	Messages:   	推送 payload == 落库净化值
+FAIL
+```
+
+### GREEN
+修复（提交后 `post.Text = sanitizedText` 再 Push）后：
+```
+--- PASS: TestUpdateContentPost_Submit_SanitizesTextBeforeKafkaPush (0.00s)
+ok  	github.com/guxiao1976/community-hub/rpc/internal/logic/notice	0.029s
+```

@@ -233,3 +233,472 @@ Number of calls: 0
 ```
 
 > 注：`onCall` 的 phone 空守卫（`if (contact.phone)`）为条件分支；实现缺失（无 `makePhoneCall` 调用）时拨号断言收到 `Number of calls: 0`（GREEN 后恢复 → 62/62 全绿）。
+
+---
+
+# TDD 证据 — web/mobile 移动端 6 项完善（TabBar 改名 / 登录协议流程 / 登录态修复 / 通知模块改造）
+
+> 生成时间: 2026-08-16
+> 背景: 本轮新增/修改 7 个有逻辑函数，全部先写失败测试（RED 摘录真实 vitest FAIL 输出）→ 实现（GREEN）。RED 摘录均为运行时的实际 FAIL 文本。
+
+## 9. RED — isLoggedIn token 权威化（src/stores/user.spec.ts）
+
+复现: 工作树 `user.ts` 仍为旧实现（`isLoggedIn = isAuthenticated() && user !== null`），新测试断言「已登录（token 存在）但 user 未加载（user=null）→ isLoggedIn=true」。
+
+```
+ FAIL  src/stores/user.spec.ts > user store — isLoggedIn（token 权威） > 已登录（token 存在）但 user 未加载（user=null）→ isLoggedIn=true
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+ ❯ src/stores/user.spec.ts:53:30
+```
+
+## 10. RED — text-fit 截断工具（src/utils/text-fit.spec.ts）
+
+复现: 工具模块尚不存在，运行测试。
+
+```
+ FAIL  src/utils/text-fit.spec.ts [ src/utils/text-fit.spec.ts ]
+Error: Failed to resolve import "./text-fit" from "src/utils/text-fit.spec.ts". Does the file exist?
+```
+
+## 11. RED — auth-flow handleAuthSuccess profile 成功路径（src/utils/auth-flow.spec.ts）
+
+复现: auth-flow.ts 初版从 `@/api/user` 错误导入 `getUserProfile`（实际在 `@/api/identity`），profile 拉取抛错 → user 保持 null。
+
+```
+ FAIL  src/utils/auth-flow.spec.ts > auth-flow — handleAuthSuccess > 保存 token + 拉取 profile 并 setUser，无小区 → redirectTo 加入小区
+AssertionError: expected undefined to be '测试用户' // Object.is equality
+
+- Expected:
+"测试用户"
+
++ Received:
+undefined
+ ❯ src/utils/auth-flow.spec.ts:55:34
+```
+
+## 12. RED — login.vue 登录流程改造（src/pages/login/login.spec.ts）
+
+复现: `auth-flow` 模块尚不存在（`login.vue` 新提交逻辑引用它），运行测试。
+
+```
+ FAIL  src/pages/login/login.spec.ts [ src/pages/login/login.spec.ts ]
+Error: Failed to resolve import "@/utils/auth-flow" from "src/pages/login/login.spec.ts". Does the file exist?
+```
+
+## 13. RED — agreement.vue 协议确认注册（src/pages/agreement/agreement.spec.ts）
+
+复现: 协议页尚不存在，运行测试。
+
+```
+ FAIL  src/pages/agreement/agreement.spec.ts [ src/pages/agreement/agreement.spec.ts ]
+Error: Failed to resolve import "./agreement.vue" from "src/pages/agreement/agreement.spec.ts". Does the file exist?
+```
+
+## 14. RED — loadMemberships getAppState 服务端权威（src/stores/community.spec.ts）
+
+复现: `loadMemberships` 尚未接入 `getAppState`（服务端权威采用），4 个新用例全部 FAIL（本地 storage 陈旧值 c1 未被 c2 覆盖；getAppState 0/失败降级与不在 memberships 忽略均未实现）。
+
+```
+ FAIL  src/stores/community.spec.ts > community store — loadMemberships 服务端权威（getAppState） > 后端 current_community_id 存在于 memberships → 采用并保存（跨设备一致，修复本地 storage 陈旧）
+ReferenceError: getResidentialAreasByIds is not defined
+```
+
+## 15. RED — notice.vue 非 10015 切换小区错误不再静默（src/pages/notice/notice.spec.ts）
+
+复现: 临时将 `onCommunitySwitch` 非 10015 分支回退为静默（模拟 HEAD 行为：仅 10015 有 toast），随后恢复实现。
+
+```
+ FAIL  src/pages/notice/notice.spec.ts > notice page — onCommunitySwitch 10015 branch > non-10015 switch error → console.error + 通用 toast（不再静默吞错）
+AssertionError: expected "error" to be called at least once
+      Tests  1 failed | 21 passed (22)
+```
+
+## 16. RED — notice.vue 单行紧凑角色 pill（getNoticeRoleName mock 缺返回值）
+
+复现: `getNoticeRoleName` 顶层 mock 缺省返回 ''（未在本用例覆盖），断言 pill 文本含「物业」。
+
+```
+ FAIL  src/pages/notice/notice.spec.ts > notice page — 通知模块标题栏 + 单行紧凑布局（task 4/5） > 单行紧凑卡片：标题 + (M-D) 日期 + 角色 pill 同行渲染
+AssertionError: expected '' to contain '物业'
+ ❯ src/pages/notice/notice.spec.ts:385:51
+```
+
+## 17. RED — App.vue restoreUserProfile（src/App.spec.ts，QA 分诊补测）
+
+首次运行 App.spec.ts 时 `restoreUserProfile` 未从 App.vue 导出（setup 内部函数），4 分支测试全败。
+
+```
+ FAIL  src/App.spec.ts > App.vue restoreUserProfile（onLaunch 登录态恢复） > 未登录（token 不存在）→ 不调 getUserProfile
+TypeError: restoreUserProfile is not a function
+ ❯ src/App.spec.ts:93:18
+      Tests  4 failed (4)
+```
+
+修复：App.vue 将 `restoreUserProfile` 移入独立 `<script>` 块并 `export`（onLaunch 接线不变），GREEN 后：
+
+```
+ Tests  4 passed (4)
+```
+
+> GREEN 后全量 `npx vitest run` → 16 files / 94 tests 全绿；type-check 0 error；build:h5 DONE；frontend QA 全项 PASS（含本轮新增 App.spec.ts 覆盖 restoreUserProfile 4 分支）。
+
+---
+
+## 18. RED — 首页通知列表两行布局改版（标题全文 / 发布单位 / YYYY-MM-DD / 移除 JS 截断）
+
+> 变更：`notice.vue` 通知卡片从单行紧凑（色条 + 标题 JS 截断 + (M-D) 日期 + 角色 pill）改为两行布局（标题全文自然换行 + 元信息行：发布单位 + 发布日期 YYYY-MM-DD）。新增有逻辑函数 `formatPublishDate`（YYYY-MM-DD 转换、published_at=0 回退 created_at）与 `getPublisherName`（publisher 非空优先、空回退 getNoticeRoleName）。移除 `noticeDisplayTitle`/`formatMonthDay`/`text-fit` 整条链路（`src/utils/text-fit.ts` + `text-fit.spec.ts` 无引用后整文件删除）。
+
+复现方式: 先更新 `notice.spec.ts` 断言（标题全文渲染 / 元信息行 / published_at=0 → YYYY-MM-DD / 无单行残留），生产 `notice.vue` 仍为单行紧凑实现时运行 vitest，捕获 4 处真实 FAIL。
+
+```
+ FAIL  src/pages/notice/notice.spec.ts > notice page — 通知模块标题栏 + 两行布局（标题全文 + 元信息行） > 两行布局：标题全文渲染 + 标题下方发布单位 + 发布日期(YYYY-MM-DD)
+AssertionError: expected '小区停水通知：因管道检修明日上午…' to be '小区停水通知：因管道检修明日上午9点至下午5点停水' // Object.is equality
+```
+
+```
+ FAIL  src/pages/notice/notice.spec.ts > notice page — 通知模块标题栏 + 两行布局（标题全文 + 元信息行） > publisher 为空 → 发布单位回退 getNoticeRoleName 角色名
+Error: Cannot call text on an empty DOMWrapper.
+ ❯ src/pages/notice/notice.spec.ts:411:27
+    411|     expect(meta.exists()).toBe(true);
+       |                           ^
+```
+
+```
+ FAIL  src/pages/notice/notice.spec.ts > notice page — 通知模块标题栏 + 两行布局（标题全文 + 元信息行） > published_at=0 → 回退 created_at 渲染 YYYY-MM-DD
+Error: Cannot call text on an empty DOMWrapper.
+ ❯ src/pages/notice/notice.spec.ts:428:40
+```
+
+```
+ FAIL  src/pages/notice/notice.spec.ts > notice page — 通知模块标题栏 + 两行布局（标题全文 + 元信息行） > 无单行布局残留：.notice-line 与 .notice-role-pill 已移除
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/pages/notice/notice.spec.ts:443:51
+    443|     expect(wrapper.find('.notice-line').exists()).toBe(false);
+       |                                                   ^
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 20 passed (24)
+```
+
+GREEN 后（生产两行布局 + 移除截断逻辑）：
+
+```
+ Test Files  1 passed (1)
+      Tests  24 passed (24)
+```
+
+> 既有 text-fit RED 摘录（§10，`measureTextWidth`/`truncateToFit`）对应文件 `src/utils/text-fit.ts` + `text-fit.spec.ts` 已整文件删除（无任何引用），§10 归档为已删除模块的历史证据。
+
+---
+
+## 19. 登录协议流程安全加固 — reg-pending 共享契约模块（2026-08-16）
+
+> 背景: 修复 Review 3 条 memory suggestion（`sms-code-persist-localstorage` / `frontend-cross-page-storage-contract` / `cross-page-sensitive-temp-data-storage`）。
+> 新建 `src/utils/reg-pending.ts`（内存态主载体 + H5 sessionStorage 镜像 + TTL 5 分钟 + localStorage 零触碰）为唯一契约源；
+> `login.vue`/`agreement.vue` 删内联 magic string 与 JSON.stringify/uni storage 读写，改调共享模块。
+> 分诊: `reg-pending.ts` 为**有逻辑函数**（TTL 校验/H5 镜像/读写清），TDD RED→GREEN；两页改为接线，测试改断言。
+> 复现方式: 先写测试断言共享模块行为后运行 vitest 捕获真实失败（模块未实现 / 页面未接线），随后实现。摘录均为 vitest 实际输出。
+
+### 19.1 RED — reg-pending.spec.ts（模块未实现）
+
+复现方式: 仅创建 `src/utils/reg-pending.spec.ts`，未创建 `src/utils/reg-pending.ts`，运行 `npx vitest run src/utils/reg-pending.spec.ts`。
+
+```
+ FAIL  src/utils/reg-pending.spec.ts [ src/utils/reg-pending.spec.ts ]
+Error: Failed to resolve import "./reg-pending" from "src/utils/reg-pending.spec.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/jiaoxh/my-project/community-and-home/web/mobile/src/utils/reg-pending.spec.ts:15:7
+
+ Test Files  1 failed (1)
+      Tests  no tests
+```
+
+### 19.2 RED — login.spec.ts（login.vue 尚未接线 saveRegPending）
+
+复现方式: login.spec.ts 改断言共享模块后，login.vue 仍用 `uni.setStorageSync(REG_PENDING_KEY, ...)`，运行 `npx vitest run src/pages/login/login.spec.ts`。
+
+```
+ FAIL  src/pages/login/login.spec.ts > login page — 登录流程改造 > loginWithSms 返回 50001（未注册）→ saveRegPending 暂存 + navigateTo 协议页
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ src/pages/login/login.spec.ts:97:28
+     97|     expect(saveRegPending).toHaveBeenCalledTimes(1);
+
+ Test Files  1 failed (1)
+```
+
+### 19.3 RED — agreement.spec.ts（agreement.vue 尚未接线 readRegPending/clearRegPending）
+
+复现方式: agreement.spec.ts 改断言共享模块后，agreement.vue 仍用 `uni.getStorageSync(REG_PENDING_KEY)` 手写 readPending/clearPending，运行 `npx vitest run src/pages/agreement/agreement.spec.ts`。
+
+```
+ FAIL  src/pages/agreement/agreement.spec.ts > agreement page — 协议确认注册 > 勾选后确认注册 → readRegPending + register 正确参数 + clearRegPending + 自动登录
+AssertionError: expected "vi.fn()" to be called at least once
+ ❯ src/pages/agreement/agreement.spec.ts:121:28
+    121|     expect(readRegPending).toHaveBeenCalled();
+
+ FAIL  src/pages/agreement/agreement.spec.ts > agreement page — 协议确认注册 > 无临时注册数据进入 → readRegPending 返回 null 并明确提示注册信息已失效
+AssertionError: expected "vi.fn()" to be called at least once
+ ❯ src/pages/agreement/agreement.spec.ts:160:28
+    160|     expect(readRegPending).toHaveBeenCalled();
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed (4)
+```
+
+### GREEN 后（reg-pending.ts 实现 + login.vue / agreement.vue 接线共享模块）
+
+```
+ Test Files  1 passed (1)   # reg-pending.spec.ts（5 用例）
+      Tests  5 passed (5)
+
+ Test Files  1 passed (1)   # login.spec.ts（4 用例）
+      Tests  4 passed (4)
+
+ Test Files  1 passed (1)   # agreement.spec.ts（4 用例）
+      Tests  4 passed (4)
+```
+
+> 全量门禁: `npm run test:unit` → 16 files / 97 tests PASS；`npm run type-check` → PASS（0 errors）；`npm run build:h5` → PASS（DONE Build complete）。
+
+## 20. 修复多视角审查 CRITICAL — 悬空记忆引用完整性回归测试（2026-08-16）
+
+> 背景: standards-eng 多视角审查 FAIL（1 CRITICAL）——`reg-pending.ts:16-18` / `login.vue:71-73` / `agreement.vue:56-58` 引用了 3 个不存在的记忆 slug（`sms-code-persist-localstorage` / `frontend-cross-page-storage-contract` / `cross-page-sensitive-temp-data-storage`），M2 规则「slug 文件不存在 → 🔴 CRITICAL」。
+> 修复: 按审查建议 (a) 创建 3 个记忆文件（代码行为本身正确——一次性 smsCode 走内存态 + sessionStorage TTL 5 分钟、不落 localStorage、key/结构收敛到单一契约源，值得沉淀），并新建 `src/utils/memory-refs.spec.ts` 扫描 src/ 全部 SEE slug 断言可解析，防悬空引用回归。
+> 分诊: `memory-refs.spec.ts` 为**有逻辑函数**（文件扫描 + slug 提取 + 记忆目录解析），TDD RED→GREEN；记忆文件为文档（无逻辑代码），不需 RED。
+> 复现方式: 先写测试断言 src/ 全部 SEE slug 可解析后运行 vitest 捕获真实失败（3 个 slug 悬空），随后创建记忆文件。摘录均为 vitest 实际输出。
+
+### 20.1 RED — memory-refs.spec.ts（3 个 slug 悬空）
+
+复现方式: 仅创建 `src/utils/memory-refs.spec.ts`，未创建 3 个记忆文件，运行 `npx vitest run src/utils/memory-refs.spec.ts`。
+
+```
+ FAIL  src/utils/memory-refs.spec.ts > 记忆引用完整性（SEE 标记 slug 无悬空引用） > 每个被引用的记忆 slug 都能解析到项目或个人记忆文件
+AssertionError: expected [ …(3) ] to deeply equal []
+- Expected
++ Received
+- []
++ [
++   "sms-code-persist-localstorage",
++   "frontend-cross-page-storage-contract",
++   "cross-page-sensitive-temp-data-storage",
++ ]
+ ❯ src/utils/memory-refs.spec.ts:92:21
+
+ FAIL  src/utils/memory-refs.spec.ts > 记忆引用完整性（SEE 标记 slug 无悬空引用） > 本次修复目标：3 个 smsCode 存储相关 slug 必须已存在
+AssertionError: 悬空记忆引用: [[sms-code-persist-localstorage]]: expected false to be true // Object.is equality
+ ❯ src/utils/memory-refs.spec.ts:102:61
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+```
+
+### GREEN 后（创建 3 个记忆文件于 .harness/knowledge/memory/web/ + memory-index-build.sh 重建索引）
+
+```
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+```
+
+> 全量门禁: `npm run test:unit` → 17 files / 100 tests PASS（+3 新用例）；`npm run build:h5` → PASS（DONE Build complete）；`bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service mobile` → 5 PASS / 0 FAIL / 2 WARN（WARN 均为既有存量，非本轮引入）。
+
+## 21. Review WARNING 跟进 — 登录/注册双提交窗口 + 错误分支 code 优先（2026-08-16）
+
+> 背景: Review WARNING 指出两处登录/注册提交窗口问题——`login.vue` / `agreement.vue` 成功分支在 `await handleAuthSuccess(...)` 前即复位 `submitting`，而 handleAuthSuccess 内部有 profile 拉取 + 小区检查 + 800ms setTimeout 才跳转，窗口期用户可二次点击触发重复登录/注册；同时登录错误分支三条件并存（code + msg 双判据），应以 err.code 数值为主。
+> 修复: (A) 成功分支 submitting 复位移入 `handleAuthSuccess` 的 `opts.onCompleted`（跳转后调用）；(B) catch 改为 `e?.code !== undefined ? e.code === 50001 : (msg.includes('50001') || msg.includes('未注册'))`，code 存在时只看 code。
+> 分诊: A（异步时序分支）与 B（条件判定重构）均为**有逻辑函数**，TDD RED→GREEN；C（docs/design.md 文档）与 D（crypto.ts 删调试残留）为文档/删代码，不需 RED。
+> 复现方式: 先写测试断言 onCompleted 第二参数 + 跳转完成前 submitting 保持 true + code 优先判定后运行 vitest 捕获真实失败，随后实现。摘录均为 vitest 实际输出。
+
+### 21.1 RED — login.spec.ts（A onCompleted 时序 + B code 优先，3 用例 FAIL）
+
+复现方式: 仅在 login.spec.ts / agreement.spec.ts 追加断言（组件尚未修复），运行 `npx vitest run src/pages/login/login.spec.ts src/pages/agreement/agreement.spec.ts`。
+
+```
+ FAIL  src/pages/agreement/agreement.spec.ts > A: 确认注册成功 → submitting 在 handleAuthSuccess 跳转完成前保持 true，onCompleted 回调后才复位
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…}, …(1) ]
+Received:
+  1st vi.fn() call:
+  [
+-   ObjectContaining {
++   {
+      "accessToken": "at",
+-   },
+-   ObjectContaining {
+-     "onCompleted": Any<Function>,
++     "expiresAt": 123,
++     "refreshToken": "rt",
++     "userId": "u1",
+    },
+  ]
+Number of calls: 1
+ ❯ src/pages/agreement/agreement.spec.ts:152:31
+
+ FAIL  src/pages/login/login.spec.ts > A: 登录成功 → submitting 在 handleAuthSuccess 跳转完成前保持 true，onCompleted 回调后才复位
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…}, …(1) ]
+Received:
+  1st vi.fn() call:
+  [
+-   ObjectContaining {
++   {
+      "accessToken": "at",
+-   },
+-   ObjectContaining {
+-     "onCompleted": Any<Function>,
++     "expiresAt": 123,
++     "refreshToken": "rt",
++     "userId": "u1",
+
+ FAIL  src/pages/login/login.spec.ts > B: code 存在但非 50001（即使 msg 含"未注册"）→ code 为主判据，不进注册流程
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+Received:
+  1st vi.fn() call:
+    Array [
+      Object {
+        "deviceId": "dev-1",
+        "nickname": "用户8000",
+        "phone": "13800138000",
+        "smsCode": "123456",
+      },
+    ]
+Number of calls: 1
+ ❯ src/pages/login/login.spec.ts:170:32
+
+ Test Files  1 failed | 1 failed (2)
+      Tests  3 failed | 10 passed (13)
+```
+
+### GREEN 后（login.vue / agreement.vue 修复：onCompleted 复位 + code 优先判定）
+
+```
+ Test Files  1 passed (1)   # login.spec.ts（8 用例，含 +4 新）
+      Tests  8 passed (8)
+
+ Test Files  1 passed (1)   # agreement.spec.ts（5 用例，含 +1 新）
+      Tests  5 passed (5)
+```
+
+> 全量门禁: `npm run type-check` → PASS（0 errors）；`npm run test:unit` → 17 files / 105 tests PASS（+5 新用例）；`npm run build:h5` → PASS（DONE Build complete）；`bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service mobile` → 5 PASS / 0 FAIL / 2 WARN（debug_artifacts 现为真实 0；WARN 均为既有存量）。
+
+---
+
+## 22. 首页首载去重 + 登录 toast 合并（notice-xss-sanitize-and-frontend-fixes，2026-08-16）
+
+> 变更内容（详见 CHANGELOG 顶部条目）：
+> - **A 首页 watch 双重加载（notice.vue）**：`watch(currentCommunityId)` 加 `membershipsResolved` 首载守卫；标志在 onMounted 中 `await loadMemberships()` 之后置 true（评审钉死，禁止放入 loadMemberships 内部含 finally）；无小区时直接结束骨架屏不发起数据加载。**有逻辑函数**（异步时序守卫），TDD RED→GREEN
+> - **B 登录 toast 覆盖（auth-flow.ts）**：profile 拉取失败改为单条合并 toast「登录成功，但资料加载失败」（icon:none），不再被后续「登录成功」(icon:success) 覆盖；成功路径仍显示纯净「登录成功」。**有逻辑函数**（分支合并 + toast 时序），TDD RED→GREEN
+
+复现方式: 新增 3 个 notice.spec 用例（REQ-DBL）与 1 个新 auth-flow.spec 成功路径用例 + 改 1 个失败用例断言，实现未改时直接运行 `npx vitest run src/pages/notice/notice.spec.ts src/utils/auth-flow.spec.ts` 捕获真实 FAIL（含 `AssertionError` / Received 实际调用）。摘录均为 vitest 实际输出。
+
+### 22.1 RED — 首页首载去重（src/pages/notice/notice.spec.ts）
+
+```
+ FAIL  src/pages/notice/notice.spec.ts > notice page — 首页首载去重（REQ-DBL-1/2/3） > loadMemberships 覆写 currentCommunityId（C1→C2）→ 通知/寻失接口各仅请求一次（以 C2 为维度，REQ-DBL-1）
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ src/pages/notice/notice.spec.ts:519:27
+    517|
+    518|     // 覆写触发的那次 watch 被首载守卫忽略 + onMounted 显式单次 loadAll → 各只请求一次
+    519|     expect(getNoticeList).toHaveBeenCalledTimes(1);
+       |                           ^
+
+ FAIL  src/pages/notice/notice.spec.ts > notice page — 首页首载去重（REQ-DBL-1/2/3） > loadMemberships 整体失败 → 不以陈旧 cid 发请求、无 double-load（REQ-DBL-1 降级）
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      "c1",
+      1,
+      3,
+      30,
+    ]
+
+Number of calls: 1
+ ❯ src/pages/notice/notice.spec.ts:551:31
+    549|     await flushPromises();
+    550|
+    551|     expect(getNoticeList).not.toHaveBeenCalled();
+       |                               ^
+```
+
+说明: HEAD 的 onMounted 无条件 `loadAll()`——①getAppState 覆写 C1→C2 触发 watch 一次 + onMounted 显式一次 → getNoticeList 2 次；②memberships 整体失败时仍以陈旧 `c1` 发起请求。
+
+### 22.2 RED — 登录 toast 合并（src/utils/auth-flow.spec.ts）
+
+```
+ FAIL  src/utils/auth-flow.spec.ts > auth-flow — handleAuthSuccess > profile 拉取失败 → 单条合并 toast（icon:none），不再弹纯净「登录成功」success toast（REQ-TOAST-1）
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ src/utils/auth-flow.spec.ts:71:27
+     69|     expect(errSpy).toHaveBeenCalled();
+     70|     // 合并提示同时表达成功与失败，icon:none（非 success 打勾，避免长文案截断）
+     71|     expect(uni.showToast).toHaveBeenCalledTimes(1);
+       |                           ^
+```
+
+说明: HEAD 的 catch 先弹「获取用户资料失败」，末尾再弹「登录成功」(icon:success) → showToast 共 2 次，失败提示被成功提示覆盖。
+
+### GREEN 后（notice.vue 守卫 + auth-flow 合并 toast）
+
+```
+ Test Files  2 passed (2)   # notice.spec.ts（27 用例，含 +3 新） + auth-flow.spec.ts（5 用例，含 +1 新）
+      Tests  32 passed (32)
+```
+
+> 全量门禁: `npm run type-check` → PASS（0 errors）；`npm run test:unit` → 17 files / 109 tests PASS（+4 新用例）；`npm run build:h5` → PASS（DONE Build complete）；`bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service mobile` → 5 PASS / 0 FAIL / 2 WARN（3 处 `as any` 与 api-field-align 均为既有存量，非本轮引入）。
+
+---
+
+## 23. RED — 业主认证分支 onOwnerAuth（src/pages/my/my.spec.ts）— TDD 证据补录
+
+> 本轮【我的】页图标网格重构 + 手机号显示修复 + 退出登录接线新增**有逻辑函数** `onOwnerAuth`（`if (hasOwnerRole.value)` 分支 → toast「已是业主」/ 否则 `applyForRole('owner')`）。上轮 QA 判 FAIL：CHANGELOG RED 摘录 3 条均不含 onOwnerAuth、`_tdd_evidence.md` 无本轮章节（声称「完整摘录见 _tdd_evidence.md」引用悬空）。本节补录真实 RED 摘录（不改变已 GREEN 的实现与测试）。
+
+复现方式: 临时将 `src/pages/my/my.vue` 回退到 HEAD 基线（无 `onOwnerAuth`；my.spec.ts 为未跟踪新增，不受 stash 影响），测试保持行为断言不动，运行 `npx vitest run src/pages/my/my.spec.ts` 捕获真实 FAIL，随后 `git stash pop` 恢复实现。摘录均为 vitest 实际输出。
+
+```
+ FAIL  src/pages/my/my.spec.ts > my page — 业主认证分支 > 未认证业主 → applyRole({ community_id, role_code: owner })
+TypeError: wrapper.vm.onOwnerAuth is not a function
+ ❯ src/pages/my/my.spec.ts:142:31
+    140|     communityStore.addCommunity({ communityId: 'c1', communityName: 'A…
+    141|
+    142|     await (wrapper.vm as any).onOwnerAuth();
+       |                               ^
+    143|
+    144|     expect(applyRole).toHaveBeenCalledWith({ community_id: 'c1', role_…
+
+ FAIL  src/pages/my/my.spec.ts > my page — 业主认证分支 > 已有业主角色（verf_status=2）→ toast「已是业主」，不重复申请
+TypeError: wrapper.vm.onOwnerAuth is not a function
+ ❯ src/pages/my/my.spec.ts:152:31
+    150|     communityStore.addCommunity({ communityId: 'c1', communityName: 'A…
+    151|
+    152|     await (wrapper.vm as any).onOwnerAuth();
+       |                               ^
+    153|
+    154|     expect(uni.showToast).toHaveBeenCalledWith(
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+```
+
+说明: HEAD 的 my.vue 无 `onOwnerAuth`（`git show HEAD:web/mobile/src/pages/my/my.vue` grep 0 命中），my.spec.ts:142/152 的 `wrapper.vm.onOwnerAuth()` 在 RED 阶段必然产出 `TypeError: wrapper.vm.onOwnerAuth is not a function`。该 TypeError 先于 applyRole/showToast 断言抛错，故 FAIL 形态为函数缺失（断言对比文本在实现存在后才触发）。
+
+### GREEN 后（my.vue onOwnerAuth 实现 + my.spec.ts 全量）
+
+```
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+```
+
+> 全量门禁: `npm run test:unit` → 21 files / 123 tests PASS；`npm run type-check` → 0 errors；`npm run build:h5` → PASS（DONE Build complete）；`harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）。

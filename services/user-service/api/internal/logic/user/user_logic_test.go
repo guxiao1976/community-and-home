@@ -11,6 +11,7 @@ import (
 
 	userv1 "github.com/guxiao1976/api-proto/gen/go/user/v1"
 	usermocks "github.com/guxiao1976/api-proto/gen/go/user/v1/mocks"
+	"github.com/guxiao1976/community-common/v2/pkg/responsex"
 	"github.com/guxiao1976/community-user/api/internal/svc"
 	"github.com/guxiao1976/community-user/api/internal/types"
 )
@@ -206,6 +207,96 @@ func TestGetUserLogic_GetUser(t *testing.T) {
 	}
 }
 
+// TestGetProfileLogic_GetProfile tests the GetProfile logic.
+// 核心断言：本人查自身 profile 时，RPC GetUser 请求必须携带 ViewerId==userId，
+// 这样 user-service 才返回明文手机号（而非脱敏）。
+func TestGetProfileLogic_GetProfile(t *testing.T) {
+	tests := []struct {
+		name      string
+		ctx       context.Context
+		mockSetup func(*gomock.Controller) *svc.ServiceContext
+		wantPhone string
+		wantErr   bool
+	}{
+		{
+			name: "success - 本人查自身，RPC 请求带 ViewerId==userId，返回明文手机号",
+			ctx:  context.WithValue(context.Background(), "user_id", int64(1001)),
+			mockSetup: func(ctrl *gomock.Controller) *svc.ServiceContext {
+				mockUserRpc := usermocks.NewMockUserServiceClient(ctrl)
+				mockUserRpc.EXPECT().
+					GetUser(gomock.Any(), getUserReqWithViewer(1001, 1001)).
+					Return(&userv1.GetUserResponse{
+						Base: responsex.NewBaseResp(),
+						User: &userv1.User{
+							Id:    1001,
+							Phone: "13800138000",
+						},
+					}, nil)
+				return &svc.ServiceContext{UserRpc: mockUserRpc}
+			},
+			wantPhone: "13800138000",
+			wantErr:   false,
+		},
+		{
+			name: "success - RPC 返回 Base 业务错误（用户不存在 10001）透出 error",
+			ctx:  context.WithValue(context.Background(), "user_id", int64(1001)),
+			mockSetup: func(ctrl *gomock.Controller) *svc.ServiceContext {
+				mockUserRpc := usermocks.NewMockUserServiceClient(ctrl)
+				mockUserRpc.EXPECT().
+					GetUser(gomock.Any(), gomock.Any()).
+					Return(&userv1.GetUserResponse{
+						Base: responsex.NewBaseRespWithError(10001, "用户不存在"),
+					}, nil)
+				return &svc.ServiceContext{UserRpc: mockUserRpc}
+			},
+			wantErr: true,
+		},
+		{
+			name: "error - 未登录（无 user_id）返回 error",
+			ctx:  context.Background(),
+			mockSetup: func(ctrl *gomock.Controller) *svc.ServiceContext {
+				return &svc.ServiceContext{}
+			},
+			wantErr: true,
+		},
+		{
+			name: "error - RPC 调用失败返回 error",
+			ctx:  context.WithValue(context.Background(), "user_id", int64(1001)),
+			mockSetup: func(ctrl *gomock.Controller) *svc.ServiceContext {
+				mockUserRpc := usermocks.NewMockUserServiceClient(ctrl)
+				mockUserRpc.EXPECT().
+					GetUser(gomock.Any(), gomock.Any()).
+					Return(nil, fmt.Errorf("rpc 调用失败"))
+				return &svc.ServiceContext{UserRpc: mockUserRpc}
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			svcCtx := tt.mockSetup(ctrl)
+			l := NewGetProfileLogic(tt.ctx, svcCtx)
+
+			got, err := l.GetProfile()
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.NotNil(t, got)
+			if tt.wantPhone != "" {
+				assert.Equal(t, tt.wantPhone, got.User.Phone)
+			}
+		})
+	}
+}
+
 // TestUpdateUserLogic_UpdateUser tests the UpdateUser logic
 func TestUpdateUserLogic_UpdateUser(t *testing.T) {
 	tests := []struct {
@@ -296,4 +387,23 @@ func TestUpdateUserLogic_UpdateUser(t *testing.T) {
 // Helper functions
 func strPtr(s string) *string {
 	return &s
+}
+
+// getUserReqWithViewer 返回一个 gomock.Matcher，断言 GetUserRequest 携带指定 id 与 viewer_id。
+// 本仓库 golang/mock v1.6.0 未导出 gomock.MatchedBy，故用自定义 Matcher 校验 RPC 请求参数。
+func getUserReqWithViewer(id, viewerID int64) gomock.Matcher {
+	return &getUserReqMatcher{id: id, viewerID: viewerID}
+}
+
+type getUserReqMatcher struct {
+	id, viewerID int64
+}
+
+func (m *getUserReqMatcher) Matches(x interface{}) bool {
+	req, ok := x.(*userv1.GetUserRequest)
+	return ok && req.GetId() == m.id && req.GetViewerId() == m.viewerID
+}
+
+func (m *getUserReqMatcher) String() string {
+	return fmt.Sprintf("GetUserRequest{id=%d, viewer_id=%d}", m.id, m.viewerID)
 }

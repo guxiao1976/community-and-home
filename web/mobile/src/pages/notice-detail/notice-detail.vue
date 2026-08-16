@@ -160,80 +160,80 @@ onLoad((query) => {
 .page {
   min-height: 100vh;
   background-color: #FFFFFF;
-  padding: 32rpx;
+  padding: 1rem;
 }
 
 .detail-title {
   display: block;
-  font-size: 36rpx;
+  font-size: 1.125rem;
   font-weight: 700;
   color: $uni-text-color;
   line-height: 1.5;
-  margin-bottom: 24rpx;
+  margin-bottom: 0.75rem;
 }
 
 .detail-meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16rpx;
+  gap: 0.5rem;
 }
 
 .detail-role-tag {
-  border-radius: 8rpx;
-  padding: 4rpx 14rpx;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.4375rem;
 }
 
 .role-text {
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: #FFFFFF;
 }
 
 .detail-time {
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: $uni-text-color-grey;
 }
 
 .detail-publisher {
-  font-size: 24rpx;
+  font-size: 0.75rem;
   color: $uni-text-color-grey;
 }
 
 .divider {
-  height: 1rpx;
+  height: 0.03125rem;
   background-color: $uni-border-color;
-  margin: 24rpx 0;
+  margin: 0.75rem 0;
 }
 
 .detail-content {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: $uni-text-color;
   line-height: 1.8;
   word-break: break-all;
 }
 
 .detail-attachments {
-  margin-top: 8rpx;
+  margin-top: 0.25rem;
 }
 
 .attachments-title {
   display: block;
-  font-size: 28rpx;
+  font-size: 0.875rem;
   font-weight: 600;
   color: $uni-text-color;
-  margin-bottom: 16rpx;
+  margin-bottom: 0.5rem;
 }
 
 .attachment-item {
   display: flex;
   align-items: center;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid $uni-border-color;
+  padding: 0.5rem 0;
+  border-bottom: 0.03125rem solid $uni-border-color;
 }
 
 .attachment-icon {
-  font-size: 36rpx;
-  margin-right: 16rpx;
+  font-size: 1.125rem;
+  margin-right: 0.5rem;
 }
 
 .attachment-info {
@@ -242,24 +242,24 @@ onLoad((query) => {
 }
 
 .attachment-name {
-  font-size: 26rpx;
+  font-size: 0.8125rem;
   color: $uni-color-primary;
 }
 
 .attachment-size {
-  font-size: 22rpx;
+  font-size: 0.6875rem;
   color: $uni-text-color-placeholder;
-  margin-top: 4rpx;
+  margin-top: 0.125rem;
 }
 
 .status-wrap {
   display: flex;
   justify-content: center;
-  padding: 120rpx 0;
+  padding: 3.75rem 0;
 }
 
 .status-text {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: $uni-text-color-placeholder;
 }
 </style>

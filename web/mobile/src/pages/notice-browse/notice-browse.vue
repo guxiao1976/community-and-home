@@ -105,37 +105,37 @@ onMounted(async () => {
 .page {
   min-height: 100vh;
   background: #FFFFFF;
-  padding: 0 32rpx;
+  padding: 0 1rem;
 }
 
 .nav-bar {
   display: flex;
   align-items: center;
-  padding: 28rpx 0;
-  border-bottom: 1rpx solid #F0EBE3;
+  padding: 0.875rem 0;
+  border-bottom: 0.03125rem solid #F0EBE3;
 }
 
 .nav-back {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #B8956A;
 }
 
 .nav-title {
-  font-size: 32rpx;
+  font-size: 1rem;
   font-weight: 600;
   color: #3D3226;
-  margin-left: 16rpx;
+  margin-left: 0.5rem;
   flex: 1;
 }
 
 .loading-wrap {
   display: flex;
   justify-content: center;
-  padding: 200rpx 0;
+  padding: 6.25rem 0;
 }
 
 .loading-text {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #A6988A;
 }
 
@@ -143,16 +143,16 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 200rpx 0;
+  padding: 6.25rem 0;
 }
 
 .empty-icon {
-  font-size: 72rpx;
-  margin-bottom: 16rpx;
+  font-size: 2.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .empty-text {
-  font-size: 28rpx;
+  font-size: 0.875rem;
   color: #A6988A;
 }
 
@@ -160,70 +160,70 @@ onMounted(async () => {
 .browse-list {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
-  padding-top: 24rpx;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
 }
 
 .browse-card {
   display: flex;
   background: #FAF8F5;
-  border-radius: 16rpx;
+  border-radius: 0.5rem;
   overflow: hidden;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, 0.04);
 }
 
 .browse-card-bar {
-  width: 10rpx;
+  width: 0.3125rem;
   flex-shrink: 0;
 }
 
 .browse-card-body {
   flex: 1;
-  padding: 24rpx;
+  padding: 0.75rem;
 }
 
 .browse-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 10rpx;
+  margin-bottom: 0.3125rem;
 }
 
 .browse-title {
-  font-size: 30rpx;
+  font-size: 0.9375rem;
   font-weight: 500;
   color: #3D3226;
   flex: 1;
-  margin-right: 16rpx;
+  margin-right: 0.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .browse-role-pill {
-  border-radius: 20rpx;
-  padding: 4rpx 16rpx;
-  border: 1rpx solid;
+  border-radius: 0.625rem;
+  padding: 0.125rem 0.5rem;
+  border: 0.03125rem solid;
   flex-shrink: 0;
 }
 
 .browse-role-text {
-  font-size: 20rpx;
+  font-size: 0.625rem;
   font-weight: 500;
 }
 
 .browse-time-row {
   display: flex;
   align-items: center;
-  gap: 4rpx;
+  gap: 0.125rem;
 }
 
 .browse-time-icon {
-  font-size: 20rpx;
+  font-size: 0.625rem;
 }
 
 .browse-time {
-  font-size: 22rpx;
+  font-size: 0.6875rem;
   color: #A6988A;
 }
 </style>

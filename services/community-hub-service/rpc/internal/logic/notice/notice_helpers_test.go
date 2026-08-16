@@ -31,6 +31,7 @@ type fakeContentPostModel struct {
 	marqueeItems      []*model.ContentPost
 	insertedTx        *model.ContentPost
 	updateContentTx   bool
+	updateContentText string // XSS 净化：捕获 UpdateContentTx 落库正文
 	updateIsPinnedVal int32
 	isPinnedCalled    int32
 	statusTxCalled    int64
@@ -71,6 +72,7 @@ func (f *fakeContentPostModel) FindOneReviewComplete(ctx context.Context, id int
 
 func (f *fakeContentPostModel) UpdateContentTx(ctx context.Context, session sqlx.Session, id int64, title, text, sectionCode string) error {
 	f.updateContentTx = true
+	f.updateContentText = text
 	return nil
 }
 
@@ -243,14 +245,17 @@ func (f *fakeUser) GetUsersByIds(ctx context.Context, in *userv1.GetUsersByIdsRe
 	}, nil
 }
 
-// fakePusher 断言 Producer.Push 被调用。
+// fakePusher 断言 Producer.Push 被调用；pushedTexts 捕获完整消息 payload（Text），
+// 用于「推送内容 == 落库最终值」断言（SEE: [[kafka-event-payload-must-reflect-persisted-state]]）。
 type fakePusher struct {
-	pushed  []int64
-	pushErr error
+	pushed      []int64
+	pushedTexts []string
+	pushErr     error
 }
 
 func (f *fakePusher) Push(ctx context.Context, post *model.ContentPost, attachments []*model.ContentPostAttachment) error {
 	f.pushed = append(f.pushed, post.Id)
+	f.pushedTexts = append(f.pushedTexts, post.Text)
 	return f.pushErr
 }
 

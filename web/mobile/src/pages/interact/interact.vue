@@ -16,15 +16,15 @@
 .page {
   min-height: 100vh;
   background-color: #FFFFFF;
-  padding: 32px 24px;
+  padding: 2rem 1.5rem;
 }
 
 .header {
-  margin-bottom: 32px;
+  margin-bottom: 2rem;
 
   .title {
     display: block;
-    font-size: 48rpx;
+    font-size: 1.5rem;
     font-weight: 700;
     color: $uni-text-color;
   }
@@ -34,10 +34,10 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 120rpx 0;
+  padding: 3.75rem 0;
 
   .placeholder {
-    font-size: 28rpx;
+    font-size: 0.875rem;
     color: $uni-text-color-placeholder;
   }
 }

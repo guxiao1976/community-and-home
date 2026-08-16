@@ -168,6 +168,29 @@ func TestCreateContentPost_CommunityAdminExpand(t *testing.T) {
 	assert.Equal(t, "community", pm.insertedTx.Role)
 }
 
+// TestCreateContentPost_SanitizesText XSS 净化（REQ-XSS-1）：正文落库前白名单净化。
+// 注入 payload（<script>/<img onerror>）落库前被剥离；非空校验（080005）以原始正文先行（语义不变）。
+func TestCreateContentPost_SanitizesText(t *testing.T) {
+	conn, _ := beginCommitConn(t)
+	pm := &fakeContentPostModel{}
+	sc := noticeSvcCtx(pm, &fakeScopeModel{}, &fakeAttachmentModel{}, gridWorkerPerm(), &fakeMD{}, &fakeFile{}, &fakeUser{realName: "张三"}, nil)
+	sc.Conn = conn
+
+	l := NewCreateContentPostLogic(ctxWithUserID(t, 100), sc)
+	resp, err := l.CreateContentPost(&communityv1.CreateContentPostRequest{
+		SectionCode:  SectionCodeNotice,
+		Title:        "停水通知",
+		Text:         `<script>alert(document.cookie)</script><img src=x onerror=alert(1)>安全文本`,
+		CommunityIds: []int64{2001},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), resp.GetBase().GetCode(), "原始正文非空 → 通过 080005，净化在非空校验后执行")
+	require.NotNil(t, pm.insertedTx, "InsertTx 必须被调用")
+	assert.Equal(t, "安全文本", pm.insertedTx.Text, "落库正文为净化后内容（script/img 剥离）")
+	assert.NotContains(t, pm.insertedTx.Text, "<script", "落库正文不得残留 <script")
+	assert.NotContains(t, pm.insertedTx.Text, "onerror=", "落库正文不得残留 onerror=")
+}
+
 // TestCreateContentPost_AttachmentOverLimit 附件 >10 个 → 080005。
 func TestCreateContentPost_AttachmentOverLimit(t *testing.T) {
 	ids := make([]int64, 11)

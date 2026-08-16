@@ -6,7 +6,7 @@ service: all
 status: active
 created: 2026-08-12
 updated: 2026-08-16
-apply_count: 4
+apply_count: 6
 ---
 # QA 的 TDD RED 证据必须包含实际 FAIL 输出摘录
 
@@ -83,3 +83,15 @@ apply_count: 4
 **QA 判定**：TDD 证据表 RED 列 8 项 ❌ → QA FAIL（TDD 证据不足）。机械门禁 5 PASS / 0 FAIL / 2 WARN（type_safety 3 as any、api_field_align 34 处均 PC 端存量）+ 测试质量高（62/62 全绿、断言精确）+ 结构性 RED 成立，均不改变该判定。
 
 **补救**：同前——`git stash` 回退生产文件复现真实 vitest FAIL 并持久化（覆盖全部新增 spec，不只编译错误类）。**第 5 次复发，修复目标 #4（TDD 证据强制捕获）仍未闭环——「RED 摘录存在性按函数维度入机械门禁」已连续 5 轮未落地，建议升级为 MUST（Generator RED 阶段自动运行修复前测试并写入 CHANGELOG，未捕获则 QA 直接 FAIL 不回 Generator 口头修复）。**
+
+## 复现场景（2026-08-16，web/mobile【我的】页图标网格重构 + 手机号显示修复 + 退出登录接线）
+
+**现象**：本轮 4 组新增/修改函数中 3 组有具体 RED 摘录、1 组缺失。CHANGELOG RED 摘录 3 条：`expected "setStorageSync" to be called with arguments: [ 'user_phone', '13800001111' ] Number of calls: 0`（handleAuthSuccess opts.phone）/ `logout is not a function` / `wrapper.vm.onLogout is not a function`（onLogout）。但 **`onOwnerAuth`（my.vue，有逻辑函数：`if (hasOwnerRole.value)` 分支 → toast「已是业主」/ 否则 applyForRole('owner')）无任何具体 FAIL 摘录**——my.spec.ts 2 用例（未认证→applyRole(owner) / 已有业主→toast 不重复申请）真实行为断言，若 RED 阶段复现必然产出 `wrapper.vm.onOwnerAuth is not a function` 或 applyRole 断言失败，但全工作树 grep（CHANGELOG / _tdd_evidence.md / 测试注释）均无。CHANGELOG 声称「完整摘录见 _tdd_evidence.md」，但该文件**无本轮 §23 章节**（仅止于 §22 上一轮「首页首载去重」），引用落空。
+
+**结构性佐证（成立但不够）**：`git show HEAD:web/mobile/src/pages/my/my.vue` 无 onOwnerAuth（grep 0 命中）；`auth-flow.ts` 在 HEAD 不存在（`path exists on disk, but not in 'HEAD'`）。证明 RED 真实，但 onOwnerAuth 无摘录。
+
+**根因**：与前六轮同一失败类（第 6 次复发）——Generator 对**部分**函数捕获了 RED 摘录（opts.phone / onLogout 均有），但漏掉 `onOwnerAuth`；且 `_tdd_evidence.md` 未随本轮同步新建 §23，声称「完整摘录见 _tdd_evidence.md」落空。有逻辑函数维度上的 RED 摘录覆盖不完整。
+
+**QA 判定**：TDD 证据表 onOwnerAuth 行 RED ❌（无具体摘录）→ 有逻辑函数 RED 缺失 → QA FAIL（TDD 证据不足）。机械化门禁全绿（harness-checks-frontend 6 PASS / 0 FAIL / 2 WARN exit 0；build/type-check/test 21 files / 123 tests 全绿）+ 测试质量高（onOwnerAuth 2 用例真实断言）+ 结构性 RED 成立，均不改变该判定。
+
+**补救**：`git stash` 回退 my.vue 至无 onOwnerAuth 态 → vitest 捕获真实 `wrapper.vm.onOwnerAuth is not a function`（或 applyRole 断言失败）→ 持久化到 `_tdd_evidence.md` 本轮 §23 + CHANGELOG RED 摘录行补 onOwnerAuth。**第 6 次复发，修复目标 #4 仍未闭环——「RED 摘录存在性按函数维度入机械门禁」已连续 6 轮未落地，建议 MUST 化：Generator RED 阶段自动运行修复前测试并写入 CHANGELOG（按函数维度逐条校验），未捕获则 QA 直接 FAIL 不回 Generator 口头修复。**

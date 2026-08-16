@@ -41,6 +41,7 @@
 - [TypeScript erasableSyntaxOnly 与 enum 冲突](web/typescript-erasable-syntax-enum-conflict.md) — web, must-follow, `pitfall`, `TypeScript erasableSyntaxOnly enum TS1294 npm run build vue-tsc 编译失败`
 - [QA 的 TDD RED 证据必须包含实际 FAIL 输出摘录](global/tdd-red-evidence-requires-fail-excerpt.md) — all, must-follow, `process`, `TDD RED GREEN 测试未提交 证据摘录 undefined 编译失败 QA FAIL`
 - [status=0 未认证 grant 立即生效：数据范围+level-0 能力](global/auto-grant-unverified-grant-confers-scope-level0.md) — all, must-follow, `pitfall`, `自动授权 加入小区 JoinCommunity AssignRole status=0 未认证 grant 数据范围 scope level-0 min_verf_level 认证绕过 权限种子`
+- [一次性短信验证码禁止落 localStorage 持久化残留](web/sms-code-persist-localstorage.md) — all, must-follow, `pitfall`, `smsCode 短信验证码 一次性验证码 localStorage sessionStorage 持久化 残留 共享设备 OTP setStorageSync reg_pending`
 
 ## 应该遵守 (should-follow)
 
@@ -67,6 +68,8 @@
 - [RPC 身份伪造风险：metadata 盲信 + 0.0.0.0 无鉴权（仓库级）](global/rpc-identity-spoofing-loopback-isolation.md) — all, should-follow, `pitfall`, `RPC 身份伪造 0.0.0.0 无鉴权 mTLS user_id metadata 数据权限 网络隔离 回环 8088 ListenOn 服务凭据 拦截器`
 
 - [前端可视化开发流程](web/frontend-visual-development-workflow.md) — web/mobile, should-follow, `process`, `UI 页面 设计 样式 视觉`
+- [跨页共享存储 key/结构必须收敛到单一共享模块](web/frontend-cross-page-storage-contract.md) — all, should-follow, `guideline`, `跨页 storage key magic string 契约源 共享模块 setStorageSync 两端 改名 静默失效`
+- [跨页一次性敏感数据优先走内存态载体](web/cross-page-sensitive-temp-data-storage.md) — all, should-follow, `guideline`, `跨页 一次性 临时数据 敏感数据 内存态 模块级变量 sessionStorage localStorage 持久化 reg_pending 暂存`
 - [Harness 架构决策记录](global/harness-architecture-decisions.md) — all, should-follow, `decision`, `harness .harness 驾驭工程 目录结构 架构决策 四支柱`
 
 ## 参考信息 (info)

@@ -1,7 +1,7 @@
 // Community Pinia Store — manages user community memberships and current active community
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { getUserMemberships, setCurrentCommunity } from '@/api/user';
+import { getUserMemberships, setCurrentCommunity, getAppState } from '@/api/user';
 import type { CommunityMembership } from '@/api/user';
 
 export interface CommunityInfo {
@@ -70,6 +70,28 @@ export const useCommunityStore = defineStore('community', () => {
           address: existing?.address || m.address || undefined,
         };
       });
+
+      // 服务端权威的当前小区（跨设备一致）：getAppState 返回后端持久化的 current_community_id。
+      // 若存在于 memberships 则采用并保存，修复本地 storage 陈旧导致切换/显示不一致。
+      // 必须容错：getAppState 失败/缺失时降级忽略，走本地回退逻辑。
+      // SEE: [[frontend-business-rule-hardcode]] — 当前小区权威在后端（app-state），前端以服务端为准
+      try {
+        const appState = await getAppState();
+        const serverCurrentId = appState?.current_community_id;
+        if (
+          serverCurrentId &&
+          serverCurrentId !== '0' &&
+          communities.value.some(c => c.communityId === serverCurrentId)
+        ) {
+          currentCommunityId.value = serverCurrentId;
+          saveStoredCommunityId(serverCurrentId);
+          return;
+        }
+      } catch (e) {
+        // getAppState 失败/缺失 → 降级忽略，走本地回退逻辑；但必须留痕，否则 app-state 接口故障无任何 trace。
+        // SEE: [[verify-api-before-calling]] — 禁止空 catch 静默吞错
+        console.error('[community] getAppState 获取失败，降级本地', e);
+      }
 
       // If no current selection (first load), pick first community
       if (!currentCommunityId.value && communities.value.length > 0) {

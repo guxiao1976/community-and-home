@@ -34,14 +34,44 @@
 | 页面路径 | 标题 | TabBar |
 |----------|------|:------:|
 | `pages/login/login` | 登录 | ❌ |
-| `pages/register/register` | 注册 | ❌ |
-| `pages/community/detail` | 社区详情 | ❌ |
-| `pages/community/post` | 发布内容 | ❌ |
-| `pages/profile/settings` | 设置 | ❌ |
+| `pages/agreement/agreement` | 协议注册 | ❌ |
+| `pages/join-community/join-community` | 加入小区 | ❌ |
+| `pages/notice/notice` | 通知首页 | ✅ |
+| `pages/notice-detail/notice-detail` | 通知详情 | ❌ |
+| `pages/notice-browse/notice-browse` | 通知浏览（30 天窗口） | ❌ |
 
 新增页面只需：
 1. 在 `src/pages/` 下创建 `页面名/页面名.vue`
 2. 在 `src/pages.json` 的 `pages` 数组中注册路径
+
+### 登录 / 注册流程（现行实现）
+
+> 2026-08 信息架构改造后的实际流程。早期设计（登录页内嵌协议勾选 + 独立 `pages/register/register` 注册页）已废弃，现改为「短信登录 + 未注册一键注册」：
+
+```
+登录页 pages/login/login
+  ├─ 无协议勾选区：canSubmit 仅依赖「手机号合法 + 验证码合法」
+  ├─ 提交 → loginWithSms(phone, smsCode, deviceId)
+  │    ├─ 成功 → handleAuthSuccess(loginRes, { onCompleted })
+  │    │         （保存 token + 拉 profile + 小区判断跳转；
+  │    │          submitting 由 onCompleted 在跳转完成后复位，防双提交）
+  │    └─ 失败 err.code === 50001（未注册；code 缺失时回退 msg 含 50001/未注册）
+  │         → saveRegPending({phone, smsCode, deviceId, nickname}) → navigateTo 协议页
+  └─ 其他错误 → 复位 submitting 并停止（拦截器已 toast）
+         ↓
+协议页 pages/agreement/agreement
+  ├─ 展示《社区家园使用协议》正文 + 「已阅并同意」勾选 + 确认注册按钮
+  ├─ 确认注册 → register({phone, smsCode, nickname, deviceId})
+  │    ├─ 成功 → clearRegPending() + handleAuthSuccess(regRes, { onCompleted })（自动登录一次）
+  │    └─ 失败 → toast 并保留临时数据可重试
+  └─ onLoad 读不到临时数据 → 提示「注册信息已失效」并返回
+```
+
+**reg-pending 跨页一次性注册数据（`src/utils/reg-pending.ts`）**：
+- 唯一契约源：`REG_PENDING_KEY` 与 `RegPending` 结构收敛到共享模块，两端（login.vue / agreement.vue）import 引用，禁止各自内联 magic string
+- 载体：**模块级内存变量为主**（页面栈内导航直接传递，不落持久化）；仅 H5 环境镜像到 `window.sessionStorage`（`{data, expiresAt}`，**TTL 5 分钟**，过期即清）
+- **绝不写入 localStorage** — 一次性 smsCode 持久化残留会被共享设备复用，属安全风险
+- sessionStorage 访问一律 try/catch 容错（隐私模式 / 被禁用时降级内存态）
 
 ## 数据流
 

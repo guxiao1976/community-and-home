@@ -7,6 +7,7 @@ import (
 
 	communityv1 "github.com/guxiao1976/api-proto/gen/go/community/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
+	"github.com/guxiao1976/community-hub/internal/sanitize"
 	"github.com/guxiao1976/community-hub/model"
 	"github.com/guxiao1976/community-hub/rpc/internal/logic/scope"
 	"github.com/guxiao1976/community-hub/rpc/internal/svc"
@@ -133,12 +134,28 @@ func (l *UpdateContentPostLogic) applyContentEdit(post *model.ContentPost, in *c
 			return l.err(scope.CodeInvalidParam, "仅 draft 可提交"), nil
 		}
 		now := time.Now()
+		// 净化（REQ-XSS-6/D9）：存量 draft 正文置公开前先白名单净化（关闭「净化前存量草稿经 submit 发布」缺口）；
+		// 幂等（REQ-XSS-3）——净化前后一致则不二次改写（不调用 UpdateContentTx）。
+		sanitizedText := sanitize.ContentPostText(post.Text)
 		err := l.svcCtx.Conn.TransactCtx(l.ctx, func(ctx context.Context, session sqlx.Session) error {
+			if sanitizedText != post.Text {
+				if err := l.svcCtx.ContentPostModel.UpdateContentTx(ctx, session, post.Id, post.Title, sanitizedText, post.SectionCode); err != nil {
+					return err
+				}
+			}
 			return l.svcCtx.ContentPostModel.UpdateStatusAndPublishTx(ctx, session, post.Id, model.StatusApproved, now)
 		})
 		if err != nil {
 			l.Errorf("UpdateContentPost: submit failed: %v", err)
 			return nil, err
+		}
+		// 推送 payload 必须反映落库后的最终值：post.Text 刷新为 sanitizedText（净化命中时）。
+		// 禁止复用 FindOne 载入的未净化快照——否则 DB 已封死的恶意 HTML 经 content-review 事件原样转发。
+		// 净化命中同时记日志（安全改写可追溯，SEE: [[security-sanitization-must-log-transformation]]）。
+		// SEE: [[kafka-event-payload-must-reflect-persisted-state]]
+		if sanitizedText != post.Text {
+			l.Infof("UpdateContentPost submit: sanitize hit id=%d textLen=%d->%d", post.Id, len(post.Text), len(sanitizedText))
+			post.Text = sanitizedText
 		}
 		// 事务提交成功后 Producer.Push（先提交后推送，提交失败不推送，评审 data-model v3 S1）
 		if l.svcCtx.KafkaProducer != nil {
@@ -170,7 +187,13 @@ func (l *UpdateContentPostLogic) applyContentEdit(post *model.ContentPost, in *c
 		if *in.Text == "" {
 			return l.err(scope.CodeInvalidParam, "内容不能为空"), nil
 		}
-		text = *in.Text
+		// 净化（REQ-XSS-1，D7 顺序）：正文携带时非空校验（080005）以原始正文先行（上方），此处落库前白名单净化；
+		// 未携带（D11）不重写正文、不重净化。
+		text = sanitize.ContentPostText(*in.Text)
+		// 净化命中（改写/剥离输入）记日志，安全改写可追溯（SEE: [[security-sanitization-must-log-transformation]]）
+		if text != *in.Text {
+			l.Infof("UpdateContentPost edit: sanitize hit id=%d textLen=%d->%d", post.Id, len(*in.Text), len(text))
+		}
 	}
 	if in.SectionCode != nil {
 		if *in.SectionCode == "" || *in.SectionCode != SectionCodeNotice {
