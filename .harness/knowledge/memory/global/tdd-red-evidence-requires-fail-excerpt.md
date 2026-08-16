@@ -5,8 +5,8 @@ severity: must-follow
 service: all
 status: active
 created: 2026-08-12
-updated: 2026-08-12
-apply_count: 2
+updated: 2026-08-16
+apply_count: 3
 ---
 # QA 的 TDD RED 证据必须包含实际 FAIL 输出摘录
 
@@ -54,3 +54,18 @@ apply_count: 2
 **QA 判定**：TDD 证据表 RED 列全部 ❌（无 FAIL 摘录）→ QA FAIL（TDD 证据不足）。机械门禁全 PASS（build/type-check/test 17/17 exit 0）+ 结构性 RED 成立均不改变该判定。
 
 **补救**：mobile 也须按本记忆做法——RED 阶段把真实 vitest 断言失败输出（`AssertionError:` / `- Expected` / `+ Received` / `Test:` 行）写入 CHANGELOG 或新建 `_tdd_evidence.md`；TDD 证据表 RED 列必须贴摘录原文。
+
+## 复现场景（2026-08-16，community-hub-service content-post-generalization Task 1.1-1.23）
+
+**现象**：通用图文发布重构（1763 增/1421 删，42 modified + 21 untracked）。CHANGELOG 2026-08-16 条声称"含逻辑函数任务均先写失败测试（RED）再实现（GREEN）… RED 摘录留档于测试注释（080006/080005/080002 映射、attachment_count 重算、is_pinned 操作者路径）"——**但全仓工作树 grep 不到任何实际 FAIL 输出文本**：
+- 新测试文件（division_test / userctx_test / createcontentpostlogic_test / updatecontentpostlogic_test / read_write_logic_test / producer_test / rescanner_test / contentcompat_test / api_proxy_test / content_post*_test）注释只描述行为与设计决策（如"scope 越权 → 080006"），**无 `Error:` / `expected:... actual:...` / `undefined:` 摘录**。
+- 本服务无 `_tdd_evidence.md`（仅旧 change 归档 `.harness/changes/access-data-permission/impl/community-hub-service/` 有）。
+- 全仓 grep 到的 RED 摘录全部来自**旧变更**（08-12 的 `expected: 80006, actual: 0` / `undefined: JWTUserID`、08-13 的 `expected: 80007, actual: 0`），与本轮无关。
+
+**结构性佐证（成立但不够）**：`git show HEAD:` 确认 division.go / producer.go / contentcompat.go / helper.go 新函数在 HEAD 均不存在（RED 真实），但无摘录。
+
+**根因**：与 T2.2/restore/mobile 同一失败类——Generator 把 RED 失败"口头描述进 CHANGELOG/测试注释"，未实际跑一次修复前测试并持久化失败文本。测试本身质量极高（119 测试函数全绿、行为断言精确、覆盖面广），但过程证据缺位。
+
+**QA 判定**：TDD 证据表 RED 列全部 ❌（~20 个有逻辑函数）→ QA FAIL（TDD 证据不足）。机械门禁 17 PASS / 1 FAIL（proto_ts_align 为预声明的 file-service 范围同步项）/ 3 WARN 不改变该判定。
+
+**补救**：同前——Generator 用 `git stash` 回退生产文件复现真实 FAIL（`go test`/`go build` 输出含 `Error Trace`/`Error:`/`expected...actual...` 行号），持久化到 CHANGELOG 或新建 `services/community-hub-service/_tdd_evidence.md`。**本次为第 4 次复发，修复目标 #4（TDD 证据强制捕获）仍未闭环——建议管线层面把「RED 摘录存在性」纳入机械门禁（如 tdd-evidence-validator 扩展为按函数维度校验 RED 列），否则 Generator 口头描述将持续漏检。**

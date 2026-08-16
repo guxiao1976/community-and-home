@@ -20,11 +20,11 @@ import (
 
 func TestIsReviewComplete(t *testing.T) {
 	tests := []struct {
-		name               string
-		status             int64
+		name                string
+		status              int64
 		approvedAttachments int64
-		attachmentCount    int64
-		want               bool
+		attachmentCount     int64
+		want                bool
 	}{
 		{"approved + 已审附件数==计数 → 完整", StatusApproved, 2, 2, true},
 		{"approved + 无附件 → 恒完整", StatusApproved, 0, 0, true},
@@ -171,15 +171,43 @@ func TestContentPostModel_Insert_ExplicitStatus(t *testing.T) {
 	conn := sqlx.NewSqlConnFromDB(db)
 	m := NewContentPostModel(conn)
 
-	// Insert SQL 不含 community_id/published_at 列，显式写 section_code/status/attachment_count/kafka_push_status
-	mock.ExpectExec("insert into `content_posts` \\(id, title, `text`, role, publisher, publisher_id, is_pinned, section_code, status, attachment_count, kafka_push_status, moderation_status, moderation_time\\) values \\(\\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?\\)").
-		WithArgs(int64(1001), "标题", "正文", "community", "publisher", int64(100), int32(0), "notice", int64(StatusDraft), int64(0), int64(KafkaPushNone), int64(0), sql.NullTime{}).
+	// Insert SQL 不含 community_id 列，显式写 section_code/status/attachment_count/kafka_push_status；
+	// published_at 由 submit 路径显式写（draft 时 sql.NullTime{} → NULL，运维验证发现的真实 bug 回归，见 _qa.md）
+	mock.ExpectExec("insert into `content_posts` \\(id, title, `text`, role, publisher, publisher_id, is_pinned, section_code, status, attachment_count, kafka_push_status, moderation_status, moderation_time, published_at\\) values \\(\\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?\\)").
+		WithArgs(int64(1001), "标题", "正文", "community", "publisher", int64(100), int32(0), "notice", int64(StatusDraft), int64(0), int64(KafkaPushNone), int64(0), sql.NullTime{}, sql.NullTime{}).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	n := &ContentPost{
 		Id: 1001, Title: "标题", Text: "正文", Role: "community", Publisher: "publisher",
 		PublisherId: int64Ptr(100), IsPinned: 0, SectionCode: "notice",
 		Status: StatusDraft, AttachmentCount: 0, KafkaPushStatus: KafkaPushNone,
+	}
+	id, err := m.Insert(context.Background(), n)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), id)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+// TestContentPostModel_Insert_SubmitWritesPublishedAt — submit 路径 published_at=NOW() 必须落库
+// （回归：运维验证发现 Insert SQL 漏 published_at 列，跑马灯恒空；submit=approved 时须写入）。
+func TestContentPostModel_Insert_SubmitWritesPublishedAt(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	conn := sqlx.NewSqlConnFromDB(db)
+	m := NewContentPostModel(conn)
+
+	ts := time.Date(2026, 8, 16, 12, 0, 0, 0, time.Local)
+	mock.ExpectExec("insert into `content_posts` \\(id, title, `text`, role, publisher, publisher_id, is_pinned, section_code, status, attachment_count, kafka_push_status, moderation_status, moderation_time, published_at\\) values \\(\\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?, \\?\\)").
+		WithArgs(int64(1002), "标题", "正文", "property", "publisher", int64(100), int32(0), "notice", int64(StatusApproved), int64(0), int64(KafkaPushPending), int64(0), sql.NullTime{}, sql.NullTime{Valid: true, Time: ts}).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	n := &ContentPost{
+		Id: 1002, Title: "标题", Text: "正文", Role: "property", Publisher: "publisher",
+		PublisherId: int64Ptr(100), IsPinned: 0, SectionCode: "notice",
+		Status: StatusApproved, AttachmentCount: 0, KafkaPushStatus: KafkaPushPending,
+		PublishedAt: sql.NullTime{Valid: true, Time: ts},
 	}
 	id, err := m.Insert(context.Background(), n)
 	require.NoError(t, err)

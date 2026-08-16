@@ -57,8 +57,10 @@ FileRpc:
     Key: file.rpc
 
 # Kafka 生产者（content-review topic，Task 1.17/1.18）
+# brokers 用 EXTERNAL listener（localhost:29092）：community-hub 为宿主机进程，
+# 不在 compose 网络内，kafka:9092 无法解析；29092 为宿主机可达映射端口（docker-compose）。
 Kafka:
   Brokers:
-    - kafka:9092
+    - localhost:29092
   Topic: content-review
   RetryIntervalSeconds: 60

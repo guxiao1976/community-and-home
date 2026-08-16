@@ -129,12 +129,12 @@ func (m *defaultContentPostModel) insert(ctx context.Context, execer interface {
 	ExecCtx(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }, n *ContentPost) (int64, error) {
 	query := `insert into ` + m.table + `
-		(id, title, ` + "`text`" + `, role, publisher, publisher_id, is_pinned, section_code, status, attachment_count, kafka_push_status, moderation_status, moderation_time)
-		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		(id, title, ` + "`text`" + `, role, publisher, publisher_id, is_pinned, section_code, status, attachment_count, kafka_push_status, moderation_status, moderation_time, published_at)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := execer.ExecCtx(ctx, query,
 		n.Id, n.Title, n.Text, n.Role,
 		n.Publisher, n.PublisherId, n.IsPinned, n.SectionCode, n.Status, n.AttachmentCount,
-		n.KafkaPushStatus, n.ModerationStatus, n.ModerationTime)
+		n.KafkaPushStatus, n.ModerationStatus, n.ModerationTime, n.PublishedAt)
 	if err != nil {
 		return 0, err
 	}

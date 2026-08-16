@@ -14,7 +14,7 @@
 ## P1 — 本周
 
 - [修复 harness-spec-pipeline 需求评审盲循环（REVISION 反馈未注入分析师）](task-2026-08-14-002.md) — harness, P1, review, review
-- [通用图文发布组件重构（content_posts 通用化 + 内容级审核 + Kafka）](task-2026-08-16-001.md) — community-hub-service, P1, open, human
+- ~~[通用图文发布组件重构（content_posts 通用化 + 内容级审核 + Kafka）](task-2026-08-16-001.md) — community-hub-service, P1, done, human~~（2026-08-16 完成；数据依赖未验证项见任务执行记录）
 
 
 ## P2 — 本月

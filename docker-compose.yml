@@ -147,3 +147,72 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  # ==================== Kafka 3.7（单节点 KRaft，content-review topic）====================
+  # 通用图文发布（content-post-generalization）内容级审核链路：community-hub 生产者推送
+  # content-review 消息（at-least-once 待推标记 + 定时重推），moderation 消费者后期开发。
+  # KRaft 单节点（无 ZooKeeper）：process.roles=broker,controller。
+  # 镜像选用 apache/kafka:3.7.0（任务允许「或等位 KRaft 单节点镜像」；本地镜像源无 bitnami/kafka）。
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka
+    restart: always
+    networks:
+      app-network:
+        ipv4_address: 172.19.0.8
+    ports:
+      - "9092:9092"          # INTERNAL：compose 网络内（kafka:9092）
+      - "29092:29092"        # EXTERNAL：宿主机可达（localhost:29092，community-hub 宿主机进程使用）
+    volumes:
+      - ./data/kafka-data:/var/lib/kafka/data                        # 数据持久化（appuser 拥有）
+    environment:
+      TZ: Asia/Shanghai
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: "1"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: "INTERNAL://:9092,EXTERNAL://:29092,CONTROLLER://:9093"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka:9092,EXTERNAL://localhost:29092"   # 双通告：网络内 kafka:9092 / 宿主 localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"                       # 仅显式 topic，禁自动创建
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"                    # 单节点必需=1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    # content-review topic：partition=1 / replication=1；retention 覆盖消费者上线空窗
+    # （本期无消费者，消息须存活到消费者存在或 pending-push 重推补投）。
+    # apache/kafka 镜像无 KAFKA_CREATE_TOPICS，故命令覆盖：启动 broker → 等就绪 → 建 topic。
+    command:
+      - /bin/bash
+      - -c
+      - |
+        set -e
+        /etc/kafka/docker/run &
+        BROKER_PID=$$!
+        BIN=/opt/kafka/bin
+        ready=0
+        for i in $$(seq 1 60); do
+          if ! kill -0 "$$BROKER_PID" 2>/dev/null; then
+            echo "kafka broker exited prematurely" >&2
+            wait "$$BROKER_PID"; exit $$?
+          fi
+          if $$BIN/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1; then
+            ready=1; break
+          fi
+          sleep 2
+        done
+        if [ "$$ready" -ne 1 ]; then
+          echo "kafka broker not ready in 120s" >&2; exit 1
+        fi
+        echo "===> Broker ready — creating content-review topic"
+        $$BIN/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists \
+          --topic content-review --partitions 1 --replication-factor 1
+        echo "===> content-review topic ready"
+        wait "$$BROKER_PID"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s

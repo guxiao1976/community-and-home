@@ -78,13 +78,22 @@ func newProducerWithWriter(w Writer, topic string, m model.ContentPostModel, fc 
 	return &Producer{writer: w, topic: topic, postModel: m, fileClient: fc}
 }
 
+// pushTimeout 推送独立超时：Kafka 不可用时 kafka-go WriteMessages 重试不得耗尽 RPC 请求
+// deadline 导致客户端收到 DeadlineExceeded——帖已提交成功，推送是尽力而为（D20）。
+// 网络写/URL 再生走 pushCtx；DB 落标（markPending/ack）走请求 ctx（本地写，实时性不受限）。
+const pushTimeout = 3 * time.Second
+
 // Push 推送 content-review 消息（含附件 file_url 经 GetFileUrl 重生）。
 func (p *Producer) Push(ctx context.Context, post *model.ContentPost, attachments []*model.ContentPostAttachment) error {
+	// 不阻塞发布（D20）：脱离请求 deadline 用独立短超时——Kafka 不可用时 3s 内快速失败 → markPending 待重推
+	pushCtx, cancel := context.WithTimeout(context.Background(), pushTimeout)
+	defer cancel()
+
 	msg := buildMessage(post, attachments)
 	// 重生附件预签名 URL（file_id 权威载体；兼容期 file_id=0 回退 stored file_url）
 	for i := range msg.Attachments {
 		if i < len(attachments) && attachments[i].FileId > 0 {
-			if url, err := p.regenerateURL(ctx, attachments[i].FileId); err == nil && url != "" {
+			if url, err := p.regenerateURL(pushCtx, attachments[i].FileId); err == nil && url != "" {
 				msg.Attachments[i].FileURL = url
 			}
 		}
@@ -96,7 +105,7 @@ func (p *Producer) Push(ctx context.Context, post *model.ContentPost, attachment
 		return err
 	}
 
-	if err := p.writer.WriteMessages(ctx, kafka.Message{Value: payload}); err != nil {
+	if err := p.writer.WriteMessages(pushCtx, kafka.Message{Value: payload}); err != nil {
 		logx.WithContext(ctx).Errorf("kafkapush: push content-review failed post=%d: %v", post.Id, err)
 		p.markPending(ctx, post, err)
 		return err

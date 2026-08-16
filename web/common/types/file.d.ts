@@ -11,4 +11,6 @@ export interface FileInfo {
   mimeType: string;
   bucketName: string;
   uploadTime: number;
+  file_type: string;   // 白名单规范类型（ConfirmUpload magic-bytes 层产出）
+  confirmed: boolean;  // 上传流程完成标志
 }

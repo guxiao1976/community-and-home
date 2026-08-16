@@ -1,0 +1,63 @@
+schema: spec-driven
+created: 2026-08-16
+change: content-post-generalization
+title: 通用图文发布组件重构（content_posts 通用化 + 内容级审核 + Kafka）
+size: 大
+priority: P1
+change_type: modify
+services:
+  - api-proto
+  - community-hub-service
+  - moderation-service
+  - file-service
+  - permission-service
+  - master-data-service
+  - docker-compose
+revises:
+  - docs/superpowers/specs/2026-08-16-content-post-design.md
+  - docs/superpowers/specs/2026-08-15-notice-module-design.md
+  - .harness/changes/notice-multicommunity-publish/proposal.md
+  - .harness/changes/notice-multicommunity-publish/.change.yaml
+  - api-proto/api/community/v1/community.proto
+  - api-proto/api/file/v1/file.proto
+  - api-proto/CHANGELOG.md
+  - services/community-hub-service/docs/design.md
+  - services/community-hub-service/migration/001_initial.sql
+  - services/community-hub-service/migration/002_add_moderation_status.sql
+  - services/community-hub-service/model/notice.go
+  - services/community-hub-service/rpc/internal/logic/notice/createnoticelogic.go
+  - services/community-hub-service/rpc/internal/logic/notice/updatenoticemoderationstatuslogic.go
+  - services/moderation-service/rpc/internal/consumer/task_consumer.go
+  - services/moderation-service/rpc/internal/consumer/task_handler.go
+  - services/file-service/rpc/internal/errx/errcode.go
+  - services/file-service/api/internal/logic/errcode.go
+  - services/permission-service/scripts/init_permissions.sql
+  - docker-compose.yml
+specs:
+  - capability: content-post-publish
+    file: specs/content-post-publish/spec.md
+  - capability: content-post-read
+    file: specs/content-post-read/spec.md
+  - capability: content-post-moderation
+    file: specs/content-post-moderation/spec.md
+  - capability: content-post-permission
+    file: specs/content-post-permission/spec.md
+  - capability: content-post-attachment-security
+    file: specs/content-post-attachment-security/spec.md
+out_of_scope:
+  - 前端接线（D10/Q10：web/mobile 本期不改，前端各板块展示差异化后续单独做，不接线通用组件）
+  - Kafka 审核消费者实现（D16/D18：moderation-service 扩展消费者后期开发，本期只定契约+推送；status 默认 approved）
+  - 存量数据迁移（D2/Q2：存量 notices 行不迁移，仅新数据走 content_post_scope；存量 attachment review_status/file_id 不回填）
+  - Proto 兼容别名（D4：CreateNotice 等直接改名，不做旧名兼容转发）
+  - PC 端（Q10）
+  - 小区/村层级统筹（task-016，不阻塞）
+  - 附件病毒扫描 / 图片处理 / CDN（magic-bytes 嗅探仅用于类型白名单判定，复用 notice 边界）
+  - 批量操作（发布/撤回一次一条）
+  - 缓存层优化（读路径靠 content_post_scope 索引兜底）
+  - Redis 审核队列机制移除（moderation:task:queue 对 content_posts 停推 D3，但 lostfound/user 等其他来源仍走 Redis；不做物理清理）
+  - moderation-service Redis 消费者删除（仅「对 content_posts 不再回调 NoticeService」D4，lostfound/user 消费逻辑保留）
+  - 未来板块的具体业务规则（repair 等板块本期仅 section_code 预留，不实现具体板块逻辑）
+  - 事务性 outbox 中间件（Kafka at-least-once 补偿以落库待推标记 + 定时重推实现 D20，不引入独立 outbox 组件）
+proto_change_required: true
+common_change_required: false
+data_migration_required: true

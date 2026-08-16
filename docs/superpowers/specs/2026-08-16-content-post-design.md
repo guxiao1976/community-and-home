@@ -12,7 +12,7 @@
 3. **Kafka 审核链路**：发布时打包 JSON 推 Kafka，moderation-service 扩展消费者（文字先关键字后大模型，图片/pdf 走大模型）
 4. **审核完整性判定**：主表 `attachment_count` 计数，已审核附件数 == 计数 → 审核完整
 5. **多小区归属**：复用 scope 关联表模式（post_id + community_id）
-6. **本期 status 默认 approved**（审核消费者后期开发，本期功能先跑通）
+6. **本期 submit 即隐式通过（status=approved + published_at=NOW()）**（审核消费者后期开发，本期功能先跑通）
 
 ## 二、数据模型
 
@@ -24,11 +24,12 @@ content_posts
 ├── section_code    VARCHAR(30)     -- 板块：notice=通知 / repair=维修保修 / ...
 ├── text            TEXT            -- 一段文字（图文发布的核心）
 ├── publisher_id    BIGINT          -- 发布者（JWT 派生）
-├── publisher       VARCHAR(100)    -- 展示名（请求体）
-├── role            VARCHAR(20)     -- 发布角色
-├── status          TINYINT         -- 整体审核状态：0=pending 1=approved 2=rejected 3=withdrawn；本期默认 approved
-├── attachment_count INT            -- 附件计数（审核完整性判定：已审附件数 == 此数 → 审核完整）
-├── published_at    DATETIME NULL   -- 审核通过时设置（D27）
+├── publisher       VARCHAR(100)    -- 展示名（取用户真实档案，禁请求体信任 — REVISION 堵伪造向量）
+├── role            VARCHAR(20)     -- 发布角色（RBAC→发布角色映射派生）
+├── is_pinned       TINYINT DEFAULT 0  -- 置顶（跑马灯 order by is_pinned desc；UpdateContentPost 置位）
+├── status          TINYINT         -- 全生命周期+审核结果：0=draft 1=submitted 2=approved 3=rejected 4=withdrawn；本期 submit 即隐式通过置 approved（无消费者）
+├── attachment_count INT            -- 附件计数（审核完整性判定：已审附件数 == 此数 → 审核完整；每次附件集合变更同事务重算，提交时冻结）
+├── published_at    DATETIME NULL   -- 审核锚定：本期 submit 即置 NOW()（隐式通过）；消费者上线后按审核结果覆盖（D27）
 ├── moderation_status / moderation_time  -- 兼容期保留（原审核列，逐步过渡到 status+附件级）
 ├── created_at / updated_at / deleted_at
 ```
@@ -67,14 +68,15 @@ content_posts.status          -- 整体（正文审核结果）
 content_post_attachments.review_status -- 每个附件各自审核
 ```
 
-**审核完整性判定**：`count(attachments WHERE review_status=approved) == content_posts.attachment_count` 且 正文 status=approved → 整体可展示；任一附件 rejected → 整体不展示（status=rejected）
+**审核完整性判定**：`count(attachments WHERE review_status=approved) == content_posts.attachment_count` 且 正文 status=approved → 整体可展示；任一附件 rejected → 整体不展示。**语义澄清（REVISION）：不展示由读路径完整性谓词隐藏，读路径不 mutate content_posts.status；status=rejected 仅由审核流（后期消费者）回写。**
 
 ### 3.2 Kafka 审核链路（新增）
 
 ```
-发布 CreateContentPost
-  → 打包 JSON：{ post_id, text, attachment_ids:[{file_id,file_type}], section_code }
-  → 推 Kafka topic: content-review
+发布 CreateContentPost（entry draft/submitted；submitted 即触发推送）
+  → 打包 JSON：{ version, post_id, section_code, text, publisher_id, attachments:[{file_id,file_type,review_status,file_url}] }
+     （契约单源 REQ-CPM-2；file_url 为可再生预签名 URL，D7）
+  → 推 Kafka topic: content-review（at-least-once：落库待推标记 + 定时重推，D20）
   → moderation-service 扩展消费者（后期开发，本期只定契约+推送）
        ├── text：先关键字过滤 → 再大模型审核
        ├── image/pdf：走大模型接口（图片内容/文档内容审查）
@@ -82,13 +84,13 @@ content_post_attachments.review_status -- 每个附件各自审核
   → 全部通过 → 前端可见
 ```
 
-- **Kafka 安装**：docker-compose 新增 kafka（+zookeeper 或 KRaft 模式），本期一并安装
-- **现有 Redis List（moderation:task:queue）**：过渡期保留，正式切 Kafka 后移除
+- **Kafka 安装**：docker-compose 新增 kafka（单节点 KRaft 模式 + 数据卷持久化，D8/Q8），本期一并安装
+- **现有 Redis List（moderation:task:queue）**：对 content_posts 停推（D3），lostfound/user 等其他来源仍走 Redis；队列机制保留，不做物理清理
 
 ### 3.3 本期范围（审核消费者后期开发）
 
-- 本期 `status` 默认 `approved`、附件 `review_status` 默认 `approved`（功能先跑通，无消费者也可见）
-- Kafka 推送 + 契约本期实现；**消费者程序后期单独开发**
+- 本期 submit 即隐式通过：`status=approved(2)` + `published_at=NOW()`（无消费者也可见，REVISION——替代「status 默认 approved」含混表述）；附件 `review_status` 默认 `approved`
+- Kafka 推送 + 契约本期实现（at-least-once 待推标记 + 定时重推）；**消费者程序后期单独开发**
 - 本期验收：发布→推送 Kafka 消息→（无消费者）→内容直接可见
 
 ## 四、接口契约
@@ -97,24 +99,29 @@ content_post_attachments.review_status -- 每个附件各自审核
 
 - `CreateNoticeRequest` → 通用化 `CreateContentPostRequest`（或保留 CreateNotice 名但加 section_code）
   - `section_code` 新增
-  - `text`（原 content）、`community_ids`/`division_id`（多小区，D23-D29 已设计）
+  - `text`（原 content）、`community_ids`（多小区；社区管理员无 division_id 入参，后端自动展开其唯一管辖社区下所有通过小区，A2）
   - `attachment_ids`（文件 ID）
 - 响应/列表/详情：`ContentPost` + `attachments[]`（含 review_status）
 - `GetPublishPermission` / `GetMarqueeNotices` 保留（通知板块用）
 
-### 4.2 Kafka 消息契约（新，content-review topic）
+### 4.2 Kafka 消息契约（新，content-review topic；单源 REQ-CPM-2，REVISION 同步）
 
 ```json
 {
+  "version": 1,
   "post_id": 123,
   "section_code": "notice",
   "text": "正文内容",
   "publisher_id": 456,
   "attachments": [
-    {"file_id": 789, "file_type": "pdf", "review_status": 0}
+    {"file_id": 789, "file_type": "pdf", "review_status": 0, "file_url": "https://.../presigned?x-id=..."}
   ]
 }
 ```
+
+- `version`：契约版本（变更即 bump，供消费者协商）
+- `file_url`：可再生预签名 URL（消费者直接拉取附件内容；经 file_id 经 GetFileUrl 再生，非永久链接依赖，D7）
+- `attachments[].review_status`：推送时刻为审核前默认值（本期 approved），非审核结论
 
 ## 五、服务归属
 

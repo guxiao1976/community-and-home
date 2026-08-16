@@ -1,5 +1,17 @@
 # CHANGELOG — community-hub-service
 
+## 2026-08-16 — 运维验证修复（Task 6.1/6.2 发现，published_at 落库 + Kafka 推送非阻塞）
+
+### 做了什么
+- **`model/content_post.go` Insert SQL 补 `published_at` 列（真实 bug 修复）**：submit 路径逻辑层已置 `PublishedAt=sql.NullTime{NOW}`，但 Insert 列清单漏了该列 → published_at 恒 NULL → `FindMarquee`（`published_at >= since` 过滤）恒空。修复后 draft 写 NULL、submit 写 NOW()；配套补回归测试 `TestContentPostModel_Insert_SubmitWritesPublishedAt`（运维验证真实暴露，见 `_qa.md`/`_tdd_evidence.md`）。
+- **`rpc/internal/kafkapush/producer.go` Push 独立短超时（真实 bug 修复）**：Push 原用 RPC 请求 ctx 同步写，Kafka 不可用时 kafka-go WriteMessages 重试耗尽请求 deadline → 客户端收到 `DeadlineExceeded`（尽管帖已提交成功）。修复：网络写/附件 URL 再生走 `context.WithTimeout(context.Background(), 3s)`，DB 落标（markPending/ack）走请求 ctx → 推送失败不阻塞发布（D20），客户端收到成功 + `kafka_push_status=1`(pending) 待重推。
+- **`rpc/etc/communityhub.yaml` brokers 改 `localhost:29092`（部署修复）**：community-hub 为宿主机进程不在 compose 网络，原 `kafka:9092` 无法解析；docker-compose 为 Kafka 增 EXTERNAL listener（`localhost:29092` 宿主可达）。
+
+### 验证（Task 6.2 端到端冒烟，真实 DB + Kafka）
+- 发布 → status=2 + published_at=NOW + Kafka content-review 消息（REQ-CPM-2 契约）→ 列表/详情/跑马灯可见；R2 wire 键 `notices`/`notice`/`content` 保持。
+- Kafka 不可用（D20）：发布成功（0.09s）+ pending 标记；恢复后扫描器补投（status 1→2）。
+- 权限矩阵：owner 只读（发帖 99401）、纯 property_admin 发布成功 + DELETE/PUT 403（fail-closed 427/428）、审核完整性（rejected 附件帖读路径隐藏）。
+
 ## 2026-08-16 — 通用图文发布组件重构（content-post-generalization Task 1.1-1.23）
 
 ### 做了什么（类型：model 重构 + 逻辑改造 + 新增功能）

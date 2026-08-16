@@ -1,0 +1,58 @@
+schema: spec-driven
+created: 2026-08-15
+change: notice-multicommunity-publish
+title: 通知模块多小区发布 + 通栏跑马灯 + 附件安全
+size: 大
+priority: P1
+change_type: modify
+services:
+  - api-proto
+  - community-hub-service
+  - file-service
+  - permission-service
+  - master-data-service
+  - moderation-service
+  - web/mobile
+revises:
+  - docs/superpowers/specs/2026-08-15-notice-module-design.md
+  - api-proto/api/community/v1/community.proto
+  - api-proto/api/file/v1/file.proto
+  - api-proto/CHANGELOG.md
+  - services/community-hub-service/docs/design.md
+  - services/community-hub-service/migration/001_initial.sql
+  - services/community-hub-service/model/notice.go
+  - services/permission-service/scripts/init_permissions.sql
+  - services/file-service/rpc/internal/errx/errcode.go
+  - services/file-service/api/internal/logic/errcode.go
+  - docs/specs/rbac-design.md
+specs:
+  - capability: notice-publish
+    file: specs/notice-publish/spec.md
+  - capability: notice-read
+    file: specs/notice-read/spec.md
+  - capability: publish-permission
+    file: specs/publish-permission/spec.md
+  - capability: attachment-security
+    file: specs/attachment-security/spec.md
+  - capability: notice-moderation
+    file: specs/notice-moderation/spec.md
+  - capability: notice-mobile
+    file: specs/notice-mobile/spec.md
+out_of_scope:
+  - 存量数据迁移回填（Q1：旧通知暂不可见，后续补迁移回填挂 BACKLOG）
+  - PC 端通知模块（Q6：web/pc 后续单独排期；property_admin 的发布面随 PC 一并顺延，本变更移动端 property_admin 不可发布，D26）
+  - 小区/村层级统筹（task-016，community_type 不影响范围表达）
+  - 附件病毒扫描 / 图片处理 / CDN（magic-bytes 嗅探仅用于类型白名单判定）
+  - 下载侧 file_url 的 scope 绑定（沿用 file-service 既有预签名有效期；上传白名单不约束已披露 URL 的再传播）
+  - sys_admin 移动端发布入口（sys_admin 发布面为管理台/PC，移动端 can_publish=false，D16；写路径不额外拦截）
+  - property_admin 移动端发布角色/入口（D26：剔除，收敛为 grid_worker/community_admin/committee；种子回收 421 属本变更行为回归，见 REQ-PP-4）
+  - 批量撤回 / 批量审核
+  - 缓存层优化（读路径靠 notice_scope 索引兜底）
+  - ListNotices 响应结构改多 community_id（Q2：响应保持单值）
+  - 置顶 UI / 置顶写入路径（is_pinned 走既有 UpdateNotice）
+  - UpdateNotice scope 编辑能力（保持通知级 title/content/is_pinned）
+  - owner/tenant 的 435/436 回收、property_admin 的其他权限（属寻失/联络模块，非本变更范围；仅回收 421 通知发布 + 421 置 min_verf_level=2）
+  - CreateNotice 幂等键（后端声明不幂等，防重由前端提交中禁用承担，D25）
+proto_change_required: true
+common_change_required: false
+data_migration_required: true
