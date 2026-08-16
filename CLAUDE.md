@@ -38,7 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 bash .harness/scripts/graph-query.sh <service-name>   # 知识图谱查询
 ```
 
-## 7 条硬性约束
+## 8 条硬性约束
 
 | # | 规则 | 详见 |
 |---|------|------|
@@ -50,6 +50,7 @@ bash .harness/scripts/graph-query.sh <service-name>   # 知识图谱查询
 | 5 | 密钥在 `.env`，服务入口用 `configx.MustLoad` | [项目编码规范 §7](.harness/rules/项目编码规范.md) |
 | 6 | 修改 `common/` 需全局评估影响 | [项目编码规范 §3](.harness/rules/项目编码规范.md) |
 | 7 | 所有开发任务必须先走统一入口 dispatch（[`.harness/skills/dispatch.md`](.harness/skills/dispatch.md)），首条响应必须输出**工作量分级（S/M/L）+ 路由 + 理由 + 涉及服务**；S→轻量Pipeline、M→Pipeline、L→OpenSpec → `.harness/workflows/harness-pipeline.js`，禁止用外部技能替代，禁止绕过入口直接开发 | [dispatch.md](.harness/skills/dispatch.md) |
+| 8 | **上下文预算门禁 + 进度心跳**：L 级/长会话任务按 [context-budget](.harness/skills/context-budget.md) 在阶段边界跑 `/context`，50/70/80 三线决策（≤50 正常 / 50-70 阶段边界 compact / 70-80 立即 compact / >80 写 handoff + 新会话续）；主会话禁止直读 >50KB 文件、禁止内联跑运维验证（Task 6.x）与 QA 闭环（交子 Agent）；长任务必须启动进度心跳（`progress-heartbeat.sh`，每 5 分钟） | [context-management.md](.harness/docs/context-management.md) |
 
 ## 常用命令
 

@@ -200,7 +200,7 @@ Workflow({scriptPath: ".harness/workflows/harness-pipeline.js", args: {
 }})
 ```
 Workflow 内部自动执行：Generator → QA(18项) → QA FAIL? Debug → Reviewer(3视角并行) → 最多 3 轮。
-| 6 | **集成归档** | 编码通过 | Owner 内联 | 移动 QA/Review → `.harness/changes/<change>/impl/` + 更新 INDEX + summary | 全链路通过 | — | 修复重试 |
+| 6 | **集成归档** | 编码通过 | **验证子 Agent/新会话** + Owner 内联收尾 | **运维验证（Task 6.x 迁移/E2E）派独立子 Agent 执行**，回传验证结果摘要（禁止主会话内联跑验证，见 §会话卫生）；归档（移动 QA/Review → impl/ + 更新 INDEX + summary）Owner 收尾 | 全链路通过 | **⏸️ HITL 最终交付确认** | 修复重试 |
 
 **上下文隔离设计**：
 
@@ -217,6 +217,17 @@ Owner Agent 上下文 (~200 lines)
 ```
 
 子 Agent 间**不通过 Owner 上下文交接**——前一个子 Agent 的产出写入 disk，后一个子 Agent 从 disk 读取。Owner Agent 只读取产出文件的**摘要**来做验收决策，不加载全文。
+
+### 会话卫生（硬性，SEE: context-budget.md / context-management.md）
+
+> **上次事故复盘（2026-08-16）**：L 级任务运维验证阶段在单会话触发上下文上限，开发中断。根因=主会话直读大文件 + 内联跑验证 + 无预算门禁。以下为强制规则：
+
+1. **上下文预算门禁**：每个阶段边界跑 `/context`，按 50/70/80 三线决策（≤50 正常 / 50-70 阶段边界 compact / 70-80 立即 compact / >80 写 handoff + 新会话 `claude -r` 续）。>70% 禁止继续长工具序列。
+2. **主会话禁止直读 >50KB 文件**：`tasks.md`/`design.md` 等大文件只读相关小节（`sed -n` 片段）或交子 Agent 读，禁止全文进主会话。
+3. **运维验证（Task 6.x 迁移/E2E）禁止内联**：改派独立子 Agent/新会话执行，回传验证结果摘要；主会话只验收摘要。
+4. **QA FAIL 闭环禁止内联**（TDD 证据复现/bug 修复）：派子 Agent，回传证据文件路径 + 结论。
+5. **进度心跳必开**：长任务启动 `Monitor` 跑 `.harness/scripts/progress-heartbeat.sh`；每步骤边界更新 `$CLAUDE_JOB_DIR/tmp/progress.txt`，用户每 5 分钟可确认"在跑 + 在哪一步"。
+6. **成果必落盘**：每阶段产出写 `summary.md` 固定小节（当前阶段/已验收产出/上下文快照/剩余任务）= 后续任何会话唯一入口。
 
 阶段 5 内部流程：TDD → QA(18项) → QA FAIL? Debug → Review(3视角) → 最多 3 轮。
 

@@ -142,6 +142,12 @@ Workflow({ scriptPath: ".harness/workflows/harness-pipeline.js",
 **L 级（跨服务 → spec-pipeline 全流程自动化）**：
 启动 `harness-spec-pipeline.js` 全流程 Workflow（规范驱动）：自动走 路径选择→需求分析→需求评审→架构设计→Proto→编码→集成归档，每阶段末 HITL 暂停等用户确认后 `resumeFromRunId` 续跑。阶段 5 编码内部 HITL 委托 Owner 启动 N×Workflow（复用 harness-pipeline.js）。详见 owner-agent §4「全流程自动化（spec-pipeline）」。
 
+**L 级上下文卫生（强制，SEE: [context-budget.md](context-budget.md)）**：
+- 长任务启动前先开进度心跳（`Monitor` 跑 `.harness/scripts/progress-heartbeat.sh`）。
+- **运维验证（Task 6.x）与 QA FAIL 闭环禁止主会话内联**——派独立子 Agent/新会话执行，回传落盘报告摘要。
+- 主会话禁止直读 >50KB 文件（`tasks.md`/`design.md` → 交子 Agent 或 `sed -n` 读小节）。
+- 阶段边界按 50/70/80 三线跑 `/context` 决策 compact / handoff（>80% 写交接文件 + `claude -r` 新会话续）。
+
 **跳过级（纯文案/配置）**：直接 Edit + build 验证，不进派发。
 
 **快速（模式二，用户显式覆盖）**：仅用 `Agent` 工具派发 Generator（prompt 见下文"构造派发提示词"节）。

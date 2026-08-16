@@ -19,6 +19,30 @@
 
 ---
 
+## 2026-08-16 — 通用图文发布组件重构（content-post-generalization）
+
+**路径**: L 级 spec-driven（设计评审 4 轮 + 实现 4 服务 + 运维验证）
+**状态**: ✅ 已完成（Kafka 基建 + 三库迁移 + 端到端冒烟；运维验证修复 published_at 落库 / Kafka push 非阻塞 2 bug）
+**涉及服务**: api-proto, community-hub-service, file-service, permission-service, moderation-service, docker-compose
+
+把通知模块升级为通用图文发布组件（content_posts 通用化 + 内容级审核 + Kafka）。实现 + QA 由上一会话完成（4 服务提交 bddeadc/d684e7b/87f7d02/499330c），本会话续跑收尾：Kafka 基建（Task 0.4）、community-hub QA 闭环（TDD RED 证据补录）、Owner 运维验证（Task 6.1 三库迁移 + 6.2 端到端冒烟）。运维验证真实暴露并修复 2 个 bug（Insert 漏 published_at 列→跑马灯恒空；Kafka push 阻塞发布→DeadlineExceeded）。
+
+详见: [.harness/changes/content-post-generalization/](./content-post-generalization/)
+
+---
+
+## 2026-08-16 — 通知多小区发布（notice-multicommunity-publish）
+
+**路径**: L 级 spec-driven
+**状态**: 📦 已归档（被 content-post-generalization 通用化方案取代）
+**涉及服务**: community-hub-service, api-proto
+
+原通知模块多小区发布 + 附件安全 + 权限设计（D1-D32）。B 方案（用户拍板 2026-08-16）将其升级为通用图文发布组件 content-post-generalization，本变更设计作为可复用参考（多小区发布/附件安全/权限/GetPublishPermission/GetMarqueeNotices 等）并入新变更，独立归档。
+
+详见: [.harness/changes/notice-multicommunity-publish/](./notice-multicommunity-publish/)
+
+---
+
 ## 2026-08-15 — rel_user_role 迁移 + 寻失路径修复（rel-user-role-migration-publish-fix）
 
 **路径**: L 级 spec-pipeline（阶段 0-6 全流程）
