@@ -19,7 +19,20 @@
 
 ---
 
-## 2026-08-16 — 通用图文发布组件重构（content-post-generalization）
+## 2026-08-16 — 通用图文发布组件重构
+## 2026-08-16 — 移动端首页信息架构改造（mobile-homepage-content-revamp）
+
+**路径**: L 级 spec-driven（需求评审 4/4 + 架构设计 16 任务 + 编码双管线 + Owner 运维验证）
+**状态**: ✅ 已完成（migration 落库 + EXPLAIN 索引 + since_days 透传 e2e + 全流程提交 8a09b86）
+**涉及服务**: api-proto, community-hub-service, web/mobile
+
+首页信息架构重排：通知 30 天窗口（后端 since_days 强制）+ 4 功能入口（便民联络做实/其余占位）+ 邻里互助占位 + 广告集中底部 + 通知列表/详情/附件预览改造 + 新建联络列表页。修复 community_contacts 缺表（migration 004）+ 新增窗口索引（005）。
+
+详见: [.harness/changes/mobile-homepage-content-revamp/](./mobile-homepage-content-revamp/)
+
+---
+
+（content-post-generalization）
 
 **路径**: L 级 spec-driven（设计评审 4 轮 + 实现 4 服务 + 运维验证）
 **状态**: ✅ 已完成（Kafka 基建 + 三库迁移 + 端到端冒烟；运维验证修复 published_at 落库 / Kafka push 非阻塞 2 bug）

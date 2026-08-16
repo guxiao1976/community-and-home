@@ -61,7 +61,7 @@ lost_found_items (独立)
 | created_at / updated_at | DATETIME | 自动维护 |
 | deleted_at | DATETIME | 软删除标记 |
 
-索引：`idx_community(community_id, deleted_at)`（deprecated 兼容期保留）、`idx_published(community_id, published_at DESC, deleted_at)`（deprecated 兼容期保留）；新读路径走 content_post_scope 索引。
+索引：`idx_community(community_id, deleted_at)`（deprecated 兼容期保留）、`idx_published(community_id, published_at DESC, deleted_at)`（deprecated 兼容期保留）、`idx_status_pinned_published(status, is_pinned, published_at)`（migration 005，通知 30 天窗口过滤读路径：等值 status/is_pinned + 范围 published_at，覆盖 ORDER BY 前导列）；新读路径走 content_post_scope 索引。
 
 #### content_post_scope（内容帖-小区范围关联，多小区发布单源）
 

@@ -6,7 +6,7 @@ service: all
 status: active
 created: 2026-08-12
 updated: 2026-08-16
-apply_count: 3
+apply_count: 4
 ---
 # QA 的 TDD RED 证据必须包含实际 FAIL 输出摘录
 
@@ -69,3 +69,17 @@ apply_count: 3
 **QA 判定**：TDD 证据表 RED 列全部 ❌（~20 个有逻辑函数）→ QA FAIL（TDD 证据不足）。机械门禁 17 PASS / 1 FAIL（proto_ts_align 为预声明的 file-service 范围同步项）/ 3 WARN 不改变该判定。
 
 **补救**：同前——Generator 用 `git stash` 回退生产文件复现真实 FAIL（`go test`/`go build` 输出含 `Error Trace`/`Error:`/`expected...actual...` 行号），持久化到 CHANGELOG 或新建 `services/community-hub-service/_tdd_evidence.md`。**本次为第 4 次复发，修复目标 #4（TDD 证据强制捕获）仍未闭环——建议管线层面把「RED 摘录存在性」纳入机械门禁（如 tdd-evidence-validator 扩展为按函数维度校验 RED 列），否则 Generator 口头描述将持续漏检。**
+
+## 复现场景（2026-08-16，web/mobile 首页信息架构改造 mobile-homepage-content-revamp Task 2.1-2.6）
+
+**现象**：移动端首页改造（8 modified + 5 untracked spec/页面）。CHANGELOG 2026-08-16 条逐任务分诊并声称"有逻辑函数，TDD RED→GREEN"（isImageAttachment / onFuncEntry / onAttachmentClick / fetchDetail loadError / notice-browse onMounted since_days+loadError / formatTime dayjs 转换 / fetchContacts / onCall），**但无任何实际 FAIL 输出文本**：
+- 5 个 spec 文件（community.spec / notice.spec 增量 / notice-browse.spec / notice-detail.spec / contact-list.spec）注释只描述行为与设计决策（"REQ-NDP-2/3 三分支"、"since_days=30"），**无 `AssertionError:` / `expected...Received...` / `Number of calls: 0` 摘录**。
+- `web/mobile/_tdd_evidence.md` 仍只覆盖 08-13 access-control 轮，未扩展到本轮；全仓 grep 到的 RED 摘录全部来自旧变更。
+
+**结构性佐证（成立但不够）**：`git show HEAD:web/mobile/src/api/community.ts` 无 `isImageAttachment`/`IMAGE_FILE_TYPES`（grep 0 命中）；`git show HEAD:.../pages/contact-list/contact-list.vue` → `path exists on disk, but not in 'HEAD'`。证明 RED 真实，但无摘录。
+
+**根因**：与前四轮（T2.2/restore/mobile ownership/community-hub）**同一失败类（第 5 次复发）**——行为型断言 RED 需主动跑一次修复前测试并复制输出，Generator 未做；`_tdd_evidence.md` 被当作"一次性产物"未随新增测试文件扩展。本轮 8 个有逻辑函数全部缺 RED 摘录。
+
+**QA 判定**：TDD 证据表 RED 列 8 项 ❌ → QA FAIL（TDD 证据不足）。机械门禁 5 PASS / 0 FAIL / 2 WARN（type_safety 3 as any、api_field_align 34 处均 PC 端存量）+ 测试质量高（62/62 全绿、断言精确）+ 结构性 RED 成立，均不改变该判定。
+
+**补救**：同前——`git stash` 回退生产文件复现真实 vitest FAIL 并持久化（覆盖全部新增 spec，不只编译错误类）。**第 5 次复发，修复目标 #4（TDD 证据强制捕获）仍未闭环——「RED 摘录存在性按函数维度入机械门禁」已连续 5 轮未落地，建议升级为 MUST（Generator RED 阶段自动运行修复前测试并写入 CHANGELOG，未捕获则 QA 直接 FAIL 不回 Generator 口头修复）。**
