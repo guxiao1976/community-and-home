@@ -27,10 +27,10 @@ func NewFileModel(conn sqlx.SqlConn) FileModel {
 
 func (m *defaultFileModel) Insert(ctx context.Context, f *File) (int64, error) {
 	query := fmt.Sprintf(
-		"insert into %s (user_id, entity_type, entity_id, file_name, file_path, file_size, mime_type, bucket_name, upload_time, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now())",
+		"insert into %s (user_id, entity_type, entity_id, file_name, file_path, file_size, mime_type, bucket_name, upload_time, file_type, confirmed, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now())",
 		m.table,
 	)
-	res, err := m.conn.ExecCtx(ctx, query, f.UserID, f.EntityType, f.EntityID, f.FileName, f.FilePath, f.FileSize, f.MimeType, f.BucketName, f.UploadTime)
+	res, err := m.conn.ExecCtx(ctx, query, f.UserID, f.EntityType, f.EntityID, f.FileName, f.FilePath, f.FileSize, f.MimeType, f.BucketName, f.UploadTime, f.FileType, f.Confirmed)
 	if err != nil {
 		return 0, err
 	}

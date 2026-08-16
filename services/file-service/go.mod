@@ -3,9 +3,11 @@ module github.com/guxiao1976/community-file
 go 1.25.0
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/guxiao1976/api-proto v0.1.0
 	github.com/guxiao1976/community-common/v2 v2.0.0
 	github.com/minio/minio-go/v7 v7.0.100
+	github.com/stretchr/testify v1.11.1
 	github.com/zeromicro/go-zero v1.10.2
 	google.golang.org/grpc v1.81.0
 )

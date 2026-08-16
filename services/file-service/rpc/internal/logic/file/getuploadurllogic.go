@@ -8,6 +8,7 @@ import (
 	filev1 "github.com/guxiao1976/api-proto/gen/go/file/v1"
 	"github.com/guxiao1976/community-common/v2/pkg/errx"
 	"github.com/guxiao1976/community-common/v2/pkg/responsex"
+	"github.com/guxiao1976/community-file/internal/guard"
 	"github.com/guxiao1976/community-file/rpc/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/logx"
@@ -28,6 +29,14 @@ func NewGetUploadUrlLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetU
 }
 
 func (l *GetUploadUrlLogic) GetUploadUrl(in *filev1.GetUploadUrlRequest) (*filev1.GetUploadUrlResponse, error) {
+	// L1 快速拒绝（生成预签名 URL 前，不触碰 MinIO） // SEE: [[frontend-business-rule-hardcode]]
+	if _, err := guard.ValidateFileNameForEntityType(in.FileName, in.EntityType); err != nil {
+		return nil, err
+	}
+	if err := guard.ValidateFileSize(in.FileSize); err != nil {
+		return nil, err
+	}
+
 	if l.svcCtx.RawMinio == nil {
 		return nil, errx.NewCodeError(ErrCodeFileAccessDenied, "MinIO not available")
 	}
