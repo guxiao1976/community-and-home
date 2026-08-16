@@ -140,6 +140,70 @@ func TestContentPostModel_FindOneReviewComplete_NotComplete(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+// =============================================================================
+// Task 1.3 时间窗口：ContentPostListOption.WithTimeWindow + FindListByCommunity 窗口谓词
+// =============================================================================
+
+// TestContentPostListOption_WithTimeWindow — 选项语义：缺省 nil（不过滤）、WithTimeWindow(since) 返回下界。
+func TestContentPostListOption_WithTimeWindow(t *testing.T) {
+	// 无选项 → nil（additive：缺省不过滤）
+	assert.Nil(t, ContentPostListOptionSince())
+
+	// WithTimeWindow(s) → 返回下界 s（含端点）
+	s := time.Date(2026, 7, 17, 0, 0, 0, 0, time.Local)
+	got := ContentPostListOptionSince(WithTimeWindow(s))
+	require.NotNil(t, got)
+	assert.Equal(t, s, *got)
+}
+
+// TestContentPostModel_FindListByCommunity_WithWindow — 窗口谓词 sqlmock 锁定（RED: 新签名/谓词未实现）。
+// 场景：窗口内行返回（count+list SQL 含 published_at >= ? AND published_at <= ?）；
+// NULL/未来行排除由 SQL 谓词保证（published_at NULL 恒不匹配下界、未来行被上界排除）；
+// 无窗口选项时 SQL 不含窗口谓词（additive，PC 管理列表行为不变）。
+func TestContentPostModel_FindListByCommunity_WithWindow(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	conn := sqlx.NewSqlConnFromDB(db)
+	m := NewContentPostModel(conn)
+
+	t.Run("窗口内行返回 + NULL/未来行被 SQL 谓词排除", func(t *testing.T) {
+		since := time.Date(2026, 7, 17, 0, 0, 0, 0, time.Local)
+		// count 查询：窗口谓词在 section/role 之后（args: communityId, status, since, now）
+		mock.ExpectQuery("select count\\(\\*\\) from `content_posts` join `content_post_scope`.*published_at >= \\? and content_posts.published_at <= \\?.*").
+			WithArgs(int64(2001), int64(StatusApproved), since, sqlmock.AnyArg()).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+		// 数据查询：窗口谓词 + order by is_pinned desc, published_at desc（args: + since, now, offset, limit）
+		mock.ExpectQuery("select content_posts\\.\\*, content_post_scope\\.community_id.*published_at >= \\? and content_posts.published_at <= \\?.*order by content_posts\\.is_pinned desc, content_posts\\.published_at desc limit \\?, \\?").
+			WithArgs(int64(2001), int64(StatusApproved), since, sqlmock.AnyArg(), int64(0), int64(10)).
+			WillReturnRows(sqlmock.NewRows(contentPostCols()).AddRow(contentPostRow(1001, 2001, StatusApproved, 0)...))
+
+		list, total, err := m.FindListByCommunity(context.Background(), 2001, "", "", 0, 10, WithTimeWindow(since))
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), total)
+		require.Len(t, list, 1)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("无窗口选项 → SQL 不含窗口谓词（缺省不过滤）", func(t *testing.T) {
+		// 不加窗口谓词时 count/list 均仅 communityId + status 两个参数；
+		// 若实现误加窗口谓词，WithArgs 参数个数不匹配 → 本子测试 FAIL。
+		mock.ExpectQuery("select count\\(\\*\\) from `content_posts` join `content_post_scope`.*").
+			WithArgs(int64(2001), int64(StatusApproved)).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+		mock.ExpectQuery("select content_posts\\.\\*, content_post_scope\\.community_id.*limit \\?, \\?").
+			WithArgs(int64(2001), int64(StatusApproved), int64(0), int64(10)).
+			WillReturnRows(sqlmock.NewRows(contentPostCols()))
+
+		list, total, err := m.FindListByCommunity(context.Background(), 2001, "", "", 0, 10)
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), total)
+		assert.Len(t, list, 0)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
 func TestContentPostModel_FindMarquee(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)

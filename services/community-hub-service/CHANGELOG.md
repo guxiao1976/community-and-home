@@ -1,5 +1,50 @@
 # CHANGELOG — community-hub-service
 
+## 2026-08-16 — QA 门禁修复（graph_freshness + memory-index 过期，运维类非源码缺陷）
+
+### 做了什么（类型：运维操作，无源码逻辑改动）
+- **graph_freshness FAIL 消除**：上一轮 QA（`_qa.md`）唯一 FAIL 为机械化检查第 10 项 graph_freshness——api-proto 子模块 commit `9c848cb`（since_days proto，ts=1786871984）晚于图谱同步时间戳（1786856530），图谱过期。修复：执行 `bash .harness/scripts/graph-sync.sh`（Neo4j HTTP/bolt 可达，增量同步成功，Proto 222 消息/96 RPC、Go 9 服务/27 表、TS 52 接口全部并入图谱，时间戳更新至 1786873166）。**非本服务源码缺陷**（graph_freshness 扫描全仓库提交非工作树 diff）；本工作树 go build/vet/test、json_string、错误码、跨服务导入等 18 项检查本就 PASS。
+- **memory-index freshness FAIL 消除（同步暴露）**：门禁重跑时新暴露第 17 项 memory index 过期（记忆文件 `tdd-red-evidence-requires-fail-excerpt.md` 更新后索引未重建）。修复：执行 `bash .harness/scripts/memory-index-build.sh` 重建 `.memory-index.json`。
+- **无源码/无 TDD 变更**：本轮为纯运维门禁修复，不涉及逻辑函数，无 RED/GREEN 证据要求。
+
+### 验证结果（--service community-hub-service 全量重跑）
+- 机械化检查：**19 PASS / 0 FAIL / 2 WARN**（graph_freshness + memory_index 均已转 PASS）。
+- 剩余 2 WARN 为既有跨服务项，非本变更引入：proto→TS 对齐（identity.ts 5 字段 / moderation.d.ts reviewer_id 滞后，属其他服务/前端任务）；git hygiene（api-proto gitlink 无 .gitmodules 条目，Git 治理规范）。
+- 门禁：`go build ./...` exit 0；`go test ./... -count=1` 13 包 ~124 测试 0 fail。
+
+---
+
+## 2026-08-16 — 移动端首页信息架构改造（mobile-homepage-content-revamp Task 1.1-1.5）
+
+### 做了什么（类型：model 逻辑改造 + RPC 逻辑改造 + REST 透传 + migration 补表/索引）
+
+**Migration（字段映射类，纯 DDL 无 TDD；执行 + DESCRIBE/EXPLAIN 验证归 Task 3.1 Owner 运维验证）**
+- `migration/004_add_community_contacts.sql`（Task 1.1）：`CREATE TABLE IF NOT EXISTS community_contacts`，DDL 与 001_initial.sql / model/community_contact.go 完全对齐（8 列 + idx_community，InnoDB/utf8mb4）；**不预置种子数据**（REQ-CLP-2 场景 3 空态）；文件头声明 001 为 schema 单源、004 为运行库缺表幂等补救、结构漂移不自动修复需人工订正（场景 5）。
+- `migration/005_content_posts_window_index.sql`（Task 1.2）：`idx_status_pinned_published (status, is_pinned, published_at)` 幂等守卫（`information_schema.statistics` 检查，MySQL 8.0 无 ADD INDEX IF NOT EXISTS）；列序等值 status + 等值 is_pinned + 范围 published_at，覆盖 ORDER BY 前导列减少 filesort（REQ-NTW-6 / ADR-3）；纯增量不影响缺省非窗口调用。
+
+**Model（逻辑函数 TDD）**
+- `model/content_post.go`（Task 1.3）：新增 `ContentPostListOption` 变参选项 + `WithTimeWindow(since)` 构造器（内部 `*contentPostListParams.since *time.Time`，nil=不过滤，additive）+ `ContentPostListOptionSince` 自省助手 + `buildWindowClause` 共享谓词构建。`FindListByCommunity` 签名改变参 `opts ...ContentPostListOption`——既有调用方/测试零改动即可编译；窗口选项存在时 count/list 两 SQL 追加 `and content_posts.published_at >= ? and content_posts.published_at <= ?`（下界 since、上界 `time.Now()`，参数化防注入 D12），NULL 恒不匹配下界、未来行被上界排除。
+
+**RPC（逻辑函数 TDD）**
+- `rpc/internal/logic/notice/listcontentpostslogic.go`（Task 1.4）：`since_days` 参数校验先于业务逻辑（fail-fast）——`<0 || >365` → 080005（以 Base 错误返回，非 gRPC err；r2-5：int32 wire 恒数字，非数字由 REST 网关解析层拒绝）；`==0`（缺省）不过滤（PC 管理列表兼容）；`>0` → `model.WithTimeWindow(time.Now().AddDate(0,0,-since_days))` 传入 `FindListByCommunity`。
+
+**REST（逻辑函数 TDD）**
+- `api/internal/types/types.go` + `api/internal/logic/notice/listcontentpostslogic.go`（Task 1.5）：`ListContentPostsReq` 新增 `SinceDays int32 form:"since_days,optional"`；RPC 请求补 `SinceDays: req.SinceDays`（**必贯通**，漏传致移动端 30 天窗口静默失效，REVISION r2-2）；该 logic 补 `responsex.ToError(resp.GetBase())` 上抛（RPC 侧 080005 以 Base 错误返回，REST 层禁止静默吞错，与 getcontentpostlogic.go 既有模式一致）。
+
+### TDD 证据（RED 摘录）
+- Task 1.3（model）：`undefined: ContentPostListOptionSince` / `undefined: WithTimeWindow` / `too many arguments in call to m.FindListByCommunity`（编译期 RED）→ GREEN：`go test ./model/ -run 'TestContentPostListOption_WithTimeWindow|TestContentPostModel_FindListByCommunity'` PASS（窗口内行返回 + NULL/未来行被 SQL 谓词排除 + 无窗口缺省不过滤）。
+- Task 1.4（RPC）：`Should NOT be empty, but was []`（since_days=30 未传窗口选项）+ `expected: 80005, actual: 0`（-1/366 未拦截）→ GREEN：`go test ./rpc/internal/logic/notice/ -run TestListContentPosts -count=1` 5 用例 PASS。
+- Task 1.5（REST）：`unknown field SinceDays in struct literal`（编译期 RED）→ GREEN：`go test ./api/internal/logic/notice/ -run TestListContentPosts -count=1` 3 用例 PASS（30 透传 / 080005 上抛 / 成功映射 notices+total）。
+
+### 影响
+- 配置：无新增（复用既有 RPC/API 配置）。
+- 依赖：无新增（复用 go-sqlmock 测试依赖）。
+- 兼容：RPC/API 请求响应契约 additive 非破坏（since_days 新增可选字段，缺省 0 行为不变）；迁移 004/005 幂等。
+- 跨服务：无新增依赖（api-proto since_days 字段已由全局 Claude 完成，Task 0.1-0.3）。
+- 门禁：`go build ./...` + `go vet ./...` + `go test ./... -count=1` 全绿。
+
+---
+
 ## 2026-08-16 — 运维验证修复（Task 6.1/6.2 发现，published_at 落库 + Kafka 推送非阻塞）
 
 ### 做了什么

@@ -25,13 +25,6 @@
             <view class="skeleton-text" />
           </view>
         </view>
-        <!-- 联络骨架 -->
-        <view class="skeleton-section">
-          <view class="skeleton-title short" />
-          <view class="skeleton-grid">
-            <view v-for="i in 4" :key="'sc'+i" class="skeleton-contact" />
-          </view>
-        </view>
         <!-- 寻失骨架 -->
         <view class="skeleton-section">
           <view class="skeleton-title short" />
@@ -43,8 +36,9 @@
     </template>
 
     <!-- 实际内容 -->
+    <!-- REQ-HL-4 固定垂直全序：通知 → 4功能入口 → 邻里互助占位 → 寻失互助 → 底部广告集中区 -->
     <template v-else-if="communityStore.hasCommunities">
-      <!-- 通知公告（跑马灯） -->
+      <!-- ① 通知公告（跑马灯同源 30 天数据 + 卡片） -->
       <view class="section">
         <view class="marquee-bar" @click="onMoreNotice">
           <text class="marquee-icon">📢</text>
@@ -89,67 +83,36 @@
         </view>
       </view>
 
-      <!-- 便民联络 -->
+      <!-- ② 4 功能图标入口（REQ-FE-1/2/3） -->
+      <view class="section">
+        <view class="func-entries">
+          <view
+            v-for="entry in FUNCTION_ENTRIES"
+            :key="entry.key"
+            class="func-entry"
+            @click="onFuncEntry(entry)"
+          >
+            <text class="func-entry-icon">{{ entry.icon }}</text>
+            <text class="func-entry-label">{{ entry.label }}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- ③ 邻里互助占位区块（REQ-HL-1，本期无后端/无页面，点击不导航、不伪造数据） -->
       <view class="section">
         <view class="section-header">
           <view class="section-header-left">
-            <text class="section-icon">📞</text>
-            <text class="section-title">便民联络</text>
+            <text class="section-icon">🤝</text>
+            <text class="section-title">邻里互助</text>
           </view>
         </view>
-        <view v-if="contactGroups.length === 0" class="empty-state">
-          <text class="empty-icon">📞</text>
-          <text class="empty-text">暂无联络信息</text>
-        </view>
-        <view v-else class="contact-grid">
-          <view
-            v-for="(group, gIdx) in contactGroups"
-            :key="gIdx"
-            class="contact-card"
-            @click="onCallPhone(group.phone)"
-          >
-            <text class="contact-icon">{{ group.icon }}</text>
-            <view class="contact-body">
-              <text class="contact-category">{{ group.categoryName }}</text>
-              <text class="contact-phone">{{ group.phone }}</text>
-            </view>
-          </view>
+        <view class="empty-state">
+          <text class="empty-icon">🤝</text>
+          <text class="empty-text">互助功能开发中</text>
         </view>
       </view>
 
-      <!-- 广告位 ×2（便民联络下方） -->
-      <view
-        class="ad-banner"
-        :style="{ backgroundImage: 'url(https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=200&fit=crop)' }"
-      >
-        <view class="ad-overlay">
-          <view class="ad-text">
-            <text class="ad-label">限时特惠</text>
-            <text class="ad-title">社区团购 · 生鲜直达 🥬</text>
-            <text class="ad-desc">今日下单 明日送达 满50减10</text>
-          </view>
-          <view class="ad-btn" style="background-color: #FF6B35;" @click.stop="onAdClick('groupbuy')">
-            <text>去看看</text>
-          </view>
-        </view>
-      </view>
-      <view
-        class="ad-banner ad-banner--spaced"
-        :style="{ backgroundImage: 'url(https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&h=200&fit=crop)' }"
-      >
-        <view class="ad-overlay">
-          <view class="ad-text">
-            <text class="ad-label">新用户专享</text>
-            <text class="ad-title">家政保洁 · 首单立减 🧹</text>
-            <text class="ad-desc">专业认证保洁师 2小时69元起</text>
-          </view>
-          <view class="ad-btn" style="background-color: #0EA5E9;" @click.stop="onAdClick('housekeeping')">
-            <text>立即预约</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 寻失互助 -->
+      <!-- ④ 寻失互助（REQ-HL-2，样式与数据保持现状） -->
       <view class="section">
         <view class="section-header">
           <view class="section-header-left">
@@ -195,19 +158,51 @@
         </view>
       </view>
 
-      <!-- 广告位 ×1（寻失互助下方） -->
-      <view
-        class="ad-banner ad-banner--spaced"
-        :style="{ backgroundImage: 'url(https://images.unsplash.com/photo-1523050854058-8df90910b48a?w=800&h=200&fit=crop)' }"
-      >
-        <view class="ad-overlay">
-          <view class="ad-text">
-            <text class="ad-label">免费试听</text>
-            <text class="ad-title">社区课堂 · 兴趣培养 📚</text>
-            <text class="ad-desc">书法 绘画 舞蹈 家门口的兴趣班</text>
+      <!-- ⑤ 底部广告集中区（REQ-HL-3：3 个广告垂直堆叠，内容保留硬编码，点击预留不跳转） -->
+      <view class="ad-section">
+        <view
+          class="ad-banner"
+          :style="{ backgroundImage: 'url(https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=200&fit=crop)' }"
+        >
+          <view class="ad-overlay">
+            <view class="ad-text">
+              <text class="ad-label">限时特惠</text>
+              <text class="ad-title">社区团购 · 生鲜直达 🥬</text>
+              <text class="ad-desc">今日下单 明日送达 满50减10</text>
+            </view>
+            <view class="ad-btn" style="background-color: #FF6B35;" @click.stop="onAdClick('groupbuy')">
+              <text>去看看</text>
+            </view>
           </view>
-          <view class="ad-btn" style="background-color: #8B5CF6;" @click.stop="onAdClick('classroom')">
-            <text>免费试听</text>
+        </view>
+        <view
+          class="ad-banner"
+          :style="{ backgroundImage: 'url(https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&h=200&fit=crop)' }"
+        >
+          <view class="ad-overlay">
+            <view class="ad-text">
+              <text class="ad-label">新用户专享</text>
+              <text class="ad-title">家政保洁 · 首单立减 🧹</text>
+              <text class="ad-desc">专业认证保洁师 2小时69元起</text>
+            </view>
+            <view class="ad-btn" style="background-color: #0EA5E9;" @click.stop="onAdClick('housekeeping')">
+              <text>立即预约</text>
+            </view>
+          </view>
+        </view>
+        <view
+          class="ad-banner"
+          :style="{ backgroundImage: 'url(https://images.unsplash.com/photo-1523050854058-8df90910b48a?w=800&h=200&fit=crop)' }"
+        >
+          <view class="ad-overlay">
+            <view class="ad-text">
+              <text class="ad-label">免费试听</text>
+              <text class="ad-title">社区课堂 · 兴趣培养 📚</text>
+              <text class="ad-desc">书法 绘画 舞蹈 家门口的兴趣班</text>
+            </view>
+            <view class="ad-btn" style="background-color: #8B5CF6;" @click.stop="onAdClick('classroom')">
+              <text>免费试听</text>
+            </view>
           </view>
         </view>
       </view>
@@ -221,15 +216,12 @@ import { onPullDownRefresh } from '@dcloudio/uni-app';
 import { useCommunityStore } from '@/stores/community';
 import {
   getNoticeList,
-  getContacts,
   getLostFoundList,
   getNoticeRoleName,
   getNoticeRoleColor,
-  getContactCategoryName,
-  getContactCategoryIcon,
   getLostFoundTypeName,
 } from '@/api/community';
-import type { Notice, Contact, LostFoundItem } from '@/api/community';
+import type { Notice, LostFoundItem } from '@/api/community';
 import CommunitySwitcher from '@/components/community-switcher.vue';
 import dayjs from 'dayjs';
 
@@ -241,40 +233,33 @@ const loading = ref(true);
 // ---- Notice State ----
 const notices = ref<Notice[]>([]);
 
-// ---- Contact State ----
-const contacts = ref<Contact[]>([]);
-
-interface ContactGroup {
-  category: number;
-  categoryName: string;
-  icon: string;
-  phone: string;
-}
-
-const contactGroups = computed<ContactGroup[]>(() => {
-  const map = new Map<number, Contact[]>();
-  for (const c of contacts.value) {
-    const list = map.get(c.category) || [];
-    list.push(c);
-    map.set(c.category, list);
-  }
-  const groups: ContactGroup[] = [];
-  for (const [cat, items] of map) {
-    for (const item of items) {
-      groups.push({
-        category: cat,
-        categoryName: getContactCategoryName(cat),
-        icon: getContactCategoryIcon(cat),
-        phone: item.phone,
-      });
-    }
-  }
-  return groups;
-});
-
 // ---- Lost & Found State ----
 const lostFoundItems = ref<LostFoundItem[]>([]);
 const imageErrors = ref<Set<string>>(new Set());
+
+// ---- 4 功能图标入口（REQ-FE-1/2/3）----
+interface FuncEntry {
+  key: string;
+  label: string;
+  icon: string;
+  // target 存在 → 做实跳页；不存在 → 占位 toast「功能开发中」不跳转
+  target?: string;
+}
+
+const FUNCTION_ENTRIES: FuncEntry[] = [
+  { key: 'contact', label: '便民联络', icon: '📞', target: '/pages/contact-list/contact-list' },
+  { key: 'repair', label: '物业报修', icon: '🔧' },
+  { key: 'secondhand', label: '二手闲置', icon: '📦' },
+  { key: 'rent', label: '租房卖房', icon: '🏠' },
+];
+
+function onFuncEntry(entry: FuncEntry) {
+  if (entry.target) {
+    uni.navigateTo({ url: entry.target });
+  } else {
+    uni.showToast({ title: '功能开发中', icon: 'none' });
+  }
+}
 
 // ---- Marquee ----
 const marqueeText = computed(() => {
@@ -290,10 +275,6 @@ function onMoreNotice() {
 
 function onNoticeClick(id: string) {
   uni.navigateTo({ url: `/pages/notice-detail/notice-detail?id=${id}` });
-}
-
-function onCallPhone(phone: string) {
-  uni.makePhoneCall({ phoneNumber: phone });
 }
 
 function onImageError(_event: Event, itemId: string) {
@@ -333,24 +314,14 @@ async function fetchNotices() {
   const cid = communityStore.currentCommunityId;
   if (!cid) return;
   try {
-    const data = await getNoticeList(cid);
+    // since_days=30（30 天窗口后端强制，前端只传参）+ page_size=3（首页 ≤3 条）
+    // SEE: [[frontend-business-rule-hardcode]] — 窗口业务逻辑在后端
+    const data = await getNoticeList(cid, 1, 3, 30);
     notices.value = data.notices || [];
   } catch (e) {
     // SEE: [[verify-api-before-calling]] — 禁止静默吞错，失败需 console.error + 区块提示
     console.error('[notice] 通知加载失败', e);
     uni.showToast({ title: '通知加载失败', icon: 'none' });
-  }
-}
-
-async function fetchContacts() {
-  const cid = communityStore.currentCommunityId;
-  if (!cid) return;
-  try {
-    const data = await getContacts(cid);
-    contacts.value = data.contacts || [];
-  } catch (e) {
-    console.error('[notice] 联络加载失败', e);
-    uni.showToast({ title: '联络加载失败', icon: 'none' });
   }
 }
 
@@ -368,7 +339,7 @@ async function fetchLostFound() {
 
 async function loadAll() {
   loading.value = true;
-  await Promise.all([fetchNotices(), fetchContacts(), fetchLostFound()]);
+  await Promise.all([fetchNotices(), fetchLostFound()]);
   loading.value = false;
 }
 
@@ -688,59 +659,50 @@ onPullDownRefresh(async () => {
   color: $uni-text-color-grey;
 }
 
-// ---- Contact Grid ----
-.contact-grid {
+// ---- 4 Function Entries (REQ-FE-1) ----
+.func-entries {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12rpx;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16rpx;
 }
 
-.contact-card {
+.func-entry {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   background-color: $uni-bg-color-card;
-  border-radius: 10rpx;
-  padding: 14rpx 16rpx;
+  border-radius: 16rpx;
+  padding: 24rpx 8rpx;
   box-shadow: $uni-shadow-sm;
 }
 
-.contact-icon {
-  font-size: 36rpx;
-  margin-right: 12rpx;
-  flex-shrink: 0;
+.func-entry-icon {
+  font-size: 44rpx;
+  margin-bottom: 10rpx;
 }
 
-.contact-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.contact-category {
-  display: block;
-  font-size: 22rpx;
-  color: $uni-text-color-grey;
-  margin-bottom: 2rpx;
-}
-
-.contact-phone {
-  display: block;
-  font-size: 28rpx;
+.func-entry-label {
+  font-size: 24rpx;
+  color: $uni-text-color;
   font-weight: 500;
-  color: #5D5348;
 }
 
-// ---- Ad Banner ----
+// ---- Ad Banner（底部集中区，REQ-HL-3）----
+.ad-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  padding: 0 32rpx 32rpx;
+}
+
 .ad-banner {
   height: 180rpx;
   background-size: cover;
   background-position: center;
   position: relative;
   overflow: hidden;
-
-  &--spaced {
-    margin-top: 24rpx;
-    margin-bottom: 36rpx;
-  }
+  border-radius: 12rpx;
 }
 
 .ad-overlay {

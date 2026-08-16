@@ -38,9 +38,11 @@ type fakeContentPostModel struct {
 	countTxCalled     bool
 	withdrawn         int64
 	withdrawErr       error
+	listOpts          []model.ContentPostListOption // Task 1.4：捕获时间窗口选项
 }
 
-func (f *fakeContentPostModel) FindListByCommunity(ctx context.Context, communityId int64, sectionCode, role string, offset, limit int64) ([]*model.ContentPost, int64, error) {
+func (f *fakeContentPostModel) FindListByCommunity(ctx context.Context, communityId int64, sectionCode, role string, offset, limit int64, opts ...model.ContentPostListOption) ([]*model.ContentPost, int64, error) {
+	f.listOpts = opts
 	return f.listItems, f.listTotal, nil
 }
 

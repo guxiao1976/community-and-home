@@ -105,3 +105,131 @@ AssertionError: expected false to be true // Object.is equality
 命令: npm run type-check       →  vue-tsc --noEmit -p tsconfig.app.json → exit 0（clean）
 命令: npm run build            →  DONE Build complete（exit 0）
 ```
+
+---
+
+## mobile-homepage-content-revamp（Task 2.1-2.6）TDD RED 证据
+
+> 生成时间: 2026-08-16
+> 复现方式: `git stash push` 回退对应生产文件到 HEAD 基线（contact-list 为新增文件用函数改名法），运行对应 spec 捕获真实 vitest FAIL 输出，随后恢复。所有摘录均为 vitest 实际输出，非注释/口头描述。
+> 基线验证: 恢复后 `npm run build` / `npm run type-check` / `npm run test:unit`（62 tests）全部 exit 0。
+
+### 1. RED — isImageAttachment（src/api/community.ts，新增谓词）
+
+复现: `git stash push -- src/api/community.ts` 后运行 `npx vitest run src/api/community.spec.ts`。
+
+```
+ FAIL  src/api/community.spec.ts > isImageAttachment — file_type 图片白名单分发（REQ-NDP-2） > 白名单小写扩展名 png/jpg/jpeg/gif → true
+TypeError: isImageAttachment is not a function
+ ❯ src/api/community.spec.ts:10:12
+     10|     expect(isImageAttachment('png')).toBe(true);
+       |            ^
+
+ FAIL  ... > 文档扩展名 pdf/doc/docx → false（走文档分支 REQ-NDP-3）
+TypeError: isImageAttachment is not a function
+ ❯ src/api/community.spec.ts:17:12
+
+ FAIL  ... > 缺失/无法识别 file_type（undefined/空串/未知）→ false 不崩溃
+TypeError: isImageAttachment is not a function
+ ❯ src/api/community.spec.ts:23:12
+```
+
+### 2. RED — onFuncEntry / onCommunitySwitch / 通知区静默 catch（src/pages/notice/notice.vue）
+
+复现: `git stash push -- src/pages/notice/notice.vue` 后运行 `npx vitest run src/pages/notice/notice.spec.ts`。
+
+```
+ FAIL  src/pages/notice/notice.spec.ts > notice page — onCommunitySwitch 10015 branch > does not toast for a non-10015 switch error
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 2 times
+Number of calls: 2
+ ❯ src/pages/notice/notice.spec.ts:95:31
+
+ FAIL  ... > fetch 静默 catch 消除（REQ-P1-ERR） > 双请求并发全部失败 → toast ≥1 次 + console.error 恰好 2 次
+AssertionError: expected "error" to be called 2 times, but got 3 times
+ ❯ src/pages/notice/notice.spec.ts:161:20
+
+ FAIL  ... > 4 功能图标入口（REQ-FE-1/2/3） > 4 个入口按固定顺序渲染：便民联络/物业报修/二手闲置/租房卖房
+AssertionError: expected +0 to be 4 // Object.is equality
++ Received
+ ❯ src/pages/notice/notice.spec.ts:266:28
+
+ FAIL  ... > 4 功能图标入口（REQ-FE-1/2/3） > 点击便民联络 → uni.navigateTo 到 contact-list（做实跳页）
+TypeError: Cannot read properties of undefined (reading 'trigger')
+ ❯ src/pages/notice/notice.spec.ts:276:17
+
+ FAIL  ... > 首页通知 30 天窗口参数（REQ-NTW-1/2） > 首页通知以 since_days=30 & page_size=3 调用 getNoticeList
+AssertionError: expected "vi.fn()" to be called with arguments: [ 'c1', 1, 3, 30 ]
+Number of calls: 1
+ ❯ src/pages/notice/notice.spec.ts:242:27
+```
+
+> 注：HEAD 无 `.func-entry` 元素/`onFuncEntry`/`FUNCTION_ENTRIES`（grep 0 命中），且 HEAD `loadAll` 仍含 `fetchContacts`（3 并发）——故「4 入口渲染」期望 4 实得 0、「点便民联络」`navigateTo` 元素不存在、`getNoticeList` 收到 HEAD 旧签名 `(cid,1,3)` 缺 `30` 窗口参数。onFuncEntry 分支（target→navigateTo / 无→toast）在 HEAD 下均未实现 → 三类断言全部 FAIL。
+
+### 3. RED — onAttachmentClick（src/pages/notice-detail/notice-detail.vue）
+
+复现: `git stash push -- src/pages/notice-detail/notice-detail.vue` 后运行 `npx vitest run src/pages/notice-detail/notice-detail.spec.ts`。
+
+```
+ FAIL  ... > 附件点击图片 → previewImage（file_type ∈ 白名单）
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]
+Number of calls: 0
+ ❯ src/pages/notice-detail/notice-detail.spec.ts:62:30
+```
+
+### 4. RED — fetchDetail loadError 失败态分支（notice-detail.vue）
+
+```
+ FAIL  ... > 详情加载失败 → 明确失败态 + console.error
+AssertionError: expected '通知不存在' to contain '加载失败'
+Expected: "加载失败"
+Received: "通知不存在"
+ ❯ src/pages/notice-detail/notice-detail.spec.ts:136:28
+```
+
+### 5. RED — notice-browse onMounted（since_days=30 窗口传参，src/pages/notice-browse/notice-browse.vue）
+
+复现: `git stash push -- src/pages/notice-browse/notice-browse.vue` 后运行 `npx vitest run src/pages/notice-browse/notice-browse.spec.ts`。
+
+```
+ FAIL  ... > 通知卡片列表渲染
+AssertionError: expected "vi.fn()" to be called with arguments: [ 'c1', 1, 50, 30 ]
+Received: 1st vi.fn() call:  <老实现无 since_days 传参>
+```
+
+### 6. RED — notice-browse formatTime（dayjs 转换 + !ts 空守卫）
+
+```
+ FAIL  ... > 时间格式化为 YYYY-MM-DD HH:mm
+AssertionError: expected +0 to be 2 // Object.is equality
+- Expected
++ Received
+```
+
+### 7. RED — contact-list fetchContacts（src/pages/contact-list/contact-list.vue，新增页）
+
+复现: 临时将 `fetchContacts` 改名（新文件无法 stash）后运行 `npx vitest run src/pages/contact-list/contact-list.spec.ts`，随后恢复。
+
+```
+ReferenceError: fetchContacts is not defined
+ ❯ src/pages/contact-list/contact-list.vue:75:5
+     73|   const cid = communityStore.currentCommunityId;
+     74|   if (cid) {
+     75|     fetchContacts(cid);
+       |     ^
+```
+
+### 8. RED — contact-list onCall（phone 空守卫 + makePhoneCall）
+
+复现: 临时注释 `onCall` 内 `uni.makePhoneCall` 调用（模拟实现缺失）后运行 `npx vitest run src/pages/contact-list/contact-list.spec.ts`，随后恢复。
+
+```
+ FAIL  src/pages/contact-list/contact-list.spec.ts > contact-list — 联络拨号网格（REQ-CLP-1） > 点击联络卡片 → uni.makePhoneCall 拨号
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]
+Number of calls: 0
+ ❯ src/pages/contact-list/contact-list.spec.ts:75:31
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+```
+
+> 注：`onCall` 的 phone 空守卫（`if (contact.phone)`）为条件分支；实现缺失（无 `makePhoneCall` 调用）时拨号断言收到 `Number of calls: 0`（GREEN 后恢复 → 62/62 全绿）。

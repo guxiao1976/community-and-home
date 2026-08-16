@@ -6,9 +6,12 @@ import request from '@/utils/request';
 // =============================================================================
 
 // 字段名对齐后端 community-hub-service types.go JSON tag（snake_case）
+// file_id/file_type 可选（optional-safe）：legacy wire 缺失时 undefined 不崩溃（REQ-NDP-4 场景 2）
 // SEE: [[snake-camel-field-mismatch]]
 export interface NoticeAttachment {
   id: string;
+  file_id?: string;
+  file_type?: string;
   file_name: string;
   file_url: string;
   file_size: number;
@@ -54,6 +57,21 @@ export interface LostFoundItem {
 // =============================================================================
 // Enum Display Helpers
 // =============================================================================
+
+// 图片附件白名单（file_type 分发谓词，REQ-NDP-2/3/4 同一判定口径）。
+// wire 的 file_type 是 file-service magic-bytes 嗅探落库的规范小写扩展名（非 MIME），
+// 白名单须与 services/file-service/internal/guard/magic.go 对齐（png/jpg/gif + 兼容 jpeg）。
+// SEE: [[frontend-business-rule-hardcode]]
+export const IMAGE_FILE_TYPES: string[] = ['png', 'jpg', 'jpeg', 'gif'];
+
+/**
+ * 判断附件 file_type 是否为图片（白名单扩展名）。
+ * 缺失/无法识别一律返回 false（走文档分支），类型字段缺省不崩溃（REQ-NDP-4 场景 2）。
+ */
+export function isImageAttachment(fileType?: string): boolean {
+  if (!fileType) return false;
+  return IMAGE_FILE_TYPES.includes(fileType.toLowerCase());
+}
 
 export function getNoticeRoleName(role: number): string {
   switch (role) {
@@ -115,15 +133,20 @@ export function getLostFoundTypeName(type: number): string {
 
 /**
  * Get notice list for a community.
+ * @param sinceDays 可选时间窗口（天，1..365；缺省 0=不过滤，由后端强制，前端只传参不实现窗口逻辑）。
+ *                  SEE: [[frontend-business-rule-hardcode]]
  */
 export async function getNoticeList(
   communityId: string,
   page: number = 1,
   pageSize: number = 3,
+  sinceDays?: number,
 ): Promise<{ notices: Notice[]; total: string }> {
-  const res = await request.get('/api/community/notices', {
-    params: { community_id: communityId, page, page_size: pageSize },
-  });
+  const params: Record<string, unknown> = { community_id: communityId, page, page_size: pageSize };
+  if (sinceDays && sinceDays > 0) {
+    params.since_days = sinceDays;
+  }
+  const res = await request.get('/api/community/notices', { params });
   return res as unknown as { notices: Notice[]; total: string };
 }
 

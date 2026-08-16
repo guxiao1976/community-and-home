@@ -23,7 +23,7 @@
         <rich-text :nodes="notice.content"></rich-text>
       </view>
 
-      <!-- Attachments -->
+      <!-- Attachments（REQ-NDP-1：无附件不渲染附件区） -->
       <template v-if="notice.attachments && notice.attachments.length > 0">
         <view class="divider" />
         <view class="detail-attachments">
@@ -32,9 +32,9 @@
             v-for="att in notice.attachments"
             :key="att.id"
             class="attachment-item"
-            @click="onDownload(att.file_url, att.file_name)"
+            @click="onAttachmentClick(att)"
           >
-            <text class="attachment-icon">📎</text>
+            <text class="attachment-icon">{{ isImageAttachment(att.file_type) ? '🖼️' : '📎' }}</text>
             <view class="attachment-info">
               <text class="attachment-name">{{ att.file_name }}</text>
               <text class="attachment-size">{{ formatSize(att.file_size) }}</text>
@@ -44,9 +44,12 @@
       </template>
     </template>
 
-    <!-- Loading / Error -->
+    <!-- Loading / Error（REQ-NDP-1 场景 3：失败明确提示，不静默空白页） -->
     <view v-else-if="loading" class="status-wrap">
       <text class="status-text">加载中...</text>
+    </view>
+    <view v-else-if="loadError" class="status-wrap">
+      <text class="status-text">加载失败，请稍后重试</text>
     </view>
     <view v-else class="status-wrap">
       <text class="status-text">通知不存在</text>
@@ -57,12 +60,18 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import { getNoticeDetail, getNoticeRoleName, getNoticeRoleColor } from '@/api/community';
-import type { Notice } from '@/api/community';
+import {
+  getNoticeDetail,
+  getNoticeRoleName,
+  getNoticeRoleColor,
+  isImageAttachment,
+} from '@/api/community';
+import type { Notice, NoticeAttachment } from '@/api/community';
 import dayjs from 'dayjs';
 
 const notice = ref<Notice | null>(null);
 const loading = ref(true);
+const loadError = ref(false);
 
 function formatTime(ts: number): string {
   if (!ts) return '';
@@ -81,29 +90,57 @@ function formatSize(bytes: number): string {
   return `${size.toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
-function onDownload(url: string, _name: string) {
-  // #ifdef H5
-  window.open(url, '_blank');
-  // #endif
-  // #ifdef MP-WEIXIN
-  uni.downloadFile({
-    url,
-    success: (res) => {
-      if (res.statusCode === 200) {
-        uni.openDocument({ filePath: res.tempFilePath });
-      }
-    },
-  });
-  // #endif
+/**
+ * 附件点击按 file_type 白名单分发（REQ-NDP-2/3，同一判定口径 isImageAttachment）：
+ * 图片 → uni.previewImage 全屏预览；其余（pdf/doc/docx 或缺失/无法识别）→
+ * uni.downloadFile 成功后 uni.openDocument。
+ * 主路径消费详情响应中 community-hub 服务端重生的 file_url（预签名 URL），
+ * 不直连 file-service REST（该端点强制文件所有权，查看者非上传者被拒）。
+ * SEE: [[frontend-business-rule-hardcode]] — 白名单与 file-service guard/magic.go 对齐
+ */
+function onAttachmentClick(att: NoticeAttachment) {
+  if (!att.file_url) {
+    // 逐附件降级（legacy 无重生可能）：图片 → 预览失败；文档 → 附件打开失败（REQ-NDP-2/3 场景 2）
+    if (isImageAttachment(att.file_type)) {
+      uni.showToast({ title: '预览失败', icon: 'none' });
+    } else {
+      uni.showToast({ title: '附件打开失败', icon: 'none' });
+    }
+    return;
+  }
+  if (isImageAttachment(att.file_type)) {
+    // 图片 → 全屏预览；预览失败明确提示，不降级到文档打开器（REQ-NDP-2 场景 2）
+    uni.previewImage({
+      urls: [att.file_url],
+      fail: () => uni.showToast({ title: '预览失败', icon: 'none' }),
+    });
+  } else {
+    // 文档 → 下载后 openDocument；下载失败明确提示（REQ-NDP-3 场景 2）
+    uni.downloadFile({
+      url: att.file_url,
+      success: (res: any) => {
+        if (res?.statusCode === 200 && res.tempFilePath) {
+          uni.openDocument({ filePath: res.tempFilePath, showMenu: true });
+        } else {
+          uni.showToast({ title: '附件打开失败', icon: 'none' });
+        }
+      },
+      fail: () => uni.showToast({ title: '附件打开失败', icon: 'none' }),
+    });
+  }
 }
 
 async function fetchDetail(id: string) {
   loading.value = true;
+  loadError.value = false;
   try {
     const data = await getNoticeDetail(id);
     notice.value = data.notice || null;
-  } catch {
+  } catch (e) {
+    // 详情加载失败（API 失败/详情读整单失败）→ 明确失败态，禁止静默吞错
+    console.error('[notice-detail] 详情加载失败', e);
     notice.value = null;
+    loadError.value = true;
   } finally {
     loading.value = false;
   }

@@ -1,5 +1,50 @@
 # CHANGELOG — web/mobile
 
+## 2026-08-16 — 首页信息架构改造（mobile-homepage-content-revamp Task 2.1-2.6）
+
+### 分诊
+- **Task 2.1** `isImageAttachment`（file_type 图片白名单谓词，分支逻辑）：**有逻辑函数**，TDD RED→GREEN
+- **Task 2.2** 通知区 `getNoticeList(cid,1,3,30)` 传参 / 4 功能入口点击分发（跳页 vs toast）：**有逻辑函数**，TDD RED→GREEN
+- **Task 2.3** 区块垂直全序 + 邻里互助占位 + 广告集中：**布局调整**，组件测试补全序断言
+- **Task 2.4** notice-browse 30 天卡片列表（fetch since_days + 失败态分支）：**有逻辑函数**，TDD RED→GREEN
+- **Task 2.5** notice-detail 附件点击 file_type 分发（图片/文档/空 url）：**有逻辑函数**，TDD RED→GREEN
+- **Task 2.6** contact-list 新建（fetch + 失败态 + 拨号点击）：**有逻辑函数**，TDD RED→GREEN
+- 字段映射/纯接线：`NoticeAttachment` 扩展 `file_id`/`file_type`（REQ-NDP-4）、`getNoticeList` 增 `since_days` 参数、pages.json 注册 contact-list
+
+### 做了什么
+- **2.1** `src/api/community.ts`：`NoticeAttachment` 扩展 `file_id?`/`file_type?`（snake_case 对齐 wire，optional-safe 缺省不崩溃 REQ-NDP-4 场景 2）；`getNoticeList` 新增 `sinceDays?: number` 参数 → `params.since_days`（仅 >0 传参，缺省不传保持 PC 行为）；新增 `IMAGE_FILE_TYPES=['png','jpg','jpeg','gif']` + `isImageAttachment(fileType?)`（与 `file-service` `guard/magic.go` 白名单对齐，`// SEE: [[frontend-business-rule-hardcode]]`）
+- **2.2** `src/pages/notice/notice.vue`：通知区改调 `getNoticeList(cid, 1, 3, 30)`（since_days=30 + page_size=3，30 天窗口后端强制）；**移除首页内嵌联络拨号网格**（fetchContacts/contacts/contactGroups/onCallPhone/样式）；通知下方新增 4 个功能图标入口（便民联络 → `uni.navigateTo('/pages/contact-list/contact-list')` 做实跳页；物业报修/二手闲置/租房卖房 → `uni.showToast('功能开发中')` 不跳转，REQ-FE-1/2/3）；未加入小区不渲染入口区
+- **2.3** `notice.vue` 区块垂直全序重排（REQ-HL-4）：通知（跑马灯+卡片）→ 4 功能入口 → **邻里互助占位**（「互助功能开发中」，点击不导航、不伪造数据，REQ-HL-1）→ 寻失互助（样式数据不动，REQ-HL-2）→ **底部广告集中区**（3 个广告垂直堆叠，内容保留硬编码，点击预留不跳转，REQ-HL-3）；移除联络骨架屏
+- **2.4** `src/pages/notice-browse/notice-browse.vue`：从单条翻页浏览改为 30 天卡片列表（`getNoticeList(cid, 1, 50, 30)` 单请求，REQ-NTW-4）；渲染与首页一致的卡片（role 色条/role 标签/标题/时间，REQ-NTW-5 视觉契约）；**移除客户端 3 个月过滤**（窗口由后端强制）；点卡片 → `uni.navigateTo` 详情；空态「暂无通知公告」+ 加载失败明确提示（不静默）；移除 currentIndex/翻页逻辑
+- **2.5** `src/pages/notice-detail/notice-detail.vue`：附件点击按 `isImageAttachment(att.file_type)` 白名单分发（REQ-NDP-2/3）：图片 → `uni.previewImage` 全屏预览（失败 toast「预览失败」，不降级文档打开器）；文档（pdf/doc/docx 或缺失/无法识别）→ `uni.downloadFile` 成功后 `uni.openDocument`（失败 toast「附件打开失败」）；**消费详情响应重生 file_url，不直连 file-service REST**（所有权限制，REVISION #4）；移除 H5 `window.open` 平台分支；详情加载失败态「加载失败」/「通知不存在」区分；无附件不渲染附件区
+- **2.6** 新建 `src/pages/contact-list/contact-list.vue`：`onLoad` 读当前小区 → `getContacts(cid)` 渲染拨号网格（类别图标/类别名/电话，样式沿用首页原联络网格），点击 → `uni.makePhoneCall`（REQ-CLP-1）；空态「暂无联络信息」+ 加载失败明确提示；`pages.json` 注册 `pages/contact-list/contact-list`（navigationBarTitleText 便民联络）
+
+### 新增测试（RED → GREEN）
+- `src/api/community.spec.ts`（3 用例）：isImageAttachment 白名单 true / 文档 false / 缺失 undefined 不崩溃
+- `src/pages/notice/notice.spec.ts`（新增 9 用例，共 17）：since_days=30&page_size=3 调用 / 4 入口按固定顺序渲染 / 便民联络 navigateTo / 占位入口 toast 不跳转 / 未加入小区不渲染 / 区块全序（func-entries→邻里互助→寻失→底部广告）/ 双请求失败 console.error 恰好 2 次（联络网格移除后由 3 变 2）
+- `src/pages/notice-browse/notice-browse.spec.ts`（5 用例）：since_days=30&page_size=50 / 卡片契约渲染 / 点卡片进详情 / 加载失败态 / 空态
+- `src/pages/notice-detail/notice-detail.spec.ts`（8 用例）：图片 previewImage / 文档 downloadFile+openDocument / 图片空 url 预览失败 / 文档空 url 附件打开失败 / 无法识别按文档 / 无附件不渲染 / 加载失败态 / 通知不存在
+- `src/pages/contact-list/contact-list.spec.ts`（4 用例）：getContacts 渲染网格 / 点击 makePhoneCall / 空态 / 加载失败态
+
+### TDD 证据（RED 摘录）
+- 8 个有逻辑函数（isImageAttachment / onFuncEntry / onAttachmentClick / fetchDetail / notice-browse onMounted / formatTime / fetchContacts / onCall）真实 vitest FAIL 摘录已持久化至 `_tdd_evidence.md` §1-§8（`git stash` 回退生产文件复现，含 `TypeError: isImageAttachment is not a function` / `expected +0 to be 4` / `Number of calls: 0` / `ReferenceError: fetchContacts is not defined` 等）
+
+### 基础设施
+- `vitest.setup.ts` uni stub 增补 `previewImage`/`downloadFile`/`openDocument`/`makePhoneCall`（附件预览 + 拨号测试）
+
+### 记忆应用
+- `[[frontend-business-rule-hardcode]]` — file_type 白名单与 file-service guard/magic.go 对齐；30 天窗口后端强制前端只传参
+- `[[snake-camel-field-mismatch]]` — NoticeAttachment file_id/file_type snake_case 对齐 wire
+- `[[verify-api-before-calling]]` — 各 API 路由 graph-context 已确认；失败明确提示不静默吞错
+- `[[change-verification-checklist]]` — 改后全量门禁验证（test:unit/type-check/build）
+
+### 门禁
+- `npm run test:unit` → 10 files / 62 tests PASS
+- `npm run type-check` → PASS（0 errors）
+- `npm run build` → PASS（DONE Build complete）
+
+---
+
 ## 2026-08-15 — 字段名对齐后端 snake_case JSON tag（Task 3.4）
 
 ### 分诊

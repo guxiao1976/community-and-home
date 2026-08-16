@@ -4,7 +4,6 @@
     <view class="nav-bar">
       <view class="nav-back" @click="goBack">← 返回</view>
       <text class="nav-title">通知公告</text>
-      <text class="nav-count">{{ currentIndex + 1 }} / {{ notices.length }}</text>
     </view>
 
     <!-- 加载中 -->
@@ -12,54 +11,46 @@
       <text class="loading-text">加载中...</text>
     </view>
 
-    <!-- 无通知 -->
+    <!-- 加载失败（REQ-NTW-4 场景 6，禁止静默吞错） -->
+    <view v-else-if="loadError" class="empty-wrap">
+      <text class="empty-icon">⚠️</text>
+      <text class="empty-text">加载失败，请稍后重试</text>
+    </view>
+
+    <!-- 30 天窗口内无通知（REQ-NTW-4 场景 7） -->
     <view v-else-if="notices.length === 0" class="empty-wrap">
       <text class="empty-icon">📭</text>
       <text class="empty-text">暂无通知公告</text>
     </view>
 
-    <!-- 通知内容 -->
-    <view v-else class="notice-wrap">
-      <view class="notice-card">
-        <!-- 标题 -->
-        <text class="notice-title">{{ currentNotice.title }}</text>
-
-        <!-- 元信息 -->
-        <view class="notice-meta">
-          <view
-            class="role-pill"
-            :style="{ backgroundColor: roleColor + '18', borderColor: roleColor }"
-          >
-            <text class="role-text" :style="{ color: roleColor }">{{ roleName }}</text>
+    <!-- 30 天卡片列表（REQ-NTW-4/5 视觉契约：role 色条 + role 标签 + 标题 + 时间，置顶优先 + published_at 倒序由后端保证） -->
+    <view v-else class="browse-list">
+      <view
+        v-for="item in notices"
+        :key="item.id"
+        class="browse-card"
+        @click="onCardClick(item.id)"
+      >
+        <view class="browse-card-bar" :style="{ backgroundColor: getNoticeRoleColor(item.role) }" />
+        <view class="browse-card-body">
+          <view class="browse-card-header">
+            <text class="browse-title">{{ item.title }}</text>
+            <view
+              class="browse-role-pill"
+              :style="{
+                backgroundColor: getNoticeRoleColor(item.role) + '18',
+                borderColor: getNoticeRoleColor(item.role),
+              }"
+            >
+              <text class="browse-role-text" :style="{ color: getNoticeRoleColor(item.role) }">
+                {{ getNoticeRoleName(item.role) }}
+              </text>
+            </view>
           </view>
-          <text class="meta-time">{{ formatTime(currentNotice.published_at || currentNotice.created_at) }}</text>
-          <text class="meta-publisher">{{ currentNotice.publisher }}</text>
-        </view>
-
-        <!-- 分隔线 -->
-        <view class="divider" />
-
-        <!-- 正文 -->
-        <view class="notice-content">
-          <rich-text :nodes="currentNotice.content" />
-        </view>
-      </view>
-
-      <!-- 翻页按钮 -->
-      <view class="nav-btns">
-        <view
-          class="nav-btn"
-          :class="{ 'nav-btn--disabled': currentIndex === 0 }"
-          @click="prevNotice"
-        >
-          <text>← 上一条</text>
-        </view>
-        <view
-          class="nav-btn"
-          :class="{ 'nav-btn--disabled': currentIndex >= notices.length - 1 }"
-          @click="nextNotice"
-        >
-          <text>下一条 →</text>
+          <view class="browse-time-row">
+            <text class="browse-time-icon">🕐</text>
+            <text class="browse-time">{{ formatTime(item.published_at || item.created_at) }}</text>
+          </view>
         </view>
       </view>
     </view>
@@ -67,54 +58,43 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { getNoticeList, getNoticeRoleName, getNoticeRoleColor, type Notice } from '@/api/community';
 import { useCommunityStore } from '@/stores/community';
+import dayjs from 'dayjs';
 
 const communityStore = useCommunityStore();
 
 const notices = ref<Notice[]>([]);
-const currentIndex = ref(0);
 const loading = ref(true);
-
-const currentNotice = computed(() => notices.value[currentIndex.value]);
-const roleName = computed(() => getNoticeRoleName(currentNotice.value?.role || 0));
-const roleColor = computed(() => getNoticeRoleColor(currentNotice.value?.role || 0));
+const loadError = ref(false);
 
 function goBack() {
   uni.navigateBack();
 }
 
-function prevNotice() {
-  if (currentIndex.value > 0) {
-    currentIndex.value--;
-  }
-}
-
-function nextNotice() {
-  if (currentIndex.value < notices.value.length - 1) {
-    currentIndex.value++;
-  }
+function onCardClick(id: string) {
+  uni.navigateTo({ url: `/pages/notice-detail/notice-detail?id=${id}` });
 }
 
 function formatTime(ts: number): string {
   if (!ts) return '';
-  const d = new Date(ts * 1000);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return dayjs.unix(ts).format('YYYY-MM-DD HH:mm');
 }
 
 onMounted(async () => {
   const cid = communityStore.currentCommunityId;
   if (!cid) { loading.value = false; return; }
   try {
-    const result = await getNoticeList(cid, 1, 50);
-    // Filter recent 3 months
-    const threeMonthsAgo = Math.floor(Date.now() / 1000) - 90 * 24 * 3600;
-    notices.value = (result.notices || []).filter(
-      (n: Notice) => (n.published_at || n.created_at) >= threeMonthsAgo,
-    );
-  } catch {
-    notices.value = [];
+    // 30 天窗口后端强制（since_days=30），前端只传参不实现窗口过滤（REQ-NTW-2）；
+    // 单请求 page_size=50 截断，total 反映窗口内全量（REQ-NTW-4 场景 3）
+    // SEE: [[frontend-business-rule-hardcode]]
+    const result = await getNoticeList(cid, 1, 50, 30);
+    notices.value = result.notices || [];
+  } catch (e) {
+    // SEE: [[verify-api-before-calling]] — 禁止静默吞错，明确失败态
+    console.error('[notice-browse] 通知列表加载失败', e);
+    loadError.value = true;
   } finally {
     loading.value = false;
   }
@@ -148,11 +128,6 @@ onMounted(async () => {
   flex: 1;
 }
 
-.nav-count {
-  font-size: 24rpx;
-  color: #A6988A;
-}
-
 .loading-wrap {
   display: flex;
   justify-content: center;
@@ -181,90 +156,74 @@ onMounted(async () => {
   color: #A6988A;
 }
 
-.notice-wrap {
+// ---- 30 天卡片列表（与首页通知卡片一致）----
+.browse-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
   padding-top: 24rpx;
 }
 
-.notice-card {
+.browse-card {
+  display: flex;
   background: #FAF8F5;
   border-radius: 16rpx;
-  padding: 32rpx;
-  min-height: 400rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
 }
 
-.notice-title {
-  font-size: 36rpx;
-  font-weight: 700;
-  color: #3D3226;
-  display: block;
-  line-height: 1.4;
-  margin-bottom: 20rpx;
+.browse-card-bar {
+  width: 10rpx;
+  flex-shrink: 0;
 }
 
-.notice-meta {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  margin-bottom: 20rpx;
-  flex-wrap: wrap;
-}
-
-.role-pill {
-  padding: 4rpx 16rpx;
-  border-radius: 8rpx;
-  border-width: 1rpx;
-  border-style: solid;
-}
-
-.role-text {
-  font-size: 22rpx;
-  font-weight: 600;
-}
-
-.meta-time {
-  font-size: 24rpx;
-  color: #A6988A;
-}
-
-.meta-publisher {
-  font-size: 24rpx;
-  color: #A6988A;
-  margin-left: auto;
-}
-
-.divider {
-  height: 1rpx;
-  background: #E8DCCF;
-  margin-bottom: 24rpx;
-}
-
-.notice-content {
-  font-size: 28rpx;
-  color: #3D3226;
-  line-height: 1.8;
-}
-
-.nav-btns {
-  display: flex;
-  gap: 16rpx;
-  margin-top: 32rpx;
-  padding-bottom: 40rpx;
-}
-
-.nav-btn {
+.browse-card-body {
   flex: 1;
-  height: 80rpx;
-  border-radius: 40rpx;
-  background: #FAF8F5;
+  padding: 24rpx;
+}
+
+.browse-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10rpx;
+}
+
+.browse-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #3D3226;
+  flex: 1;
+  margin-right: 16rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browse-role-pill {
+  border-radius: 20rpx;
+  padding: 4rpx 16rpx;
+  border: 1rpx solid;
+  flex-shrink: 0;
+}
+
+.browse-role-text {
+  font-size: 20rpx;
+  font-weight: 500;
+}
+
+.browse-time-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 28rpx;
-  color: #3D3226;
-  font-weight: 500;
+  gap: 4rpx;
+}
 
-  &--disabled {
-    opacity: 0.3;
-  }
+.browse-time-icon {
+  font-size: 20rpx;
+}
+
+.browse-time {
+  font-size: 22rpx;
+  color: #A6988A;
 }
 </style>

@@ -1,121 +1,103 @@
 # QA Report — community-hub-service
 
-**验证时间**: 2026-08-16 11:10 (CST)
-**验证范围**: 工作树未提交改动 + 未跟踪文件（content-post-generalization Task 1.1-1.23：42 modified + 21 untracked，含 rename notices→content_posts、scope 包、kafkapush、contentcompat、API 代理）
+**验证时间**: 2026-08-16 18:00 (CST)
+**验证范围**: 工作树未提交改动 + 未跟踪文件（mobile-homepage-content-revamp Task 1.1-1.5：model 时间窗口 + RPC since_days 校验 + REST 透传 + migration 004/005 补表/索引）
 
 ## 机械化检查结果 (harness-checks.sh — FRESH run)
 
+命令：`bash .harness/skills/qa/scripts/harness-checks.sh --service community-hub-service --json`（FRESH，timestamp 2026-08-16T09:42:28Z）
+
 | # | 检查项 | 结果 | 详情 |
 |---|--------|------|------|
-| 1 | go build | ✅ | exit 0 (compilation succeeded) |
-| 2 | go vet | ✅ | exit 0 (no issues) |
-| 3 | go test | ⚠️ | 13P/0F/10N, ~119 测试函数 — WARN：NEW package `rpc`（package main，薄接线）无测试 |
-| 4 | Proto int64 jstype | ✅ | diff 无 proto 变更 (skipped) |
-| 5 | json:",string" | ✅ | AST 校验全过，所有 int64 ID 字段均带 `json:",string"` |
-| 6 | 跨服务DB导入 | ✅ | no violations（68 个 Go 文件 diff 扫描） |
-| 7 | 错误码格式 | ✅ | no magic numbers（全部命名常量或 0） |
-| 8 | 硬编码密钥 | ✅ | no secrets detected |
-| 9 | go_fmt | ✅ | 变更 Go 文件全部已格式化 |
-| 10 | proto_ts_align | ❌ | MISMATCH: proto `FileInfo.confirmed` 未同步 TS `FileInfo`（web/common/types/file.d.ts）；proto `FileInfo.file_type` 未同步 TS `FileInfo` |
-| 11 | graph_freshness | ✅ | graph up-to-date (synced 0h ago) |
-| 12 | claude_structural_data | ✅ | 无结构数据重复 |
+| 1 | go build | ✅ | PASS — compilation succeeded |
+| 2 | go vet | ✅ | PASS — no issues |
+| 3 | go test | ✅ | PASS — 13 包通过, ~124 测试函数（工作树 go test ./... -count=1 实测 124 个 Test 函数，0 fail） |
+| 4 | go_fmt | ✅ | 变更 Go 文件全部已格式化 |
+| 5 | Proto int64 jstype | ✅ | diff 无 proto 变更 (skipped) |
+| 6 | json:",string" | ✅ | AST 校验全过，所有 int64 ID 字段均带 `json:",string"` |
+| 7 | 跨服务DB导入 | ✅ | no violations（8 Go 文件 diff 扫描） |
+| 8 | 错误码格式 | ✅ | no magic numbers（全部命名常量或 0；RPC 080005 用 scope.CodeInvalidParam 命名常量） |
+| 9 | 硬编码密钥 | ✅ | no secrets detected |
+| 10 | graph_freshness | ✅ | graph up-to-date (synced 0h ago)——上轮 FAIL（api-proto 9c848cb 晚于图谱时间戳）已由 Owner 执行 graph-sync.sh 消除 |
+| 11 | claude_structural_data | ✅ | 无结构数据重复 |
+| 12 | proto_ts_align | ⚠️ | WARN — 跨服务 TS 滞后（identity.ts LoginSmsRequest.phone / RefreshTokenRequest.device_type / RegisterRequest.phone / User.avatar_url、moderation.d.ts SubmitReviewRequest.reviewer_id），均属其他服务/前端任务范围，本工作树未触及 |
 | 13 | api_stubs | ✅ | 无 TODO 桩 |
 | 14 | response_wrap | ✅ | 无双重包裹风险 |
 | 15 | bench_regression | ✅ | 无 benchmark（SKIP） |
-| 16 | api_smoke | ⚠️ | 无法确定 API 端口 — SKIP |
-| 17 | memory_index / design_consistency / git_hygiene | ⚠️/✅/⚠️ | git_hygiene WARN：gitlink 无 .gitmodules 条目 (api-proto) |
-| 18 | mutation_testing / pipeline_evals | ✅ | 变异分数 ?%（未解析到分数）；管线 eval 全过 |
+| 16 | api_smoke | ✅ | diff 无新增路由（透传基于既有 GET /api/community/notices） |
+| 17 | memory_index / design_consistency | ✅/✅ | 索引最新 (生成于 2026-08-16T09:40:21Z)；model 列覆盖标准迁移源 |
+| 18 | git_hygiene | ⚠️ | WARN — gitlink 无 .gitmodules 条目: api-proto（既有治理项，非本变更引入） |
+| 19 | mutation_testing / pipeline_evals | ✅/✅ | 变异分数 ?%（≥80% 或未解析到分数）；管线 eval 全部通过 |
 
-**汇总**: 17 PASS / 1 FAIL / 3 WARN，`exit_code=1`
-
-**FAIL 归因（proto_ts_align）**: 本工作树 api-proto 子模块指针 3d3a8ad→006d4ae 引入 `FileInfo.file_type(11)/confirmed(12)`，但前端 `web/common/types/file.d.ts` 未同步。违规不在 community-hub-service 自身 Go 代码（file.d.ts 未在本变更中改动）。CHANGELOG 已预声明此为 file-service 任务范围的跨服务/前端同步项。**机械门禁角度仍是 FAIL（硬约束 #4「FAIL 不可提交」需 Owner 裁决或 file-service 任务同步 TS）**，非本服务源码缺陷。
+**汇总**: **19 PASS / 0 FAIL / 2 WARN，`exit_code=0`**
 
 ## 编译检查
-- [x] go build ./... — **exit 0**
-- [x] go vet ./... — **exit 0**
+- [x] go build ./... — **exit 0**（FRESH，BUILD_EXIT=0）
+
+## 静态分析
+- [x] go vet ./... — **exit 0**（FRESH，VET_EXIT=0，clean output）
 
 ## 单元测试
-- [x] go test ./... -count=1 — **exit 0**（13 包含测试，119 个测试函数，0 fail；10 包无测试文件 = handler/types/main/配置薄层）
+- [x] go test ./... -count=1 — **exit 0**（FRESH 禁缓存；13 包含测试，124 个测试函数，0 fail；rpc/api 主包 + handler/types/config 为薄层无测试）
 
 ## 测试覆盖（go test -cover，非阻塞记录）
 | 包 | 覆盖率 | 状态 |
 |----|--------|------|
-| rpc/internal/logic/scope | 94.3% | 优 |
-| api/internal/util | 86.4% | 优 |
-| internal/contentcompat | 82.4% | 优 |
-| api/internal/logic/contact | 79.2% | 优 |
-| api/internal/logic/lostfound | 75.0% | 优 |
-| rpc/internal/logic/notice | 73.1% | 良 |
-| rpc/internal/kafkapush | 68.8% | 良 |
-| rpc/internal/logic/lostfound | 68.7% | 良 |
-| model | 57.1% | 中 |
-| api/internal/logic/notice | 56.8% | 中 |
-| rpc/internal/logic/contact | 47.1% | 中 |
-| api/internal/svc | 25.0% | 低（仅接线） |
-| handler/main/types/config | 0% | 生成代码/薄层，常规 |
+| rpc/internal/logic/notice | 73.4% | 良 |
+| api/internal/logic/notice | 63.8% | 良 |
+| model | 60.9% | 中 |
 
 ## TDD 证据检查（分诊：字段映射 vs 有逻辑函数）
 
-**分诊说明**：字段映射类（model struct 改名、SQL 加列、Tx 变体、proto 透出、types.go wire 兼容、servicecontext 接线）只要求测试绿 — 全部通过（content_post_test 13 / content_post_scope_test 4 / content_post_attachment_test 3 个 sqlmock 测试锁定 SQL；api_proxy_test 覆盖 types 透出）。以下「有逻辑函数」逐项核对。
+**分诊说明**：本次变更新增/修改函数共 8 个 + 2 个 migration（纯 DDL）。字段映射类（types.go SinceDays 字段、WithTimeWindow 构造器接线、ContentPostListOptionSince 自省访问器、migration DDL）只要求有测试/对齐，RED 不要求；「有逻辑函数」（buildWindowClause 条件分支、FindListByCommunity 变参+窗口谓词拼接、rpc ListContentPosts 校验分支、api ListContentPosts 错误上抛分支）要求 RED 摘录。
+
+**RED 证据来源**：CHANGELOG 2026-08-16「移动端首页信息架构改造」TDD 段（L35-37）持久化了**具体 FAIL 输出文本**（含 `undefined:` / `too many arguments in call to` / `expected: 80005, actual: 0` / `unknown field ... in struct literal`），非仅口头描述；结构性佐证 `git show HEAD:` 确认所有新符号（WithTimeWindow / ContentPostListOptionSince / buildWindowClause / ContentPostListOption / SinceDays / GetSinceDays）在 HEAD 均 0 命中 → 测试文件在 HEAD 状态必然编译失败（RED 真实）。
 
 | 新增/修改函数 | 类型 | 是否有测试 | RED 确认 | GREEN 确认 | 状态 |
 |-------------|------|:---:|:---:|:---:|:---:|
-| scope.ExpandDivisionCommunities | 有逻辑 | ✅ TestExpandDivisionCommunities×3 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| scope.ResolveAdminDivision | 有逻辑 | ✅ TestResolveAdminDivision | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| scope.AssertCommunitiesScope | 有逻辑 | ✅ TestAssertCommunitiesScope | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| scope.PublishRolesFrom | 有逻辑 | ✅ TestPublishRolesFrom×6 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| scope.PublishRoleToString | 有逻辑(映射) | ✅ TestPublishRoleToString×6 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| scope.IsLevel2Grant | 有逻辑(谓词) | ⚠️ 仅间接（PublishRolesFrom/GetPublishPermission 覆盖，无直接用例） | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| CreateContentPost | 有逻辑 | ✅ createcontentpostlogic_test×6 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| UpdateContentPost（V5 presence 分流） | 有逻辑 | ✅ updatecontentpostlogic_test×14 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| DeleteContentPost | 有逻辑 | ✅ read_write_logic_test×4 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| ListContentPosts | 有逻辑 | ✅ read_write_logic_test×2 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| GetContentPost | 有逻辑 | ✅ read_write_logic_test×6 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| GetMarqueeNotices | 有逻辑 | ✅ read_write_logic_test×2 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| GetPublishPermission | 有逻辑 | ✅ read_write_logic_test×3 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| kafkapush.Producer.Push | 有逻辑 | ✅ producer_test×4 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| kafkapush.Rescanner.ScanOnce | 有逻辑 | ✅ rescanner_test×4 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| contentcompat.ResolveReadableCommunityForCompat | 有逻辑 | ✅ contentcompat_test×1 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| API CreateContentPost 代理（community_ids 解析） | 有逻辑 | ✅ api_proxy_test×2 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| API UpdateContentPost 代理（presence 转发） | 有逻辑 | ✅ TestUpdateContentPost_PresenceForwarding | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| API GetContentPost 代理（compat 回退） | 有逻辑 | ✅ api_proxy_test×4 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| API GetMarqueeNotices 代理 | 有逻辑 | ✅ api_proxy_test×1 | ❌ 无 FAIL 摘录 | ✅ | FAIL |
-| model 字段映射/查询/写路径（IsReviewComplete/FindListByCommunity/FindOneReviewComplete/FindMarquee/UpdateIsPinned/UpdateStatusAndPublish/UpdateAttachmentCount/Withdraw/UpdateKafkaPushStatus/FindPendingPush/InsertBatch×2/FindCommunityIdsByPostId/DeleteByPostId×2/FindByPostId） | 字段映射 | ✅ content_post_test×13 + scope×4 + attachment×3 | —（不要求） | ✅ | PASS |
+| model.ContentPostListOption / contentPostListParams | 字段映射(类型) | ✅ 间接（ContentPostListOptionSince 测试） | —（不要求） | ✅ | PASS |
+| model.WithTimeWindow | 字段映射(构造器接线，无分支) | ✅ TestContentPostListOption_WithTimeWindow | —（不要求；CHANGELOG 另有 `undefined: WithTimeWindow` 编译期摘录） | ✅ PASS | PASS |
+| model.ContentPostListOptionSince | 字段映射(自省访问器) | ✅ TestContentPostListOption_WithTimeWindow | —（不要求；CHANGELOG 另有 `undefined: ContentPostListOptionSince` 摘录） | ✅ PASS | PASS |
+| model.buildWindowClause | 有逻辑(条件分支 since==nil) | ✅ TestContentPostModel_FindListByCommunity_WithWindow（sqlmock 锁定 SQL 谓词） | ✅ `too many arguments in call to m.FindListByCommunity`（变参签名编译期 RED，CHANGELOG L35） | ✅ PASS（2 子用例） | PASS |
+| model.FindListByCommunity（变参签名 + 窗口谓词） | 有逻辑(SQL 拼接分支) | ✅ TestContentPostModel_FindListByCommunity_WithWindow | ✅ 同上 `too many arguments in call to m.FindListByCommunity`（CHANGELOG L35） | ✅ PASS | PASS |
+| rpc ListContentPosts（since_days 校验 + 窗口传参） | 有逻辑(校验分支 <0\|\|>365→080005) | ✅ TestListContentPosts_SinceDays×5 | ✅ `Should NOT be empty, but was []`（30 未传窗口）+ `expected: 80005, actual: 0`（-1/366 未拦截）（CHANGELOG L36） | ✅ 5 用例 PASS | PASS |
+| api ListContentPosts（SinceDays 透传 + responsex.ToError 上抛） | 有逻辑(错误上抛分支) | ✅ TestListContentPosts_SinceDaysAndBaseError×3 | ✅ `unknown field SinceDays in struct literal`（编译期 RED，CHANGELOG L37） | ✅ 3 用例 PASS | PASS |
+| api types.ListContentPostsReq.SinceDays | 字段映射 | ✅ 同上透传断言 | —（不要求） | ✅ | PASS |
+| migration 004/005 | 字段映射(DDL) | —（纯 DDL，无 TDD 要求） | — | —（幂等守卫 + 001/design 对齐） | PASS |
 
-- **GREEN 全部确认**：119 个测试函数全绿（exit 0）。测试行为精确（080005/080006/080002 映射、attachment_count 重算、is_pinned 操作者分流、Kafka 推送 ack/pending、compat 回退均被断言）。
-- **RED 全部缺失**：对全部 ~20 个「有逻辑函数」，工作树（测试注释/CHANGELOG/loop-runs/task 文件/`_tdd_evidence.md`）**均无任何具体 FAIL 输出摘录**（无 `undefined:` / `expected:... actual:...` / `Error:` 文本）。
-- **结构性佐证（成立但不足）**：`git show HEAD:` 确认 division.go / producer.go / contentcompat.go / helper.go 新函数在 HEAD 均不存在（RED 真实），但按既定标准不替代真实摘录。
+### GREEN 复现（工作树，-count=1 禁缓存，FRESH）
+
+```
+$ go test ./model/ -run 'TestContentPostListOption_WithTimeWindow|TestContentPostModel_FindListByCommunity_WithWindow' -count=1 -v
+  --- PASS: TestContentPostListOption_WithTimeWindow
+  --- PASS: TestContentPostModel_FindListByCommunity_WithWindow (含 2 子用例)
+  ok   model  0.010s  (exit 0)
+$ go test ./rpc/internal/logic/notice/ -run TestListContentPosts_SinceDays -count=1 -v
+  --- PASS: TestListContentPosts_SinceDays (5 子用例: 30/0/-1/366/365)
+  ok   ...notice  0.028s  (exit 0)
+$ go test ./api/internal/logic/notice/ -run TestListContentPosts_SinceDaysAndBaseError -count=1 -v
+  --- PASS: TestListContentPosts_SinceDaysAndBaseError (3 子用例)
+  ok   ...notice  0.027s  (exit 0)
+$ go test ./... -count=1   # exit 0，13P/0F
+```
+
+## 测试质量评估
+- 新增/修改函数: 8，有测试: 8，缺失: 0
+- 边界测试: ✅（since_days 0/30/365/366/-1 边界矩阵；无窗口 additive 缺省；窗口谓词 count/list 双 SQL sqlmock 锁定；NULL/未来行排除由 SQL 谓词保证；REST 080005 上抛 + wire 键保持）
 
 ## 发现
 
 | 级别 | 问题 | 建议 |
 |------|------|------|
-| ❌ FAIL（TDD 证据） | 全部「有逻辑函数」缺 RED 具体 FAIL 摘录；CHANGELOG 声称"RED 摘录留档于测试注释"与事实不符。系 `tdd-red-evidence-requires-fail-excerpt` 记忆所述失败类的**第 4 次复发**（此前 master-data T2.2 / restore / web-mobile T5.1 均判 QA FAIL）。机械门禁只查包级测试文件与 RED 列文本格式，未按函数维度门禁，故 17 PASS 无法拦截 | Generator 用 `git stash` 回退生产文件复现真实 RED 输出（含 `Error Trace`/`expected...actual...`/`undefined:` 行号），持久化到 CHANGELOG 或 `_tdd_evidence.md`；修复目标 #4（TDD 证据强制捕获）需闭环 |
-| ⚠️ WARN（机械 FAIL 已声明） | proto_ts_align FAIL：FileInfo.confirmed/file_type 未同步 web/common/types/file.d.ts（本变更子模块指针引入，CHANGELOG 预声明属 file-service 范围） | file-service 任务同步 TS；硬约束 #4 需 Owner 确认可提交 |
-| ⚠️ WARN | rpc 主包（package main）无测试 | 薄接线，可接受，已记录 |
-| ⚠️ WARN | git_hygiene：api-proto gitlink 无 .modules 条目 | 按 Git治理规范补 .gitmodules |
-| ⚠️ WARN | api_smoke 因无法确定端口 SKIP | 配置 smoke 测试端口 |
+| ⚠️ WARN | proto_ts_align：跨服务 TS 滞后（identity.ts 5 字段 / moderation.d.ts reviewer_id），本工作树未触及这些文件 | 各归属服务/前端任务同步 |
+| ⚠️ WARN | git_hygiene：api-proto gitlink 无 .gitmodules 条目 | 按 Git治理规范补 .gitmodules |
+| ℹ️ 提示 | bench_regression：无 benchmark 函数 | 热路径（FindListByCommunity 窗口谓词）可考虑补 benchmark |
+
+## TDD 纪律达成
+- 本次 4 个「有逻辑函数」RED 全部有**具体 FAIL 输出摘录**（编译期 `undefined:` / `too many arguments in call to` / `unknown field SinceDays in struct literal` + 行为型 `Should NOT be empty, but was []` / `expected: 80005, actual: 0`），且 `git show HEAD:` 结构性佐证新符号在 HEAD 均不存在（RED 真实）。相较 `tdd-red-evidence-requires-fail-excerpt` 记忆前 5 次复发（Generator 仅口头描述），本轮 CHANGELOG 已持久化真实失败文本，未复发。
+- 字段映射类（types.SinceDays、WithTimeWindow、ContentPostListOptionSince、migration DDL）RED 不要求，均有测试/对齐。
+- GREEN 全绿：3 组定向测试 + 全量 `go test ./... -count=1`（124 测试函数 0 fail）。
 
 ---
-VERDICT: FAIL → PASS（2026-08-16 闭环）
+VERDICT: PASS — 机械化检查 **19 PASS / 0 FAIL / 2 WARN（exit_code=0）**；go build/vet/test 全绿（exit 0，124 测试函数 0 fail）；TDD 证据完整（4 个有逻辑函数均有具体 RED FAIL 摘录 + GREEN 定向测试通过）。2 项 WARN（proto_ts_align / git_hygiene）均为跨服务/既有治理项，非本变更引入。
 ---
-
-**初判依据（11:10）**：
-1. **TDD RED 证据不足（决定性）**：~20 个「有逻辑函数」RED 列全部 ❌（无具体 FAIL 摘录），按 `tdd-red-evidence-requires-fail-excerpt`（must-follow）及管线规则「只有有逻辑函数的 RED 缺失才判 QA FAIL」，判定 QA FAIL。
-2. **机械化检查 1 项 FAIL**（proto_ts_align，exit_code=1）：虽为预声明的跨服务/前端同步项、非本服务源码缺陷，但机械门禁角度为 FAIL，需 Owner 裁决或 file-service 任务闭环。
-3. 编译/静态/单测全部绿：go build exit 0 / go vet exit 0 / go test exit 0（13 包 119 测试函数），测试覆盖合理（scope 94%、contentcompat 82%、notice logic 73%）。**QA 对代码正确性无异议，FAIL 点纯粹是 TDD 过程证据 + 机械门禁。**
-
-**闭环处理（11:53-12:00）**：
-- **FAIL-1（TDD 证据）已补救**：新建 `services/community-hub-service/_tdd_evidence.md` —— 在父提交 `dca1225` 临时 worktree 叠加 13 个新测试文件 + HEAD go.mod/go.sum，`go test` 复现真实编译失败（`undefined: NewContentPostScopeModel` / `undefined: ResolveReadableCommunityForCompat` / `undefined: ContentReviewMessage` / `undefined: ExpandDivisionCommunities` / `undefined: model.ContentPostModel` / `undefined: communityv1.NoticeServiceClient` 等，均含行号）。覆盖 model / contentcompat / kafkapush / scope / notice logic / API 代理六组有逻辑函数。GREEN 复跑 13P/119F exit 0。
-- **FAIL-2（proto_ts_align 机械门禁）已消除**：`web/common/types/file.d.ts` 已同步 `FileInfo.confirmed`/`file_type`；重跑 harness-checks → **19 PASS / 0 FAIL / 2 WARN（既有的 identity.ts 等跨服务 TS 滞后 + git_hygiene），exit 0**。
-
-**终判复现命令（every-fresh-run 证据）**：
-```
-bash .harness/skills/qa/scripts/harness-checks.sh --service community-hub-service --json   # 19P/0F/2W, exit 0
-cd services/community-hub-service && go build ./... && echo $?   # 0
-cd services/community-hub-service && go vet ./... && echo $?     # 0
-cd services/community-hub-service && go test ./... -count=1 && echo $?   # 0, 13P/119F
-git worktree add --detach <tmp>/red-repro dca1225 && # 叠加测试文件后 go test → RED 各包 build failed（见 _tdd_evidence.md）
-```
-
-**保留 WARN（不阻塞）**：identity.ts / moderation.d.ts 既有 TS 滞后（跨服务欠账，非本变更引入）；api-proto gitlink 无 .gitmodules 条目（Git 治理欠账）。

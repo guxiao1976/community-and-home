@@ -20,6 +20,11 @@ const uniStub = {
   navigateTo: vi.fn(),
   redirectTo: vi.fn(),
   getSystemInfoSync: () => ({ platform: 'h5' }),
+  // 附件预览 / 联络拨号（notice-detail / contact-list 测试）
+  previewImage: vi.fn(),
+  downloadFile: vi.fn(),
+  openDocument: vi.fn(),
+  makePhoneCall: vi.fn(),
 };
 
 // @ts-expect-error — uni is provided by the uni-app runtime in real app; stubbed here for tests

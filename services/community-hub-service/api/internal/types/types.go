@@ -46,6 +46,7 @@ type ListContentPostsReq struct {
 	SectionCode string `form:"section_code,optional"`
 	Page        int32  `form:"page,optional,default=1"`
 	PageSize    int32  `form:"page_size,optional,default=10"`
+	SinceDays   int32  `form:"since_days,optional"` // 可选时间窗口（天，1..365；缺省 0 → RPC 缺省不过滤，REVISION r2-2）
 }
 
 // ListContentPostsResp R2 wire 兼容：JSON 键保持 notices（移动端 getNoticeList 读 res.notices）。

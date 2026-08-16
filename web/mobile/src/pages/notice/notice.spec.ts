@@ -12,12 +12,9 @@ vi.mock('@dcloudio/uni-app', () => ({
 
 vi.mock('@/api/community', () => ({
   getNoticeList: vi.fn().mockResolvedValue({ notices: [], total: '0' }),
-  getContacts: vi.fn().mockResolvedValue({ contacts: [] }),
   getLostFoundList: vi.fn().mockResolvedValue({ items: [], total: '0' }),
   getNoticeRoleName: vi.fn(() => ''),
   getNoticeRoleColor: vi.fn(() => '#000000'),
-  getContactCategoryName: vi.fn(() => ''),
-  getContactCategoryIcon: vi.fn(() => ''),
   getLostFoundTypeName: vi.fn(() => ''),
 }));
 
@@ -28,7 +25,7 @@ vi.mock('@/api/user', () => ({
 }));
 
 import { setCurrentCommunity, getUserMemberships } from '@/api/user';
-import { getNoticeList, getContacts, getLostFoundList } from '@/api/community';
+import { getNoticeList, getLostFoundList } from '@/api/community';
 import { useCommunityStore } from '@/stores/community';
 import NoticePage from './notice.vue';
 
@@ -44,6 +41,21 @@ function seedCommunities(store: ReturnType<typeof useCommunityStore>) {
   store.addCommunity({ communityId: 'c1', communityName: 'A 小区' });
   store.addCommunity({ communityId: 'c2', communityName: 'B 小区' });
   store.currentCommunityId = 'c1';
+}
+
+// 默认：登录用户已加入 c1/c2 两个小区，首小区 c1 被选中，内容区渲染
+function seedMemberships() {
+  (getUserMemberships as any).mockResolvedValue([
+    { community_id: 'c1', community_name: 'A 小区' },
+    { community_id: 'c2', community_name: 'B 小区' },
+  ]);
+}
+
+// 预置 uni storage 的 current_community_id='c1'：store 初始化即选中 c1，
+// loadMemberships 不再变更 → 不触发 watch 的二次 loadAll，getNoticeList 参数与
+// console.error 次数均确定可断言（避免共享 storage 跨用例污染）
+function seedStoredCommunity() {
+  uni.setStorageSync('current_community_id', 'c1');
 }
 
 describe('notice page — onCommunitySwitch 10015 branch', () => {
@@ -102,12 +114,9 @@ describe('notice page — fetch 静默 catch 消除（REQ-P1-ERR）', () => {
     setActivePinia(pinia);
     vi.clearAllMocks();
     (getNoticeList as any).mockResolvedValue({ notices: [], total: '0' });
-    (getContacts as any).mockResolvedValue({ contacts: [] });
     (getLostFoundList as any).mockResolvedValue({ items: [], total: '0' });
-    (getUserMemberships as any).mockResolvedValue([
-      { community_id: 'c1', community_name: 'A 小区' },
-      { community_id: 'c2', community_name: 'B 小区' },
-    ]);
+    seedMemberships();
+    seedStoredCommunity();
   });
 
   afterEach(() => {
@@ -140,42 +149,25 @@ describe('notice page — fetch 静默 catch 消除（REQ-P1-ERR）', () => {
     expect(errSpy).toHaveBeenCalled();
   });
 
-  it('getContacts 失败 → 联络 toast + console.error', async () => {
-    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    (getContacts as any).mockRejectedValue(new Error('联络请求失败'));
-
-    mount(NoticePage, { global: { plugins: [pinia] } });
-    await flushPromises();
-
-    expect(uni.showToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: '联络加载失败', icon: 'none' }),
-    );
-    expect(errSpy).toHaveBeenCalled();
-  });
-
-  it('三请求并发全部失败 → toast ≥1 次 + console.error 恰好 3 次 + 页面不崩', async () => {
+  it('双请求并发全部失败 → toast ≥1 次 + console.error 恰好 2 次 + 页面不崩', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     (getNoticeList as any).mockRejectedValue(new Error('通知请求失败'));
-    (getContacts as any).mockRejectedValue(new Error('联络请求失败'));
     (getLostFoundList as any).mockRejectedValue(new Error('寻失请求失败'));
 
     const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
     await flushPromises();
 
     expect(uni.showToast).toHaveBeenCalled();
-    expect(errSpy).toHaveBeenCalledTimes(3);
+    expect(errSpy).toHaveBeenCalledTimes(2);
     // 页面不崩：loading 复位 + 内容区（空态）渲染而非骨架屏
     expect((wrapper.vm as any).loading).toBe(false);
     expect(wrapper.text()).toContain('暂无通知公告');
     expect(wrapper.text()).toContain('暂无寻失信息');
   });
 
-  it('局部失败（通知失败 + 其余成功）→ 成功区块数据仍渲染', async () => {
+  it('局部失败（通知失败 + 寻失成功）→ 成功区块数据仍渲染', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     (getNoticeList as any).mockRejectedValue(new Error('通知请求失败'));
-    (getContacts as any).mockResolvedValue({
-      contacts: [{ id: 'ct1', community_id: 'c1', category: 1, name: '供水维修', phone: '12345678901', sort_order: 1 }],
-    });
     (getLostFoundList as any).mockResolvedValue({
       items: [{ id: 'lf1', community_id: 'c1', type: 1, title: '丢失的钥匙', description: '', image_urls: [], contact_phone: '13800000000', status: 1, publisher_id: 'u1', created_at: 1234567890 }],
       total: '1',
@@ -184,7 +176,6 @@ describe('notice page — fetch 静默 catch 消除（REQ-P1-ERR）', () => {
     const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
     await flushPromises();
 
-    expect(wrapper.text()).toContain('12345678901');
     expect(wrapper.text()).toContain('丢失的钥匙');
   });
 
@@ -226,5 +217,135 @@ describe('notice page — fetch 静默 catch 消除（REQ-P1-ERR）', () => {
     await flushPromises();
 
     expect(uni.showToast).not.toHaveBeenCalled();
+  });
+});
+
+describe('notice page — 首页通知 30 天窗口参数（REQ-NTW-1/2）', () => {
+  beforeEach(() => {
+    pinia = createPinia();
+    setActivePinia(pinia);
+    vi.clearAllMocks();
+    (getNoticeList as any).mockResolvedValue({ notices: [], total: '0' });
+    (getLostFoundList as any).mockResolvedValue({ items: [], total: '0' });
+    seedMemberships();
+    seedStoredCommunity();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('首页通知以 since_days=30 & page_size=3 调用 getNoticeList', async () => {
+    mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    expect(getNoticeList).toHaveBeenCalledWith('c1', 1, 3, 30);
+  });
+});
+
+describe('notice page — 4 功能图标入口（REQ-FE-1/2/3）', () => {
+  beforeEach(() => {
+    pinia = createPinia();
+    setActivePinia(pinia);
+    vi.clearAllMocks();
+    (getNoticeList as any).mockResolvedValue({ notices: [], total: '0' });
+    (getLostFoundList as any).mockResolvedValue({ items: [], total: '0' });
+    seedMemberships();
+    seedStoredCommunity();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('4 个入口按固定顺序渲染：便民联络/物业报修/二手闲置/租房卖房', async () => {
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    const entries = wrapper.findAll('.func-entry');
+    expect(entries.length).toBe(4);
+    const labels = entries.map(e => e.find('.func-entry-label').text());
+    expect(labels).toEqual(['便民联络', '物业报修', '二手闲置', '租房卖房']);
+  });
+
+  it('点击便民联络 → uni.navigateTo 到 contact-list（做实跳页）', async () => {
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    const entry = wrapper.findAll('.func-entry')[0];
+    await entry.trigger('click');
+
+    expect(uni.navigateTo).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/pages/contact-list/contact-list' }),
+    );
+    expect(uni.showToast).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [1, '物业报修'],
+    [2, '二手闲置'],
+    [3, '租房卖房'],
+  ])('点击 %s 占位入口 → showToast 功能开发中 且不跳转', async (idx, label) => {
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    const entry = wrapper.findAll('.func-entry')[idx as number];
+    await entry.trigger('click');
+
+    expect(uni.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: '功能开发中' }),
+    );
+    expect(uni.navigateTo).not.toHaveBeenCalled();
+  });
+
+  it('未加入小区（hasCommunities=false）时不渲染入口区', async () => {
+    (getUserMemberships as any).mockResolvedValue([]);
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    expect(wrapper.findAll('.func-entry').length).toBe(0);
+    expect(wrapper.text()).toContain('请先加入小区以查看更多内容');
+  });
+});
+
+describe('notice page — 区块垂直全序（REQ-HL-4）', () => {
+  beforeEach(() => {
+    pinia = createPinia();
+    setActivePinia(pinia);
+    vi.clearAllMocks();
+    (getNoticeList as any).mockResolvedValue({ notices: [], total: '0' });
+    (getLostFoundList as any).mockResolvedValue({ items: [], total: '0' });
+    seedMemberships();
+    seedStoredCommunity();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('固定全序：4功能入口 → 邻里互助占位 → 寻失互助 → 底部广告集中区', async () => {
+    const wrapper = mount(NoticePage, { global: { plugins: [pinia] } });
+    await flushPromises();
+
+    // 邻里互助占位区块存在且为占位文案（不伪造数据）
+    const neighbor = wrapper.findAll('.section').find(s => s.text().includes('邻里互助'))!;
+    expect(neighbor.text()).toContain('互助功能开发中');
+
+    // 底部广告集中区存在，3 个广告垂直堆叠
+    const adSection = wrapper.find('.ad-section');
+    expect(adSection.exists()).toBe(true);
+    expect(adSection.findAll('.ad-banner').length).toBe(3);
+
+    // 全序断言：func-entries < 邻里互助 < 寻失互助 < 底部广告集中区
+    const pos = (a: HTMLElement, b: HTMLElement) =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    const funcEntries = wrapper.find('.func-entries').element as HTMLElement;
+    const neighborEl = neighbor.element as HTMLElement;
+    const lostFoundEl = wrapper.findAll('.section').find(s => s.text().includes('寻失互助'))!.element as HTMLElement;
+    const adSectionEl = adSection.element as HTMLElement;
+
+    expect(pos(funcEntries, neighborEl)).toBe(true);
+    expect(pos(neighborEl, lostFoundEl)).toBe(true);
+    expect(pos(lostFoundEl, adSectionEl)).toBe(true);
   });
 });

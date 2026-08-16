@@ -69,6 +69,12 @@
       }
     },
     {
+      "path": "pages/contact-list/contact-list",
+      "style": {
+        "navigationBarTitleText": "便民联络"
+      }
+    },
+    {
       "path": "pages/user-detail/user-detail",
       "style": {
         "navigationBarTitleText": "用户详情"

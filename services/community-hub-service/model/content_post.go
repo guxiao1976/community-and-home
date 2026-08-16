@@ -62,9 +62,10 @@ type ContentPostModel interface {
 	// FindOne 写接口存在性/归属校验（deleted_at IS NULL）。
 	FindOne(ctx context.Context, id int64) (*ContentPost, error)
 	// FindListByCommunity 读列表：JOIN content_post_scope（scope.community_id=?）+ IsReviewComplete 谓词 +
-	// 可选 section_code/role 筛选 + order by is_pinned desc, published_at desc（NULLS LAST 防御）+ 分页。
+	// 可选 section_code/role 筛选 + 可选时间窗口（opts ...ContentPostListOption，WithTimeWindow 追加
+	// published_at 范围谓词，缺省 additive 不过滤）+ order by is_pinned desc, published_at desc（NULLS LAST 防御）+ 分页。
 	// 显式投影 content_posts.* + content_post_scope.community_id（右表限定，防双 community_id 列取到弃用 NULL）。
-	FindListByCommunity(ctx context.Context, communityId int64, sectionCode, role string, offset, limit int64) ([]*ContentPost, int64, error)
+	FindListByCommunity(ctx context.Context, communityId int64, sectionCode, role string, offset, limit int64, opts ...ContentPostListOption) ([]*ContentPost, int64, error)
 	// FindOneReviewComplete 读详情专用：仅返回审核完整（status=approved + 附件完整性谓词）的内容。
 	FindOneReviewComplete(ctx context.Context, id int64) (*ContentPost, error)
 	// FindMarquee 跑马灯：JOIN scope、status=approved + 附件完整性、published_at >= since（含端点）、
@@ -117,6 +118,48 @@ func IsReviewComplete(status int64, approvedAttachments, attachmentCount int64) 
 // 走 `idx_notice(post_id)`，勿退化为全表扫描（评审 data-model v4 I4）。
 const attachmentCompleteSubquery = `(select count(*) from ` + "`content_post_attachments`" + ` where post_id = content_posts.id and review_status = 1) = content_posts.attachment_count`
 
+// ContentPostListOption FindListByCommunity 读列表可选选项（additive：nil/缺省=不过滤）。
+type ContentPostListOption func(*contentPostListParams)
+
+// contentPostListParams FindListByCommunity 可选参数内部载体。
+type contentPostListParams struct {
+	since *time.Time // 时间窗口下界（含端点）；nil=不过滤
+}
+
+// WithTimeWindow 时间窗口：published_at ∈ [since, now]（含端点）。
+// published_at NULL 恒不匹配下界；未来行被上界排除（D12，参数化查询防注入）。
+func WithTimeWindow(since time.Time) ContentPostListOption {
+	return func(p *contentPostListParams) {
+		s := since
+		p.since = &s
+	}
+}
+
+// ContentPostListOptionSince 自省：返回 opts 中的窗口下界；无窗口选项返回 nil。
+// 供调用方/测试确认窗口参数（additive：nil=缺省不过滤）。
+func ContentPostListOptionSince(opts ...ContentPostListOption) *time.Time {
+	p := &contentPostListParams{}
+	for _, o := range opts {
+		o(p)
+	}
+	return p.since
+}
+
+// buildWindowClause 将 opts 应用为时间窗口谓词（count/list 共用）：
+// 有窗口 → ` and content_posts.published_at >= ? and content_posts.published_at <= ?` + [since, now]；
+// 无窗口 → 空片段 + 零参数（additive，缺省行为不变）。上界 time.Now() 在执行时取。
+func buildWindowClause(opts ...ContentPostListOption) (string, []interface{}) {
+	p := &contentPostListParams{}
+	for _, o := range opts {
+		o(p)
+	}
+	if p.since == nil {
+		return "", nil
+	}
+	return ` and content_posts.published_at >= ? and content_posts.published_at <= ?`,
+		[]interface{}{*p.since, time.Now()}
+}
+
 func (m *defaultContentPostModel) Insert(ctx context.Context, n *ContentPost) (int64, error) {
 	return m.insert(ctx, m.conn, n)
 }
@@ -155,7 +198,11 @@ func (m *defaultContentPostModel) FindOne(ctx context.Context, id int64) (*Conte
 // 显式投影 `content_posts.*, content_post_scope.community_id`：go-zero sqlx 按列名赋值、
 // 同名列后者覆盖前者——右表 scope.community_id 在投影末尾，确保 ContentPost.CommunityId 取到
 // 请求小区而非 content_posts 弃用 NULL 列（评审 data-model v4 I4/JOIN 投影）。
-func (m *defaultContentPostModel) FindListByCommunity(ctx context.Context, communityId int64, sectionCode, role string, offset, limit int64) ([]*ContentPost, int64, error) {
+// FindListByCommunity 读列表：JOIN content_post_scope 按目标小区过滤 + 审核完整性谓词 + 可选时间窗口。
+// opts 为变参（ContentPostListOption）：WithTimeWindow(since) 提供时，count/list 追加
+// `published_at >= ? AND published_at <= ?`（下界 since、上界 now）；缺省无窗口谓词（additive）。
+func (m *defaultContentPostModel) FindListByCommunity(ctx context.Context, communityId int64, sectionCode, role string, offset, limit int64, opts ...ContentPostListOption) ([]*ContentPost, int64, error) {
+	windowSQL, windowArgs := buildWindowClause(opts...)
 	var total int64
 	countQuery := `select count(*) from ` + m.table + ` join ` + "`content_post_scope`" + ` on content_posts.id = content_post_scope.post_id
 		where content_post_scope.community_id = ? and content_posts.deleted_at is null
@@ -170,6 +217,8 @@ func (m *defaultContentPostModel) FindListByCommunity(ctx context.Context, commu
 		countQuery += ` and content_posts.role = ?`
 		countArgs = append(countArgs, role)
 	}
+	countQuery += windowSQL
+	countArgs = append(countArgs, windowArgs...)
 
 	if err := m.conn.QueryRowCtx(ctx, &total, countQuery, countArgs...); err != nil {
 		return nil, 0, err
@@ -188,6 +237,8 @@ func (m *defaultContentPostModel) FindListByCommunity(ctx context.Context, commu
 		query += ` and content_posts.role = ?`
 		queryArgs = append(queryArgs, role)
 	}
+	query += windowSQL
+	queryArgs = append(queryArgs, windowArgs...)
 	query += ` order by content_posts.is_pinned desc, content_posts.published_at desc limit ?, ?`
 	queryArgs = append(queryArgs, offset, limit)
 

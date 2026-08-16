@@ -1,0 +1,51 @@
+schema: spec-driven
+created: 2026-08-16
+change: mobile-homepage-content-revamp
+title: 移动端「社区家园」首页信息架构改造（通知30天窗口/4功能入口/邻里互助占位/广告位集中/联络页+补表）
+size: 大
+priority: P1
+change_type: modify
+services:
+  - web/mobile
+  - community-hub-service
+  - api-proto
+revises:
+  # REVISION #6: getmarqueenoticeslogic.go 已从本变更移除（移动端跑马灯不消费 GetMarqueeNotices，后端常量变更无效/冗余）
+  - web/mobile/src/pages/notice/notice.vue
+  - web/mobile/src/pages/notice-browse/notice-browse.vue
+  - web/mobile/src/pages/notice-detail/notice-detail.vue
+  - web/mobile/src/api/community.ts
+  - web/mobile/src/pages.json
+  # 新建文件（非修订）：migration 004 为 community_contacts 幂等补表；REVISION #5 要求 content_posts 窗口过滤索引（设计阶段定迁移编号）
+  - services/community-hub-service/migration/004_add_community_contacts.sql
+  - services/community-hub-service/rpc/internal/logic/notice/listcontentpostslogic.go
+  - services/community-hub-service/model/content_post.go
+  - api-proto/api/community/v1/community.proto
+  # REVISION r2-2: since_days 需经 REST 层透传——ListContentPostsReq 新增 since_days form 字段 + api logic 透传至 RPC；仅列 RPC logic 会致 REST 层丢弃该参数、移动端 30 天窗口静默失效
+  - services/community-hub-service/api/internal/types/types.go
+  - services/community-hub-service/api/internal/logic/notice/listcontentpostslogic.go
+specs:
+  - capability: notice-time-window
+    file: specs/notice-time-window/spec.md
+  - capability: notice-detail-preview
+    file: specs/notice-detail-preview/spec.md
+  - capability: function-entries
+    file: specs/function-entries/spec.md
+  - capability: contact-list-page
+    file: specs/contact-list-page/spec.md
+  - capability: homepage-layout
+    file: specs/homepage-layout/spec.md
+out_of_scope:
+  - 邻里互助后端数据源/模型/表/接口（D9 本期不开发；「7天内3条」行为依赖后端，推迟）
+  - 邻里互助列表页/详情页/用户发布入口（D8 本期无）
+  - 物业报修/二手闲置/租房卖房落地页（D3 仅入口占位，点击提示「功能开发中」）
+  - 广告位内容动态化/运营配置/点击跳转（D6/D7 内容前端硬编码、点击预留不跳转）
+  - community_contacts 种子数据预置（D4 空态，运营后续维护）
+  - 寻失互助首页展示风格改动（保持现状）
+  - 后端 GetMarqueeNotices 修改（REVISION #6：移动端跑马灯由首页通知列表派生，非该 RPC）
+  - 前端直连 file-service REST GET /api/files/:id 的附件读（REVISION #4：该端点强制所有权，改为消费详情响应重生 file_url）
+  - PC 端 / 管理后台联动改造
+  - 通知发布侧改造
+proto_change_required: true
+common_change_required: false
+data_migration_required: true
