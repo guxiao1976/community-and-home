@@ -1,5 +1,48 @@
 # CHANGELOG — permission-service
 
+## 2026-08-16 — content-post-generalization 权限部分（Task 3.1 + 3.2）：AssertPublishScope 社区管理员角色感知展开 + 权限种子矩阵
+
+### 类型
+分诊：**Task 3.1 属有逻辑函数**（`resolvePublishScope`/`holdsCommunityAdminRole`/`expandCommunityAdminDivision` 为分支/转换/校验）→ 走 RED→GREEN（留 RED FAIL 摘录）；**Task 3.2 属字段映射类**（种子 SQL 加权限码 + rel 绑定 + 文档补登，无逻辑函数）→ 免 RED（幂等验证查询兜底，执行由 Owner 验证）。
+
+### TDD 证据（RED FAIL 摘录 → GREEN PASS）
+
+#### RED — Task 3.1 社区管理员 division 展开（`go test -run TestAssertPublishScope_CommunityAdminDivisionExpansion`）
+```
+--- FAIL: TestAssertPublishScope_CommunityAdminDivisionExpansion (0.02s)
+    --- FAIL: TestAssertPublishScope_CommunityAdminDivisionExpansion/community_admin@100_发同division_101_✅（子树展开生效） (0.02s)
+        Not equal: expected: true  actual: false   (Allowed 应为 true)
+    --- FAIL: TestAssertPublishScope_CommunityAdminDivisionExpansion/community_admin@100_发同division_102_✅（子树展开全部_approved_小区） (0.00s)
+    --- FAIL: TestAssertPublishScope_CommunityAdminDivisionExpansion/共享调用方：community_admin_发同division_101_✅（lostfound/contacts_同判据） (0.00s)
+    --- FAIL: TestAssertPublishScope_CommunityAdminDivisionExpansion/community_admin_多grant多division_并集展开_201_✅ (0.00s)
+```
+根因：现状 `resolveUserScope` 不展开 division，community_admin 的 community grant 仅覆盖本小区。
+GREEN：`ok`，15 用例全 PASS（子树展开生效 / division 外 060007 / 未知节点 fail-closed / 非 admin 不展开回归 / 共享调用方回归 / 多 grant 多 division 并集展开 / GetResidentialArea 失败 fail-closed / 过期(4)·驳回(3) grant 不驱动展开）。
+
+### 做了什么
+- **T3.1** `rpc/internal/logic/permission/scope.go`：新增 `resolvePublishScope(ctx, urm, mdClient, userId)` 发布专用 scope 解析变体——基线同 `resolveUserScope`（community grant ids 并集 + GLOBAL 支配短路）；**社区管理员角色感知展开**（`RoleCodeCommunityAdmin = "community_admin"` + `holdsCommunityAdminRole` + `expandCommunityAdminDivision`）：用户持 active community_admin 角色（grantActive，URStatus∈{0,1,2}）时，对每个 community grant 的 scope_id（communityId）→ masterdata `GetResidentialArea(communityId).community_div_id` → `GetResidentialAreasByDivision(division, status=1)` → approved 小区子树并入 ids；非 community_admin（owner/tenant/committee/property_admin/grid_worker）语义完全不变；`resolveUserScope` 读路径（GetDataScopes）不动。masterdata 展开失败 fail-closed（跳过该 grant 子树贡献，目标级 targetCovered 拒绝）。
+- **T3.1** `rpc/internal/logic/permission/assertpublishscopelogic.go`：`AssertPublishScope` 改用 `resolvePublishScope`（L38）；GLOBAL/EMPTY/逐 target `targetCovered` 判据不变。
+- **T3.1** 新建 `assertpublishscope_division_test.go`：`divisionFakeMD` fake（ResolveScopeAncestors + GetResidentialArea + GetResidentialAreasByDivision）+ `TestAssertPublishScope_CommunityAdminDivisionExpansion`（15 用例，覆盖 design gate 门禁场景 1-6 + 防御）。
+- **T3.2** `scripts/init_permissions.sql` 新增段 6（REQ-CPP-3 REVISION，幂等）：421 `min_verf_level` 0→2（需已认证，覆盖 4.2 默认 0）；**显式 DELETE (1,421)/(5,421)**（owner/tenant 撤销，保留 435/436——INSERT IGNORE 无法撤销）；grid_worker(4) 授 421；property_admin(2) 保留 421（不做回收，推翻 notice D26）；新增读码 423（marquee）/424（publish-permission）/426（detail，parent_id=410）+ 写码 427（DELETE）/428（PUT，parent_id=420）；422 扩展绑定全部移动端角色（补 3/4/6/7/8，含 sys_admin 补挂）；新增码绑定全部移动端角色 {1,3,4,5,6,7,8,9}；段 6.7 幂等验证查询断言精确到具体码（owner/tenant 无 421、四发布角色持 421、421 min_verf_level=2、422 绑定 8 角色、新增码 40 条绑定、parent_id 无孤儿）。
+- **T3.2** `docs/specs/rbac-design.md` §6.5 补登 §6.5.1 content-posts 发布/读写权限矩阵（写路径 421/427/428 + 读路径 422/423/424/426 + parent_id 汇总 + 幻影 435 措辞 + property_admin 421↔427/428 不对称注明 + 080002 跨端点重载语义）。
+
+### 影响
+- Proto: 无（未修改 api-proto/）
+- 调用方: community-hub-service（`AssertPublishScope` 为共享 RPC，还被 lostfound 创建、contacts upsert 调用）——community_admin 持 community grant 时其 division 下全部 approved 小区连带放行（division 管辖权覆盖其全部小区，修复「仅能写自己小区权限过窄」，属共享语义变更，已在 T3.1 共享调用方回归用例声明）
+- 数据库: `init_permissions.sql` 段 6（permission 库 sys_permission + rel_role_permission 变更）；**执行由 Owner 验证**（种子 SQL 写但执行不在 harness-pipeline）
+- 安全: 421 min_verf_level 0→2 收窄未认证发布（堵 level-0 未认证业主直调创建）；owner/tenant 撤销 421（保留 435/436）；社区管理员 division 展开由既有 community grant 派生（非任意 division 指定）；已过期/已驳回 grant 不驱动展开
+- 门禁: `go build ./...` + `go vet ./...` + `go test ./...` 全绿；`harness-checks.sh --service permission-service` → 18 PASS, 0 FAIL, 3 WARN（3 WARN 均为既有：proto→TS 滞后 / design_consistency deleted_at / git 治理漂移，非本次引入）
+
+### 应用的记忆
+- [[is-system-no-permission-shortcut]] (must-follow) — resolvePublishScope 角色判定仅驱动数据范围展开，非权限短路（scope.go / assertpublishscopelogic.go）
+- [[grpc-timeout-layers]] (must-follow) — AssertPublishScope 内嵌 GetResidentialArea/GetResidentialAreasByDivision/ResolveScopeAncestors 超时对齐
+- [[permission-seed-api-path-must-match-routes]] (must-follow) — 423/424/426/427/428 path 与实际 REST 路由一致（REST 路径保持 /api/community/notices）
+- [[insert-ignore-swallows-errors]] (must-follow) — 撤销 (1,421)/(5,421) 用显式 DELETE
+- [[auto-grant-unverified-grant-confers-scope-level0]] (must-follow) — 421 min_verf_level=2 收窄未认证发布
+- [[tdd-red-evidence-requires-fail-excerpt]] (must-follow) — T3.1 附 RED FAIL 摘录
+
+---
+
 ## 2026-08-15 — rel-user-role-migration-publish-fix：rel_user_role 生命周期三列补齐迁移（003_add_role_lifecycle.sql）
 
 ### 类型

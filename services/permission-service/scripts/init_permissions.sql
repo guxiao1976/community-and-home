@@ -303,6 +303,86 @@ INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
 (8, 700), (8, 701);   -- sys_admin（全权限语义）
 
 -- ============================================================================
+-- 6. 通用图文发布权限种子（content-post-generalization，REQ-CPP-3 REVISION）
+--    -- 目标：421 min_verf_level 0→2（需已认证）+ grid_worker 授 421 + owner/tenant 撤销 421
+--    --       + 读码 422 扩展全部移动端角色 + 新增 423/424/426（读）+ 427/428（写）
+--    -- 幂等：UPDATE + INSERT IGNORE + 幂等 DELETE，可重复执行
+--    -- 「全部移动端角色」={owner1 / community_admin3 / grid_worker4 / tenant5 / committee6 /
+--    --                     merchant7 / sys_admin8 / registered_user9}
+--    -- property_admin(2) platforms='pc' 不绑移动端读码与 427/428，仅保留 421（PC 走后续接线，
+--    --   创建后编辑/撤回由 080002 作者校验兜底——评审 SHOULD #4 不对称注明）
+-- ============================================================================
+
+-- 6.1 421（community:notice:create-api）min_verf_level 0→2（行为变更：需已认证，REVISION）
+--     覆盖 4.2 的默认 min_verf_level=0（脚本自上而下，本段恒生效）；写路径角色状态门槛=level-2
+--     （status==2 且 verified_at NOT NULL 且未过期，与 GetPublishPermission/community-hub 判定一致）
+-- SEE: [[auto-grant-unverified-grant-confers-scope-level0]]
+UPDATE sys_permission SET min_verf_level = 2 WHERE code = 'community:notice:create-api';
+
+-- 6.2 撤销 owner(1)/tenant(5) 的 421（保留 435/436——(1,435)/(1,436)/(5,435)/(5,436) 不动）
+--     INSERT IGNORE 无法撤销，须显式 DELETE（SEE: [[insert-ignore-swallows-errors]]）
+DELETE FROM rel_role_permission WHERE (role_id, permission_id) IN ((1,421),(5,421));
+
+-- 6.3 grid_worker(4) 授 421（本小区发布权，D6；property_admin(2) 保留 421——不做回收，推翻 notice D26）
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES (4, 421);
+
+-- 6.4 新增读码 423/424/426（parent_id=410 community:read）+ 写码 427/428（parent_id=420 community:notice）
+--     path 与实际 REST 路由一致（REST 路径保持 /api/community/notices，R2 wire 兼容；勿孤儿节点）
+-- SEE: [[permission-seed-api-path-must-match-routes]]
+INSERT IGNORE INTO sys_permission (id, parent_id, name, code, type, path, icon, sort_order, status, created_at, updated_at)
+VALUES
+(423, 410, 'GET /api/community/notices/marquee', 'community:notice:read-marquee-api', 3, 'GET:/api/community/notices/marquee', NULL, 16, 1, NOW(), NOW()),
+(424, 410, 'GET /api/community/notices/publish-permission', 'community:notice:publish-permission-api', 3, 'GET:/api/community/notices/publish-permission', NULL, 17, 1, NOW(), NOW()),
+(426, 410, 'GET /api/community/notices/:id', 'community:notice:read-detail-api', 3, 'GET:/api/community/notices/:id', NULL, 18, 1, NOW(), NOW()),
+(427, 420, 'DELETE /api/community/notices/:id', 'community:notice:delete-api', 3, 'DELETE:/api/community/notices/:id', NULL, 21, 1, NOW(), NOW()),
+(428, 420, 'PUT /api/community/notices/:id', 'community:notice:update-api', 3, 'PUT:/api/community/notices/:id', NULL, 22, 1, NOW(), NOW());
+
+-- 6.5 422 扩展绑定全部移动端角色（现仅 (9,1,5)；补 grid_worker4 / committee6 / merchant7 /
+--     community_admin3 / sys_admin8——sys_admin 的「全权限」绑定在 422 创建前执行，须补挂）
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(3, 422), (4, 422), (6, 422), (7, 422), (8, 422);
+
+-- 6.6 新增 423/424/426/427/428 绑定全部移动端角色 {1,3,4,5,6,7,8,9}（各 8 角色 × 5 码 = 40 条）
+--     property_admin(2) platforms='pc' 不绑（platforms 端准入；427/428 绑全移动端，
+--     property_admin 创建后操作由 080002 作者校验兜底——评审 SHOULD #4 不对称注明）
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES
+(1, 423), (3, 423), (4, 423), (5, 423), (6, 423), (7, 423), (8, 423), (9, 423),
+(1, 424), (3, 424), (4, 424), (5, 424), (6, 424), (7, 424), (8, 424), (9, 424),
+(1, 426), (3, 426), (4, 426), (5, 426), (6, 426), (7, 426), (8, 426), (9, 426),
+(1, 427), (3, 427), (4, 427), (5, 427), (6, 427), (7, 427), (8, 427), (9, 427),
+(1, 428), (3, 428), (4, 428), (5, 428), (6, 428), (7, 428), (8, 428), (9, 428);
+
+-- 6.7 content-post 权限种子验证（REQ-CPP-3 断言精确到具体码）
+--     ① owner/tenant 撤销 421 生效（(1,421)/(5,421) 删除），② 发布角色保留（property_admin/grid_worker/community_admin/committee 持 421）
+SELECT 'content-post 写权限 421' AS check_type,
+       (SELECT COUNT(*) FROM rel_role_permission WHERE (role_id, permission_id) IN ((1,421),(5,421))) AS owner_tenant_421,
+       (SELECT COUNT(*) FROM rel_role_permission WHERE (role_id, permission_id) IN ((2,421),(3,421),(4,421),(6,421))) AS publish_roles_421,
+       CASE WHEN (SELECT COUNT(*) FROM rel_role_permission WHERE (role_id, permission_id) IN ((1,421),(5,421))) = 0
+             AND (SELECT COUNT(*) FROM rel_role_permission WHERE (role_id, permission_id) IN ((2,421),(3,421),(4,421),(6,421))) = 4
+             THEN '✅ PASS' ELSE '❌ FAIL' END AS status;
+
+SELECT '421 min_verf_level' AS check_type, min_verf_level,
+       CASE WHEN min_verf_level = 2 THEN '✅ PASS' ELSE '❌ FAIL' END AS status
+FROM sys_permission WHERE code = 'community:notice:create-api';
+
+SELECT 'content-post 读码 422 扩展' AS check_type,
+       (SELECT COUNT(*) FROM rel_role_permission WHERE permission_id = 422 AND role_id IN (1,3,4,5,6,7,8,9)) AS mobile_bindings,
+       CASE WHEN (SELECT COUNT(*) FROM rel_role_permission WHERE permission_id = 422 AND role_id IN (1,3,4,5,6,7,8,9)) = 8
+             THEN '✅ PASS' ELSE '❌ FAIL' END AS status;
+
+SELECT 'content-post 新增读/写码绑定' AS check_type,
+       (SELECT COUNT(*) FROM rel_role_permission WHERE permission_id IN (423,424,426,427,428) AND role_id IN (1,3,4,5,6,7,8,9)) AS bindings,
+       CASE WHEN (SELECT COUNT(*) FROM rel_role_permission WHERE permission_id IN (423,424,426,427,428) AND role_id IN (1,3,4,5,6,7,8,9)) = 40
+             THEN '✅ PASS' ELSE '❌ FAIL' END AS status;
+
+SELECT 'content-post 新增码 parent_id（防孤儿节点）' AS check_type,
+       (SELECT COUNT(*) FROM sys_permission WHERE id IN (423,424,426) AND parent_id = 410) AS read_parent_ok,
+       (SELECT COUNT(*) FROM sys_permission WHERE id IN (427,428) AND parent_id = 420) AS write_parent_ok,
+       CASE WHEN (SELECT COUNT(*) FROM sys_permission WHERE id IN (423,424,426) AND parent_id = 410) = 3
+             AND (SELECT COUNT(*) FROM sys_permission WHERE id IN (427,428) AND parent_id = 420) = 2
+             THEN '✅ PASS' ELSE '❌ FAIL' END AS status;
+
+-- ============================================================================
 -- 数据验证查询
 -- ============================================================================
 
