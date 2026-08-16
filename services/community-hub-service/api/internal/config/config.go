@@ -14,6 +14,10 @@ type Config struct {
 	}
 	CommunityHubRpc zrpc.RpcClientConf
 	PermissionRpc   zrpc.RpcClientConf
+	// DataSource 仅用于 REST 详情 community_id 兼容回退（R2）：GET /notices/:id 缺 community_id 时
+	// 按 content_post_scope 反查帖所属小区 + FilterAllowed 任一允许即放行（contentcompat）。
+	// 只读查询（FindOneReviewComplete / FindCommunityIdsByPostId），不承载写路径。
+	DataSource string
 }
 
 // JWT claim 契约（auth-service 签发，access-data-permission 阶段③④ 消费侧统一）：

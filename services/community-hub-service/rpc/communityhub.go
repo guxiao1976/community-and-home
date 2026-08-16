@@ -23,7 +23,7 @@ func main() {
 
 	ctx := svc.NewServiceContext(c)
 	s := zrpc.MustNewServer(c.RpcServerConf, func(grpcServer *grpc.Server) {
-		communityv1.RegisterNoticeServiceServer(grpcServer, server.NewNoticeServiceServer(ctx))
+		communityv1.RegisterContentPostServiceServer(grpcServer, server.NewContentPostServiceServer(ctx))
 		communityv1.RegisterContactServiceServer(grpcServer, server.NewContactServiceServer(ctx))
 		communityv1.RegisterLostFoundServiceServer(grpcServer, server.NewLostFoundServiceServer(ctx))
 	})

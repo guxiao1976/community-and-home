@@ -10,38 +10,42 @@ import (
 	"github.com/guxiao1976/community-hub/rpc/internal/svc"
 )
 
-// NoticeServiceServer 通知公告 gRPC Server
-type NoticeServiceServer struct {
+// ContentPostServiceServer 通用图文发布 gRPC Server（原 NoticeServiceServer 改名，D4）。
+type ContentPostServiceServer struct {
 	svcCtx *svc.ServiceContext
-	communityv1.UnimplementedNoticeServiceServer
+	communityv1.UnimplementedContentPostServiceServer
 }
 
-func NewNoticeServiceServer(svcCtx *svc.ServiceContext) *NoticeServiceServer {
-	return &NoticeServiceServer{svcCtx: svcCtx}
+func NewContentPostServiceServer(svcCtx *svc.ServiceContext) *ContentPostServiceServer {
+	return &ContentPostServiceServer{svcCtx: svcCtx}
 }
 
-func (s *NoticeServiceServer) CreateNotice(ctx context.Context, in *communityv1.CreateNoticeRequest) (*communityv1.CreateNoticeResponse, error) {
-	return notice.NewCreateNoticeLogic(ctx, s.svcCtx).CreateNotice(in)
+func (s *ContentPostServiceServer) CreateContentPost(ctx context.Context, in *communityv1.CreateContentPostRequest) (*communityv1.CreateContentPostResponse, error) {
+	return notice.NewCreateContentPostLogic(ctx, s.svcCtx).CreateContentPost(in)
 }
 
-func (s *NoticeServiceServer) ListNotices(ctx context.Context, in *communityv1.ListNoticesRequest) (*communityv1.ListNoticesResponse, error) {
-	return notice.NewListNoticesLogic(ctx, s.svcCtx).ListNotices(in)
+func (s *ContentPostServiceServer) ListContentPosts(ctx context.Context, in *communityv1.ListContentPostsRequest) (*communityv1.ListContentPostsResponse, error) {
+	return notice.NewListContentPostsLogic(ctx, s.svcCtx).ListContentPosts(in)
 }
 
-func (s *NoticeServiceServer) GetNotice(ctx context.Context, in *communityv1.GetNoticeRequest) (*communityv1.GetNoticeResponse, error) {
-	return notice.NewGetNoticeLogic(ctx, s.svcCtx).GetNotice(in)
+func (s *ContentPostServiceServer) GetContentPost(ctx context.Context, in *communityv1.GetContentPostRequest) (*communityv1.GetContentPostResponse, error) {
+	return notice.NewGetContentPostLogic(ctx, s.svcCtx).GetContentPost(in)
 }
 
-func (s *NoticeServiceServer) UpdateNotice(ctx context.Context, in *communityv1.UpdateNoticeRequest) (*communityv1.UpdateNoticeResponse, error) {
-	return notice.NewUpdateNoticeLogic(ctx, s.svcCtx).UpdateNotice(in)
+func (s *ContentPostServiceServer) UpdateContentPost(ctx context.Context, in *communityv1.UpdateContentPostRequest) (*communityv1.UpdateContentPostResponse, error) {
+	return notice.NewUpdateContentPostLogic(ctx, s.svcCtx).UpdateContentPost(in)
 }
 
-func (s *NoticeServiceServer) DeleteNotice(ctx context.Context, in *communityv1.DeleteNoticeRequest) (*communityv1.DeleteNoticeResponse, error) {
-	return notice.NewDeleteNoticeLogic(ctx, s.svcCtx).DeleteNotice(in)
+func (s *ContentPostServiceServer) DeleteContentPost(ctx context.Context, in *communityv1.DeleteContentPostRequest) (*communityv1.DeleteContentPostResponse, error) {
+	return notice.NewDeleteContentPostLogic(ctx, s.svcCtx).DeleteContentPost(in)
 }
 
-func (s *NoticeServiceServer) UpdateNoticeModerationStatus(ctx context.Context, in *communityv1.UpdateModerationStatusRequest) (*communityv1.UpdateModerationStatusResponse, error) {
-	return notice.NewUpdateNoticeModerationStatusLogic(ctx, s.svcCtx).UpdateNoticeModerationStatus(in)
+func (s *ContentPostServiceServer) GetPublishPermission(ctx context.Context, in *communityv1.GetPublishPermissionRequest) (*communityv1.GetPublishPermissionResponse, error) {
+	return notice.NewGetPublishPermissionLogic(ctx, s.svcCtx).GetPublishPermission(in)
+}
+
+func (s *ContentPostServiceServer) GetMarqueeNotices(ctx context.Context, in *communityv1.GetMarqueeNoticesRequest) (*communityv1.GetMarqueeNoticesResponse, error) {
+	return notice.NewGetMarqueeNoticesLogic(ctx, s.svcCtx).GetMarqueeNotices(in)
 }
 
 // ContactServiceServer 便民联络 gRPC Server

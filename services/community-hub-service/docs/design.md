@@ -29,42 +29,65 @@ notices 和 lost_found_items 表使用软删除（deleted_at），community_cont
 ### ER 图
 
 ```
-notices (1) ────< (N) notice_attachments
+content_posts (1) ────< (N) content_post_scope     多小区范围关联
+content_posts (1) ────< (N) content_post_attachments
 community_contacts (独立)
 lost_found_items (独立)
 ```
 
 ### 表结构
 
-#### notices（通知公告）
+#### content_posts（通用图文发布，原 notices RENAME，Migration 003）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | BIGINT PK | Snowflake ID |
-| community_id | BIGINT NOT NULL | 小区ID |
+| community_id | BIGINT DEFAULT NULL | 弃用：范围关联单源 content_post_scope（兼容期保留列，不写入） |
 | title | VARCHAR(200) | 标题 |
-| content | TEXT | 富文本正文 |
-| role | VARCHAR(20) | 发布角色：community/committee/property/grid_officer |
-| publisher | VARCHAR(100) | 发布单位/人名称 |
-| publisher_id | BIGINT | 发布人ID |
+| text | TEXT | 正文（原 content 改名；REST wire 仍以 content 键输出） |
+| role | VARCHAR(20) | 发布角色：community/committee/property/grid_officer（RBAC→映射派生） |
+| publisher | VARCHAR(100) | 展示名（取用户真实档案，禁请求体信任） |
+| publisher_id | BIGINT | 发布人ID（JWT 派生） |
 | is_pinned | TINYINT | 是否置顶 |
-| published_at | DATETIME | 发布时间 |
+| published_at | DATETIME DEFAULT NULL | 审核锚定：本期 submit 即置 NOW() |
+| section_code | VARCHAR(30) DEFAULT 'notice' | 板块：notice=通知/repair=维修保修/... |
+| status | TINYINT DEFAULT 0 | 全生命周期+审核结果：0=draft 1=submitted 2=approved 3=rejected 4=withdrawn |
+| attachment_count | INT DEFAULT 0 | 附件计数（审核完整性判定载体） |
+| moderation_status / moderation_time | 兼容期保留 | 逐步过渡到 status + 附件级 |
+| kafka_push_status | TINYINT DEFAULT 0 | 0=无待推 1=pending-push 2=已推(ack) |
+| kafka_push_retries | INT DEFAULT 0 | 重推次数 |
+| kafka_push_last_error | VARCHAR(500) NULL | 最近一次推送错误摘要（可观测） |
+| kafka_pushed_at | DATETIME NULL | 成功推送时间 |
 | created_at / updated_at | DATETIME | 自动维护 |
 | deleted_at | DATETIME | 软删除标记 |
 
-索引：`idx_community(community_id, deleted_at)`, `idx_published(community_id, published_at DESC, deleted_at)`
+索引：`idx_community(community_id, deleted_at)`（deprecated 兼容期保留）、`idx_published(community_id, published_at DESC, deleted_at)`（deprecated 兼容期保留）；新读路径走 content_post_scope 索引。
 
-#### notice_attachments（通知附件）
+#### content_post_scope（内容帖-小区范围关联，多小区发布单源）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| post_id | BIGINT NOT NULL | 关联 content_posts.id（复合 PK） |
+| community_id | BIGINT NOT NULL | 目标小区（复合 PK + idx_scope_community 读索引） |
+| created_at | DATETIME | 默认 CURRENT_TIMESTAMP |
+
+复合 PK `(post_id, community_id)`；索引 `idx_scope_community(community_id, post_id)`。纯关联表仅 created_at（显式偏离 §3.1 时间三件套）；撤回不删行（主表软删表达）。
+
+#### content_post_attachments（内容帖附件，原 notice_attachments RENAME）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | BIGINT PK | Snowflake ID |
-| notice_id | BIGINT | 关联通知 |
+| post_id | BIGINT | 关联 content_posts.id（原 notice_id 改名，post_id 全链一致） |
 | file_name | VARCHAR(200) | 文件名 |
-| file_url | VARCHAR(500) | 文件URL |
+| file_url | VARCHAR(1024) | 存量回退用 stored URL（新行占位空串，file_id 为权威重生载体） |
 | file_size | BIGINT | 字节数 |
+| review_status | TINYINT DEFAULT 1 | 附件级审核：0=pending 1=approved 2=rejected（本期默认 approved） |
+| file_id | BIGINT DEFAULT 0 | file-service 文件ID（重生预签名 URL 权威载体）；兼容期存量行 0 |
+| file_type | VARCHAR(20) NULL | 白名单校验通过的文件类型（扩展名） |
+| created_at | DATETIME | 自动维护 |
 
-索引：`idx_notice(notice_id)`
+索引：`idx_notice(post_id)`（RENAME 后自动改指 post_id）。
 
 #### community_contacts（便民联络）
 

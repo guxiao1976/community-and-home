@@ -35,9 +35,30 @@ ModerationRedis:
   Host: localhost:6379
   Pass: "${REDIS_PASSWORD}"
 
-# permission-service gRPC 客户端（数据权限：AssertPublishScope / GetDataScopes）
+# permission-service gRPC 客户端（数据权限：AssertPublishScope / GetDataScopes / GetUserRoles）
 PermissionRpc:
   Etcd:
     Hosts:
       - 127.0.0.1:2379
     Key: permission.rpc
+
+# user-service gRPC 客户端（publisher 展示名真实档案查询 GetUsersByIds，R5）
+UserRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: user.rpc
+
+# file-service gRPC 客户端（附件绑定/重生 GetFileUrl，REQ-CPB-6）
+FileRpc:
+  Etcd:
+    Hosts:
+      - 127.0.0.1:2379
+    Key: file.rpc
+
+# Kafka 生产者（content-review topic，Task 1.17/1.18）
+Kafka:
+  Brokers:
+    - kafka:9092
+  Topic: content-review
+  RetryIntervalSeconds: 60

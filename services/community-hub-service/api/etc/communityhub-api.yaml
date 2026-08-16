@@ -20,3 +20,6 @@ PermissionRpc:
     Hosts:
       - 127.0.0.1:2379
     Key: permission.rpc
+
+# 仅 REST 详情 community_id 兼容回退用（contentcompat 只读查询，R2）
+DataSource: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(localhost:3306)/community_hub_db?charset=utf8mb4&parseTime=true&loc=Local

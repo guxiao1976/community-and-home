@@ -19,27 +19,38 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				{
 					Method:  http.MethodPost,
 					Path:    "/api/community/notices",
-					Handler: notice.CreateNoticeHandler(serverCtx),
+					Handler: notice.CreateContentPostHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodGet,
 					Path:    "/api/community/notices",
-					Handler: notice.ListNoticesHandler(serverCtx),
+					Handler: notice.ListContentPostsHandler(serverCtx),
+				},
+				// 静态路径先于 :id 注册（防被 :id 通配吞掉）
+				{
+					Method:  http.MethodGet,
+					Path:    "/api/community/notices/marquee",
+					Handler: notice.GetMarqueeNoticesHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/api/community/notices/publish-permission",
+					Handler: notice.GetPublishPermissionHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodGet,
 					Path:    "/api/community/notices/:id",
-					Handler: notice.GetNoticeHandler(serverCtx),
+					Handler: notice.GetContentPostHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodPut,
 					Path:    "/api/community/notices/:id",
-					Handler: notice.UpdateNoticeHandler(serverCtx),
+					Handler: notice.UpdateContentPostHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodDelete,
 					Path:    "/api/community/notices/:id",
-					Handler: notice.DeleteNoticeHandler(serverCtx),
+					Handler: notice.DeleteContentPostHandler(serverCtx),
 				},
 				{
 					Method:  http.MethodGet,

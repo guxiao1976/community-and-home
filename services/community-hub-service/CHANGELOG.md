@@ -1,5 +1,62 @@
 # CHANGELOG — community-hub-service
 
+## 2026-08-16 — 通用图文发布组件重构（content-post-generalization Task 1.1-1.23）
+
+### 做了什么（类型：model 重构 + 逻辑改造 + 新增功能）
+
+**数据模型（字段映射类 + 读/写逻辑）**
+- `migration/003_content_posts_generalize.sql`（Task 1.1，一次性 RENAME 勿重跑）：`notices`→`content_posts`（content→`text` + `section_code/status/attachment_count`）+ `published_at`/`community_id` 去 NOT NULL + Kafka 待推列（`kafka_push_status/kafka_push_retries/kafka_push_last_error/kafka_pushed_at`）+ 新建 `content_post_scope`（复合 PK + idx_scope_community）+ `notice_attachments`→`content_post_attachments`（notice_id→post_id + review_status/file_id/file_type + file_url 加宽）；同步 `docs/design.md` §数据模型。
+- `model/content_post.go`（rename 自 notice.go，Task 1.2/1.5/1.6）：`Content`→`Text`、`CommunityId`→`*int64`、`PublishedAt`→`sql.NullTime`；导出状态常量（StatusDraft..Withdrawn / KafkaPushNone..Done）；`IsReviewComplete` 审核完整性单一谓词；读查询（`FindListByCommunity` scope JOIN + 完整性子查询走 idx_notice / `FindOneReviewComplete` / `FindMarquee`）+ 写路径（Insert 显式状态、UpdateContent 三列、**UpdateIsPinned 独立列**、UpdateStatusAndPublish、UpdateAttachmentCount、Withdraw、UpdateKafkaPushStatus、FindPendingPush）+ Tx 变体。
+- `model/content_post_scope.go`（Task 1.3）：InsertBatch/FindCommunityIdsByPostId/DeleteByPostId + Tx。
+- `model/content_post_attachment.go`（rename 自 notice_attachment.go，Task 1.4）：post_id/review_status/file_id/file_type + InsertBatch/FindByPostId/DeleteByPostId + Tx。
+- `rpc/internal/svc/servicecontext.go`：注册新模型 + Conn + UserClient（R5）+ FileClient + KafkaProducer/Rescanner（D20）。
+
+**scope 基础设施（逻辑函数 TDD）**
+- `rpc/internal/logic/scope/scope.go`：`AssertCommunitiesScope`（多目标单次批量 all-or-nothing）。
+- `rpc/internal/logic/scope/division.go`（Task 1.7）：`ExpandDivisionCommunities`（guard + GetResidentialAreasByDivision status=1）+ `ResolveAdminDivision`（R1 grounded：经既有 community grant 派生唯一 division，URStatus==2 过滤）。
+- `rpc/internal/logic/scope/userctx.go`（Task 1.8）：`PublishRolesFrom`（level-2 + 优先序）+ `PublishRoleToString`（RBAC→DB role 列）+ `IsLevel2Grant`。
+
+**写逻辑（逻辑函数 TDD）**
+- `createcontentpostlogic.go`（Task 1.10）：板块白名单 + title/text 非空 + community_ids 去重 + 社区管理员 division 展开（>100→080003）+ 附件绑定（GetFileUrl confirmed/user_id 归属/≤10/≤50MB）+ 单次批量 AssertCommunitiesScope + JWT/RBAC/档案身份派生 + 单事务落库 + entry=submitted 隐式通过（status=2 + published_at=NOW + kafka_push_status=1）→ 事务提交后 Producer.Push；**不再 LPUSH Redis**（D3）。
+- `updatecontentpostlogic.go`（Task 1.11，V5 presence 权威实现）：Title/Text/SectionCode/IsPinned 用 proto3 `optional` 指针判 presence、附件/scope 以 HasAttachmentChange/HasScopeChange 标志；授权分流（(a) 内容编辑先作者校验 080002 / (b) 仅 is_pinned 跳过作者校验改验 PublishRolesFrom+AssertCommunitiesScope）；**UpdateIsPinned 独立列更新防正文清空**；attachment_count 同事务重算（空集=0）；submit 动作 UpdateStatusAndPublish + Producer.Push；**整体移除 CreateAuditLog + LpushCtx**（评审 M3）。
+- `deletecontentpostlogic.go`（Task 1.12）：仅发布者本人 080002 + Withdraw 单语句原子（scope/附件保留）。
+
+**读逻辑（逻辑函数 TDD）**
+- `listcontentpostslogic.go`（Task 1.13）：FilterAllowed + role 枚举→DB 列映射收敛 helper.go 单源。
+- `getcontentpostlogic.go`（Task 1.14）：community_id RPC 必填 + FindOneReviewComplete + scope 匹配 + 附件 file_url 重生（file_id 权威 / 0 回退 stored）+ `ResolveReadableCommunityForCompat`（委托共享 `internal/contentcompat`）。
+- `getmarqueenoticeslogic.go`（Task 1.15）：FindMarquee（15 天含端点、≤10、置顶优先）+ FilterAllowed。
+- `getpublishpermissionlogic.go`（Task 1.16）：level-2 判定（含 property_admin）+ ContentPostRole 映射。
+
+**Kafka 基建（Task 1.17-1.19）**
+- `rpc/internal/config/config.go` + `etc/communityhub.yaml`：Kafka（brokers/topic/retry）+ UserRpc + FileRpc；go.mod +`segmentio/kafka-go`。
+- `rpc/internal/kafkapush/producer.go`（Task 1.18）：ContentReviewMessage 契约（REQ-CPM-2 单源）+ Producer.Push（先提交后推送；成功 ack 置 2 / 失败置 pending + last_error 落库）。
+- `rpc/internal/kafkapush/rescanner.go`（Task 1.19）：定时重推复用 Producer.Push（内含 GetFileUrl 重生 file_url）+ 超阈值保留 pending + pending-count 可观测。
+
+**接口（Task 1.21-1.23）**
+- `rpc/internal/server/communityhubserver.go` + `rpc/communityhub.go`：NoticeService→ContentPostService 改名 + GetPublishPermission/GetMarqueeNotices + 移除 UpdateNoticeModerationStatus。
+- `api/internal/types/types.go`（Task 1.22）：ContentPost 类型 + pointer/标志位 presence 字段 + form 标签 + **R2 wire 兼容（notices/notice/content 键保持）**。
+- `api/internal/logic/notice/*` + handler + routes（Task 1.23）：RPC 代理（community_ids []string→[]int64 + entry_status/status 同号映射 + **Update presence 指针/标志转发**）+ **详情 community_id 兼容回退（R2：scope 反查 + 逐小区 FilterAllowed 任一允许即放行）** + marquee/publish-permission 静态路径先于 :id 注册。
+
+### 关键设计决策
+- **R2 wire 兼容**：REST 响应键保持 `notices`/`notice`/`content`（移动端 tabbar/浏览/详情现行消费方零改动），RPC/proto/DB 通用化改名 `text` 分轨。
+- **详情 community_id 兼容回退**：RPC 层严格必填（080005），回退只落 REST 薄代理层（contentcompat scope 反查 + FilterAllowed 任一允许即放行）——多小区用户迁移后详情不 080005。
+- **V5 presence 语义**：UpdateContentPost 分支判定以 proto3 `optional` 指针/标志位为准，禁止 value 非空启发式（取消置顶 `*false`、清空全部附件 `attachment_count→0` 确定性可达）。
+- **is_pinned 独立列更新**：置顶/取消置顶一律走 `UpdateIsPinned`，禁止复用 UpdateContent 传空 title/text（防清空已发布帖正文）。
+- **停 Redis 只推 Kafka（D3）**：content_posts Create/Update(submit) 不再 LPUSH `moderation:task:queue`；lostfound/user 仍走 Redis（双轨过渡）。
+
+### TDD
+- 含逻辑函数任务均先写失败测试（RED）再实现（GREEN）：scope 包（division/roles/userctx）、写逻辑（create/update/delete）、读逻辑（list/get/marquee/publish-permission）、Kafka（producer/rescanner）、contentcompat、API 代理（presence 转发 + compat 回退）。RED 摘录留档于测试注释（080006/080005/080002 映射、attachment_count 重算、is_pinned 操作者路径）。
+- 字段映射类（model struct/SQL/Tx 变体/proto 透出）测试绿即可（content_post_test/content_post_scope_test/content_post_attachment_test sqlmock 锁定 SQL）。
+
+### 影响
+- 配置：yaml 新增 `UserRpc`/`FileRpc`/`Kafka` 段；API yaml 新增 `DataSource`（仅 contentcompat 只读查询）。
+- 依赖：go.mod 新增 `segmentio/kafka-go`（v0.4.51）。
+- 兼容：REST 路径保持 `/api/community/notices` + wire 键保持（R2）；RPC/proto/DB 通用化改名（破坏性，预期登记 Task 0.1）。
+- 跨服务：新增依赖 user-service `GetUsersByIds`、file-service `GetFileUrl`、master-data `GetResidentialArea/GetResidentialAreasByDivision`、permission `GetUserRoles/GetDataScopes`。
+- 门禁：harness-checks 全绿（除 file-service proto→TS 的 FileInfo.confirmed/file_type 同步属 file-service 任务范围）；`go build ./...` + `go vet ./...` + `go test ./...` 全绿。
+
+---
+
 ## 2026-08-13 — 板块发布配额（access-control Task 4.1-4.4）
 
 ### 做了什么

@@ -2,8 +2,11 @@ package scope
 
 import (
 	"context"
+	"sort"
 	"strconv"
+	"time"
 
+	permissionv1 "github.com/guxiao1976/api-proto/gen/go/permission/v1"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -44,4 +47,86 @@ func UserIDFromCtx(ctx context.Context) int64 {
 		return 0
 	}
 	return id
+}
+
+// IsLevel2Grant level-2 等价判定：status==2（已认证）且 verified_at>0 且未过期。
+// 与 permission-service 421 min_verf_level=2 门槛同语义（SEE [[auto-grant-unverified-grant-confers-scope-level0]]），
+// 基于 RPC 输出（UserRoleInfo），禁止直读 rel_user_role。供 PublishRolesFrom / GetPublishPermission / ResolveAdminDivision 共用。
+func IsLevel2Grant(ur *permissionv1.UserRoleInfo) bool {
+	if ur == nil || ur.GetRole() == nil {
+		return false
+	}
+	if ur.GetStatus() != UserRoleStatusVerified {
+		return false
+	}
+	if ur.GetVerifiedAt() <= 0 {
+		return false
+	}
+	if ur.GetExpiresAt() != 0 && ur.GetExpiresAt() <= time.Now().Unix() {
+		return false
+	}
+	return true
+}
+
+// publishRolePriority 发布角色优先序（D6：grid_worker > community_admin > committee > property_admin）。
+var publishRolePriority = map[string]int{
+	RoleGridWorker:     1,
+	RoleCommunityAdmin: 2,
+	RoleCommittee:      3,
+	RolePropertyAdmin:  4,
+}
+
+// PublishRolesFrom 取用户实际持有的发布角色 code（level-2 已认证过滤），按发布角色优先序返回（Task 1.8）。
+//
+// REVISION REQ-CPB-5：JWT 仅含 user_id，角色必须显式调 permission `GetUserRoles(user_id)` 解析；
+// 供 role 列映射派生与 is_pinned 操作者授权（Task 1.11 (b) 分支「PublishRolesFrom 非空」判据）。
+// 无发布角色 → 空集；GetUserRoles 传输错误原样返回（fail-closed）。
+//
+// SEE: [[grpc-only-comms]] — 经 GetUserRoles，禁止直读 rel_user_role
+func PublishRolesFrom(ctx context.Context, permClient permissionv1.PermissionServiceClient, userID int64) ([]string, error) {
+	resp, err := permClient.GetUserRoles(ctx, &permissionv1.GetUserRolesRequest{UserId: userID})
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]struct{})
+	var roles []string
+	for _, ur := range resp.GetRoles() {
+		if !IsLevel2Grant(ur) {
+			continue
+		}
+		code := ur.GetRole().GetCode()
+		if _, ok := publishRolePriority[code]; !ok {
+			continue // 非发布角色（owner/tenant/merchant/sys_admin）
+		}
+		if _, dup := seen[code]; dup {
+			continue // 同角色多 scope grant 去重
+		}
+		seen[code] = struct{}{}
+		roles = append(roles, code)
+	}
+
+	// 按发布角色优先序稳定排序
+	sort.SliceStable(roles, func(i, j int) bool {
+		return publishRolePriority[roles[i]] < publishRolePriority[roles[j]]
+	})
+	return roles, nil
+}
+
+// PublishRoleToString RBAC code → DB role 列值映射（Task 1.8，D6）。
+// grid_worker→grid_officer、community_admin→community、committee→committee、property_admin→property。
+// 与 Task 1.13 读侧 ContentPostRoleToString 收敛同一字符串集合（评审 data-model v4 I2）。
+func PublishRoleToString(roleCode string) string {
+	switch roleCode {
+	case RoleGridWorker:
+		return "grid_officer"
+	case RoleCommunityAdmin:
+		return "community"
+	case RoleCommittee:
+		return "committee"
+	case RolePropertyAdmin:
+		return "property"
+	default:
+		return ""
+	}
 }

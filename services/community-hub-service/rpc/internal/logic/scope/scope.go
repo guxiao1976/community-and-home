@@ -26,6 +26,37 @@ const CodePublishScopeDenied = 80006
 // ScopeTypeCommunity 是本变更唯一支持的 target 作用域类型。
 const ScopeTypeCommunity = "community"
 
+// CodeInvalidParam 请求参数不合法（API 面 080005）。
+const CodeInvalidParam = 80005
+
+// AssertCommunitiesScope 多目标发布数据权限校验（Task 1.7，单次批量）。
+//
+// 一次携带全部 target ScopeRef 调 permission AssertPublishScope（all-or-nothing）：
+// 任一目标越权 / 不可解析（目标不存在）→ 060007 → 080006 整体拒绝，无部分放行；
+// 未知节点 fail-closed（REUSE:notice-D31）。gRPC 传输错误原样返回。
+//
+// community_admin 的 division 子树目标由逻辑层 role 感知展开（resolvePublishScope，Task 3.1）
+// 在 permission 侧覆盖，本函数不感知角色。
+//
+// SEE: [[grpc-timeout-layers]] — AssertPublishScope 内嵌 master-data ResolveScopeAncestors，三层超时对齐
+func AssertCommunitiesScope(ctx context.Context, client permissionv1.PermissionServiceClient, userID int64, targets []int64) error {
+	refs := make([]*permissionv1.ScopeRef, 0, len(targets))
+	for _, t := range targets {
+		refs = append(refs, &permissionv1.ScopeRef{ScopeType: ScopeTypeCommunity, ScopeId: t})
+	}
+	resp, err := client.AssertPublishScope(ctx, &permissionv1.AssertPublishScopeRequest{
+		UserId:  userID,
+		Targets: refs,
+	})
+	if err != nil {
+		return err
+	}
+	if !resp.GetAllowed() {
+		return errx.NewCodeError(CodePublishScopeDenied, "目标小区超出发布者数据范围")
+	}
+	return nil
+}
+
 // AssertCommunityScope 校验 userID 是否对目标小区有发布数据权限。
 //
 // 构造 [{scope_type:'community', scope_id: communityID}] 调 permission AssertPublishScope；

@@ -10,27 +10,24 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type DeleteNoticeLogic struct {
+type DeleteContentPostLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	logx.Logger
 }
 
-func NewDeleteNoticeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DeleteNoticeLogic {
-	return &DeleteNoticeLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
+func NewDeleteContentPostLogic(ctx context.Context, svcCtx *svc.ServiceContext) *DeleteContentPostLogic {
+	return &DeleteContentPostLogic{ctx: ctx, svcCtx: svcCtx, Logger: logx.WithContext(ctx)}
 }
 
-// DeleteNotice 删除通知公告。
-//
-// 注入 JWT 身份 metadata 供 rpc 层 AssertPublishScope 数据权限校验（T4.3，超范围不删），
-// 并将 rpc 业务错误（如 080006）透出给客户端。
-func (l *DeleteNoticeLogic) DeleteNotice(req *types.DeleteNoticeReq) error {
+// DeleteContentPost 撤回代理（真正越权判定交 RPC 080002 作者校验，REST 权限码 427 由 PermMiddleware 强制）。
+func (l *DeleteContentPostLogic) DeleteContentPost(req *types.DeleteContentPostReq) error {
 	callCtx, _, err := l.svcCtx.CallCtx(l.ctx)
 	if err != nil {
 		return err
 	}
 
-	resp, err := l.svcCtx.NoticeServiceRpc.DeleteNotice(callCtx, &communityv1.DeleteNoticeRequest{
+	resp, err := l.svcCtx.ContentPostServiceRpc.DeleteContentPost(callCtx, &communityv1.DeleteContentPostRequest{
 		Id: req.Id,
 	})
 	if err != nil {
