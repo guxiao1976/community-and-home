@@ -72,3 +72,4 @@ my-ralph-project/
 # 流水线运行记录（每次调用/运行追加，运行时产物不入库）
 .harness/logs/usage/
 .harness/logs/pipeline/
+.superpowers/
