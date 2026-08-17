@@ -1,9 +1,9 @@
 // pending-join.ts — 加入小区流程跨页一次性「待加入小区」数据的唯一契约源
 //
 // 背景：join-community.vue 选中小区的 4 步向导原在页内弹「自有/租住 + 楼单元房号」modal。
-// 新设计：选中小区后不再弹窗，改为把选中小区 {id, name, address} 存入本模块 → 新页
-// join-choice（2 个身份选项）分流：
-//   - 业主路径 → join-residence 填房号（joinCommunity + applyRole owner）
+// 现设计（用户拍板新模型）：加入=立即建 membership（无房号），选中小区即 joinCommunity → 把
+// membership.id 回填本模块 {id, name, address, membershipId} → 新页 join-choice（2 个身份选项）分流：
+//   - 业主路径 → join-residence 填房号（bindResidence + applyRole owner/tenant）
 //   - 其他身份认证路径 → 我的页申请角色（communityStore.pendingCommunityId）
 //
 // 载体与 reg-pending 一致：模块级内存变量为主载体（页面栈内导航即可传递，不落持久化）；
@@ -20,6 +20,10 @@ export interface PendingJoin {
   communityId: string;
   communityName: string;
   address?: string;
+  // 新模型：加入=立即建 membership，join-community 点「加入」成功后回填 membership.id，
+  // join-residence 绑定房号（bindResidence）时优先读取；缺省回退 getUserMemberships 按 communityId 取。
+  // SEE: [[frontend-cross-page-storage-contract]]
+  membershipId?: string;
 }
 
 /** sessionStorage 镜像的 TTL（30 分钟；非一次性验证码等敏感数据，时长可放宽） */

@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"database/sql/driver"
 	"testing"
 	"time"
 
@@ -195,6 +196,57 @@ func TestRelUserRoleModel_CountByRoleId(t *testing.T) {
 	}
 	if count != 25 {
 		t.Errorf("expected count 25, got %d", count)
+	}
+}
+
+// TestRelUserRoleModel_CountActiveByRoleAndScope — 每小区 community_admin 活跃 grants 计数
+// 断言：SQL 含 status IN (0,1,2) 过滤（驳回 3 / 过期 4 不计）；excludeUserId>0 时追加 user_id != ?（幂等重复申请不误拒）
+func TestRelUserRoleModel_CountActiveByRoleAndScope(t *testing.T) {
+	tests := []struct {
+		name       string
+		excludeUID int64
+		wantSQL    string
+		wantArgs   []driver.Value
+		wantCount  int64
+	}{
+		{
+			name:       "含排除用户：status IN (0,1,2) + user_id != 排除用户",
+			excludeUID: 1001,
+			wantSQL:    "select count\\(\\*\\) from `rel_user_role` where role_id = \\? and scope_type = \\? and scope_id = \\? and status in \\(0,1,2\\) and user_id != \\?",
+			wantArgs:   []driver.Value{int64(3), "community", int64(100), int64(1001)},
+			wantCount:  2,
+		},
+		{
+			name:       "无排除用户：仅 status IN (0,1,2)",
+			excludeUID: 0,
+			wantSQL:    "select count\\(\\*\\) from `rel_user_role` where role_id = \\? and scope_type = \\? and scope_id = \\? and status in \\(0,1,2\\)",
+			wantArgs:   []driver.Value{int64(3), "community", int64(100)},
+			wantCount:  3,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+
+			conn := sqlx.NewSqlConnFromDB(db)
+			m := NewRelUserRoleModel(conn, nil)
+
+			mock.ExpectQuery(tt.wantSQL).
+				WithArgs(tt.wantArgs...).
+				WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(tt.wantCount))
+
+			count, err := m.CountActiveByRoleAndScope(context.Background(), 3, "community", 100, tt.excludeUID)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if count != tt.wantCount {
+				t.Errorf("expected count %d, got %d", tt.wantCount, count)
+			}
+		})
 	}
 }
 

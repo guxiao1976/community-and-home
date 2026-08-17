@@ -1,5 +1,69 @@
 # CHANGELOG — permission-service
 
+## 2026-08-17 — 社区管理员角色强化：维护便民电话权限 + 每小区上限 3 人（用户拍板）
+
+### 类型
+分诊：**改动 2（AssignRole 每小区上限 + model `CountActiveByRoleAndScope`）属有逻辑函数**（角色判定分支/计数校验）→ 走 RED→GREEN（留 RED FAIL 摘录）；**改动 1（init_permissions.sql 段 7 + migration/005 种子/迁移 SQL：INSERT IGNORE 绑定 + 436 加固 UPDATE）属字段映射类** → 免 RED（种子结构测试 + 幂等验证 SELECT 兜底）。
+
+### TDD 证据（RED FAIL 摘录 → GREEN PASS）
+
+#### RED 1 — model CountActiveByRoleAndScope（`go test ./model/ -run TestRelUserRoleModel_CountActiveByRoleAndScope`）
+```
+# github.com/guxiao1976/community-permission/model [github.com/guxiao1976/community-permission/model.test]
+model/rel_test.go:242:20: m.CountActiveByRoleAndScope undefined (type RelUserRoleModel has no field or method CountActiveByRoleAndScope)
+FAIL	github.com/guxiao1976/community-permission/model [build failed]
+```
+
+#### RED 2 — AssignRole 第 4 个 community_admin 未被拒（`go test ./rpc/internal/logic/permission/ -run TestAssignRole_CommunityAdminLimit_4thRejected`）
+```
+panic: assert: mock: I don't know what to return because the method call was unexpected.
+	This method was unexpected:
+		InsertIgnore(context.backgroundCtx,*model.RelUserRole)
+	... rpc/internal/logic/permission/assignrolelogic.go:51 ...
+```
+（根因：上限检查未实现，AssignRole 直接 InsertIgnore → 第 4 人未拒）
+
+#### RED 3 — 种子绑定缺失（`go test ./rpc/internal/logic/permission/ -run TestSeedCommunityAdmin|TestMigrationCommunityAdmin`）
+```
+Error: map[...]{...} does not contain 436
+	Messages:  community_admin(3) 必须绑定 436 community:contact:upsert-api（维护便民电话权限）
+--- FAIL: TestMigrationCommunityAdmin_ContactUpsertBound
+	读取 .../migration/005_community_admin_contact_permission.sql 失败：no such file or directory
+```
+
+GREEN：`ok`，4 包全绿（~195 测试函数）——
+- `TestRelUserRoleModel_CountActiveByRoleAndScope`（2 用例：排除用户 status IN (0,1,2)+`user_id != ?` / 无排除）
+- AssignRole 上限 6 用例（第 4 个被拒 60009 且 InsertIgnore 未调用 / 不同小区各 3 人 OK / 同人重复申请幂等不误拒 / 非 community_admin 不限制 / global scope 不限制 / 计数失败透传 error）
+- `TestSeedCommunityAdmin_ContactUpsertBound` + `TestMigrationCommunityAdmin_ContactUpsertBound`
+
+### 做了什么
+- **改动 1** `scripts/init_permissions.sql` 新增段 7（community-admin-role-strengthen，放置于 4.8 之后恒生效）：
+  - `INSERT IGNORE (3,436)` 把 community_admin(3) 绑定 436 `community:contact:upsert-api`（`POST:/api/community/contacts`，维护便民电话权限）
+  - **436 min_verf_level 0→2**：436 为 POST 写（社区级联系方式，非 self-scoped），community_admin(3) 属服务角色（可免 membership 自助申请）——未认证(status=0) grant 不得行使破坏性写，与 6.8 服务角色破坏性写加固同判据。审计回归测试 `TestSeedPrivilegedRoles_DestructiveWritePerms_HardenedToLevel2` 强制（本变更最初未加固即 FAIL → 修复）。owner/tenant 持 436 同步收窄为需已认证。
+  - 段 7.1 幂等验证 SELECT（ca_binding=1、keep_436=3、level436=2）
+- **改动 1** 新增 `migration/005_community_admin_contact_permission.sql`：既有库幂等补绑定 + 436 加固（INSERT IGNORE + UPDATE 可重跑）+ 验证 SELECT
+- **改动 2** `model/rel.go`：新增 `RelUserRoleModel.CountActiveByRoleAndScope(ctx, roleId, scopeType, scopeId, excludeUserId)` — `select count(*) ... where role_id=? and scope_type=? and scope_id=? and status in (0,1,2)`，excludeUserId>0 追加 `user_id != ?`（幂等重复申请不误拒）；驳回(3)/过期(4) 不计入
+- **改动 2** `rpc/internal/logic/permission/assignrolelogic.go`：FindOne 捕获 role；`role.RoleCode == RoleCodeCommunityAdmin && in.ScopeType == model.ScopeTypeCommunity` 时计数该小区活跃 community_admin grants，≥`MaxCommunityAdminPerCommunity`(3) 拒绝（60009，不落库）；其他角色/其他作用域不限制；不同小区按 scope_id 互不影响
+- **改动 2** `helpers.go`：新增命名常量 `CodeCommunityAdminLimit int32 = 60009`（一码一义，60001-60008 已占含文档登记的 60002「权限不存在」；协议头注释待 Owner 同步）
+- 测试：`model/rel_test.go` 增 `TestRelUserRoleModel_CountActiveByRoleAndScope`；`assignrolelogic_test.go` 增 6 上限用例 + MockUserRoleModel 增 `CountActiveByRoleAndScope`；新建 `seed_community_admin_contact_test.go`（复用迷你 SQL 解析器：436 绑定 + path 断言 + 有效层级=2 + 迁移 005）
+
+### 影响
+- Proto: 无（未修改 api-proto/）；`060009` 错误码注释需 **Owner 同步**到 permission.proto 头部错误码清单（硬约束 #2 子 Agent 禁止改 api-proto）
+- 调用方: **集成缺口（如实披露）**——user-service `apply_role_logic.go:116` / `helper.go:42` 的 AssignRole 调用方仅检查 Go err，未检查 `resp.Base.Code`：60009「已达上限」经 Base 返回（Go err=nil）会被调用方静默当作成功。需 user-service 侧检查 Base 后透出；本服务不做跨服务改动
+- 数据库: `init_permissions.sql` 段 7 + `migration/005`（rel_role_permission 1 行绑定 + sys_permission 436 min_verf_level 0→2）；**执行由 Owner 验证**（种子/迁移 SQL 写但执行不在 harness-pipeline）
+- 安全: 436 加固收窄未认证 grant 行使社区联系方式写（owner/tenant 同步需已认证）；community_admin 每小区人数受控（数据范围特权角色，防管理权过度集中）
+- 门禁: `go build ./...` + `go vet ./...` + `go test ./...` 全绿；`harness-checks.sh --service permission-service` → 18 PASS, 0 FAIL, 3 WARN（3 WARN 均为既有：proto→TS 滞后 / design_consistency deleted_at / git 治理漂移，非本次引入）
+
+### 应用的记忆
+- [[permission-seed-api-path-must-match-routes]] (must-follow) — 436 path 与 community-hub 实际 REST 路由一致（seed 测试断言）
+- [[is-system-no-permission-shortcut]] (must-follow) — 角色码判定仅驱动人数上限，认证要求经 min_verf_level 数据驱动（assignrolelogic.go / init_permissions.sql 段 7）
+- [[error-code-collision-and-namespace-alignment]] (must-follow) — 60009 新码段，不复用 60002「权限不存在」（一码一义）
+- [[error-code-literal-bypasses-qa-gate]] (must-follow) — CodeCommunityAdminLimit 命名常量（helpers.go）
+- [[migration-must-execute]] (must-follow) — migration/005 幂等 + 末尾 SELECT 验证（执行由 Owner 验证）
+- [[testing-discipline]] (must-follow) — 修改函数全覆盖（AssignRole 上限 + model 计数 + seed 结构）
+
+---
+
 ## 2026-08-17 — 敏感权限 min_verf_level=2 加固（security-arch 评审 CRITICAL）：服务角色破坏性操作认证门槛
 
 ### 类型

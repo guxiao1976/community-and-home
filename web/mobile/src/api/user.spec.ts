@@ -62,4 +62,17 @@ describe('joinCommunity', () => {
       ownership: 2,
     });
   });
+
+  it('仅传 communityId（房号可选）→ 载荷不含 building/unit/room/ownership', async () => {
+    // 新模型：点「加入小区」立即建 membership（无房号），房号绑定移到独立步骤 bindResidence。
+    (request.post as any).mockResolvedValue(mockMembership());
+    await joinCommunity('c1');
+
+    const payload = (request.post as any).mock.calls[0][1];
+    expect(payload).toEqual({ community_id: 'c1' });
+    expect(payload).not.toHaveProperty('building');
+    expect(payload).not.toHaveProperty('unit');
+    expect(payload).not.toHaveProperty('room');
+    expect(payload).not.toHaveProperty('ownership');
+  });
 });

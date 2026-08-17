@@ -1,5 +1,101 @@
 # CHANGELOG — web/mobile
 
+## 2026-08-17 — joinCommunity 解包 {membership} 修复（Review：membershipId 回填静默失效）
+
+### 做了什么
+- `api/user.ts joinCommunity()` 原 `return res as unknown as CommunityMembership`——REST 响应解包 data 后仍是 `{membership:{...}}`，调用方取 `res.id` 恒 undefined → membershipId 回填失效（靠 getUserMemberships 兜底掩盖）。改为解出 `data.membership` 返回资源本身。
+- 记忆 `frontend-api-return-wrapped-resource-unwrap` 落盘。
+
+### 门禁
+- `npx vitest run` → 24 files / 150 tests PASS；harness-checks-frontend 6 PASS / 0 FAIL。
+
+---
+
+# CHANGELOG — web/mobile
+
+## 2026-08-17 — TDD 证据补录：joinCommunity 条件载荷真实 RED（QA FAIL 修复轮）
+
+### 做了什么
+- **QA FAIL 项**：CHANGELOG 分诊 B「joinCommunity 房号可选（有逻辑函数：条件载荷）… TDD RED→GREEN」，但 `_tdd_evidence.md` 无其真实 vitest FAIL 摘录（GREEN 阶段与新增 user.spec.ts 用例 3 一并实现，首跑即绿，RED 从未在旧实现下持久化）。
+- **修复（证据补录，无生产代码改动）**：`git checkout HEAD -- src/api/user.ts` 回退旧实现（5 必填参数、恒发全部字段）→ `npx vitest run src/api/user.spec.ts` 复现真实 FAIL → `1 failed | 2 passed`，`AssertionError: expected { community_id: 'c1', …(4) } to not have property "building"` → 恢复工作树实现。
+- **摘录落盘**：`_tdd_evidence.md` 新增 §RED 2.5（user.ts joinCommunity 条件载荷）；RED 汇总 3 files/8 failed → 4 files/9 failed；复现命令补充 user.ts 回退说明。
+- **完整性注记**：`_tdd_evidence.md` §RED 1（join-choice 文案）Received「加入进行中」基线取自工作树中间态（非 HEAD「加入小区」），已注明避免误判。
+
+### 测试
+- `api/user.spec.ts:66-77` 用例 3（仅传 communityId → 载荷不含房号字段）即回归测试：旧实现下 FAIL（`not.toHaveProperty('building')`）→ 新实现 GREEN。无新增用例（用例已存在，本轮仅补录其 RED）。
+
+### 门禁
+- `npm run test:unit` → 24 files / 150 tests PASS；`npm run type-check` → 0 errors；`npm run build:h5` → DONE Build complete
+
+---
+
+# CHANGELOG — web/mobile
+
+## 2026-08-17 — 加入流程重构：点「加入小区」立即建 membership，填写房号改为独立步骤（用户拍板）
+
+### 分诊
+- **A join-community onSelectArea 立即加入（有逻辑函数，异步时序）**：点「加入小区」→ `await joinCommunity(communityId)`（无房号）→ `communityStore.addCommunity` 立即进 store → 把 `membership.id` 回填 pending-join（新增 `membershipId` 字段）→ navigateTo join-choice。已加入 → toast「该小区已加入」不重复；maxReached → 上限警告；joinCommunity 失败 → toast 错误（如「每年最多加入 3 个新小区」）可重试。TDD RED→GREEN
+- **B joinCommunity 房号可选（`src/api/user.ts`，有逻辑函数：条件载荷）**：building/unit/room/ownership 改为可选，仅传入时透传（并行管线已支持房号可选），纯 communityId 调用时载荷不含房号字段。TDD RED→GREEN（RED 摘录见 `_tdd_evidence.md` §RED 2.5：`git checkout HEAD -- src/api/user.ts` 回退旧实现复现 `AssertionError: expected { community_id: 'c1', …(4) } to not have property "building"`）
+- **C join-residence confirmJoin 改 bindResidence + applyRole（有逻辑函数）**：加入已在上一步完成，本页独立步骤：读 `pending.membershipId`（无则 `getUserMemberships` 按 communityId 回退）→ `bindResidence({membership_id, building, unit, room, is_primary:1})` + `applyRole({community_id, role_code: ownership===1?'owner':'tenant'})` → 成功后 toast「房号登记成功」+ 清 pending-join + switchTab notice。bindResidence/applyRole 失败：提示 + 保留 pending-join 可重试。TDD RED→GREEN
+- **D join-choice 页顶文案（字段/文案映射）**：「加入进行中」→「已加入 XX，请选择下一步」（保留社区名/地址），移除「请选择身份完成加入」引导提示（已加入，语义过时）。测试绿，无 RED
+- **E pending-join membershipId 字段（字段映射类）**：`PendingJoin` 增加 `membershipId?: string`。测试绿，无 RED
+
+### 做了什么
+- `join-community.vue`：`onSelectArea` 改异步立即加入（joinCommunity 无房号 → addCommunity → savePendingJoin 带 membershipId → 导航 join-choice）；失败/已加入/上限三路提示
+- `api/user.ts`：`joinCommunity` 四参可选 + 条件透传；`join-form.ts` 注释同步新模型（joinFormToPayload 供 bindResidence/applyRole 用）
+- `join-residence.vue`：`confirmJoin` 移除 joinCommunity，改 bindResidence + applyRole；按钮「确认加入」→「确认登记」；loading「登记中...」
+- `join-choice.vue`：页顶「已加入 XX，请选择下一步」+ 保留社区名/地址
+- `pending-join.ts`：`PendingJoin` 增加 `membershipId?: string`，注释同步新模型
+
+### 测试（+6，144→150）
+- `join-community.spec.ts`：点击即 join（无房号）+ addCommunity + 存 pending 带 membershipId + 导航；已加入 toast；上限警告；join 失败 toast（共 5 用例）
+- `join-residence.spec.ts`：bindResidence(is_primary:1) + applyRole(owner/tenant)；membershipId 回退 getUserMemberships；找不到成员 toast；bindResidence 失败保留 pending 可重试（共 7 用例）
+- `join-choice.spec.ts`：页顶「已加入 XX，请选择下一步」
+- `pending-join.spec.ts`：membershipId 往返 + 缺省不含该字段（+2）
+- `api/user.spec.ts`：仅 communityId 调用载荷不含房号字段（+1）
+
+### TDD 证据
+- RED 摘录见 `_tdd_evidence.md` 新增章节（join-community joinCommunity 0 调用 / join-residence bindResidence 0 调用 / join-choice header 文案不符 / **user.ts joinCommunity 条件载荷（payload 不含房号字段，§RED 2.5 回退 HEAD 复现 `not to have property "building"`）** 等真实 vitest FAIL）
+
+### 门禁
+- `npx vitest run` → 24 files / 150 tests PASS（基线 144 → +6）；`npm run type-check` → 0 errors；`npm run build:h5` → DONE Build complete
+- `harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量 type-safety 3 处 as any + api-field-align 34 处）
+
+---
+
+# CHANGELOG — web/mobile
+
+## 2026-08-17 — join-choice 页 UX 修复：明确「加入进行中」（用户误以为到达即已加入）
+
+### 做了什么
+- **根因**：用户搜索小区点「加入」后到达 join-choice（2 个身份选项）页，页顶「加入小区 金辰富海」让用户误以为已加入，实际还需选身份 + 填房号才真正加入。
+- **修复**：`join-choice.vue` 页顶改为「加入进行中」+ 社区名 + 引导提示「请选择身份完成加入——选择『填写房号成为业主』并登记房号后即完成加入；『其他身份认证』用于申请网格员/管理员等身份」。
+- **流程验证**：前端 join-residence 填表提交 → joinCommunity → membership 落库成功（实测 361985 bind_status=1），加入流程本身无 bug。
+
+### 门禁
+- `npx vitest run` → 24 files / 144 tests PASS；`harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）
+
+---
+
+# CHANGELOG — web/mobile
+
+## 2026-08-17 — 加入小区：省市县自动级联 + 已加入反馈（去掉"下一步"）
+
+### 做了什么
+- **省市县自动级联**：`join-community.vue` 选完省立即进入城市列表、选完市立即进入县区列表，移除步骤 1/2 的「下一步」按钮（步骤 3 的「搜索小区」保留——那是搜索动作）
+- **已加入反馈**：`onSelectArea` 对已加入小区由静默返回改为 toast「该小区已加入」（此前用户点了没反应误以为失败）
+- **排查结论（未改后端）**：加入未完成的最可能根因是后端「每年最多加入 3 个新小区」限流（99500）——实测新用户 joinCommunity 成功、老用户命中限流；toast 已带错误文案
+
+### 记忆沉淀
+- 新建 `join-auto-grant-vs-frontend-reapply-role-mismatch` / `one-shot-pending-consume-on-success`（Review 建议落盘，memory-refs 转绿）
+
+### 门禁
+- `npx vitest run` → 24 files / 144 tests PASS；`harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）
+
+---
+
+# CHANGELOG — web/mobile
+
 ## 2026-08-17 — 加入小区流程改造：选小区后分流（join-choice）+ 业主路径新页（join-residence）
 
 ### 分诊

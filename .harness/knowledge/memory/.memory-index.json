@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "generated_at": "2026-08-16T22:42:10Z",
-  "total_memories": 62,
+  "generated_at": "2026-08-17T06:44:51Z",
+  "total_memories": 66,
   "index": {
     "模板": [
       "ai-model-template-variable-content"
@@ -150,7 +150,8 @@
     ],
     "ownership": [
       "api-required-field-marked-optional",
-      "frontend-business-rule-hardcode"
+      "frontend-business-rule-hardcode",
+      "join-auto-grant-vs-frontend-reapply-role-mismatch"
     ],
     "JoinCommunity": [
       "api-required-field-marked-optional",
@@ -224,10 +225,12 @@
       "insert-ignore-swallows-errors"
     ],
     "自动授权": [
-      "auto-grant-unverified-grant-confers-scope-level0"
+      "auto-grant-unverified-grant-confers-scope-level0",
+      "join-auto-grant-vs-frontend-reapply-role-mismatch"
     ],
     "加入小区": [
-      "auto-grant-unverified-grant-confers-scope-level0"
+      "auto-grant-unverified-grant-confers-scope-level0",
+      "join-auto-grant-vs-frontend-reapply-role-mismatch"
     ],
     "AssignRole": [
       "auto-grant-unverified-grant-confers-scope-level0",
@@ -243,7 +246,8 @@
       "auto-grant-unverified-grant-confers-scope-level0"
     ],
     "scope": [
-      "auto-grant-unverified-grant-confers-scope-level0"
+      "auto-grant-unverified-grant-confers-scope-level0",
+      "membership-bound-scope-revoke-on-leave"
     ],
     "level-0": [
       "auto-grant-unverified-grant-confers-scope-level0"
@@ -280,7 +284,8 @@
       "axios-interceptor-unwrap-typing-mismatch"
     ],
     "request.post": [
-      "axios-interceptor-unwrap-typing-mismatch"
+      "axios-interceptor-unwrap-typing-mismatch",
+      "frontend-api-return-wrapped-resource-unwrap"
     ],
     "装饰性泛型": [
       "axios-interceptor-unwrap-typing-mismatch"
@@ -834,6 +839,7 @@
       "non-blocking-grant-requires-reconciliation"
     ],
     "grant": [
+      "membership-bound-scope-revoke-on-leave",
       "non-blocking-grant-requires-reconciliation"
     ],
     "对账": [
@@ -1206,6 +1212,8 @@
       "web-common-type-reuse-no-redefine"
     ],
     "joinCommunity": [
+      "frontend-api-return-wrapped-resource-unwrap",
+      "join-auto-grant-vs-frontend-reapply-role-mismatch",
       "web-common-type-reuse-no-redefine"
     ],
     "类型": [
@@ -1221,6 +1229,7 @@
       "web-common-type-reuse-no-redefine"
     ],
     "权属": [
+      "join-auto-grant-vs-frontend-reapply-role-mismatch",
       "web-common-type-reuse-no-redefine"
     ],
     "共享层": [
@@ -1327,6 +1336,53 @@
     "路由匹配": [
       "permission-seed-api-path-must-match-routes"
     ],
+    "退出小区": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "LeaveCommunity": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "revoke": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "撤销授权": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "残留": [
+      "membership-bound-scope-revoke-on-leave",
+      "sms-code-persist-localstorage"
+    ],
+    "服务角色": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "grid_worker": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "property_admin": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "community_admin": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "committee": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "RevokeRole": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "作用域": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "membership": [
+      "frontend-api-return-wrapped-resource-unwrap",
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "免membership": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
+    "权限漂移": [
+      "membership-bound-scope-revoke-on-leave"
+    ],
     "viewer_id": [
       "api-accessor-identity-from-url"
     ],
@@ -1353,10 +1409,12 @@
     ],
     "跨页": [
       "cross-page-sensitive-temp-data-storage",
-      "frontend-cross-page-storage-contract"
+      "frontend-cross-page-storage-contract",
+      "one-shot-pending-consume-on-success"
     ],
     "一次性": [
-      "cross-page-sensitive-temp-data-storage"
+      "cross-page-sensitive-temp-data-storage",
+      "one-shot-pending-consume-on-success"
     ],
     "临时数据": [
       "cross-page-sensitive-temp-data-storage"
@@ -1393,6 +1451,36 @@
     ],
     "navigateTo": [
       "cross-page-sensitive-temp-data-storage"
+    ],
+    "接口响应": [
+      "frontend-api-return-wrapped-resource-unwrap"
+    ],
+    "资源包装": [
+      "frontend-api-return-wrapped-resource-unwrap"
+    ],
+    "返回形状": [
+      "frontend-api-return-wrapped-resource-unwrap"
+    ],
+    "回填": [
+      "frontend-api-return-wrapped-resource-unwrap"
+    ],
+    "api封装": [
+      "frontend-api-return-wrapped-resource-unwrap"
+    ],
+    "data.membership": [
+      "frontend-api-return-wrapped-resource-unwrap"
+    ],
+    "响应结构": [
+      "frontend-api-return-wrapped-resource-unwrap"
+    ],
+    "mock": [
+      "frontend-api-return-wrapped-resource-unwrap"
+    ],
+    "假绿": [
+      "frontend-api-return-wrapped-resource-unwrap"
+    ],
+    "envelope": [
+      "frontend-api-return-wrapped-resource-unwrap"
     ],
     "cross-page": [
       "frontend-cross-page-storage-contract"
@@ -1456,6 +1544,22 @@
     "Visual Companion": [
       "frontend-visual-development-workflow"
     ],
+    "applyRole": [
+      "join-auto-grant-vs-frontend-reapply-role-mismatch",
+      "one-shot-pending-consume-on-success"
+    ],
+    "角色申请": [
+      "join-auto-grant-vs-frontend-reapply-role-mismatch"
+    ],
+    "重复授权": [
+      "join-auto-grant-vs-frontend-reapply-role-mismatch"
+    ],
+    "owner": [
+      "join-auto-grant-vs-frontend-reapply-role-mismatch"
+    ],
+    "tenant": [
+      "join-auto-grant-vs-frontend-reapply-role-mismatch"
+    ],
     "logout": [
       "logout-clear-login-cache"
     ],
@@ -1481,6 +1585,27 @@
     "兜底字段": [
       "logout-clear-login-cache"
     ],
+    "pending": [
+      "one-shot-pending-consume-on-success"
+    ],
+    "清除": [
+      "one-shot-pending-consume-on-success"
+    ],
+    "消费": [
+      "one-shot-pending-consume-on-success"
+    ],
+    "retry": [
+      "one-shot-pending-consume-on-success"
+    ],
+    "待加入": [
+      "one-shot-pending-consume-on-success"
+    ],
+    "pendingCommunityId": [
+      "one-shot-pending-consume-on-success"
+    ],
+    "pending-join": [
+      "one-shot-pending-consume-on-success"
+    ],
     "smsCode": [
       "sms-code-persist-localstorage"
     ],
@@ -1488,9 +1613,6 @@
       "sms-code-persist-localstorage"
     ],
     "一次性验证码": [
-      "sms-code-persist-localstorage"
-    ],
-    "残留": [
       "sms-code-persist-localstorage"
     ],
     "OTP": [
@@ -2510,6 +2632,32 @@
         "路由匹配"
       ]
     },
+    "membership-bound-scope-revoke-on-leave": {
+      "title": "退出小区必须撤销该小区全部社区作用域 grant，防服务角色 grant 残留",
+      "file": "user-service/membership-bound-scope-revoke-on-leave.md",
+      "severity": "must-follow",
+      "type": "pitfall",
+      "service": "user-service",
+      "triggers": [
+        "退出小区",
+        "LeaveCommunity",
+        "revoke",
+        "撤销授权",
+        "grant",
+        "残留",
+        "服务角色",
+        "grid_worker",
+        "property_admin",
+        "community_admin",
+        "committee",
+        "RevokeRole",
+        "scope",
+        "作用域",
+        "membership",
+        "免membership",
+        "权限漂移"
+      ]
+    },
     "api-accessor-identity-from-url": {
       "title": "禁止把 URL query 中的访问者身份传给权限/脱敏 API",
       "file": "web/api-accessor-identity-from-url.md",
@@ -2549,6 +2697,28 @@
         "reg_pending",
         "暂存",
         "navigateTo"
+      ]
+    },
+    "frontend-api-return-wrapped-resource-unwrap": {
+      "title": "前端 api 封装须按 REST 响应对象形状解出命名资源字段（勿把 {membership} 当资源返回）",
+      "file": "web/frontend-api-return-wrapped-resource-unwrap.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "web/mobile",
+      "triggers": [
+        "接口响应",
+        "资源包装",
+        "返回形状",
+        "回填",
+        "api封装",
+        "membership",
+        "data.membership",
+        "request.post",
+        "响应结构",
+        "mock",
+        "假绿",
+        "envelope",
+        "joinCommunity"
       ]
     },
     "frontend-cross-page-storage-contract": {
@@ -2592,6 +2762,25 @@
         "Visual Companion"
       ]
     },
+    "join-auto-grant-vs-frontend-reapply-role-mismatch": {
+      "title": "加入流程后端已按权属自动授权 owner/tenant，前端不应再无条件自申请 owner",
+      "file": "web/join-auto-grant-vs-frontend-reapply-role-mismatch.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "web/mobile",
+      "triggers": [
+        "joinCommunity",
+        "applyRole",
+        "加入小区",
+        "角色申请",
+        "ownership",
+        "权属",
+        "自动授权",
+        "重复授权",
+        "owner",
+        "tenant"
+      ]
+    },
     "logout-clear-login-cache": {
       "title": "退出登录需清理登录期写入的本地缓存字段（如 user_phone），防共享设备跨账号残留",
       "file": "web/logout-clear-login-cache.md",
@@ -2609,6 +2798,25 @@
         "storage",
         "clearTokens",
         "兜底字段"
+      ]
+    },
+    "one-shot-pending-consume-on-success": {
+      "title": "一次性跨页待处理数据应在异步操作成功后消费/清除，而非读取即清",
+      "file": "web/one-shot-pending-consume-on-success.md",
+      "severity": "should-follow",
+      "type": "pitfall",
+      "service": "web/mobile",
+      "triggers": [
+        "pending",
+        "一次性",
+        "清除",
+        "消费",
+        "retry",
+        "跨页",
+        "applyRole",
+        "待加入",
+        "pendingCommunityId",
+        "pending-join"
       ]
     },
     "sms-code-persist-localstorage": {

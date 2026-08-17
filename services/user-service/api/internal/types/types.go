@@ -89,11 +89,16 @@ type PageInfo struct {
 
 type JoinCommunityReq struct {
 	CommunityId int64 `json:"community_id,string"`
-	// SEE: [[api-required-field-marked-optional]] — 楼/单元/房号必填，移除 optional
-	Building int32 `json:"building"`
-	Unit     int32 `json:"unit"`
-	Room     int32 `json:"room"`
-	// Ownership 权属：1=自有(owner) 2=租住(tenant)，必填（permission 数据权限自动授权）
+	// 房号/权属「全有或全无」可选（用户拍板：加入小区=建 membership，填写房号=独立步骤）。
+	// RPC 层 joinResidenceProvided 已将 0=未提供 视为合法（无房号 join 不自动授权，服务角色后续 applyRole），
+	// 故 Building/Unit/Room 均标记 optional，API 边界放行最小载荷 {community_id}，与 RPC/Proto 语义一致。
+	// SEE: [[api-required-field-marked-optional]] — 本记忆原则为「API 层与 RPC/Proto 必填语义一致」；
+	//      RPC 语义改为可选后此处同样标记 optional（同 08-13 反向变化：当时必填，现已随 RPC 反转）
+	Building int32 `json:"building,optional"`
+	Unit     int32 `json:"unit,optional"`
+	Room     int32 `json:"room,optional"`
+	// Ownership 权属：1=自有(owner) 2=租住(tenant)；与房号同为「全有或全无」——
+	// 无房号 join 不带 ownership（不自动授权），有房号必须同时带 ownership（部分提供 → RPC 10040）
 	Ownership int32 `json:"ownership,optional"`
 }
 

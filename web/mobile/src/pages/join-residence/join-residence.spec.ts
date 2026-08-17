@@ -1,14 +1,15 @@
-// Component test — join-residence 页：业主路径填房号加入
+// Component test — join-residence 页：房号登记独立步骤（新模型）
+// 加入已在上一步（join-community 立即建 membership）完成，本页不再调 joinCommunity；
+// 确认 → 读 pending.membershipId（无则 getUserMemberships 按 communityId 回退）→
+// bindResidence({membership_id, building, unit, room, is_primary:1}) + applyRole(owner/tenant)。
 // 复用 join-form（validateJoinForm / joinFormToPayload / OWNERSHIP_OPTIONS）。
-// 确认加入 → joinCommunity(communityId, building, unit, room, ownership)
-//   → applyRole({community_id, role_code:'owner'}) → addCommunity → 清 pending-join → 提示加入成功。
 // SEE: [[tdd-red-evidence-requires-fail-excerpt]] — RED 摘录见 _tdd_evidence.md
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia, type Pinia } from 'pinia';
 
 vi.mock('@/api/user', () => ({
-  joinCommunity: vi.fn(),
+  bindResidence: vi.fn(),
   applyRole: vi.fn(),
   getUserMemberships: vi.fn().mockResolvedValue([]),
   getResidentialAreasByIds: vi.fn().mockResolvedValue([]),
@@ -22,18 +23,20 @@ vi.mock('@/utils/pending-join', () => ({
   clearPendingJoin: vi.fn(),
 }));
 
-import { joinCommunity, applyRole } from '@/api/user';
+import { bindResidence, applyRole, getUserMemberships } from '@/api/user';
 import { clearPendingJoin } from '@/utils/pending-join';
 import { useCommunityStore } from '@/stores/community';
 import JoinResidencePage from './join-residence.vue';
 
 let pinia: Pinia;
 
-const PENDING = { communityId: 'c1', communityName: '幸福小区', address: '幸福路1号' };
+// 形状与 PendingJoin 对齐（membershipId 可选，join-community 立即加入后回填）
+type PendingInput = { communityId: string; communityName: string; address: string; membershipId?: string };
+const PENDING: PendingInput = { communityId: 'c1', communityName: '幸福小区', address: '幸福路1号' };
 
-async function mountWithPending() {
+async function mountWithPending(pending: PendingInput = PENDING) {
   const { readPendingJoin } = await import('@/utils/pending-join');
-  (readPendingJoin as any).mockReturnValue(PENDING);
+  (readPendingJoin as any).mockReturnValue(pending);
   const wrapper = mount(JoinResidencePage, { global: { plugins: [pinia] } });
   await flushPromises();
   return wrapper;
@@ -47,26 +50,23 @@ async function fillValidForm(wrapper: any, ownershipIndex = 0) {
   await inputs[2].setValue('502');
 }
 
-describe('join-residence page — 业主路径加入', () => {
+describe('join-residence page — 房号登记独立步骤（bindResidence + applyRole）', () => {
   beforeEach(() => {
     pinia = createPinia();
     setActivePinia(pinia);
     vi.clearAllMocks();
-    (joinCommunity as any).mockResolvedValue({
-      id: 'm1', user_id: 'u1', community_id: 'c1', bind_status: 1,
-      building: 3, unit: 1, room: 502, join_time: 0, leave_time: 0, created_at: 0, updated_at: 0,
-    });
+    (bindResidence as any).mockResolvedValue({});
     (applyRole as any).mockResolvedValue({});
     uni.setStorageSync('current_community_id', '');
   });
 
-  it('空表单 → 校验错误展示，不调 API', async () => {
-    const wrapper = await mountWithPending();
+  it('空表单 → 校验错误展示，不调 bindResidence/applyRole', async () => {
+    const wrapper = await mountWithPending({ ...PENDING, membershipId: 'm1' });
     await wrapper.find('.confirm-join-btn').trigger('click');
 
     expect((wrapper.vm as any).joinFormErrors.ownership).toBeTruthy();
     expect((wrapper.vm as any).joinFormErrors.building).toBeTruthy();
-    expect(joinCommunity).not.toHaveBeenCalled();
+    expect(bindResidence).not.toHaveBeenCalled();
     expect(applyRole).not.toHaveBeenCalled();
   });
 
@@ -79,46 +79,79 @@ describe('join-residence page — 业主路径加入', () => {
     await wrapper.find('.confirm-join-btn').trigger('click');
 
     expect(uni.showToast).toHaveBeenCalledWith(expect.objectContaining({ title: '请先选择小区' }));
-    expect(joinCommunity).not.toHaveBeenCalled();
+    expect(bindResidence).not.toHaveBeenCalled();
+    expect(applyRole).not.toHaveBeenCalled();
   });
 
-  it('自有（OWNED=1）→ joinCommunity(ownership=1) + addCommunity + 清 pending + 提示成功，不重复申请角色', async () => {
-    // 后端 JoinCommunity 已按权属自动授权 owner/tenant，前端不再 applyRole('owner')（避免租住被误授 owner）。
-    const wrapper = await mountWithPending();
+  it('自有 → 读 pending.membershipId → bindResidence(is_primary:1) + applyRole(owner) + toast 房号登记成功 + 清 pending + switchTab notice', async () => {
+    const wrapper = await mountWithPending({ ...PENDING, membershipId: 'm1' });
     await fillValidForm(wrapper, 0);
     await wrapper.find('.confirm-join-btn').trigger('click');
     await flushPromises();
 
-    expect(joinCommunity).toHaveBeenCalledWith('c1', 3, 1, 502, 1);
-    expect(applyRole).not.toHaveBeenCalled();
-    const communityStore = useCommunityStore();
-    expect(communityStore.communities).toEqual([
-      expect.objectContaining({ communityId: 'c1', communityName: '幸福小区', address: '幸福路1号' }),
-    ]);
+    expect(bindResidence).toHaveBeenCalledWith({
+      membership_id: 'm1',
+      building: '3',
+      unit: '1',
+      room: '502',
+      is_primary: 1,
+    });
+    expect(applyRole).toHaveBeenCalledWith({ community_id: 'c1', role_code: 'owner' });
+    expect(getUserMemberships).not.toHaveBeenCalled();
     expect(clearPendingJoin).toHaveBeenCalled();
-    expect(uni.showToast).toHaveBeenCalledWith(expect.objectContaining({ title: '加入成功' }));
+    expect(uni.showToast).toHaveBeenCalledWith(expect.objectContaining({ title: '房号登记成功' }));
     expect(uni.switchTab).toHaveBeenCalledWith({ url: '/pages/notice/notice' });
   });
 
-  it('租住（RENTED=2）→ joinCommunity 传 ownership=2', async () => {
-    const wrapper = await mountWithPending();
+  it('租住 → applyRole role_code=tenant', async () => {
+    const wrapper = await mountWithPending({ ...PENDING, membershipId: 'm1' });
     await fillValidForm(wrapper, 1);
     await wrapper.find('.confirm-join-btn').trigger('click');
     await flushPromises();
 
-    expect(joinCommunity).toHaveBeenCalledWith('c1', 3, 1, 502, 2);
+    expect(applyRole).toHaveBeenCalledWith({ community_id: 'c1', role_code: 'tenant' });
   });
 
-  it('joinCommunity 失败 → toast 错误，不 addCommunity、不调 applyRole', async () => {
-    (joinCommunity as any).mockRejectedValue(new Error('加入失败，请稍后重试'));
-    const wrapper = await mountWithPending();
+  it('pending 无 membershipId → 回退 getUserMemberships 按 communityId 取 membership.id', async () => {
+    (getUserMemberships as any).mockResolvedValue([
+      {
+        id: 'm99', user_id: 'u1', community_id: 'c1', bind_status: 1,
+        building: 0, unit: 0, room: 0, join_time: 0, leave_time: 0, created_at: 0, updated_at: 0,
+      },
+    ]);
+    const wrapper = await mountWithPending(PENDING);
     await fillValidForm(wrapper, 0);
     await wrapper.find('.confirm-join-btn').trigger('click');
     await flushPromises();
 
-    expect(uni.showToast).toHaveBeenCalledWith(expect.objectContaining({ title: '加入失败，请稍后重试' }));
+    expect(getUserMemberships).toHaveBeenCalled();
+    expect(bindResidence).toHaveBeenCalledWith(expect.objectContaining({ membership_id: 'm99' }));
+    expect(applyRole).toHaveBeenCalledWith({ community_id: 'c1', role_code: 'owner' });
+  });
+
+  it('getUserMemberships 找不到匹配成员关系 → toast 未找到小区成员关系，不调 bindResidence/applyRole、不清 pending', async () => {
+    (getUserMemberships as any).mockResolvedValue([]);
+    const wrapper = await mountWithPending(PENDING);
+    await fillValidForm(wrapper, 0);
+    await wrapper.find('.confirm-join-btn').trigger('click');
+    await flushPromises();
+
+    expect(uni.showToast).toHaveBeenCalledWith(expect.objectContaining({ title: '未找到小区成员关系，请重新加入' }));
+    expect(bindResidence).not.toHaveBeenCalled();
     expect(applyRole).not.toHaveBeenCalled();
-    const communityStore = useCommunityStore();
-    expect(communityStore.communities.length).toBe(0);
+    expect(clearPendingJoin).not.toHaveBeenCalled();
+  });
+
+  it('bindResidence 失败 → toast 错误，不调 applyRole、不清 pending、不 switchTab（可重试）', async () => {
+    (bindResidence as any).mockRejectedValue(new Error('房号绑定失败'));
+    const wrapper = await mountWithPending({ ...PENDING, membershipId: 'm1' });
+    await fillValidForm(wrapper, 0);
+    await wrapper.find('.confirm-join-btn').trigger('click');
+    await flushPromises();
+
+    expect(uni.showToast).toHaveBeenCalledWith(expect.objectContaining({ title: '房号绑定失败' }));
+    expect(applyRole).not.toHaveBeenCalled();
+    expect(clearPendingJoin).not.toHaveBeenCalled();
+    expect(uni.switchTab).not.toHaveBeenCalled();
   });
 });

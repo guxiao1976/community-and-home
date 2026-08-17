@@ -130,6 +130,10 @@ type RelUserRoleModel interface {
 	BatchInsertUserRoles(ctx context.Context, records []*RelUserRole) error
 	// CountByRoleId 统计角色被分配给多少用户
 	CountByRoleId(ctx context.Context, roleId int64) (int64, error)
+	// CountActiveByRoleAndScope 统计某角色在某作用域（scope_type+scope_id）下的活跃 grants 数量
+	//（status IN (0,1,2)：未认证/待审/已认证；驳回 3 与过期 4 不计）。
+	// excludeUserId > 0 时排除该用户（幂等重复申请不计入，避免误拒）。
+	CountActiveByRoleAndScope(ctx context.Context, roleId int64, scopeType string, scopeId, excludeUserId int64) (int64, error)
 	// UpdateRoleStatus 更新用户角色的生命周期状态（认证通过/驳回/过期）
 	UpdateRoleStatus(ctx context.Context, userId, roleId int64, scopeType string, scopeId, status int64, verifiedAt, expiresAt sql.NullTime) error
 	// FindAllByUserId 联表查询用户所有角色（含个体生命周期状态，不过滤）
@@ -240,6 +244,22 @@ func (m *defaultRelUserRoleModel) BatchInsertUserRoles(ctx context.Context, reco
 func (m *defaultRelUserRoleModel) CountByRoleId(ctx context.Context, roleId int64) (int64, error) {
 	var count int64
 	err := m.conn.QueryRowCtx(ctx, &count, fmt.Sprintf("select count(*) from %s where role_id = ?", m.table), roleId)
+	return count, err
+}
+
+// CountActiveByRoleAndScope 统计某角色在某作用域（scope_type+scope_id）下的活跃 grants 数量
+// 活跃 = status IN (0,1,2)（未认证/待审/已认证；驳回 3 与过期 4 不计）。
+// excludeUserId > 0 时追加 `user_id != ?` 排除该用户（幂等重复申请不计入，避免误拒）。
+// 支撑 AssignRole 每小区 community_admin 上限 3 人（用户拍板 2026-08-17）。
+func (m *defaultRelUserRoleModel) CountActiveByRoleAndScope(ctx context.Context, roleId int64, scopeType string, scopeId, excludeUserId int64) (int64, error) {
+	var count int64
+	query := fmt.Sprintf("select count(*) from %s where role_id = ? and scope_type = ? and scope_id = ? and status in (0,1,2)", m.table)
+	args := []any{roleId, scopeType, scopeId}
+	if excludeUserId > 0 {
+		query += " and user_id != ?"
+		args = append(args, excludeUserId)
+	}
+	err := m.conn.QueryRowCtx(ctx, &count, query, args...)
 	return count, err
 }
 

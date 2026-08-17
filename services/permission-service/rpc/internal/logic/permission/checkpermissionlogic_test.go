@@ -93,6 +93,11 @@ func (m *MockUserRoleModel) UpdateRoleStatus(ctx context.Context, userId, roleId
 	return args.Error(0)
 }
 
+func (m *MockUserRoleModel) CountActiveByRoleAndScope(ctx context.Context, roleId int64, scopeType string, scopeId, excludeUserId int64) (int64, error) {
+	args := m.Called(ctx, roleId, scopeType, scopeId, excludeUserId)
+	return args.Get(0).(int64), args.Error(1)
+}
+
 func (m *MockUserRoleModel) FindByRoleId(ctx context.Context, roleId int64) ([]*model.RelUserRole, error) {
 	args := m.Called(ctx, roleId)
 	if args.Get(0) == nil {

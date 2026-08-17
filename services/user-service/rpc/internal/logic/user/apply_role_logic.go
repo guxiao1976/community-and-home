@@ -113,7 +113,7 @@ func (l *ApplyRoleLogic) ApplyRole(in *userv1.ApplyRoleRequest) (*userv1.ApplyRo
 			Base: responsex.NewBaseRespWithError(50000, "系统繁忙"),
 		}, nil
 	}
-	_, err := l.svcCtx.PermissionClient.AssignRole(l.ctx, &permissionv1.AssignRoleRequest{
+	assignResp, err := l.svcCtx.PermissionClient.AssignRole(l.ctx, &permissionv1.AssignRoleRequest{
 		UserId:    in.UserId,
 		RoleId:    roleID,
 		ScopeType: scopeType,
@@ -123,6 +123,16 @@ func (l *ApplyRoleLogic) ApplyRole(in *userv1.ApplyRoleRequest) (*userv1.ApplyRo
 	if err != nil {
 		l.Errorf("ApplyRole: AssignRole failed userId=%d roleId=%d err=%v", in.UserId, roleID, err)
 		return nil, err
+	}
+	// 业务错误经 Base.Code 返回（go-zero 约定 err=nil）——必须显式检查并透出，
+	// 否则 permission-service 的上限/业务拒绝（如 community_admin 每小区 60009）被静默当成功。
+	// SEE: [[rpc-base-code-silent-swallow-by-caller]]
+	if assignResp != nil && assignResp.Base != nil && assignResp.Base.GetCode() != 0 {
+		l.Errorf("ApplyRole: AssignRole business error userId=%d roleCode=%s code=%d msg=%s",
+			in.UserId, in.RoleCode, assignResp.Base.GetCode(), assignResp.Base.GetMsg())
+		return &userv1.ApplyRoleResponse{
+			Base: responsex.NewBaseRespWithError(int32(assignResp.Base.GetCode()), assignResp.Base.GetMsg()),
+		}, nil
 	}
 
 	l.Infof("ApplyRole success, userId=%d, roleCode=%s, roleId=%d, scope=%s:%d",

@@ -1,5 +1,96 @@
 # CHANGELOG — user-service
 
+## 2026-08-17 — ApplyRole 检查 AssignRole 的 Base.Code（Review must-follow：业务错误静默当成功）
+
+### 做了什么
+- `apply_role_logic.go`：调用 permission-service AssignRole 后只查 `err`，未查 `resp.Base.GetCode()`——permission-service 以 Base.Code 返回业务错误（如 community_admin 每小区上限 60009）时，user-service 误当成功（用户看到"申请成功"但 grant 未建）。
+- 修复：显式检查 `assignResp.Base.GetCode()!=0` → 记错误日志 + 透出 Base 错误码/消息。
+
+### 门禁
+- `go test ./...` 5 包全绿；harness-checks 18 PASS / 0 FAIL。
+
+---
+
+# CHANGELOG — user-service
+
+## 2026-08-17 — 修复 standards-eng 复审 CRITICAL：REST 边界放行无房号 join + 幽灵记忆引用（字段契约/记忆修复）
+
+### 背景
+多视角复审（规范工程 2 CRITICAL）：
+1. **REST 契约未随 RPC 语义同步**：join_community_logic.go 已把房号/权属改为「全有或全无」可选（无房号 join 合法且不自动授权），但 `JoinCommunityReq` 的 Building/Unit/Room 无 `,optional`（必填）——go-zero `httpx.Parse`（handler.go:16-20 → mapping/unmarshaler.go:959）对移动端无房号最小载荷 `{community_id}` 返回 `"building" is not set` → API 边界拦截，交付的「无房号加入小区」功能不可用。且 types.go:92 注释 `// SEE: [[api-required-field-marked-optional]] — 楼/单元/房号必填，移除 optional` 与新 RPC 语义直接矛盾（该记忆原则是 API 层与 RPC/Proto 语义一致，此处反向违背）。
+2. **幽灵记忆引用（M2）**：leave_community_logic.go:79 `// SEE: [[membership-bound-scope-revoke-on-leave]]` 在 MEMORY.md/.memory-index.json/memory/ 全仓 grep 均无匹配——假引用误导（上一轮 apply_role 评审的 M1 仅覆盖 apply_role_logic.go 未覆盖此文件）。
+
+### 做了什么
+1. **types.go 房号/权属字段改为 `,optional`**：`Building/Unit/Room` 标记 `json:"building,optional"` 等（0=未提供，透传 RPC），`Ownership` 注释改为「与房号同为全有或全无——无房号不带 ownership，有房号必须同时带（部分提供 → RPC 10040）」；更新过期 `// SEE: [[api-required-field-marked-optional]]` 注释——该记忆原则（API 与 RPC/Proto 必填语义一致）在新语义下即「标记 optional」，与 08-13 必填化是同一原则的两次方向应用。
+2. **创建记忆 `membership-bound-scope-revoke-on-leave`**（user-service/membership-bound-scope-revoke-on-leave.md，含 triggers + 验证方法）：真实规则（退出小区撤销全部社区作用域 grant，防服务角色 grant 残留）有价值且代码已正确实现，创建记忆使引用成立；重建 `.memory-index.json` 使 slug 可被检索。leave_community_logic.go 无需改代码（实现已正确）。
+
+### 测试（TDD RED→GREEN）
+| 测试文件 | 用例 | 类型 |
+|---|---|---|
+| `api/internal/handler/community/handler_test.go`（新增） | `TestJoinCommunityHandler_NoResidenceMinimalPayload`：REST 层最小载荷 `{"community_id":"123"}` → API 边界放行，透传 RPC（building/unit/room=0、ownership=UNSPECIFIED 断言） | 字段契约（接线/回归） |
+| `api/internal/handler/community/handler_test.go`（新增） | `TestJoinCommunityHandler_WithResidence_PayloadPassesThrough`：带房号+权属载荷正常透传（字段契约不破） | 字段契约（接线） |
+
+### RED 摘录（先写行为测试，修复未实现时）
+```
+handler_test.go:67: Not equal: expected: 0 / actual: 99500
+  Messages: 无房号最小载荷应在 API 边界放行并透传 RPC（当前被必填字段拦截）
+controller.go:269: missing call(s) to *mocks.MockUserServiceClient.JoinCommunity(...)  # parse 失败 → RPC 未被调用
+```
+（GREEN：Building/Unit/Room 标记 `,optional` 后 `go test ./...` 全绿，221 测试函数 PASS，harness-checks 18 PASS / 0 FAIL / 3 WARN 存量）
+
+### 为什么
+RPC 层已支持无房号 join（用户拍板模型），REST 层契约必须同步放行最小载荷，否则前端无房号流程（joinCommunity('c1') 只 POST {community_id}）在 API 边界即被 400 拦截，功能交付却不可用；api_smoke 只查路由不查字段契约故漏过，补 handler 级字段契约回归测试兜底。幽灵记忆引用消除误导：选择「创建记忆」而非「移除引用」，因该规则（退出撤销全部社区作用域 grant）真实且是安全不变量，值得沉淀供后续服务角色扩展复用。
+
+### 影响
+- Proto: 无（可选字段语义不变，RPC 0=未提供已是合法输入）
+- 调用方: 移动端无房号 joinCommunity 在 API 边界恢复可用（此前被 400 拦截）
+- 数据库: 无
+- 备注: 记忆应用见下节报告；`.harness/knowledge/memory/.memory-index.json` 已随新建记忆重建
+
+---
+
+## 2026-08-17 — joinCommunity 房号/权属改为可选（用户拍板：加入小区=建 membership，填写房号=独立步骤）
+
+### 做了什么
+- 新增纯函数 `joinResidenceProvided` 判定房号/权属的提供情况（全有或全无，部分提供 → 10040）：
+  - **全部提供**（ownership∈{OWNED,RENTED} 且 building/unit/room>0）→ 现状：建带房号 membership + 自动授权 owner/tenant（`assignCommunityRole`，status=0）
+  - **全不提供**（无房号+无权属）→ 仅建 membership（用户-小区关联，`building/unit/room` 落 0，`bind_status=active`），**不自动授权**（网格员/物业管理员等服务角色后续 `applyRole` 认证）
+  - **部分提供**（只给了房号没给权属，或反之）→ 10040 参数错误（要么全有要么全无）
+- 移除 ownership/building/unit/room 的强制必填校验；保留其他校验：用户存在 10001 / 上限 3 小区 10006 / 重复 10007 / 年度限流 10012 / 终身 10013 / 每户≤6 10014（**仅带房号时**执行，无房号无地址概念）
+- 房号区间/格式校验（楼≤200、单元≤6、房号 3-4 位/楼层≤55/门牌 01-04）改为仅带房号时执行（权威校验，防前端绕过）
+- 重新激活路径：无房号 join 将地址**清空为 0** 且不自动授权；有房号保持现状（UpdateAddress + assignCommunityRole + 失败补偿回 left）
+
+### 测试（TDD RED→GREEN）
+| 测试文件 | 用例 | 类型 |
+|---|---|---|
+| `join_community_optional_residence_test.go` | `TestJoinResidenceProvided`：9 组合表驱动（全有-自有/全有-租住/全无/仅权属/仅楼号/仅单元/仅房号/有房号无权属/缺房号） | 逻辑（纯函数） |
+| `join_community_optional_residence_test.go` | `TestJoinCommunity_NoResidence_CreatesMembershipNoAutoGrant`：无房号 join → 建 membership（地址 0、active）+ **AssignRole 0 次调用** | 逻辑 |
+| `join_community_optional_residence_test.go` | `TestJoinCommunity_NoResidence_NoAutoGrant_OnReactivate`：无房号重新激活 → 成功、地址清 0、不自动授权 | 逻辑 |
+| `join_community_optional_residence_test.go` | `TestJoinCommunity_NoResidence_RespectsMaxCommunities`：无房号 join 仍受 10006 上限约束 | 逻辑 |
+| `join_community_optional_residence_test.go` | `TestJoinCommunity_Partial_RoomOnly_NoOwnership_Returns10040` / `TestJoinCommunity_Partial_OwnershipOnly_Returns10040`：部分提供 → 10040 且不建 membership | 逻辑 |
+| `join_community_member_constraints_test.go`（更新） | MissingBuilding/MissingUnit/MissingRoom 改为「部分提供 → 10040」语义（断言不变） | 逻辑（回归） |
+
+### RED 摘录（先写行为测试，功能未实现时）
+```
+join_community_optional_residence_test.go:45:34: undefined: joinResidenceProvided        # 纯函数编译 RED
+join_community_optional_residence_test.go:68: expected: 0 / actual: 10040               # 无房号 join 应成功（当前强制校验拒绝）
+join_community_optional_residence_test.go:72: expected: 1 / actual: 0                   # 无房号 join 应建 membership
+join_community_optional_residence_test.go:99: expected: 0 / actual: 10040               # 无房号重新激活应成功
+join_community_optional_residence_test.go:122: expected: 10006 / actual: 10040          # 无房号 join 应受上限约束
+```
+（GREEN：`joinResidenceProvided` + JoinCommunity 分支改造后 `go build ./...` + `go test ./...` 全绿，~155 测试函数 PASS，harness-checks 18 PASS / 0 FAIL / 3 WARN 存量）
+
+### 为什么
+用户拍板：加入小区 = 建 membership（用户-小区关联），填写房号 = 独立步骤。网格员/物业管理员等服务角色加入小区无需房号/权属，后续通过 applyRole 认证；业主/租户带房号 join 自动授权 owner/tenant，或先无房号加入再 bindResidence + applyRole 补房号。
+
+### 影响
+- Proto: 无（可选字段语义不变，仅校验逻辑改）
+- 调用方: 移动端 joinCommunity（支持无房号加入；有房号需同时携带 ownership，否则 10040）
+- 数据库: 无表结构变更（membership.building/unit/room 存 0 表示无房号）
+- 备注: `// SEE: [[auto-grant-unverified-grant-confers-scope-level0]]` 应用于无房号不自动授权；`// SEE: [[api-required-field-marked-optional]]` 保留于房号区间校验
+
+---
+
 ## 2026-08-17 — 退出小区同步撤销服务角色 grant（Review must-follow）
 
 ### 背景

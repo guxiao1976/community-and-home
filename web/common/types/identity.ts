@@ -172,13 +172,15 @@ export interface UserFilter {
 }
 
 // Community membership — user's affiliation with a residential community
+// CommunityMembership — 字段名与 wire(JSON tag) 对齐（snake_case，后端 types.go json tag）。
+// SEE: [[web-common-type-reuse-no-redefine]] [[web-common-type-field-wire-mismatch]]
 export interface CommunityMembership {
   id: string;
-  userId: string;
-  communityId: string;
-  bindStatus: number;
-  joinTime: number;
-  leaveTime: number;
+  user_id: string;
+  community_id: string;
+  bind_status: number;
+  join_time: number;
+  leave_time: number;
   created_at: number;
   updated_at: number;
   building: number;

@@ -1,5 +1,5 @@
 // Component test — join-choice 页：选小区后的身份分流页
-//  - 顶部显示待加入小区名（读 pending-join）
+//  - 页顶显示「已加入 XX，请选择下一步」（加入已由 join-community 立即完成）+ 保留社区名/地址
 //  - 【填写房号成为业主】→ navigateTo join-residence（pending 小区随行）
 //  - 【其他身份认证】→ 设 communityStore.pendingCommunityId（供我的页申请角色）+ switchTab my
 //  - 无 pending-join（深链）→ 空态提示，不导航
@@ -36,9 +36,11 @@ describe('join-choice page — 身份分流', () => {
     vi.clearAllMocks();
   });
 
-  it('显示待加入小区名', async () => {
+  it('页顶显示「已加入 XX，请选择下一步」+ 保留社区名/地址', async () => {
     const wrapper = await mountWithPending(PENDING);
-    expect(wrapper.find('.header-sub').text()).toBe('幸福小区');
+    expect(wrapper.find('.header-title').text()).toBe('已加入 幸福小区');
+    expect(wrapper.find('.header-sub').text()).toBe('请选择下一步');
+    expect(wrapper.find('.header-addr').text()).toBe('幸福路1号');
   });
 
   it('点击「填写房号成为业主」→ navigateTo join-residence', async () => {

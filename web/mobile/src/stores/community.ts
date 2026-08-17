@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { getUserMemberships, setCurrentCommunity, getAppState } from '@/api/user';
-import type { CommunityMembership } from '@/api/user';
+import type { CommunityMembership } from '@common/types/identity';
 
 export interface CommunityInfo {
   communityId: string;

@@ -420,6 +420,40 @@ SELECT '敏感写/管理权限 min_verf_level=2' AS check_type,
             THEN '✅ PASS' ELSE '❌ FAIL' END AS status;
 
 -- ============================================================================
+-- 7. 社区管理员角色强化（community-admin-role-strengthen，用户拍板 2026-08-17）
+--    -- 目标：community_admin(3) 可维护便民电话 —— 绑定 436 community:contact:upsert-api
+--    --       （POST:/api/community/contacts）。
+--    --       AssignRole 每小区上限 3 人由 rpc 层约束（assignrolelogic.go，错误码 60009）。
+--    -- 436 min_verf_level 0→2：436 为 POST 写（维护社区级联系方式，非 self-scoped），
+--    --    community_admin(3) 属服务角色（可免 membership 自助申请）——未认证(status=0) grant
+--    --    不得行使破坏性写，与 6.8 服务角色破坏性写加固同判据（审计回归测试
+--    --    TestSeedPrivilegedRoles_DestructiveWritePerms_HardenedToLevel2 强制）。
+--    --    放置于 4.8（436 INSERT + min_verf_level=0）之后恒生效；owner/tenant 持 436 同步收窄为需已认证。
+--    -- 幂等：INSERT IGNORE + UPDATE 可重复执行；既有库经 migration/005 幂等补绑定+加固。
+-- SEE: [[permission-seed-api-path-must-match-routes]] — 436 path 与 community-hub 实际 REST 路由一致
+-- SEE: [[is-system-no-permission-shortcut]] — 权限经 rel_role_permission 配置，认证要求经 min_verf_level 数据驱动
+-- ============================================================================
+INSERT IGNORE INTO rel_role_permission (role_id, permission_id) VALUES (3, 436);
+UPDATE sys_permission SET min_verf_level = 2 WHERE code = 'community:contact:upsert-api';
+
+-- 7.1 幂等验证：community_admin(3) 持 436；owner(1)/tenant(5) 既有 436 不受影响（共 3 条）；
+--     436 有效 min_verf_level=2
+SELECT 'community_admin 绑定 436' AS check_type,
+       (SELECT COUNT(*) FROM rel_role_permission WHERE (role_id, permission_id) IN ((3,436))) AS ca_binding,
+       (SELECT COUNT(*) FROM rel_role_permission WHERE permission_id = 436 AND role_id IN (1,3,5)) AS keep_436,
+       (SELECT min_verf_level FROM sys_permission WHERE code = 'community:contact:upsert-api') AS level436,
+       CASE WHEN (SELECT COUNT(*) FROM rel_role_permission WHERE (role_id, permission_id) IN ((3,436))) = 1
+             AND (SELECT COUNT(*) FROM rel_role_permission WHERE permission_id = 436 AND role_id IN (1,3,5)) = 3
+             AND (SELECT min_verf_level FROM sys_permission WHERE code = 'community:contact:upsert-api') = 2
+            THEN '✅ PASS' ELSE '❌ FAIL' END AS status;
+SELECT 'community_admin 绑定 436' AS check_type,
+       (SELECT COUNT(*) FROM rel_role_permission WHERE (role_id, permission_id) IN ((3,436))) AS ca_binding,
+       (SELECT COUNT(*) FROM rel_role_permission WHERE permission_id = 436 AND role_id IN (1,3,5)) AS keep_436,
+       CASE WHEN (SELECT COUNT(*) FROM rel_role_permission WHERE (role_id, permission_id) IN ((3,436))) = 1
+             AND (SELECT COUNT(*) FROM rel_role_permission WHERE permission_id = 436 AND role_id IN (1,3,5)) = 3
+            THEN '✅ PASS' ELSE '❌ FAIL' END AS status;
+
+-- ============================================================================
 -- 数据验证查询
 -- ============================================================================
 

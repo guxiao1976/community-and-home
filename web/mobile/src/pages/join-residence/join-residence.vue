@@ -33,14 +33,14 @@
       <input class="join-form-input" v-model="joinForm.room" type="number" placeholder="如 502" />
       <text v-if="joinFormErrors.room" class="field-error">{{ joinFormErrors.room }}</text>
 
-      <button class="btn confirm-join-btn" :disabled="submitting" @click="confirmJoin">确认加入</button>
+      <button class="btn confirm-join-btn" :disabled="submitting" @click="confirmJoin">确认登记</button>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { joinCommunity } from '@/api/user';
+import { bindResidence, applyRole, getUserMemberships } from '@/api/user';
 import { useCommunityStore } from '@/stores/community';
 import { readPendingJoin, clearPendingJoin, type PendingJoin } from '@/utils/pending-join';
 import {
@@ -56,7 +56,8 @@ const joinFormErrors = ref<JoinFormErrors>({});
 const submitting = ref(false);
 
 onMounted(() => {
-  // 待加入小区来自 join-community → join-choice 的分流，pending-join 唯一契约源随行
+  // 加入已由 join-community 点「加入」立即完成（membership.id 回填 pending-join），
+  // 本页为独立「填写房号」步骤；pending-join 唯一契约源随行。
   // SEE: [[frontend-cross-page-storage-contract]] — 跨页临时数据收敛到共享模块
   pendingCommunity.value = readPendingJoin();
 });
@@ -69,7 +70,7 @@ async function confirmJoin() {
   }
   if (submitting.value) return;
 
-  // 前端 UX 即时校验（复用 join-form）；后端 JoinCommunity 仍权威校验（防绕过）
+  // 前端 UX 即时校验（复用 join-form）；后端 bindResidence 仍权威校验（防绕过）
   // SEE: [[frontend-business-rule-hardcode]] — 前端仅展示层校验，权威在后端
   const result = validateJoinForm(joinForm.value);
   joinFormErrors.value = result.errors;
@@ -78,13 +79,41 @@ async function confirmJoin() {
   submitting.value = true;
   try {
     uni.hideLoading(); // clear any lingering loading state
-    uni.showLoading({ title: '加入中...', mask: true });
-    const { building, unit, room, ownership } = joinFormToPayload(joinForm.value);
-    // 后端 JoinCommunity 已按权属自动授权 owner（自有）/tenant（租住）角色（status=0 未认证），
-    // 前端不得再自申请 applyRole('owner')——对租住用户会误授 owner（越权）。
-    // SEE: [[join-auto-grant-vs-frontend-reapply-role-mismatch]]
-    await joinCommunity(pending.communityId, building, unit, room, ownership);
+    uni.showLoading({ title: '登记中...', mask: true });
 
+    // membership_id 优先读 pending-join.membershipId（join-community 立即加入时回填）；
+    // 缺省回退按 communityId 从 getUserMemberships 取（深链/旧流程兜底）。
+    // SEE: [[one-shot-pending-consume-on-success]]
+    let membershipId = pending.membershipId;
+    if (!membershipId) {
+      const memberships = await getUserMemberships();
+      membershipId = memberships.find(
+        (m: any) => (m.community_id || m.communityId) === pending.communityId,
+      )?.id;
+    }
+    if (!membershipId) {
+      uni.showToast({ title: '未找到小区成员关系，请重新加入', icon: 'none' });
+      return;
+    }
+
+    const { building, unit, room, ownership } = joinFormToPayload(joinForm.value);
+    // 新模型：加入已在上一步完成（join-community 立即建 membership），本页只做独立步骤——
+    // bindResidence 绑定房号 + applyRole 申请权属角色（OWNED→owner / RENTED→tenant）。
+    // 加入时未传 ownership，后端不再自动授权，权属角色由用户在房号登记时拍板（用户拍板）。
+    // SEE: [[auto-grant-unverified-grant-confers-scope-level0]] [[join-auto-grant-vs-frontend-reapply-role-mismatch]]
+    await bindResidence({
+      membership_id: membershipId,
+      building: String(building),
+      unit: String(unit),
+      room: String(room),
+      is_primary: 1,
+    });
+    await applyRole({
+      community_id: pending.communityId,
+      role_code: ownership === 1 ? 'owner' : 'tenant',
+    });
+
+    // 幂等：join-community 已 addCommunity；深链直达时兜底确保小区在 store
     communityStore.addCommunity({
       communityId: pending.communityId,
       communityName: pending.communityName,
@@ -92,10 +121,12 @@ async function confirmJoin() {
     });
     clearPendingJoin();
     pendingCommunity.value = null;
-    uni.showToast({ title: '加入成功', icon: 'success' });
+    uni.showToast({ title: '房号登记成功', icon: 'success' });
     uni.switchTab({ url: '/pages/notice/notice' });
   } catch (e: any) {
-    const msg = e?.message || e?.msg || '加入失败，请稍后重试';
+    // bindResidence/applyRole 失败：提示 + 保留 pending-join 可重试（不清除）
+    // SEE: [[one-shot-pending-consume-on-success]]
+    const msg = e?.message || e?.msg || '房号登记失败，请重试';
     uni.showToast({ title: msg, icon: 'none', duration: 3000 });
   } finally {
     uni.hideLoading();

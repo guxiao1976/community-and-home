@@ -1,9 +1,10 @@
 <template>
   <view class="page">
     <view class="header">
-      <text class="header-title">加入小区</text>
-      <text class="header-sub">{{ pendingCommunity?.communityName || '请选择加入身份' }}</text>
+      <!-- 加入已由 join-community 立即完成（已建 membership），此页为「选择下一步」分流 -->
+      <text class="header-title">已加入 {{ pendingCommunity?.communityName || '小区' }}</text>
       <text v-if="pendingCommunity?.address" class="header-addr">{{ pendingCommunity.address }}</text>
+      <text class="header-sub">请选择下一步</text>
     </view>
 
     <!-- 身份分流：业主填房号 / 其他身份认证去我的页 -->
@@ -67,8 +68,8 @@ function goBack() {
 
 .header { padding: 1.875rem 0 1.5rem; text-align: center;
   .header-title { display: block; font-size: 1.375rem; font-weight: 700; color: $uni-text-color; margin-bottom: 0.25rem; }
-  .header-sub { display: block; font-size: 0.9375rem; font-weight: 600; color: $uni-color-primary; }
   .header-addr { display: block; font-size: 0.75rem; color: $uni-text-color-grey; margin-top: 0.25rem; }
+  .header-sub { display: block; font-size: 0.9375rem; font-weight: 600; color: $uni-color-primary; margin-top: 0.375rem; }
 }
 
 .choice-list { display: flex; flex-direction: column; gap: 1rem; }

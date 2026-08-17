@@ -28,11 +28,11 @@ func createTestMembershipAt(t *testing.T, m *mockMembershipModel, id, uid, cid i
 }
 
 // =============================================================================
-// Task 3.4: JoinCommunity 房屋必填 + 每户 ≤6
+// Task 3.4: JoinCommunity 每户 ≤6 + 部分提供校验（房号/权属改为可选后，缺其一视为部分提供 → 10040）
 // =============================================================================
 
 func TestJoinCommunity_MissingBuilding_Returns10040(t *testing.T) {
-	// 缺楼号 → 10040（楼/单元/房号必填）
+	// 部分提供：缺楼号（有权属有单元有房号）→ 10040（要么全有要么全无）
 	svc, _ := certTestSvc(t)
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
@@ -44,7 +44,7 @@ func TestJoinCommunity_MissingBuilding_Returns10040(t *testing.T) {
 }
 
 func TestJoinCommunity_MissingUnit_Returns10040(t *testing.T) {
-	// 缺单元号 → 10040
+	// 部分提供：缺单元号 → 10040
 	svc, _ := certTestSvc(t)
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{
@@ -56,7 +56,7 @@ func TestJoinCommunity_MissingUnit_Returns10040(t *testing.T) {
 }
 
 func TestJoinCommunity_MissingRoom_Returns10040(t *testing.T) {
-	// 缺房号 → 10040
+	// 部分提供：缺房号 → 10040
 	svc, _ := certTestSvc(t)
 	logic := NewJoinCommunityLogic(context.Background(), svc)
 	resp, err := logic.JoinCommunity(&userv1.JoinCommunityRequest{

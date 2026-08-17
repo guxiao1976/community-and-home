@@ -22,16 +22,41 @@ func NewAssignRoleLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Assign
 	return &AssignRoleLogic{Logger: logx.WithContext(ctx), ctx: ctx, svcCtx: svcCtx}
 }
 
+// MaxCommunityAdminPerCommunity 每小区 community_admin 人数上限（用户拍板 2026-08-17）。
+// 社区管理员是数据范围特权角色（驱动 division 子树发布范围展开，见 resolvePublishScope），
+// 人数必须受控，避免单个小区管理权过度集中。
+const MaxCommunityAdminPerCommunity = int64(3)
+
 // AssignRole 分配角色（spec/permission.md 核心逻辑流 1）
 //
-//	校验角色存在 → 插入 rel_user_role（幂等） → 失效 Redis 权限缓存
+//	校验角色存在 → [community_admin 每小区上限 3 人] → 插入 rel_user_role（幂等） → 失效 Redis 权限缓存
 func (l *AssignRoleLogic) AssignRole(in *permissionv1.AssignRoleRequest) (*permissionv1.AssignRoleResponse, error) {
 	// 校验角色存在
-	_, err := l.svcCtx.RoleModel.FindOne(l.ctx, in.RoleId)
+	role, err := l.svcCtx.RoleModel.FindOne(l.ctx, in.RoleId)
 	if err != nil {
 		return &permissionv1.AssignRoleResponse{
 			Base: responsex.NewBaseRespWithError(60001, "角色不存在"),
 		}, nil
+	}
+
+	// 每小区 community_admin 上限 3 人（用户拍板 2026-08-17）
+	// 计数该小区活跃（status∈{0,1,2}）community_admin grants，≥3 拒绝；其他角色/其他作用域不限制。
+	// 幂等：计数排除本用户（INSERT IGNORE 已存在时同人重复申请不误拒）；驳回(3)/过期(4)不计入。
+	// SEE: [[is-system-no-permission-shortcut]] — 角色码判定仅驱动人数上限，非权限短路
+	if role.RoleCode == RoleCodeCommunityAdmin && in.ScopeType == model.ScopeTypeCommunity {
+		count, err := l.svcCtx.UserRoleModel.CountActiveByRoleAndScope(l.ctx, in.RoleId, in.ScopeType, in.ScopeId, in.UserId)
+		if err != nil {
+			l.Errorf("AssignRole: count community_admin grants failed roleId=%d scope=%s:%d: %v",
+				in.RoleId, in.ScopeType, in.ScopeId, err)
+			return nil, err
+		}
+		if count >= MaxCommunityAdminPerCommunity {
+			l.Infof("AssignRole denied: community_admin limit reached roleId=%d scope=%s:%d count=%d",
+				in.RoleId, in.ScopeType, in.ScopeId, count)
+			return &permissionv1.AssignRoleResponse{
+				Base: responsex.NewBaseRespWithError(CodeCommunityAdminLimit, "该小区管理员已达上限 3 人"),
+			}, nil
+		}
 	}
 
 	// 解析个体角色生命周期参数（可选）

@@ -878,3 +878,111 @@ Number of calls: 1
 ```
 
 > 全量门禁: `npm run test:unit` → 24 files / 144 tests PASS；`npm run type-check` → 0 errors；`npm run build:h5` → PASS（DONE Build complete）；`harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）。
+
+---
+
+## 加入流程重构：点「加入小区」立即建 membership（2026-08-17）
+
+> 背景：新模型（用户拍板）——加入=立即建 membership（无房号），填写房号改为独立步骤（bindResidence + applyRole）。RED 摘录通过**先写重写后的 spec（断言新行为），在旧实现仍驻留时运行 vitest** 捕获真实输出，随后实现 GREEN。
+> 复现命令：`npx vitest run src/pages/join-community/join-community.spec.ts src/pages/join-residence/join-residence.spec.ts src/pages/join-choice/join-choice.spec.ts`（旧实现下）；`src/api/user.ts` 的 RED 需 `git checkout HEAD -- src/api/user.ts` 回退旧实现后单独复现（见 RED 2.5）。
+
+### RED 汇总（4 files / 9 failed / 8 passed）
+
+```
+ Test Files  4 failed (4)
+      Tests  9 failed | 8 passed (17)
+```
+
+### RED 1 — join-choice 页顶文案（旧「加入进行中」→ 新「已加入 XX，请选择下一步」）
+
+> 基线校准：Received「加入进行中」取自工作树中间态（2026-08-17「明确加入进行中」轮已改文案但未 commit，git show HEAD 的 join-choice.vue 第 5 行为更早的「加入小区 <社区名>」）。本页属文案映射（RED 不要求），此摘录仅证明「断言新文案时旧文案未命中」；基线差异不影响结论，特此注明避免后续 QA 误判。
+
+```
+ FAIL  src/pages/join-choice/join-choice.spec.ts > join-choice page — 身份分流 > 页顶显示「已加入 XX，请选择下一步」+ 保留社区名/地址
+AssertionError: expected '加入进行中' to be '已加入 幸福小区' // Object.is equality
+
+Expected: "已加入 幸福小区"
+Received: "加入进行中"
+
+ ❯ src/pages/join-choice/join-choice.spec.ts:41:50
+     41|     expect(wrapper.find('.header-title').text()).toBe('已加入 幸福小区');
+```
+
+### RED 2 — join-community 点「加入」立即 joinCommunity（旧仅存 pending 不调后端）
+
+```
+ FAIL  src/pages/join-community/join-community.spec.ts > … > 点击未加入小区 → joinCommunity(communityId 无房号) + addCommunity + 存 pending(带 membershipId) + navigateTo join-choice
+AssertionError: expected "vi.fn()" to be called with arguments: [ 'c1' ]
+
+Number of calls: 0
+
+ ❯ src/pages/join-community/join-community.spec.ts:61:27
+     61|     expect(joinCommunity).toHaveBeenCalledWith('c1');
+
+ FAIL  src/pages/join-community/join-community.spec.ts > … > joinCommunity 失败（如每年最多加入 3 个新小区）→ toast 错误，不存 pending、不导航、不 addCommunity
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]
+
+Number of calls: 0
+```
+
+说明: 旧 `onSelectArea` 同步存 pending 即导航、不调 `joinCommunity`，故 ①`joinCommunity` 调用数为 0；②失败分支 toast（`uni.showToast`）调用数为 0。
+
+### RED 3 — join-residence 改 bindResidence + applyRole（旧仍调 joinCommunity，未 mock 时抛错/0 调用）
+
+```
+ FAIL  src/pages/join-residence/join-residence.spec.ts > … > 自有 → 读 pending.membershipId → bindResidence(is_primary:1) + applyRole(owner) + toast 房号登记成功 + 清 pending + switchTab notice
+AssertionError: expected "vi.fn()" to be called with arguments: [ { membership_id: 'm1', …(4) } ]
+
+Number of calls: 0
+
+ ❯ src/pages/join-residence/join-residence.spec.ts:90:27
+     90|     expect(bindResidence).toHaveBeenCalledWith({
+
+ FAIL  src/pages/join-residence/join-residence.spec.ts > … > 租住 → applyRole role_code=tenant
+AssertionError: expected "vi.fn()" to be called with arguments: [ { community_id: 'c1', …(1) } ]
+
+Number of calls: 0
+
+ ❯ src/pages/join-residence/join-residence.spec.ts:110:23
+
+ FAIL  src/pages/join-residence/join-residence.spec.ts > … > pending 无 membershipId → 回退 getUserMemberships 按 communityId 取 membership.id
+AssertionError: expected "vi.fn()" to be called at least once
+ ❯ src/pages/join-residence/join-residence.spec.ts:125:32
+    125|     expect(getUserMemberships).toHaveBeenCalled();
+```
+
+说明: 旧 `confirmJoin` 调 `joinCommunity(pending.communityId, building, unit, room, ownership)`，新 spec 的 mock 只提供 bindResidence/applyRole/getUserMemberships，故 ①bindResidence/applyRole/getUserMemberships 均 0 调用；②旧代码运行时取 `joinCommunity` 抛 `No "joinCommunity" export is defined on the "@/api/user" mock`，兜底 toast 文案错误（Received 与期望不符）。
+
+### RED 2.5 — user.ts `joinCommunity` 条件载荷（房号可选）
+
+> 复现方式：`git checkout HEAD -- src/api/user.ts` 回退到旧实现（5 个必填参数、恒发送全部字段）→ `npx vitest run src/api/user.spec.ts` → 捕获下方真实 FAIL → `git stash pop` / 恢复工作树实现。新增用例 3（仅传 communityId）首跑即在此 FAIL，真实 RED 从未在旧实现下持久化过，故本轮补录。
+> // SEE: [[tdd-red-evidence-requires-fail-excerpt]] — RED 证据必须含实际 FAIL 摘录（本轮即该记忆的第 7 次复发的补录）
+
+```
+ FAIL  src/api/user.spec.ts > joinCommunity > 仅传 communityId（房号可选）→ 载荷不含 building/unit/room/ownership
+AssertionError: expected { community_id: 'c1', …(4) } to not have property "building"
+ ❯ src/api/user.spec.ts:73:25
+     71|     const payload = (request.post as any).mock.calls[0][1];
+     72|     expect(payload).toEqual({ community_id: 'c1' });
+     73|     expect(payload).not.toHaveProperty('building');
+       |                         ^
+     74|     expect(payload).not.toHaveProperty('unit');
+     75|     expect(payload).not.toHaveProperty('room')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+```
+
+说明: 旧实现 `joinCommunity('c1')` 恒发送 `{community_id, building, unit, room, ownership}` 全部字段（可选参未传为 `undefined`），`toEqual({community_id:'c1'})` 因 vitest 忽略 `undefined` 键而通过，但 `not.toHaveProperty('building')` 必然失败（`undefined` 键仍存在于 payload 对象上）——这正是条件载荷逻辑（4 个 `if (x != null)` 分支）要修复的行为：仅 communityId 调用时载荷不含房号字段。
+
+### GREEN（实现后全量）
+
+```
+ Test Files  24 passed (24)
+      Tests  150 passed (150)
+```
+
+> 全量门禁: `npm run type-check` → 0 errors；`npm run build:h5` → DONE Build complete；`harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量 type-safety 3 处 as any + api-field-align 34 处）。

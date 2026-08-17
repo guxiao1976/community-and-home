@@ -37,6 +37,19 @@ describe('pending-join — 跨页一次性待加入小区契约', () => {
     expect(readPendingJoin()).toEqual(PENDING);
   });
 
+  it('membershipId 可选字段：join-community 立即加入回填后随 save→read 往返', () => {
+    // 新模型：加入=立即建 membership，join-community 把 membership.id 回填 pending-join，
+    // join-residence 绑定房号（bindResidence）时优先读取。
+    savePendingJoin({ ...PENDING, membershipId: 'm1' });
+    expect(readPendingJoin()).toEqual({ ...PENDING, membershipId: 'm1' });
+  });
+
+  it('未填 membershipId（深链/旧数据）→ read 返回对象不含该字段', () => {
+    savePendingJoin(PENDING);
+    expect(readPendingJoin()).toEqual(PENDING);
+    expect(readPendingJoin()).not.toHaveProperty('membershipId');
+  });
+
   it('H5 镜像写入 sessionStorage 且带 {data, expiresAt}，绝不触碰 localStorage', () => {
     const lsSet = vi.spyOn(window.localStorage, 'setItem');
     const lsGet = vi.spyOn(window.localStorage, 'getItem');

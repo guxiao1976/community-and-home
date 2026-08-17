@@ -3,6 +3,7 @@ module github.com/guxiao1976/community-user
 go 1.25.0
 
 require (
+	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/golang/mock v1.6.0
 	github.com/guxiao1976/api-proto v0.1.0
 	github.com/guxiao1976/community-common/v2 v2.0.0
@@ -13,7 +14,6 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
-	github.com/alicebob/miniredis/v2 v2.38.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

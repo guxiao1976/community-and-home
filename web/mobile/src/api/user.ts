@@ -1,22 +1,11 @@
 // User Service & Master Data API — Uni-app mobile
 import request from '@/utils/request';
 
-// CommunityMembership — matches proto CommunityMembership (snake_case over the wire).
-// protojson outputs snake_case by default; CommunityMembership only contains IDs
-// (no community_name); use CommunityStore for display names.
-export interface CommunityMembership {
-  id: string;
-  user_id: string;
-  community_id: string;
-  bind_status: number;
-  join_time: number;
-  leave_time: number;
-  created_at: number;
-  updated_at: number;
-  building: number;
-  unit: number;
-  room: number;
-}
+// CommunityMembership 复用 web/common（字段名已与 wire snake_case 对齐），不再端内重定义。
+// 本地别名指向共享层（避免 vue-tsc 对「import type + 使用」解析问题），仍是单一共享类型源。
+// SEE: [[web-common-type-reuse-no-redefine]] [[web-common-type-field-wire-mismatch]]
+import type { CommunityMembership as CMembership } from '@common/types/identity';
+type CommunityMembership = CMembership;
 
 export interface Division {
   id: string;
@@ -36,27 +25,28 @@ export interface ResidentialArea {
 
 /**
  * Join a community. Requires JWT.
- * ownership 与 user.proto CommunityOwnership 对齐：1=OWNED(自有)→owner / 2=RENTED(租住)→tenant，必填。
- * building/unit/room 与 proto JoinCommunityRequest 对齐（building 1-150 / unit 1-5 / room 3位数字）。
+ * 新模型：加入=立即建 membership（无房号），房号/权属绑定移到独立步骤（bindResidence + applyRole），
+ * 故 building/unit/room/ownership 均改为可选——仅调用方传入时才透传给后端（并行管线已支持房号可选）。
+ * 传入时与 proto JoinCommunityRequest 对齐（ownership: 1=OWNED(自有)→owner / 2=RENTED(租住)→tenant）。
  */
 export async function joinCommunity(
   communityId: string,
-  building: number,
-  unit: number,
-  room: number,
-  ownership: number,
+  building?: number,
+  unit?: number,
+  room?: number,
+  ownership?: number,
 ): Promise<CommunityMembership> {
-  const res = await request.post<CommunityMembership>(
-    '/api/users/communities/join',
-    {
-      community_id: communityId,
-      building,
-      unit,
-      room,
-      ownership,
-    },
-  );
-  return res as unknown as CommunityMembership;
+  const payload: Record<string, unknown> = { community_id: communityId };
+  if (building != null) payload.building = building;
+  if (unit != null) payload.unit = unit;
+  if (room != null) payload.room = room;
+  if (ownership != null) payload.ownership = ownership;
+  const res = await request.post<any>('/api/users/communities/join', payload);
+  // REST 响应经拦截器解包 data 后仍是 { membership: {...} } 包装对象；须解出 membership 资源本身，
+  // 否则调用方取 res.id 恒为 undefined（membershipId 回填静默失效，靠 getUserMemberships 兜底掩盖）。
+  // SEE: [[frontend-api-return-wrapped-resource-unwrap]] [[api-response-single-wrap]]
+  const data = res as { membership?: CommunityMembership };
+  return data.membership || (res as unknown as CommunityMembership);
 }
 
 /**

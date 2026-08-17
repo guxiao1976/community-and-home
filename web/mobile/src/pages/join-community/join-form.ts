@@ -68,7 +68,8 @@ export function validateJoinForm(form: JoinFormState): JoinFormResult {
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
-// 前端表单（字符串输入）→ joinCommunity 载荷（int 楼/单元/房号 + 权属枚举值）。
+// 前端表单（字符串输入）→ 归一化（int 楼/单元/房号 + 权属枚举值）。
+// 新模型下 join-residence 使用：building/unit/room 转 string 进 bindResidence，ownership 决定 applyRole 的 role_code。
 export function joinFormToPayload(form: JoinFormState): {
   building: number;
   unit: number;

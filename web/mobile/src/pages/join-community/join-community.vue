@@ -63,9 +63,6 @@
           <text v-if="selectedProvince?.id === p.id" class="item-check">✓</text>
         </view>
       </scroll-view>
-      <button class="btn" :class="{ 'btn--disabled': !selectedProvince || maxReached }" :disabled="!selectedProvince || maxReached" @click="step = 2">
-        下一步
-      </button>
     </view>
 
     <!-- Step 2: Select City -->
@@ -88,9 +85,6 @@
           <text v-if="selectedCity?.id === c.id" class="item-check">✓</text>
         </view>
       </scroll-view>
-      <button class="btn" :class="{ 'btn--disabled': !selectedCity }" :disabled="!selectedCity" @click="step = 3">
-        下一步
-      </button>
     </view>
 
     <!-- Step 3: Select District -->
@@ -156,7 +150,7 @@
 import { ref, computed, onMounted } from 'vue';
 import {
   type Division, type ResidentialArea,
-  getDivisions, searchResidentialAreas,
+  getDivisions, searchResidentialAreas, joinCommunity,
 } from '@/api/user';
 import { useCommunityStore } from '@/stores/community';
 // SEE: [[frontend-cross-page-storage-contract]] — 选中小区存 pending-join 唯一契约源，join-choice/join-residence 消费
@@ -216,6 +210,8 @@ async function selectProvince(p: Division) {
   citiesLoading.value = true;
   try { cities.value = await getDivisions(p.id); } catch (_) { cities.value = []; }
   finally { citiesLoading.value = false; }
+  // 自动级联：选完省立即进入城市列表（无需点下一步）
+  step.value = 2;
 }
 
 async function selectCity(c: Division) {
@@ -224,6 +220,8 @@ async function selectCity(c: Division) {
   districtsLoading.value = true;
   try { districts.value = await getDivisions(c.id); } catch (_) { districts.value = []; }
   finally { districtsLoading.value = false; }
+  // 自动级联：选完市立即进入县区列表（无需点下一步）
+  step.value = 3;
 }
 
 function selectDistrict(d: Division) {
@@ -248,22 +246,41 @@ async function doSearch() {
   finally { searching.value = false; }
 }
 
-// --- 选小区分流：存 pending-join → 新页 join-choice 选身份（业主填房号 / 其他身份认证去我的页） ---
-// 选中小区后不再页内弹「自有/租住 + 楼/单元/房号」modal，改为把 {id,name,address} 存入
-// pending-join 唯一契约源并导航到 join-choice；后续 join-residence 页消费并复用 join-form 校验。
-function onSelectArea(area: ResidentialArea) {
+// --- 加入流程重构（用户拍板）：点「加入小区」= 立即建 membership（无房号）---
+// 选中小区 → await joinCommunity(communityId)（房号可选，后端并行管线已支持）→
+// communityStore.addCommunity 立即进 store → 把 membership.id 回填 pending-join（新增 membershipId）
+// → 导航 join-choice（已加入 XX，请选择下一步：填房号成为业主 / 其他身份认证）。
+// 已加入 → toast 不重复；maxReached → 上限警告；joinCommunity 失败 → toast 错误（可重试）。
+async function onSelectArea(area: ResidentialArea) {
   if (maxReached.value) {
     showMaxWarning.value = true;
     setTimeout(() => { showMaxWarning.value = false; }, 2000);
     return;
   }
-  if (isJoined(area.id)) return;
-  savePendingJoin({
-    communityId: area.id,
-    communityName: area.name,
-    address: area.address,
-  });
-  uni.navigateTo({ url: '/pages/join-choice/join-choice' });
+  if (isJoined(area.id)) {
+    uni.showToast({ title: '该小区已加入', icon: 'none' });
+    return;
+  }
+  // 前端仅做前置 UX 拦截 + 错误透出；加入上限/重复等由后端权威校验（拦截器已 toast，此处按 msg 透出兜底）
+  // SEE: [[frontend-business-rule-hardcode]] [[testing-discipline]]
+  try {
+    const membership = await joinCommunity(area.id);
+    communityStore.addCommunity({
+      communityId: area.id,
+      communityName: area.name,
+      address: area.address,
+    });
+    savePendingJoin({
+      communityId: area.id,
+      communityName: area.name,
+      address: area.address,
+      membershipId: membership?.id,
+    });
+    uni.navigateTo({ url: '/pages/join-choice/join-choice' });
+  } catch (e: any) {
+    const msg = e?.message || e?.msg || '加入失败，请稍后重试';
+    uni.showToast({ title: msg, icon: 'none', duration: 3000 });
+  }
 }
 
 function isJoined(id: string): boolean {

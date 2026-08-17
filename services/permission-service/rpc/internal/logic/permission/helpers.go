@@ -16,6 +16,12 @@ import (
 // SEE: [[error-code-literal-bypasses-qa-gate]] — 禁止裸字面量，必须命名常量
 const CodeInvalidPlatform int32 = 60008
 
+// CodeCommunityAdminLimit 每小区 community_admin 人数上限错误码（060009，协议头注释待 Owner 同步）
+// 社区管理员是数据范围特权角色（驱动 division 子树发布范围展开），人数必须受控。
+// SEE: [[error-code-collision-and-namespace-alignment]] — 60001-60008 已占（含文档登记的 60002/60003），
+// 新增语义必须分配新码段 60009（一码一义，禁止复用 60002「权限不存在」）
+const CodeCommunityAdminLimit int32 = 60009
+
 // grantSatisfiedLevel 计算单个 grant 满足的能力层级（T1.5 §5.1.1 数据驱动聚合规则）
 //
 //	level-2 = status==2 AND verified_at NOT NULL AND 未过期
