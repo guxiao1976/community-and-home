@@ -30,6 +30,9 @@ Thumbs.db
 # Node modules (if using Node.js projects)
 node_modules/
 
+# Frontend test coverage reports (vitest --coverage 产物，不入库)
+web/*/coverage/
+
 # Python cache (if using Python projects)
 __pycache__/
 *.pyc
