@@ -1444,7 +1444,7 @@ main() {
   else
     # Human-readable output
     local n=0
-    local labels=("go build" "go vet" "go test" "gofmt" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "design consistency" "git hygiene" "mutation testing" "pipeline evals")
+    local labels=("go build" "go vet" "go test" "gofmt" "proto int64 jstype" "json:\",string\"" "cross-service DB import" "error code format" "hardcoded secrets" "graph freshness" "CLAUDE.md structural data" "proto->TS alignment" "API logic stubs" "response single-wrap" "benchmark regression" "API smoke test" "memory index freshness" "design consistency" "git hygiene" "mutation testing" "pipeline evals" "govulncheck")
     for result in "${RESULTS[@]}"; do
       local status label detail why fix example reference
       status=$(echo "$result" | grep -oP '"status":"\K\w+')
