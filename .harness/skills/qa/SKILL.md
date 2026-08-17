@@ -19,19 +19,18 @@
 | `services/<name>/` (Go 服务) | `bash .harness/skills/qa/scripts/harness-checks.sh --service <name> --json`          |
 | `web/<name>/` (前端服务)       | `bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service <name> --json` |
 
-**Go 服务检查项**：go_build / go_vet / go_test / proto_jstype / json_string / cross_service_import / error_codes / hardcoded_secrets / graph_freshness / claude_structural_data / proto_ts_align / api_stubs / response_wrap / bench_regression / api_smoke（共 15 项）
+**检查项清单（唯一权威出处）**：运行脚本 `--list-checks` 查看完整检查项：
 
-**前端服务检查项**：type_check / unit_test / build / hardcoded_secrets / debug_artifacts / type_safety（共 6 项）
+```bash
+bash .harness/skills/qa/scripts/harness-checks.sh --list-checks            # Go 服务
+bash .harness/skills/qa/scripts/harness-checks-frontend.sh --list-checks   # 前端服务
+```
+
+> 检查项设计解释（查什么/怎么查/为什么/抓不到）见 [docs/qa-checks.md](../../../docs/qa-checks.md)。**不要在 SKILL.md 手写检查项清单**——清单散落多处必漂移，以脚本 `--list-checks` 机器生成输出为准。
 
 - PASS → 对应项打 ✅
 - FAIL → 记录违规详情（文件名:行号:字段名）
-- WARN → 记录为 WARNING 级别
-
-### Step 1-3: 编译/静态分析/单元测试（Step 0 已覆盖）
-
-机械化检查已覆盖 build/vet/test，确认结果并记录详情：
-
-- `go test` 结果需包含测试包数和测试函数数（`0/0` = 假通过，标记为 WARN）
+- WARN → 记录为 WARNING 级别（含 `go test` 的 `0/0` 假通过）
 
 ### Step 4: 覆盖率（可选）
 
@@ -76,14 +75,7 @@ cd services/<name> && go test ./... -cover
 
 | # | 检查项 | 结果 | 详情 |
 |---|--------|------|------|
-| 1 | go build | ✅/❌ | |
-| 2 | go vet | ✅/❌ | |
-| 3 | go test | ✅/❌ | <N 包, M 测试函数> |
-| 4 | Proto int64 jstype | ✅/❌ | |
-| 5 | json:",string" | ✅/❌ | |
-| 6 | 跨服务DB导入 | ✅/❌ | |
-| 7 | 错误码格式 | ✅/⚠️ | |
-| 8 | 硬编码密钥 | ✅/❌ | |
+| ... | 完整检查项以 `harness-checks.sh --list-checks` 输出为准 | ✅/❌/⚠️ | |
 
 ## 编译检查
 - [x] / [ ] go build ./...
@@ -114,8 +106,8 @@ VERDICT: PASS / FAIL
 ## VERDICT
 
 ```
-PASS — 机械化检查无 FAIL + go build/vet/test 全通过，测试覆盖合理
-FAIL — 机械化检查有 FAIL / 编译失败 / 测试失败 / 测试覆盖严重不足
+PASS — 机械化检查无 FAIL + go build/vet/test 全通过
+FAIL — 机械化检查有 FAIL / 编译失败 / 测试失败
 ```
 
 FAIL 时必须列出具体失败信息，让开发者能直接定位。
@@ -125,13 +117,14 @@ FAIL 时必须列出具体失败信息，让开发者能直接定位。
 |     | qa            | review       |
 | --- |:-------------:|:------------:|
 | 关注  | 是否正确运行        | 是否合理设计       |
-| 手段  | 编译、测试、覆盖率     | 9维度静态审查      |
-| 产出  | `_qa.md`      | `_review.md` |
+| 手段  | 编译、测试、覆盖率     | 12维度静态审查（3视角）|
+| 产出  | `_qa.md`      | `_review_<lens>.md`（按视角分文件）|
 | 顺序  | **先于 review** | QA PASS 之后   |
 
 ## 关联
 
-- Go 机械化检查：`.harness/skills/qa/scripts/harness-checks.sh`
-- 前端机械化检查：`.harness/skills/qa/scripts/harness-checks-frontend.sh`
-- 代码审查：`.harness/skills/review.md`
+- Go 机械化检查：`.harness/skills/qa/scripts/harness-checks.sh`（检查项 `--list-checks` 输出为准）
+- 前端机械化检查：`.harness/skills/qa/scripts/harness-checks-frontend.sh`（同上）
+- 检查点设计解释：`docs/qa-checks.md`（四段式人读文档）
+- 代码审查：`.harness/skills/review.md`（12 维度）
 - Harness Pipeline：`.harness/workflows/harness-pipeline.js`

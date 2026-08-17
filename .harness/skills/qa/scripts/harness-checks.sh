@@ -8,31 +8,14 @@
 # Options:
 #   --service <name>   Scope checks to a single service directory under services/
 #   --json             Output results as JSON (default: human-readable text)
+#   --list-checks      List all check items (machine-generated from check_* functions)
+#   --full             Full scan (default: diff-only)
 #   -h, --help         Show help
 #
 # Exit code: 0 if all checks pass, non-zero if any check fails.
 #
-# Checks:
-#   1. go build ./...          — compilation
-#   2. go vet ./...            — static analysis
-#   3. go test ./...           — unit tests (with 0/0 false-pass detection)
-#   3.5 gofmt — 变更 Go 文件必须已格式化（P3.1，对齐 pre-commit 提交门）
-#   4. Proto int64 jstype      — every int64 ID field must have [jstype = JS_STRING]
-#   5. Go json:",string"       — every int64 ID field must use json:"...,string"
-#   6. Cross-service DB import — no importing another service's model/ package
-#   7. Error code format       — use errx constants, not magic numbers
-#   8. Hardcoded secrets       — no password/token/secret literals in Go code
-#   9. Knowledge graph freshness — graph should be synced after latest commit
-#  10. CLAUDE.md structural data — warn if structural data (RPC/routes/DB tables) duplicated in CLAUDE.md
-#  11. Proto→TypeScript alignment — every proto message field has a matching TS interface field
-#  12. API Logic TODO stubs — no api/internal/logic/*.go should contain todo stubs
-#  13. Response single-wrap — detect Logic functions returning types with embedded BaseResponse
-#  14. Benchmark regression — compare go test -bench against stored baselines
-#  15. API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
-#  16. Memory index freshness — memory 索引与记忆文件保持同步
-#  17. Git hygiene — gitlink/.gitmodules 一致、无孤儿 worktree 分支
-#  18. Mutation testing — 有逻辑函数的测试有效性（变异测试，工具未装则 SKIP）
-#  19. Pipeline evals — 管线自身回归语料库（P4.1，跑 .harness/pipeline/evals/run-evals.sh 防管线改动回归）
+# Checks: 运行 `--list-checks` 查看完整检查项清单（从 check_* 函数定义机器生成，唯一权威出处）；
+#          设计解释见 docs/qa-checks.md。此处不再手写编号清单（易漂移）。
 #
 # ─── 项目策略 vs 通用引擎 边界 ────────────────────────────────────────
 # 以下检查为 Community-Home 项目特有策略（非通用引擎逻辑），迁移本脚本到
@@ -152,6 +135,35 @@ json_escape() {
   echo -n "$s"
 }
 
+# list_checks — 从自身 check_* 函数定义【机器生成】检查项清单（JSON），作为 QA 检查项的
+# 唯一权威出处。SKILL.md / docs 均引用 `--list-checks` 输出，不再手写硬编码清单，
+# 从根上杜绝「SKILL.md/脚本头注释/函数定义」三处漂移。
+# 输出 id（函数名）+ num（从上方 `# ... Check N ...` 注释提取，ASCII 安全）+ name（函数名去 check_ 前缀）；
+# 中文名与四段式设计解释见 docs/qa-checks.md（人工维护，不在此机器生成）。
+list_checks() {
+  local prev_num=""
+  local items=()
+  local fn it
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^#[[:space:]]*.*[Cc]heck[[:space:]]*([0-9]+(\.[0-9]+)?) ]]; then
+      prev_num="${BASH_REMATCH[1]}"
+      continue
+    fi
+    if [[ "$line" =~ ^check_([a-z_]+)\(\) ]]; then
+      fn="${BASH_REMATCH[1]}"
+      items+=("{\"id\":\"check_${fn}\",\"num\":\"${prev_num}\",\"name\":\"${fn}\"}")
+      prev_num=""
+    fi
+  done < "$0"
+  printf '['
+  local sep=""
+  for it in "${items[@]}"; do
+    printf '%s%s' "$sep" "$it"
+    sep=","
+  done
+  printf ']\n'
+}
+
 # ─── Parse Args ───────────────────────────────────────────────────────
 
 while [[ $# -gt 0 ]]; do
@@ -163,6 +175,10 @@ while [[ $# -gt 0 ]]; do
     --json)
       OUTPUT_JSON=true
       shift
+      ;;
+    --list-checks)
+      list_checks
+      exit 0
       ;;
     --full)
       FULL_SCAN=true
@@ -332,7 +348,7 @@ check_go_test() {
   fi
 }
 
-# ─── Check: gofmt（P3.1 — 对齐 pre-commit 提交门，变更 Go 文件必须已格式化）──
+# ─── Check 3.5: gofmt — 变更文件格式（对齐 pre-commit 提交门）─────
 
 check_go_fmt() {
   echo "[gofmt] gofmt — 变更 Go 文件格式（对齐 pre-commit 提交门）" >&2
@@ -1174,7 +1190,7 @@ check_memory_index() {
   fi
 }
 
-# ─── Check 16.5: 设计/代码一致性（model 列 vs 标准迁移源）───────────
+# ─── Check 16.5: 设计一致性（model 列 vs 标准迁移源）───────────────
 # 比对 Go model 的 db tag 列是否覆盖标准迁移源（migration/scripts/docs-specs）。
 # WARN 级：model 引用列缺失可能是历史手工迁移/legacy/建表源不在标准位置，
 # 提示风险而非误伤正常提交。
@@ -1303,7 +1319,7 @@ check_mutation_testing() {
   fi
 }
 
-# ─── Check: pipeline evals（P4.1 — 管线自身回归语料库，防管线改动回归）──
+# ─── Check 19: pipeline evals — 管线自身回归语料库 ──────────────
 
 check_pipeline_evals() {
   echo "[pipeline-evals] 管线自身 eval 回归（run-evals.sh）" >&2

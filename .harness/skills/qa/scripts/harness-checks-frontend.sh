@@ -8,19 +8,14 @@
 # Options:
 #   --service <name>   Scope checks to a single frontend app under web/
 #   --json             Output results as JSON (default: human-readable text)
+#   --list-checks      List all check items (machine-generated from check_* functions)
 #   -h, --help         Show help
 #
 # Exit code: 0 if all checks pass, non-zero if any check fails.
 #
-# Checks:
-#   1. type-check        — vue-tsc --noEmit / tsc --noEmit
-#   2. unit-test         — vitest run / npm test (with 0/0 false-pass detection)
-#   3. build             — vite build / npm run build
-#   4. hardcoded-secrets — no API keys, tokens, or passwords in source code
-#   5. debug-artifacts   — no console.log/debugger in non-test code
-#   6. type-safety       — no `as any` escape hatches in production code
-#   7. api-field-align    — snake_case/camelCase field name mismatch between API and frontend
-
+# Checks: 运行 `--list-checks` 查看完整检查项清单（从 check_* 函数定义机器生成，唯一权威出处）；
+#          设计解释见 docs/qa-checks.md。此处不再手写编号清单（易漂移）。
+#
 set -eu
 # pipefail intentionally disabled — grep returning 1 (no match) in pipelines
 # would cause premature script exit.
@@ -50,14 +45,26 @@ log_pass() {
 }
 
 log_fail() {
-  local check="$1" detail="$2"
-  RESULTS+=("{\"check\":\"$check\",\"status\":\"FAIL\",\"detail\":\"$detail\"}")
+  local check="$1" detail="$2" why="${3:-}" fix="${4:-}" example="${5:-}" reference="${6:-}"
+  local json_result="{\"check\":\"$check\",\"status\":\"FAIL\",\"detail\":\"$detail\""
+  [[ -n "$why" ]] && json_result+=",\"why\":\"$why\""
+  [[ -n "$fix" ]] && json_result+=",\"fix\":\"$fix\""
+  [[ -n "$example" ]] && json_result+=",\"example\":\"$example\""
+  [[ -n "$reference" ]] && json_result+=",\"reference\":\"$reference\""
+  json_result+="}"
+  RESULTS+=("$json_result")
   EXIT_CODE=1
 }
 
 log_warn() {
-  local check="$1" detail="$2"
-  RESULTS+=("{\"check\":\"$check\",\"status\":\"WARN\",\"detail\":\"$detail\"}")
+  local check="$1" detail="$2" why="${3:-}" fix="${4:-}" example="${5:-}" reference="${6:-}"
+  local json_result="{\"check\":\"$check\",\"status\":\"WARN\",\"detail\":\"$detail\""
+  [[ -n "$why" ]] && json_result+=",\"why\":\"$why\""
+  [[ -n "$fix" ]] && json_result+=",\"fix\":\"$fix\""
+  [[ -n "$example" ]] && json_result+=",\"example\":\"$example\""
+  [[ -n "$reference" ]] && json_result+=",\"reference\":\"$reference\""
+  json_result+="}"
+  RESULTS+=("$json_result")
 }
 
 json_escape() {
@@ -68,6 +75,32 @@ json_escape() {
   s="${s//$'\r'/\\r}"
   s="${s//$'\t'/\\t}"
   echo -n "$s"
+}
+
+# list_checks — 从自身 check_* 函数定义【机器生成】检查项清单（JSON），唯一权威出处。
+# 中文名与四段式设计解释见 docs/qa-checks.md（人工维护，不在此机器生成）。
+list_checks() {
+  local prev_num=""
+  local items=()
+  local fn it
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^#[[:space:]]*.*[Cc]heck[[:space:]]*([0-9]+(\.[0-9]+)?) ]]; then
+      prev_num="${BASH_REMATCH[1]}"
+      continue
+    fi
+    if [[ "$line" =~ ^check_([a-z_]+)\(\) ]]; then
+      fn="${BASH_REMATCH[1]}"
+      items+=("{\"id\":\"check_${fn}\",\"num\":\"${prev_num}\",\"name\":\"${fn}\"}")
+      prev_num=""
+    fi
+  done < "$0"
+  printf '['
+  local sep=""
+  for it in "${items[@]}"; do
+    printf '%s%s' "$sep" "$it"
+    sep=","
+  done
+  printf ']\n'
 }
 
 # ─── Parse Args ───────────────────────────────────────────────────────
@@ -81,6 +114,10 @@ while [[ $# -gt 0 ]]; do
     --json)
       OUTPUT_JSON=true
       shift
+      ;;
+    --list-checks)
+      list_checks
+      exit 0
       ;;
     -h|--help)
       sed -n '2,23p' "$0" | sed 's/^# //'
@@ -160,7 +197,7 @@ _type_check_one() {
     local err_summary
     err_summary=$(echo "$out" | grep -i 'error' | head -3 | tr '\n' '; ')
     err_summary="$(json_escape "$err_summary")"
-    log_fail "type_check" "$label: type errors: $err_summary"
+    log_fail "type_check" "$label: type errors: $err_summary" "TS 类型不匹配（字段名拼错/接口字段不存在/空值处理遗漏）" "运行 npx vue-tsc --noEmit 查看完整错误并修复类型" "" ".harness/rules/项目编码规范.md"
     return 1
   fi
 }
@@ -223,7 +260,7 @@ _unit_test_one() {
     local fail_detail
     fail_detail=$(echo "$out" | grep 'FAIL\|×' | head -5 | tr '\n' '; ')
     fail_detail="$(json_escape "$fail_detail")"
-    log_fail "unit_test" "$label: tests failed — $fail_detail"
+    log_fail "unit_test" "$label: tests failed — $fail_detail" "单测失败说明行为不符合预期" "运行 npx vitest run 定位失败用例并修复"
     return 1
   fi
 
@@ -280,7 +317,7 @@ _build_one() {
     log_pass "build" "$label: build succeeded"
   elif [[ $rc -eq 124 ]]; then
     rm -f "$tmp_log"
-    log_fail "build" "$label: build timed out (120s)"
+    log_fail "build" "$label: build timed out (120s)" "生产构建超时（依赖解析卡住/资源过多）" "检查 vite 配置和依赖，或分块构建"
     return 1
   else
     # Count distinct error types from the log
@@ -308,7 +345,7 @@ _build_one() {
     err_summary="$(json_escape "$err_summary")"
 
     rm -f "$tmp_log"
-    log_fail "build" "$label: $err_summary — $first_errors"
+    log_fail "build" "$label: $err_summary — $first_errors" "生产构建失败（dev 能跑 ≠ 生产能编）" "运行 npm run build 查看完整错误并修复"
     return 1
   fi
 }
@@ -361,7 +398,7 @@ check_hardcoded_secrets() {
     local detail
     detail="$(printf '%s; ' "${violations[@]}" | head -c 2000)"
     detail="$(json_escape "$detail")"
-    log_fail "hardcoded_secrets" "${#violations[@]} potential secrets: $detail"
+    log_fail "hardcoded_secrets" "${#violations[@]} potential secrets: $detail" "硬编码密钥会随前端代码分发到浏览器，直接泄露" "改用 .env 环境变量（import.meta.env）注入，禁止硬编码" "" ".harness/rules/项目编码规范.md §7"
   fi
 }
 
@@ -405,13 +442,11 @@ check_debug_artifacts() {
     local detail
     detail="$(printf '%s; ' "${violations[@]}" | head -c 2000)"
     detail="$(json_escape "$detail")"
-    log_warn "debug_artifacts" "${#violations[@]} debug artifacts: $detail"
+    log_fail "debug_artifacts" "${#violations[@]} debug artifacts: $detail" "console.log/debugger 是调试残留，进生产包=日志噪音+可能泄露数据；debugger 会中断调试器" "删除 console.log/debugger；错误路径用 console.error（已放行）"
   fi
 }
 
-# ─── Check 6: Type Safety ─────────────────────────────────────────────
-
-# --- check 7: api-field-align -------------------------------------------
+# ─── Check 7: api-field-align（snake_case/camelCase 字段对齐）────────
 # 检查前端是否使用了 camelCase 读取后端 snake_case API 字段
 check_api_field_align() {
   local script="$PROJECT_ROOT/.harness/skills/qa/scripts/check-api-field-align.sh"
@@ -422,13 +457,37 @@ check_api_field_align() {
   local output
   if output=$("$script" 2>&1); then
     log_pass "api_field_align" "API 字段名对齐"
+    return
+  fi
+  # 分级：存量违规保持 WARN（不阻塞历史），**本次 diff 内新增的违规 FAIL**（新代码不得引入新不匹配）。
+  # 这样存量 34 处不阻塞，但新写的 snake/camel 不匹配会被拦下。
+  # git 输出相对路径（web/pc/src/...），违规文件是绝对路径（$PROJECT_ROOT/...）——统一为相对路径比较。
+  local changed_files
+  changed_files=$(cd "$PROJECT_ROOT" && git diff --name-only HEAD 2>/dev/null; git diff --cached --name-only 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null)
+  local new_violations=()
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    local file
+    file=$(echo "$line" | grep -oP '^[^:]+' | head -1)
+    file="${file#❌ }"   # 去掉违规行前缀「❌ 」，得到干净路径
+    local rel="${file#$PROJECT_ROOT/}"
+    if echo "$changed_files" | grep -qxF "$rel"; then
+      new_violations+=("$line")
+    fi
+  done < <(echo "$output" | grep "❌" || true)
+  if [[ ${#new_violations[@]} -gt 0 ]]; then
+    local detail
+    detail="$(IFS='; '; echo "${new_violations[*]}" | head -c 2000)"
+    detail="$(json_escape "$detail")"
+    log_fail "api_field_align" "${#new_violations[@]} 处本次 diff 新增 snake/camel 不匹配: $detail" "后端 protojson 输出 snake_case，前端用 camelCase 读取取不到值(undefined)" "将读取字段改为 snake_case（如 .created_at 而非 .createdAt）" "" ".harness/knowledge/memory/web/../snake-camel-field-mismatch.md"
   else
     local count
     count=$(echo "$output" | grep -c "❌" || true)
-    log_warn "api_field_align" "$count 处 snake_case/camelCase 不匹配（WARN级别，关注 created_at/user_type 等）"
+    log_warn "api_field_align" "$count 处存量 snake_case/camelCase 不匹配（不在本次 diff，WARN；新代码不得新增）"
   fi
 }
 
+# ─── Check 6: Type Safety（禁 as any）───────────────────────────────
 check_type_safety() {
   echo "[6/6] TypeScript type safety" >&2
 
@@ -550,7 +609,7 @@ check_unit_standard() {
     local detail
     detail="$(printf '%s; ' "${violations[@]}" | head -c 2000)"
     detail="$(json_escape "$detail")"
-    log_fail "unit_standard" "${#violations[@]} rpx/px violations: $detail"
+    log_fail "unit_standard" "${#violations[@]} rpx/px violations: $detail" "项目规定前端统一 rem 单位（根字号 16px）" "rpx→rem 除以 32、px→rem 除以 16；根字号 font-size:16px 与 env()/var() 的 0px 兜底除外" "" ".harness/rules/项目编码规范.md §13"
   fi
 }
 
