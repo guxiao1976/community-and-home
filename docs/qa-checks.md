@@ -187,5 +187,6 @@
 ## 四、已闭环（2026-08-17）
 
 - **Go 依赖漏洞审计（govulncheck）**：`harness-checks.sh` 新增 check #20，扫 `./...` 的已知漏洞（含 stdlib/传递依赖），有漏洞 FAIL（exit 3）、未装/网络异常 WARN。注意：只覆盖 Go，前端 npm 依赖不在其内。
+- **Go 依赖漏洞修复**：上线即扫出 14 个可达漏洞（9 stdlib + grpc/x-net/x-text/otel），随后全模块（8 服务 + common + api-proto + ai-model api/rpc）升级 **Go 1.25.13** + grpc v1.82.1 / x-net v0.56.0 / x-text v0.39.0 / otel v1.44.0（含 otlptracehttp v1.44.0），govulncheck 复验全模块 **0 漏洞**。模块图中 `golang.org/x/crypto` GO-2026-5932 **无修复版（Fixed=N/A）**，非可达调用链，接受风险持续跟踪。
 - **前端覆盖率量化**：mobile 接入 `@vitest/coverage-v8`，vitest.config 设覆盖率阈值（Stmts 58/Branch 50/Funcs 55/Lines 58）；门禁侧 `harness-checks-frontend.sh` 的 unit_test 对装有 coverage provider 的项目跑 `vitest run --coverage`，覆盖率 < 阈值 FAIL。**pc 同轮接入 `@vitest/coverage-v8`**（2026-08-17）：实测基线 Stmts 4.2/Branch 3.2/Funcs 2.7/Lines 4.4（存量单测极少），阈值设「地板」3/2/2/3 防回退，随测试增长应同步上调（对齐 mobile 做法）。
   - 踩坑记录：coverage 曾报「Something removed coverage/*.tmp」——根因是 `unit-standard-gate.spec.ts` spawnSync 调用 harness-checks-frontend.sh，内层 vitest 再跑 --coverage 与当前进程冲突；已用 `HARNESS_RECURSE=1` 守卫（递归时不带 coverage）修复。
