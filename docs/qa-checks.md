@@ -180,7 +180,11 @@
 | 优先级 | 缺口 | 说明 |
 |:---:|------|------|
 | P0 | 依赖漏洞审计 | 无 govulncheck / npm audit（上轮 lodash@4.18.1、happy-dom CVE 靠 review 人工抓） |
-| P0 | 前端覆盖率量化 | 无 @vitest/coverage-v8，覆盖率门禁无法量化 |
 | P1 | Go `-race` 竞态 | 并发 bug 只能靠 review |
 | P1 | XSS 面扫描 | v-html/rich-text 未机械化扫描（notice-detail XSS 靠 review 抓） |
 | P2 | 错误日志规范 | review 在查「日志含 userId/communityId」，但无机械化检查 |
+
+## 四、已闭环（2026-08-17）
+
+- **前端覆盖率量化**：mobile 接入 `@vitest/coverage-v8`，vitest.config 设覆盖率阈值（Stmts 58/Branch 50/Funcs 55/Lines 58），门禁侧 `harness-checks-frontend.sh` 的 unit_test 对装有 coverage provider 的项目跑 `vitest run --coverage`，覆盖率 < 阈值 FAIL。pc 未装 provider 仍普通测试（覆盖率靠 review/TDD 兜底）。
+  - 踩坑记录：coverage 曾报「Something removed coverage/*.tmp」——根因是 `unit-standard-gate.spec.ts` spawnSync 调用 harness-checks-frontend.sh，内层 vitest 再跑 --coverage 与当前进程冲突；已用 `HARNESS_RECURSE=1` 守卫（递归时不带 coverage）修复。

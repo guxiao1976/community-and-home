@@ -8,6 +8,7 @@ import { setActivePinia, createPinia, type Pinia } from 'pinia';
 
 vi.mock('@/api/user', () => ({
   getUserMemberships: vi.fn(),
+  getAppState: vi.fn().mockResolvedValue({ current_community_id: '0', updated_at: 0 }),
 }));
 
 vi.mock('@/api/identity', () => ({

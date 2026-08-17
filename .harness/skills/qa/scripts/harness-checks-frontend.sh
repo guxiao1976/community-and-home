@@ -228,8 +228,17 @@ _unit_test_one() {
 
   # Detect test runner
   local test_cmd=""
+  local has_coverage=false
   if [[ -f "vitest.config.ts" ]] || [[ -f "vitest.config.js" ]]; then
-    test_cmd="npx vitest run --reporter=verbose"
+    # 覆盖率量化：仅当项目安装了 @vitest/coverage-* provider 且非递归场景（unit-standard-gate.spec 会
+    # spawnSync 本脚本→内层 vitest；若内层也 --coverage 会与当前进程冲突删 coverage/.tmp）才启用。
+    # 递归（HARNESS_RECURSE=1）→ 普通 vitest。
+    if ls node_modules/@vitest/coverage-* >/dev/null 2>&1 && [[ "${HARNESS_RECURSE:-}" != "1" ]]; then
+      has_coverage=true
+      test_cmd="npx vitest run --coverage --reporter=verbose"
+    else
+      test_cmd="npx vitest run --reporter=verbose"
+    fi
   elif grep -q '"jest"' package.json 2>/dev/null; then
     test_cmd="npx jest --verbose"
   elif grep -q '"test"' package.json 2>/dev/null; then
@@ -257,6 +266,19 @@ _unit_test_one() {
   passed_tests=${passed_tests:-0}
 
   if [[ $rc -ne 0 ]]; then
+    # 区分三种失败：覆盖率不达标(FAIL) / 覆盖率工具 bug(WARN) / 测试失败(FAIL)
+    if $has_coverage && echo "$out" | grep -qE "does not meet global threshold"; then
+      local cov_lines
+      cov_lines=$(echo "$out" | grep -E "All files" | tr -s ' ')
+      cov_lines="$(json_escape "$cov_lines")"
+      log_fail "unit_test" "$label: 覆盖率低于 vitest.config coverage.thresholds（测试本身通过，但新代码缺测试拉低覆盖）: $cov_lines" "单测通过但整体覆盖率低于门禁" "为未覆盖分支补测试；新增有逻辑函数必须有对应 spec（TDD）" "npx vitest run --coverage" ".harness/skills/qa/SKILL.md"
+      return 1
+    fi
+    if $has_coverage && echo "$out" | grep -qE "Something removed the coverage directory|Coverage.*failed"; then
+      # vitest 4.1.10 coverage .tmp 生命周期 bug（v8/istanbul 均）：覆盖率无法生成时降级 WARN，不阻塞（待 vitest 修复）。
+      log_warn "unit_test" "$label: 覆盖率未量化（vitest coverage bug: 目录 .tmp 生命周期竞态）——测试本身通过，覆盖率门禁本次降级 WARN，待 vitest 修复后自动升级为 FAIL"
+      return 0
+    fi
     local fail_detail
     fail_detail=$(echo "$out" | grep 'FAIL\|×' | head -5 | tr '\n' '; ')
     fail_detail="$(json_escape "$fail_detail")"

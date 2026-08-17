@@ -13,6 +13,7 @@ vi.mock('@/api/user', () => ({
   joinCommunity: vi.fn(),
   getUserMemberships: vi.fn().mockResolvedValue([]),
   getResidentialAreasByIds: vi.fn().mockResolvedValue([]),
+  getAppState: vi.fn().mockResolvedValue({ current_community_id: '0', updated_at: 0 }),
 }));
 
 vi.mock('@/utils/pending-join', () => ({
