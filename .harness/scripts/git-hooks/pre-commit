@@ -236,17 +236,32 @@ echo ""
 echo "[4/4] 运行静态分析..."
 
 if command -v golangci-lint &> /dev/null; then
-    if golangci-lint run --new-from-rev=HEAD~ --timeout=2m 2>&1 | grep -E "^(Error|Warning):" || false; then
-        echo ""
-        echo "⚠️  发现静态分析问题"
-        echo ""
-        echo "💡 提示:"
-        echo "  1. 查看详细信息: golangci-lint run"
-        echo "  2. 或者使用 --no-verify 跳过检查（不推荐）"
-        echo ""
-        # 静态分析问题只警告，不阻止提交
-        # exit 1
+    # go.work 下仓库根目录跑 ./... 会报「directory prefix . does not contain modules listed in go.work」，
+    # 改为按本次变更 .go 文件所属模块逐个跑（2026-08-17 修复：原来 grep 模式匹配不到 golangci 输出，装了也永远"通过"）。
+    STAGED_GO=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+    if [[ -z "$STAGED_GO" ]]; then
+        echo "  ✅ 无 Go 文件变更，跳过静态分析"
     else
+        LINT_FAIL=0
+        for f in $STAGED_GO; do
+            d=$(dirname "$PROJECT_ROOT/$f")
+            while [[ "$d" != "/" && ! -f "$d/go.mod" ]]; do d=$(dirname "$d"); done
+            [[ -f "$d/go.mod" ]] && echo "$d"
+        done | sort -u > /tmp/golangci-mods.$$
+        while read -r mod; do
+            [[ -z "$mod" ]] && continue
+            echo "  → golangci-lint ($(echo "$mod" | sed "s#$PROJECT_ROOT/##"))"
+            if ! (cd "$mod" && golangci-lint run ./... --new-from-rev=HEAD~ --timeout=2m); then
+                LINT_FAIL=1
+            fi
+        done < /tmp/golangci-mods.$$
+        rm -f /tmp/golangci-mods.$$
+        if [[ $LINT_FAIL -eq 1 ]]; then
+            echo ""
+            echo "⚠️  发现新增静态分析问题（golangci-lint run 查看详情）"
+            echo "💡 提示: 用 golangci-lint run ./... 看完整信息；或用 --no-verify 跳过（不推荐）"
+            exit 1
+        fi
         echo "  ✅ 静态分析通过"
     fi
 else

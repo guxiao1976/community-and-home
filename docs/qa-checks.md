@@ -179,9 +179,8 @@
 
 | 优先级 | 缺口 | 说明 |
 |:---:|------|------|
-| P0 | 前端 npm 依赖漏洞审计 | Go 侧已用 govulncheck 闭环（漏洞→FAIL，见 §四）；npm audit 在 npmmirror 下不可用，前端依赖漏洞仍靠 review 人工抓（lodash@4.18.1、happy-dom CVE 先例） |
-| P1 | Go `-race` 竞态 | 并发 bug 只能靠 review |
-| P1 | XSS 面扫描 | v-html/rich-text 未机械化扫描（notice-detail XSS 靠 review 抓） |
+| P1 | XSS 面扫描 | v-html/rich-text 未机械化扫描（notice-detail XSS 靠 review 抓）——Semgrep 规则待接（第二批） |
+| P1 | 前端 eslint 静态分析 | 前端无 ESLint 配置，仅 check_type_safety 查 `as any`——第二批接入 |
 | P2 | 错误日志规范 | review 在查「日志含 userId/communityId」，但无机械化检查 |
 
 ## 四、已闭环（2026-08-17）
@@ -190,3 +189,6 @@
 - **Go 依赖漏洞修复**：上线即扫出 14 个可达漏洞（9 stdlib + grpc/x-net/x-text/otel），随后全模块（8 服务 + common + api-proto + ai-model api/rpc）升级 **Go 1.25.13** + grpc v1.82.1 / x-net v0.56.0 / x-text v0.39.0 / otel v1.44.0（含 otlptracehttp v1.44.0），govulncheck 复验全模块 **0 漏洞**。模块图中 `golang.org/x/crypto` GO-2026-5932 **无修复版（Fixed=N/A）**，非可达调用链，接受风险持续跟踪。
 - **前端覆盖率量化**：mobile 接入 `@vitest/coverage-v8`，vitest.config 设覆盖率阈值（Stmts 58/Branch 50/Funcs 55/Lines 58）；门禁侧 `harness-checks-frontend.sh` 的 unit_test 对装有 coverage provider 的项目跑 `vitest run --coverage`，覆盖率 < 阈值 FAIL。**pc 同轮接入 `@vitest/coverage-v8`**（2026-08-17）：实测基线 Stmts 4.2/Branch 3.2/Funcs 2.7/Lines 4.4（存量单测极少），阈值设「地板」3/2/2/3 防回退，随测试增长应同步上调（对齐 mobile 做法）。
   - 踩坑记录：coverage 曾报「Something removed coverage/*.tmp」——根因是 `unit-standard-gate.spec.ts` spawnSync 调用 harness-checks-frontend.sh，内层 vitest 再跑 --coverage 与当前进程冲突；已用 `HARNESS_RECURSE=1` 守卫（递归时不带 coverage）修复。
+- **前端依赖漏洞审计（trivy）**：`harness-checks-frontend.sh` 新增 check #9，`trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1` 直接读 package-lock.json，HIGH/CRITICAL 即 FAIL、trivy 未装 WARN、DB 下载异常 WARN。CI `frontend-ci.yml` 两 job 均接入 `aquasecurity/trivy-action`。**不依赖 npm audit**（npmmirror 下不可用）。
+- **Go 竞态检测（-race）**：`harness-checks.sh` check #3 go test 加 `-race`。本地热缓存约 +7s/服务可接受；CI 冷缓存首次约 +75s/服务。依赖 CGO（需 gcc，GitHub runner 默认有）。
+- **golangci-lint 激活**：pre-commit hook 原引用但未安装、且 grep 模式匹配不到 golangci 输出（装了也永远"通过"）。现装 v1.64.8 + `.golangci.yml`（排除 SA5008 误报 go-zero `json:"x,optional"`），hook 改为**按变更模块跑 + 退出码判断**，新违规拦截（exit 1）、存量不阻塞。

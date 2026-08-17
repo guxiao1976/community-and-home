@@ -635,6 +635,57 @@ check_unit_standard() {
   fi
 }
 
+# ─── Check 9: 前端依赖漏洞审计（trivy）──────────────────────────────
+# 用 Trivy 直接读 package-lock.json 比对漏洞库，不依赖 npm audit（npmmirror 下不可用）。
+# 工具未装 → WARN（不阻塞）；HIGH/CRITICAL → FAIL；DB 下载/扫描异常 → WARN。
+check_dep_vuln() {
+  echo "[9/9] Dependency vulnerability audit (trivy)" >&2
+  if ! command -v trivy >/dev/null 2>&1; then
+    log_warn "dep_vuln" "trivy 未安装——前端依赖漏洞审计跳过。安装二进制或 CI 用 aquasecurity/trivy-action"
+    return 0
+  fi
+
+  local targets=()
+  if [[ -n "$SERVICE_NAME" ]]; then
+    targets+=("$WEB_DIR/$SERVICE_NAME/package-lock.json")
+  else
+    targets+=("$WEB_DIR/pc/package-lock.json" "$WEB_DIR/mobile/package-lock.json")
+  fi
+
+  local scanned=0 found=0 err=0
+  for lock in "${targets[@]}"; do
+    [[ -f "$lock" ]] || continue
+    scanned=$((scanned + 1))
+    local label="${lock#$PROJECT_ROOT/}"
+    local out rc
+    set +e
+    echo "  (trivy fs: $label)" >&2
+    out="$(timeout -k 10 180 trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 "$lock" 2>&1)"; rc=$?
+    set -e
+    if [[ $rc -eq 0 ]]; then
+      continue   # 无 HIGH/CRITICAL
+    elif [[ $rc -eq 1 ]]; then
+      found=1
+      local summary
+      summary=$(echo "$out" | grep -E "Total: [0-9]+|(HIGH|CRITICAL):" | head -6 | tr '\n' '; ')
+      summary="$(json_escape "$summary")"
+      log_fail "dep_vuln" "$label: 前端依赖 HIGH/CRITICAL 漏洞: $summary" "前端依赖存在已知高危漏洞（npm audit 在 npmmirror 下不可用，此前靠 review 人工抓）" "升级对应依赖到修复版并重新 npm install" "trivy fs --scanners vuln $label" "docs/qa-checks.md §依赖漏洞审计"
+    else
+      err=1
+      local e
+      e=$(echo "$out" | grep -iE "error|failed|timeout|network|download" | head -3 | tr '\n' '; ')
+      e="$(json_escape "$e")"
+      log_warn "dep_vuln" "$label: trivy 扫描异常（DB 下载/网络？）: $e"
+    fi
+  done
+
+  if [[ $scanned -eq 0 ]]; then
+    log_warn "dep_vuln" "未找到 package-lock.json（跳过）"
+  elif [[ $found -eq 0 && $err -eq 0 ]]; then
+    log_pass "dep_vuln" "trivy: 前端依赖未发现 HIGH/CRITICAL 漏洞"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -654,6 +705,7 @@ main() {
   check_type_safety
   check_api_field_align
   check_unit_standard
+  check_dep_vuln
   set -e
 
   # Count results
@@ -684,7 +736,7 @@ main() {
     printf '}\n'
   else
     local n=0
-    local labels=("type-check" "unit-test" "build" "hardcoded-secrets" "debug-artifacts" "type-safety" "api-field-align" "unit-standard")
+    local labels=("type-check" "unit-test" "build" "hardcoded-secrets" "debug-artifacts" "type-safety" "api-field-align" "unit-standard" "dep-vuln")
     for result in "${RESULTS[@]}"; do
       local status label detail
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

@@ -260,7 +260,7 @@ check_go_test() {
   local out rc
   cd "$TARGET_DIR"
   set +e
-  out="$(go test ./... -count=1 2>&1)"
+  out="$(go test ./... -count=1 -race 2>&1)"
   rc=$?
   set -e
   cd "$PROJECT_ROOT"

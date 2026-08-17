@@ -1,0 +1,22 @@
+# golangci-lint 配置（2026-08-17 接入）
+# 只启用 go vet + staticcheck + 基础正确性 linter；按需收严，避免过度告警拖慢门禁。
+# pre-commit hook 用 --new-from-rev=HEAD~ 只拦本次新增违规，存量违规不阻塞。
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+linters-settings:
+  staticcheck:
+    # SA5008 误报 go-zero 的 `json:"x,optional"` 标签（go-zero 特性，非标准 JSON option）
+    checks: ["all", "-SA5008"]

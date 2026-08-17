@@ -39,6 +39,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Scan dependencies with Trivy (npm vuln audit)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: package-lock.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+
       - name: Type check
         run: npm run type-check
 
@@ -76,6 +85,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Scan dependencies with Trivy (npm vuln audit)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: package-lock.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '1'
 
       - name: Type check
         run: npm run type-check
