@@ -1,6 +1,6 @@
 // Component test — my.vue 退出登录流程 + 业主认证分支。
 // 退出登录：showModal 确认 → await logout(getDeviceId()) → userStore.logout()（清 token/user）
-//   → reLaunch('/pages/login/login')；取消分支不动作；logout 接口失败 → toast「退出登录失败」保持登录态。
+//   → reLaunch('/pages/login/login')；取消分支不动作；logout 接口失败 → 仍本地登出（清 token+跳登录页）。
 // 业主认证：已有业主角色（role_code=owner 且 verf_status=2）→ toast「已是业主」不重复申请；
 //   否则 applyForRole('owner')（与网格员等一致，需 currentCommunityId）。
 // SEE: [[tdd-red-evidence-requires-fail-excerpt]] — RED 摘录见 _tdd_evidence.md
@@ -106,7 +106,9 @@ describe('my page — 退出登录', () => {
     expect(uni.reLaunch).not.toHaveBeenCalled();
   });
 
-  it('logout 接口失败 → toast「退出登录失败」、不跳转、保持登录态', async () => {
+  it('logout 接口失败 → 仍本地登出（清 token + 跳登录页）', async () => {
+    // 后端注销失败（如 access token 过期 401 / refresh 失效 / 网络错）不阻塞本地登出：
+    // 用户点退出就是要退出，本地清 token 并导航登录页仍正确（token 已失效时本地清理即足够）。
     mockShowModal(true);
     (logout as any).mockRejectedValue(new Error('logout 接口异常'));
     const wrapper = await mountPage();
@@ -116,11 +118,8 @@ describe('my page — 退出登录', () => {
     await (wrapper.vm as any).onLogout();
     await flushPromises();
 
-    expect(uni.showToast).toHaveBeenCalledWith(
-      expect.objectContaining({ title: '退出登录失败' }),
-    );
-    expect(uni.reLaunch).not.toHaveBeenCalled();
-    expect(store.accessToken).toBe('at');
+    expect(store.accessToken).toBe(null);
+    expect(uni.reLaunch).toHaveBeenCalledWith({ url: '/pages/login/login' });
   });
 });
 

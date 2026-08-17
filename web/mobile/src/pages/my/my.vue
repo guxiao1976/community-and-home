@@ -312,7 +312,9 @@ function applyForRole(roleCode: string) {
   });
 }
 
-// 退出登录：showModal 确认 → 调后端注销当前设备会话 → 清本地 token/user → 回到登录页（=退出页）
+// 退出登录：showModal 确认 → 调后端注销（尽力而为）→ 本地登出兜底 → 回到登录页（=退出页）
+// 本地兜底：即使后端注销失败（如 access token 过期 401 / refresh 失效 / 网络错），
+// 用户点退出就是要退出，本地清 token + user 并导航到登录页仍是正确行为；后端注销尽力而为。
 async function onLogout() {
   uni.showModal({
     title: '退出登录',
@@ -321,13 +323,13 @@ async function onLogout() {
       if (!res.confirm) return;
       try {
         await logout(getDeviceId());
-        userStore.logout();
-        uni.reLaunch({ url: '/pages/login/login' });
       } catch (e) {
-        // SEE: [[axios-network-error-raw-message-toast]] — toast 用固定中文文案，不取 e.message 原文
-        console.error('[my] 退出登录失败', e);
-        uni.showToast({ title: '退出登录失败', icon: 'none' });
+        // 后端注销失败不阻塞本地登出（token 已失效时本地清理即正确）。
+        // SEE: [[axios-network-error-raw-message-toast]]
+        console.error('[my] 后端注销失败，继续本地登出', e);
       }
+      userStore.logout();
+      uni.reLaunch({ url: '/pages/login/login' });
     },
   });
 }

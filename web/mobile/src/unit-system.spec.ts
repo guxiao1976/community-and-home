@@ -31,6 +31,11 @@ function stripEnv(src: string): string {
   return src.replace(/env\([^)]*\)/g, '');
 }
 
+/** 去除 var(...) 内部（fallback 0px 允许保留，如 var(--window-top, 0px)） */
+function stripVar(src: string): string {
+  return src.replace(/var\([^)]*\)/g, '');
+}
+
 function stripHtmlRootFont(src: string): string {
   return src.replace(/html\s*\{\s*font-size:\s*16px;?\s*\}/, '');
 }
@@ -45,11 +50,12 @@ describe('单位体系：rpx/px → rem（根字号 16px，rem=rpx÷32、px÷16�
     expect(offenders).toEqual([]);
   });
 
-  it('src 下无长度 px 残留（仅允许 html 根字号 16px 与 env() fallback）', () => {
+  it('src 下无长度 px 残留（仅允许 html 根字号 16px 与 env()/var() fallback）', () => {
     const offenders: string[] = [];
     for (const f of collectFiles(SRC, ['.vue', '.scss'])) {
       let content = stripComments(readFileSync(f, 'utf8'));
       content = stripEnv(content);
+      content = stripVar(content);
       if (f.endsWith('App.vue')) content = stripHtmlRootFont(content);
       const m = content.match(/\d+(?:\.\d+)?px/);
       if (m) offenders.push(`${f}: ${m[0]}`);

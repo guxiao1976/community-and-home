@@ -535,8 +535,9 @@ check_unit_standard() {
       # 例外①：根字号 html { font-size: 16px }（rem 唯一 px 基准）
       stripped="${code//font-size: 16px/}"
       stripped="${stripped//font-size:16px/}"
-      # 例外②：env(safe-area-inset-bottom, 0px) 兜底
+      # 例外②：env()/var() 的 0px 兜底（如 env(safe-area-inset-bottom, 0px)、var(--window-top, 0px)）
       stripped="${stripped//env(safe-area-inset-bottom, 0px)/}"
+      stripped="${stripped//, 0px)/}"
       if [[ "$stripped" =~ [0-9.]+(rpx|px) ]]; then
         violations+=("$rel:$line_no:$line")
       fi

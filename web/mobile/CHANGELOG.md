@@ -1,5 +1,35 @@
 # CHANGELOG — web/mobile
 
+## 2026-08-17 — 注册协议页改版：顶部提示 + 协议只读滚动框 + 确认注册固定可见
+
+### 做了什么
+- `src/pages/agreement/agreement.vue`：
+  - 顶部新增提示语「您尚未注册账号，请阅读使用协议，勾选同意后注册。注册通过后，您可以登记为业主，也可以认证为网格员等其他身份，解锁 App 功能。」
+  - 协议正文改为**只读可滚动文本框**（带边框/圆角/卡片底，`scroll-y` 内部滚动；`min-height:0` + `overflow:hidden` 允许 flex 收缩）
+  - 页面 `height: calc(100vh - var(--window-top, 0px))` 扣除导航栏高度，**footer（勾选 + 确认注册）固定屏内可见**，不滚动即可点确认注册（Playwright 实测 footer/按钮在视口内、body 不再滚动）
+- 配套：`unit_standard` 检查项 + `unit-system.spec.ts` 允许 `var(--window-top, 0px)` 兜底 0px（同 env() fallback 例外），不误报
+
+### 门禁
+- `npx vitest run` → 21 files / 123 tests PASS；`harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）
+
+---
+
+# CHANGELOG — web/mobile
+
+## 2026-08-17 — 运行时报错修复：退出登录 401 本地兜底 + user_app_state 迁移落库
+
+### 做了什么
+- **退出登录 401 卡死修复**：根因 = access token TTL 900s（15 分钟），用户会话超时后 logout 接口 401，且 refresh 未恢复 → 原 onLogout catch 只 toast 不登出。改为**后端注销尽力而为 + 本地登出兜底**：接口失败仍清本地 token/user + reLaunch 登录页（用户点退出就是要退出；token 已失效时本地清理即正确）。
+- **user_app_state 表缺失（切换小区报错）**：migration `005_add_user_app_state.sql` 未执行 → 手动 `docker exec mysql` 落库（问题在运行环境，非代码）。切换小区恢复正常。
+
+### 门禁
+- `npx vitest run` → 21 files / 123 tests PASS（logout 失败分支断言改为「仍本地登出」）
+- `harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）
+
+---
+
+# CHANGELOG — web/mobile
+
 ## 2026-08-17 — Review 跟进：logout 清 user_phone 兜底缓存 + account-security 孤儿页清理
 
 ### 做了什么

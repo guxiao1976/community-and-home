@@ -1,7 +1,13 @@
 <template>
   <view class="agreement-page">
-    <!-- 协议正文 -->
-    <scroll-view class="agreement-content" scroll-y>
+    <!-- 顶部提示语 -->
+    <view class="hint-box">
+      <text class="hint-icon">📢</text>
+      <text class="hint-text">您尚未注册账号，请阅读使用协议，勾选同意后注册。注册通过后，您可以登记为业主，也可以认证为网格员等其他身份，解锁 App 功能。</text>
+    </view>
+
+    <!-- 协议正文（只读可滚动文本框：内部滚动，不占满视口） -->
+    <scroll-view class="agreement-box" scroll-y>
       <text class="agreement-title">《社区家园使用协议》</text>
       <text class="agreement-body">
         欢迎使用社区家园。在使用本社区 App 前，请仔细阅读以下条款：{'\n'}
@@ -26,7 +32,7 @@
       </text>
     </scroll-view>
 
-    <!-- 确认注册 -->
+    <!-- 确认注册（固定底部，不滚动即可见） -->
     <view class="agreement-footer">
       <view class="agreement-check" @click="toggleAgreed">
         <view class="checkbox" :class="{ 'checkbox--checked': agreed }">
@@ -119,14 +125,46 @@ onLoad(() => {
 
 <style scoped lang="scss">
 .agreement-page {
-  min-height: 100vh;
+  /* 固定视口内可用高度（扣除导航栏 --window-top），footer 始终在屏内可见、不随协议内容顶出 */
+  height: calc(100vh - var(--window-top, 0px));
   background: $uni-bg-color;
   display: flex;
   flex-direction: column;
+  padding: 1rem 1rem 0;
+  box-sizing: border-box;
 }
 
-.agreement-content {
+/* 顶部提示语 */
+.hint-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  background: rgba($uni-color-primary, 0.08);
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.hint-icon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.hint-text {
+  font-size: 0.75rem;
+  color: $uni-text-color;
+  line-height: 1.6;
+}
+
+/* 只读可滚动文本框：内部滚动；min-height:0 + overflow:hidden 允许 flex 收缩，使滚动框不占满视口 */
+.agreement-box {
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border: 0.0625rem solid $uni-border-color;
+  border-radius: 0.5rem;
+  background: $uni-bg-color-card;
   padding: 1rem;
   box-sizing: border-box;
 }
@@ -148,9 +186,11 @@ onLoad(() => {
 }
 
 .agreement-footer {
-  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  /* 页级已有左右 padding；此处仅上下，footer 固定屏内 */
+  padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
   background: $uni-bg-color;
   box-shadow: 0 -0.125rem 0.75rem rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
 }
 
 .agreement-check {
