@@ -297,15 +297,23 @@ async function submitBindAndApply() {
 }
 
 function applyForRole(roleCode: string) {
-  const currentCommunityId = communityStore.currentCommunityId;
-  if (!currentCommunityId) {
+  // 当前小区优先；未加入/未选中时回退一次性 pending 小区
+  // （join-choice「其他身份认证」路径经 pendingCommunityId 带入）。
+  // 一次性 pending 在申请成功后再消费/清除（失败保留上下文可重试）。
+  // SEE: [[one-shot-pending-consume-on-success]] [[role-assignment-verify]]
+  let communityId = communityStore.currentCommunityId;
+  const usedPending = !communityId && !!communityStore.pendingCommunityId;
+  if (usedPending) communityId = communityStore.pendingCommunityId;
+  if (!communityId) {
     uni.showToast({ title: '请先加入小区', icon: 'none' });
     return;
   }
   applyRole({
-    community_id: currentCommunityId,
+    community_id: communityId,
     role_code: roleCode,
   }).then(() => {
+    // 申请成功后消费一次性 pending 小区（失败保留，用户可重试）
+    if (usedPending) communityStore.clearPendingCommunityId();
     uni.showToast({ title: '认证申请已提交，等待审核', icon: 'success' });
   }).catch((e: any) => {
     uni.showToast({ title: e.message || '操作失败', icon: 'none' });

@@ -30,6 +30,8 @@ export const useCommunityStore = defineStore('community', () => {
   // --- State ---
   const communities = ref<CommunityInfo[]>([]);
   const currentCommunityId = ref<string>(loadStoredCommunityId());
+  // 一次性「待加入小区」：join-choice「其他身份认证」路径写入，我的页申请角色时回退消费
+  const pendingCommunityId = ref<string>('');
 
   // --- Getters ---
   const currentCommunity = computed<CommunityInfo | null>(() => {
@@ -124,6 +126,14 @@ export const useCommunityStore = defineStore('community', () => {
     saveStoredCommunityId(id);
   }
 
+  function setPendingCommunityId(id: string): void {
+    pendingCommunityId.value = id;
+  }
+
+  function clearPendingCommunityId(): void {
+    pendingCommunityId.value = '';
+  }
+
   function addCommunity(membership: { communityId: string; communityName?: string; address?: string }): void {
     const exists = communities.value.some(c => c.communityId === membership.communityId);
     if (exists) return;
@@ -143,6 +153,7 @@ export const useCommunityStore = defineStore('community', () => {
     // State
     communities,
     currentCommunityId,
+    pendingCommunityId,
     // Getters
     currentCommunity,
     hasCommunities,
@@ -152,5 +163,7 @@ export const useCommunityStore = defineStore('community', () => {
     switchCommunity,
     addCommunity,
     removeCommunity,
+    setPendingCommunityId,
+    clearPendingCommunityId,
   };
 });

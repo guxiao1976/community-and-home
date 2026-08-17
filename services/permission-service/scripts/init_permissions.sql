@@ -383,6 +383,43 @@ SELECT 'content-post 新增码 parent_id（防孤儿节点）' AS check_type,
              THEN '✅ PASS' ELSE '❌ FAIL' END AS status;
 
 -- ============================================================================
+-- 6.8 敏感写/管理权限 min_verf_level=2 加固（security-arch 评审 CRITICAL，4.3.1 加固延续）
+--     -- 目标：服务角色（网格员 grid_worker / 社区管理员 community_admin / 物业管理员 property_admin）
+--     --       可免 membership 自助申请（user-service 并行改造），但其未认证(status=0) grant
+--     --       不得行使破坏性操作：删公告(427)/改公告(428)/建活动(432)/查角色配置(210/211/212)。
+--     -- 约束机制：min_verf_level=2（需已认证）为数据驱动约束——CheckPermission 放行
+--     --   ⟺ maxLevel(grantSatisfiedLevel) >= minLevel；未认证 grant 恒 level-0 → 无法放行。
+--     -- 放置于段 6 末尾：须晚于 6.4 的 INSERT IGNORE（427/428 首次插入时 min_verf_level 取列默认 0），
+--     --   从零建库（init_permissions.sql 自上而下）才生效——若置于 4.3.2 会被 6.4 默认 0 覆盖。
+--     -- 幂等：UPDATE 可重复执行；既有库经 migration/004_privileged_role_min_verf_level.sql 应用。
+-- SEE: [[auto-grant-unverified-grant-confers-scope-level0]] — 未认证 grant 立即生效的既有语义，
+--   现经 min_verf_level=2 数据驱动收窄（与 4.3.1 user:read/moderation:*、6.1 notice:create-api 同判据）
+-- SEE: [[is-system-no-permission-shortcut]] — 权限经 rel_role_permission 配置，认证要求经 min_verf_level 数据驱动
+-- SEE: [[permission-seed-api-path-must-match-routes]] — 427/428/432/211/212 path 与 REST 路由一致
+UPDATE sys_permission SET min_verf_level = 2
+WHERE code IN ('community:notice:delete-api', 'community:notice:update-api',
+               'community:activity:create-api',
+               'role:read', 'role:read:list-api', 'role:read:detail-api');
+
+-- 6.8 幂等验证：6 个敏感码全部 min_verf_level=2
+SELECT '敏感写/管理权限 min_verf_level=2' AS check_type,
+       (SELECT COUNT(*) FROM sys_permission
+        WHERE code IN ('community:notice:delete-api','community:notice:update-api',
+                       'community:activity:create-api',
+                       'role:read','role:read:list-api','role:read:detail-api')
+          AND min_verf_level = 2) AS hardened,
+       (SELECT COUNT(*) FROM sys_permission
+        WHERE code IN ('community:notice:delete-api','community:notice:update-api',
+                       'community:activity:create-api',
+                       'role:read','role:read:list-api','role:read:detail-api')) AS total,
+       CASE WHEN (SELECT COUNT(*) FROM sys_permission
+                  WHERE code IN ('community:notice:delete-api','community:notice:update-api',
+                                 'community:activity:create-api',
+                                 'role:read','role:read:list-api','role:read:detail-api')
+                    AND min_verf_level = 2) = 6
+            THEN '✅ PASS' ELSE '❌ FAIL' END AS status;
+
+-- ============================================================================
 -- 数据验证查询
 -- ============================================================================
 

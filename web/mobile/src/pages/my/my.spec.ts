@@ -159,3 +159,53 @@ describe('my page — 业主认证分支', () => {
     expect(applyRole).not.toHaveBeenCalled();
   });
 });
+
+describe('my page — applyForRole 兼容 pending 小区（join-choice「其他身份认证」路径）', () => {
+  beforeEach(() => {
+    pinia = createPinia();
+    setActivePinia(pinia);
+    vi.clearAllMocks();
+    (applyRole as any).mockResolvedValue({});
+    uni.removeStorageSync('current_community_id');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('currentCommunityId 为空 + pendingCommunityId 存在 → 用 pending 申请并一次性清除', async () => {
+    const wrapper = await mountPage([]);
+    const communityStore = useCommunityStore();
+    communityStore.setPendingCommunityId('c9');
+
+    await (wrapper.vm as any).applyForRole('grid_worker');
+    await flushPromises();
+
+    expect(applyRole).toHaveBeenCalledWith({ community_id: 'c9', role_code: 'grid_worker' });
+    expect(communityStore.pendingCommunityId).toBe('');
+  });
+
+  it('currentCommunityId 存在时优先用 current，不消费 pending', async () => {
+    const wrapper = await mountPage([]);
+    const communityStore = useCommunityStore();
+    communityStore.addCommunity({ communityId: 'c1', communityName: 'A 小区' });
+    communityStore.setPendingCommunityId('c9');
+
+    await (wrapper.vm as any).applyForRole('property_admin');
+    await flushPromises();
+
+    expect(applyRole).toHaveBeenCalledWith({ community_id: 'c1', role_code: 'property_admin' });
+    expect(communityStore.pendingCommunityId).toBe('c9');
+  });
+
+  it('current 与 pending 均为空 → toast「请先加入小区」，不调 API', async () => {
+    const wrapper = await mountPage([]);
+
+    await (wrapper.vm as any).applyForRole('community_admin');
+
+    expect(uni.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: '请先加入小区' }),
+    );
+    expect(applyRole).not.toHaveBeenCalled();
+  });
+});

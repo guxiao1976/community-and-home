@@ -72,36 +72,40 @@ func (l *LeaveCommunityLogic) LeaveCommunity(in *userv1.LeaveCommunityRequest) (
 	}, nil
 }
 
-// revokeCommunityRoles 退出小区后同步撤销 owner/tenant 授权（双调 RevokeRole，幂等）。
-// role_id 经 roleMapper 解析；任一撤销失败则返回错误（由调用方补偿恢复 membership）。
+// revokeCommunityRoles 退出小区后同步撤销该小区下全部社区作用域 grant。
+// 覆盖：居民角色 owner/tenant + 服务角色 grid_worker/property_admin/community_admin + 业委会 committee。
+// 服务角色可免 membership 自助申请（Phase A）后，退出时也必须撤销，否则 grant 残留（权限漂移）。
+// RevokeRole 幂等（只撤销存在的）；role_id 经 roleMapper 解析；任一失败返回错误（调用方补偿恢复 membership）。
+// SEE: [[membership-bound-scope-revoke-on-leave]]
 func (l *LeaveCommunityLogic) revokeCommunityRoles(userId, communityId int64) error {
 	if l.svcCtx.PermissionClient == nil {
 		l.Errorf("LeaveCommunity: PermissionClient is nil")
 		return fmt.Errorf("permission client unavailable")
 	}
-	ownerID, ok := roleIDByCode(l.ctx, l.svcCtx, l.Logger, model.RoleCodeOwner)
-	if !ok {
-		l.Errorf("LeaveCommunity: role owner not found in permission-service")
-		return fmt.Errorf("role owner not found")
+	roleCodes := []string{
+		model.RoleCodeOwner, model.RoleCodeTenant,
+		model.RoleCodeGridWorker, model.RoleCodePropertyAdmin, model.RoleCodeCommunityAdmin,
+		model.RoleCodeCommittee,
 	}
-	tenantID, ok := roleIDByCode(l.ctx, l.svcCtx, l.Logger, model.RoleCodeTenant)
-	if !ok {
-		l.Errorf("LeaveCommunity: role tenant not found in permission-service")
-		return fmt.Errorf("role tenant not found")
-	}
-
-	reqs := []*permissionv1.RevokeRoleRequest{
-		{UserId: userId, RoleId: ownerID, ScopeType: stringPtr(model.ScopeTypeCommunity), ScopeId: int64Ptr(communityId)},
-		{UserId: userId, RoleId: tenantID, ScopeType: stringPtr(model.ScopeTypeCommunity), ScopeId: int64Ptr(communityId)},
-	}
-	for _, req := range reqs {
+	for _, code := range roleCodes {
+		roleID, ok := roleIDByCode(l.ctx, l.svcCtx, l.Logger, code)
+		if !ok {
+			l.Errorf("LeaveCommunity: role %s not found in permission-service", code)
+			return fmt.Errorf("role %s not found", code)
+		}
+		req := &permissionv1.RevokeRoleRequest{
+			UserId:    userId,
+			RoleId:    roleID,
+			ScopeType: stringPtr(model.ScopeTypeCommunity),
+			ScopeId:   int64Ptr(communityId),
+		}
 		if _, err := l.svcCtx.PermissionClient.RevokeRole(l.ctx, req); err != nil {
 			l.Errorf("LeaveCommunity: RevokeRole failed userId=%d roleId=%d scope=%s:%d err=%v",
-				userId, req.RoleId, model.ScopeTypeCommunity, communityId, err)
+				userId, roleID, model.ScopeTypeCommunity, communityId, err)
 			return err
 		}
 	}
-	l.Infof("LeaveCommunity: roles owner+tenant revoked, userId=%d communityId=%d", userId, communityId)
+	l.Infof("LeaveCommunity: community-scoped roles revoked, userId=%d communityId=%d", userId, communityId)
 	return nil
 }
 

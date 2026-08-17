@@ -1,5 +1,55 @@
 # CHANGELOG — permission-service
 
+## 2026-08-17 — 敏感权限 min_verf_level=2 加固（security-arch 评审 CRITICAL）：服务角色破坏性操作认证门槛
+
+### 类型
+分诊：**改动 1/2（种子 + 迁移 SQL 加 min_verf_level 约束）属字段映射类**——无新业务逻辑函数，免 RED（幂等验证 SELECT + 种子结构测试兜底）；**新增测试 `simulateEffectiveMinVerfLevel` 迷你 SQL 解析/模拟 + 6 个敏感码断言 + 审计回归断言属有逻辑函数**（解析/分支/校验）→ 走 RED→GREEN（留 RED FAIL 摘录，见下）。
+
+### TDD 证据（RED FAIL 摘录 → GREEN PASS）
+
+#### RED — 种子结构测试 `TestSeedSensitivePermissions_HardenedToLevel2`（加固前：6 个敏感码有效 min_verf_level=0）
+```
+--- FAIL: TestSeedSensitivePermissions_HardenedToLevel2 (0.00s)
+    Messages:   权限码 community:notice:delete-api 从零建库后有效 min_verf_level 应为 2（需已认证）；当前=0。...
+    Messages:   权限码 community:notice:update-api ... 当前=0
+    Messages:   权限码 community:activity:create-api ... 当前=0
+    ...（role:read / role:read:list-api / role:read:detail-api 共 6 码均 expected: 2 actual: 0）
+FAIL
+```
+（期间修正测试解析器 3 处自身缺陷：① `--` 注释块与后续 SQL 合并破坏语句前缀检测 → `stripSQLComments`；② INSERT 前缀大小写不匹配 → 统一大写；③ VALUES 元组分隔符为 `), (` 而非 `),(` → `reTupleSep`。）
+
+GREEN：`ok`，4 个新测试全 PASS——
+- `TestSeedSensitivePermissions_HardenedToLevel2`（6 敏感码从零建库后有效层级=2）
+- `TestMigrationPrivilegedRoleMinVerfLevel_HardenedToLevel2`（迁移 004 覆盖同 6 码）
+- `TestSeedPrivilegedRoles_DestructiveWritePerms_HardenedToLevel2`（审计回归：角色 2/3/4 绑定破坏性写权限必须 level-2）
+- `TestCheckPermission_PrivilegedRoleDestructiveOps_NeedVerf`（12 用例：6 码 × 未认证 status=0 拒绝 / 已认证 status=2 放行）
+
+### 做了什么
+- **改动 1** `scripts/init_permissions.sql` 段 6.8：幂等 `UPDATE sys_permission SET min_verf_level = 2 WHERE code IN ('community:notice:delete-api','community:notice:update-api','community:activity:create-api','role:read','role:read:list-api','role:read:detail-api')` + 幂等验证 SELECT（hardened==6 → ✅ PASS）。**放置于段 6 末尾**（晚于 6.4 的 427/428 INSERT IGNORE）——从零建库（init_permissions.sql 自上而下）才生效；若置于 4.3.2 会被 6.4 首次 INSERT 的列默认 0 覆盖（种子结构测试可捕获此回归）。
+- **改动 2** 新增 `migration/004_privileged_role_min_verf_level.sql`：既有库重复应用同一 UPDATE（幂等可重跑）+ 验证 SELECT。
+- **改动 3** 审计（安全 CRITICAL）：grep init_permissions.sql 全部绑定到 property_admin(2)/community_admin(3)/grid_worker(4) 的权限并逐码核对有效 min_verf_level——
+  - **破坏性写/管理权限已全部 level-2**：user:read/read:list/read:detail(110/111/112)、moderation:read/review 系(510/511/520/521/522)、notice:create-api(421)、**本次新增** delete-api(427)/update-api(428)/activity:create-api(432)/role:read 系(210/211/212)。
+  - **读权限保持 0**：community:read:list-api(411)、notice 读码(422/423/424/426)、activity:list-api(431)、app-state(700)。
+  - **唯一 level-0 写权限为 701 user:currentcommunity:write-api**（用户自设当前小区，self-scoped 非社区级破坏性操作，审计测试显式 allowlist）。
+  - 审计回归已编码为测试 `TestSeedPrivilegedRoles_DestructiveWritePerms_HardenedToLevel2`，防未来给服务角色新增破坏性写权限时漏设门槛。
+- **改动 4** 测试：新增 `seed_min_verf_level_test.go`（迷你 SQL 解析 + 从零建库模拟有效层级 + 6 码断言 + 审计回归）、`privileged_roles_min_verf_level_test.go`（6 码 × 未认证拒绝/已认证放行判定）。
+
+### 影响
+- Proto: 无（未修改 api-proto/）
+- 调用方: 行为变更——社区管理员/网格员等持角色但未认证(status=0)的 grant 将无法再调 427/428/432/210/211/212 对应 REST 端点（此前仅靠业务层 080002 作者校验兜底，未认证者经中间件即被放行）；已认证(status=2+verified_at)用户不受影响；读权限(422/423/424/426 等)不受影响
+- 数据库: `init_permissions.sql` 段 6.8 + `migration/004`（permission 库 sys_permission 6 行 min_verf_level 0→2）；**执行由 Owner 验证**（种子/迁移 SQL 写但执行不在 harness-pipeline）
+- 安全: 堵 security-arch CRITICAL「未认证 grant 持角色+数据范围即可破坏性操作」——min_verf_level=2 为数据驱动约束（CheckPermission: maxLevel >= minLevel），未认证 grant 恒 level-0 无法放行
+- 门禁: `go build ./...` + `go vet ./...` + `go test ./...` 全绿；`harness-checks.sh --service permission-service` → 18 PASS, 0 FAIL, 3 WARN（3 WARN 均为既有：proto→TS 滞后 / design_consistency deleted_at / git 治理漂移，非本次引入）
+
+### 应用的记忆
+- [[auto-grant-unverified-grant-confers-scope-level0]] (must-follow) — 未认证 grant 立即生效的既有语义，现经 min_verf_level=2 数据驱动收窄（init_permissions.sql 段 6.8 / 004 迁移 / seed 测试）
+- [[is-system-no-permission-shortcut]] (must-follow) — 权限经 rel_role_permission 配置，认证要求经 min_verf_level 数据驱动（无角色名短路）
+- [[permission-seed-api-path-must-match-routes]] (must-follow) — 427/428/432/211/212 path 与 REST 路由一致
+- [[migration-must-execute]] (must-follow) — 004 迁移幂等 + 末尾 SELECT 验证（执行由 Owner 验证）
+- [[tdd-red-evidence-requires-fail-excerpt]] (must-follow) — 种子结构测试留 RED FAIL 摘录
+
+---
+
 ## 2026-08-16 — content-post-generalization 权限部分（Task 3.1 + 3.2）：AssertPublishScope 社区管理员角色感知展开 + 权限种子矩阵
 
 ### 类型

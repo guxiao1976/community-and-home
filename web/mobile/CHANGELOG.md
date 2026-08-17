@@ -1,5 +1,63 @@
 # CHANGELOG — web/mobile
 
+## 2026-08-17 — 加入小区流程改造：选小区后分流（join-choice）+ 业主路径新页（join-residence）
+
+### 分诊
+- **A pending-join 契约模块（`src/utils/pending-join.ts`，有逻辑函数）**：跨页一次性「待加入小区」{communityId, communityName, address} 的唯一契约源。参考 reg-pending 模式：模块级内存态为主 + 仅 H5 镜像 sessionStorage（`{data, expiresAt}`，TTL 30 分钟，非敏感数据可放宽），绝不 localStorage。TDD RED→GREEN
+- **B community store pendingCommunityId（`src/stores/community.ts`，字段映射类 + set/clear 函数）**：新增 `pendingCommunityId: ref('')` + `setPendingCommunityId` / `clearPendingCommunityId`。TDD RED→GREEN（含 set/clear 分支）
+- **C join-community 选小区分流（`src/pages/join-community/join-community.vue`，有逻辑分支）**：去掉选小区后的「自有/租住 + 楼单元房号」modal（showJoinForm/joinTarget/confirmJoin/closeJoinForm 及样式、success-card 死代码一并清理）；选中小区改为 `savePendingJoin({id,name,address})` + `navigateTo('/pages/join-choice/join-choice')`。TDD RED→GREEN
+- **D join-choice 新页（`src/pages/join-choice/join-choice.vue`，导航分支）**：顶部显示待加入小区名（读 pending-join）；【填写房号成为业主】→ navigateTo join-residence（pending 随行）；【其他身份认证】→ `setPendingCommunityId(id)` + `switchTab('/pages/my/my')`（我的页申请角色用）。TDD RED→GREEN
+- **E join-residence 新页（`src/pages/join-residence/join-residence.vue`，有逻辑函数 confirmJoin）**：自有/租住 + 楼/单元/房号（复用 `validateJoinForm` / `joinFormToPayload` / `OWNERSHIP_OPTIONS`）；确认加入 → `joinCommunity(id, building, unit, room, ownership)` → `applyRole({community_id, role_code:'owner'})`（失败不阻塞加入成功，可稍后重新申请）→ `addCommunity` → 清 pending-join → toast 加入成功 + switchTab 首页。TDD RED→GREEN
+- **F my.vue applyForRole 兼容 pending 小区（`src/pages/my/my.vue`，有逻辑分支）**：currentCommunityId 为空时回退 `pendingCommunityId`（若存在）并一次性清除；仍为空才提示「请先加入小区」。TDD RED→GREEN
+
+### 做了什么
+- 新增 `src/utils/pending-join.ts`（+5 用例 pending-join.spec.ts）
+- 新增页面 `src/pages/join-choice/join-choice.vue`、`src/pages/join-residence/join-residence.vue`，并注册 `src/pages.json`（选择身份 / 登记房号）
+- `join-community.vue`：移除 modal 及 dead success-card，选中小区存 pending-join 后导航 join-choice
+- `src/stores/community.ts`：新增 pendingCommunityId 及 set/clear
+- `my.vue applyForRole`：current 优先、pending 回退（一次性消费）
+- `join-form.ts` 保留不动（join-residence 复用）
+- TDD 证据见 `_tdd_evidence.md` 新增章节
+
+### 门禁
+- `npx vitest run` → 24 files / 144 tests PASS（基线 21/125 → +3 文件 / +19 用例）
+- `npm run type-check` → 0 errors；`npm run build:h5` → DONE Build complete
+- `harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）
+
+---
+
+# CHANGELOG — web/mobile
+
+## 2026-08-17 — 注册超时 UX 修复：账号可能已创建时不再卡死（10002/超时分流）
+
+### 背景诊断
+后端 register 实测 200ms 正常（日志：POST /api/auth/register → 200，创建 userId）；前端 30s 超时属一次性请求停滞（dev 环境 WSL2/代理抖动），且**账号实际已创建、一次性短信验证码已消费**——原前端 catch 只报「注册失败」导致用户卡死无法继续。
+
+### 做了什么
+`src/pages/agreement/agreement.vue` confirmRegister catch 按错误分流：
+- **10002（手机号已注册，user-service CreateUser）** → 清临时数据 + toast「该手机号已注册，请直接登录」+ 1s 后返回登录页
+- **timeout/网络中断（请求结果不确定，账号可能已创建）** → toast「注册超时，账号可能已创建；请重试或返回登录」+ 保留临时数据可重试（重试命中 10002 自动转登录）
+- **其他业务错误** → 保持「注册失败，请重试」
+
+### 新增测试（+2）
+- 10002 → 清临时数据 + navigateBack 回登录 + 不调 handleAuthSuccess
+- timeout → 提示账号可能已创建、保留数据、不调 handleAuthSuccess
+
+### RED 摘录（QA 修复 2026-08-17 补：上一阶段判 FAIL — 有逻辑函数 RED 缺失）
+- 复现：`git stash push -- src/pages/agreement/agreement.vue` 回退至 HEAD（catch 仅「注册失败，请重试」，无 10002/timeout 分支；spec 新增断言不受 stash 影响）→ `npx vitest run src/pages/agreement/agreement.spec.ts` 捕获真实 FAIL → `git stash pop` 恢复实现
+- 真实 FAIL（vitest 实际输出）：
+  - `手机号已注册(10002)` → `AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]`，Received `{ icon: 'none', title: '注册失败，请重试' }`（期望 toast「该手机号已注册，请直接登录」），agreement.spec.ts:202
+  - `注册超时（timeout）` → 同型 AssertionError，Received `{ icon: 'none', title: '注册失败，请重试' }`（期望 toast「注册超时，账号可能已创建；请重试或返回登录」），agreement.spec.ts:223
+  - `Test Files 1 failed (1) / Tests 2 failed | 5 passed (7)`（完整摘录见 `_tdd_evidence.md` §24）
+
+### 门禁
+- `npx vitest run` → 24 files / 144 tests PASS（当前工作树全量；本修复 +2 用例）
+- `harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）
+
+---
+
+# CHANGELOG — web/mobile
+
 ## 2026-08-17 — 注册协议页改版：顶部提示 + 协议只读滚动框 + 确认注册固定可见
 
 ### 做了什么

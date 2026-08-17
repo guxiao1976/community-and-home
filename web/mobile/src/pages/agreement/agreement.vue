@@ -106,7 +106,24 @@ async function confirmRegister() {
   } catch (err: unknown) {
     uni.hideLoading();
     submitting.value = false;
+    const e = err as Error & { code?: number };
+    const msg = e?.message || '';
     console.error('[agreement] 注册失败', err);
+    // ① 手机号已注册（user-service CreateUser 10002）：账号已存在，清临时数据回登录页直接登录
+    if (e?.code === 10002) {
+      clearRegPending();
+      uni.showToast({ title: '该手机号已注册，请直接登录', icon: 'none' });
+      setTimeout(() => uni.navigateBack({ delta: 1 }), 1000);
+      return;
+    }
+    // ② 超时/网络中断：请求结果不确定，账号可能已创建且验证码可能已消费——保留数据可重试，
+    //    重试若命中 10002 会自动转登录；提示明确避免用户误以为必然失败。
+    //    SEE: [[axios-network-error-raw-message-toast]]
+    if (/timeout|ETIMEDOUT|ECONNABORTED|network/i.test(msg)) {
+      uni.showToast({ title: '注册超时，账号可能已创建；请重试或返回登录', icon: 'none', duration: 2500 });
+      return;
+    }
+    // ③ 其他业务错误
     uni.showToast({ title: '注册失败，请重试', icon: 'none' });
     // 保留临时数据，可重试
   }

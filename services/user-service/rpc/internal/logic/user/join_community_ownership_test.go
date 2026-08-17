@@ -26,7 +26,11 @@ func mockJoinRoles() *permissionv1.ListRolesResponse {
 	return &permissionv1.ListRolesResponse{
 		Roles: []*permissionv1.Role{
 			{Id: 1, Code: "owner"},
+			{Id: 2, Code: "property_admin"},
+			{Id: 3, Code: "community_admin"},
+			{Id: 4, Code: "grid_worker"},
 			{Id: 5, Code: "tenant"},
+			{Id: 6, Code: "committee"},
 			{Id: 9, Code: "registered_user"},
 		},
 	}

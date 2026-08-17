@@ -1,5 +1,7 @@
-// Component test — join-community page collects 自有/租住 (ownership) + building/unit/room
-// before calling joinCommunity, and validates them.
+// Component test — join-community page 选小区流程改造：
+// 选中小区后不再弹「自有/租住 + 楼单元房号」modal，改为把 {id, name, address}
+// 存入 pending-join 共享契约模块 → navigateTo /pages/join-choice/join-choice。
+// SEE: [[tdd-red-evidence-requires-fail-excerpt]] — RED 摘录见 _tdd_evidence.md
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { createPinia, setActivePinia, type Pinia } from 'pinia';
@@ -12,7 +14,14 @@ vi.mock('@/api/user', () => ({
   getResidentialAreasByIds: vi.fn().mockResolvedValue([]),
 }));
 
-import { joinCommunity } from '@/api/user';
+vi.mock('@/utils/pending-join', () => ({
+  savePendingJoin: vi.fn(),
+  readPendingJoin: vi.fn(() => null),
+  clearPendingJoin: vi.fn(),
+}));
+
+import { savePendingJoin } from '@/utils/pending-join';
+import { useCommunityStore } from '@/stores/community';
 import JoinCommunityPage from './join-community.vue';
 
 const area = { id: 'c1', name: '幸福小区', address: '幸福路1号' };
@@ -28,80 +37,56 @@ async function mountAtSearchStep(): Promise<VueWrapper> {
   return wrapper;
 }
 
-async function openJoinForm(wrapper: VueWrapper) {
-  await wrapper.find('.list-item').trigger('click');
-  await (wrapper.vm as any).$nextTick();
-}
-
-async function fillValidForm(wrapper: VueWrapper, ownershipIndex = 0) {
-  // ownership radio (0=自有, 1=租住)
-  await wrapper.findAll('.ownership-option')[ownershipIndex].trigger('click');
-  const inputs = wrapper.findAll('.join-form-input');
-  await inputs[0].setValue('3'); // building
-  await inputs[1].setValue('1'); // unit
-  await inputs[2].setValue('502'); // room
-}
-
-describe('join-community page — ownership join form', () => {
+describe('join-community page — 选小区分流到 join-choice', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (joinCommunity as any).mockResolvedValue({
-      id: 'm1', user_id: 'u1', community_id: 'c1', bind_status: 1,
-      building: 3, unit: 1, room: 502, join_time: 0, leave_time: 0, created_at: 0, updated_at: 0,
+    (savePendingJoin as any).mockClear();
+  });
+
+  it('点击未加入小区 → 存 pending-join {id,name,address} + navigateTo join-choice', async () => {
+    const wrapper = await mountAtSearchStep();
+    await wrapper.find('.list-item').trigger('click');
+
+    expect(savePendingJoin).toHaveBeenCalledWith({
+      communityId: 'c1',
+      communityName: '幸福小区',
+      address: '幸福路1号',
     });
+    expect(uni.navigateTo).toHaveBeenCalledWith({ url: '/pages/join-choice/join-choice' });
   });
 
-  it('opens the join form when clicking a not-joined community', async () => {
+  it('不再弹出 join form modal（.join-form-mask 不存在）', async () => {
     const wrapper = await mountAtSearchStep();
-    await openJoinForm(wrapper);
-    expect((wrapper.vm as any).showJoinForm).toBe(true);
-    expect(joinCommunity).not.toHaveBeenCalled();
+    await wrapper.find('.list-item').trigger('click');
+
+    expect(wrapper.find('.join-form-mask').exists()).toBe(false);
+    expect(wrapper.find('.confirm-join-btn').exists()).toBe(false);
   });
 
-  it('blocks confirm when ownership is not selected', async () => {
+  it('点击已加入小区 → 不存 pending、不导航', async () => {
     const wrapper = await mountAtSearchStep();
-    await openJoinForm(wrapper);
-    const inputs = wrapper.findAll('.join-form-input');
-    await inputs[0].setValue('3');
-    await inputs[1].setValue('1');
-    await inputs[2].setValue('502');
-    await wrapper.find('.confirm-join-btn').trigger('click');
+    const communityStore = useCommunityStore();
+    communityStore.addCommunity({ communityId: 'c1', communityName: '幸福小区', address: '幸福路1号' });
+    await (wrapper.vm as any).$nextTick();
 
-    expect(joinCommunity).not.toHaveBeenCalled();
-    expect((wrapper.vm as any).joinFormErrors.ownership).toBeTruthy();
+    await wrapper.find('.list-item').trigger('click');
+
+    expect(savePendingJoin).not.toHaveBeenCalled();
+    expect(uni.navigateTo).not.toHaveBeenCalled();
   });
 
-  it('calls joinCommunity(communityId, building, unit, room, OWNED) for 自有 join', async () => {
+  it('已达上限（3 个小区）→ 显示上限警告，不存 pending、不导航', async () => {
     const wrapper = await mountAtSearchStep();
-    await openJoinForm(wrapper);
-    await fillValidForm(wrapper, 0);
+    const communityStore = useCommunityStore();
+    for (let i = 1; i <= 3; i++) {
+      communityStore.addCommunity({ communityId: `c${i}`, communityName: `小区${i}` });
+    }
+    await (wrapper.vm as any).$nextTick();
 
-    await wrapper.find('.confirm-join-btn').trigger('click');
-    await flushPromises();
+    await wrapper.find('.list-item').trigger('click');
 
-    expect(joinCommunity).toHaveBeenCalledWith('c1', 3, 1, 502, 1);
-  });
-
-  it('calls joinCommunity with ownership=2 (RENTED) for 租住 join', async () => {
-    const wrapper = await mountAtSearchStep();
-    await openJoinForm(wrapper);
-    await fillValidForm(wrapper, 1);
-
-    await wrapper.find('.confirm-join-btn').trigger('click');
-    await flushPromises();
-
-    expect(joinCommunity).toHaveBeenCalledWith('c1', 3, 1, 502, 2);
-  });
-
-  it('shows success card and records the community after a valid join', async () => {
-    const wrapper = await mountAtSearchStep();
-    await openJoinForm(wrapper);
-    await fillValidForm(wrapper, 0);
-    await wrapper.find('.confirm-join-btn').trigger('click');
-    await flushPromises();
-
-    expect((wrapper.vm as any).joinedArea).toEqual(area);
-    expect((wrapper.vm as any).showJoinForm).toBe(false);
-    expect(wrapper.find('.success-card').exists()).toBe(true);
+    expect(savePendingJoin).not.toHaveBeenCalled();
+    expect(uni.navigateTo).not.toHaveBeenCalled();
+    expect((wrapper.vm as any).showMaxWarning).toBe(true);
   });
 });

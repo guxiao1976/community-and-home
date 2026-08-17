@@ -175,6 +175,7 @@ function pauseForInput(ctx, checkpoint, payload) {
     ctx: ctx,             // 完整 ctx 返回给 Owner，resume 时经 args.resumeState 传回
     resumeFromRunId: RESUME_FROM,
     onResume: payload.onResume,
+    tokenStats: tokenStats(),
   }
 }
 
@@ -245,6 +246,26 @@ function costSummary() {
   if (b.spent === null) return ''
   const w = (n) => (n / 10000).toFixed(1)
   return `[成本护栏: 累计~${w(b.spent)}万输出token / soft ${w(b.soft)}万 / hard ${w(b.hard)}万]`
+}
+
+
+// 分阶段 token 统计（budget.spent 差分，近似该阶段输出 token；供任务结束列表呈现）
+let _lastBudgetSpent = (typeof budget !== 'undefined' && typeof budget.spent === 'function') ? budget.spent() : 0
+const _phaseTokenMarks = {}
+function _markTokenPhase(phase) {
+  if (typeof budget !== 'undefined' && typeof budget.spent === 'function') {
+    const now = budget.spent()
+    const delta = Math.max(0, now - _lastBudgetSpent)
+    _lastBudgetSpent = now
+    _phaseTokenMarks[phase] = (_phaseTokenMarks[phase] || 0) + delta
+  }
+}
+function tokenStats() {
+  const perPhase = Object.entries(_phaseTokenMarks)
+    .map(([phase, outputTokens]) => ({ phase, outputTokens }))
+    .sort((a, b) => b.outputTokens - a.outputTokens)
+  const totalOutputTokens = perPhase.reduce((sum, p) => sum + p.outputTokens, 0)
+  return { perPhase, totalOutputTokens }
 }
 
 // ── P2.1: 模型分级路由（可经 args.models 配置；默认继承会话模型，不强制）──
@@ -391,6 +412,7 @@ function builtinGate(phase, ctx) {
 // 阶段 0: 路径选择（dispatch 分级）
 async function stage0Dispatch(ctx) {
   phase('0 路径选择')
+  _markTokenPhase('0 路径选择')
   log('dispatch 分级：读取任务，判定 S/M/L 路由')
 
   // 纯文案/配置跳过判定（确定性信号）
@@ -460,6 +482,7 @@ ${TASK}
 // 阶段 1: 需求分析
 async function stage1Requirement(ctx) {
   phase('1 需求分析')
+  _markTokenPhase('1 需求分析')
   // S/M 级短路：不跑需求分析，直接跳阶段 5（编码）
   if (ctx.workload === 'S' || ctx.workload === 'M') {
     log(`  ⏭️ ${ctx.workload} 级：跳过需求分析/评审/设计，直接编码（阶段 5）`)
@@ -558,7 +581,7 @@ ${feedbackSection}
     })
     if (!gate.passed) {
       log(`❌ 需求分析门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
-      return { status: 'stage_fail', stage: 1, change: CHANGE, failures: gate.failures, stateFile: statePath() }
+      return { status: 'stage_fail', stage: 1, change: CHANGE, failures: gate.failures, stateFile: statePath(), tokenStats: tokenStats() }
     }
     ctx.stageResults[1] = ctx.stageResults[1] || {}
     ctx.stageResults[1].traceability = res.traceability
@@ -571,6 +594,7 @@ ${feedbackSection}
 // 阶段 2: 需求评审（4 视角并行 + 投票）
 async function stage2Review(ctx) {
   phase('2 需求评审')
+  _markTokenPhase('2 需求评审')
 
   // resume 处理：决策即消费（P1.4）——读后立即 delete，杜绝主循环重进回环
   const stage2Done = consumeDecision(ctx, 'stage2_done')
@@ -747,6 +771,7 @@ ${specHash}
 // 阶段 3: 架构设计
 async function stage3Architecture(ctx) {
   phase('3 架构设计')
+  _markTokenPhase('3 架构设计')
 
   // resume 处理：若已暂停过 stage3_done，读用户裁决分支
   const stage3Done = consumeDecision(ctx, 'stage3_done')
@@ -799,7 +824,7 @@ ${designFeedback ? `\n## 上轮设计评审反馈（必须逐条修订）\n${des
       log(`❌ 架构设计门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
       ctx.currentStage = 0  // 回阶段 1
       saveState(ctx)
-      return { status: 'stage_fail', stage: 3, change: CHANGE, failures: gate.failures, stateFile: statePath() }
+      return { status: 'stage_fail', stage: 3, change: CHANGE, failures: gate.failures, stateFile: statePath(), tokenStats: tokenStats() }
     }
 
     // 设计评审（2 视角并行：数据模型 / 接口契约+Proto，降低单 agent 确认偏差）
@@ -844,7 +869,7 @@ ${designFeedback ? `\n## 上轮设计评审反馈（必须逐条修订）\n${des
     log(`  ⛔ 设计评审 ${MAX_DESIGN_ROUNDS} 轮未通过，回阶段 1`)
     ctx.currentStage = 0  // 回阶段 1（需求分析）
     saveState(ctx)
-    return { status: 'stage_fail', stage: 3, change: CHANGE, failures: [{ gate: 'design_review_round_limit', message: `设计评审 ${MAX_DESIGN_ROUNDS} 轮未通过` }], stateFile: statePath() }
+    return { status: 'stage_fail', stage: 3, change: CHANGE, failures: [{ gate: 'design_review_round_limit', message: `设计评审 ${MAX_DESIGN_ROUNDS} 轮未通过` }], stateFile: statePath(), tokenStats: tokenStats() }
   }
 
   ctx.stageResults[3] = { services: res.services, protoChanges: res.protoChanges, tasksCount: res.tasksCount }
@@ -862,6 +887,7 @@ ${designFeedback ? `\n## 上轮设计评审反馈（必须逐条修订）\n${des
 // 阶段 4: Proto 变更（HITL：Owner 亲自执行 make ci）
 async function stage4Proto(ctx) {
   phase('4 Proto 变更')
+  _markTokenPhase('4 Proto 变更')
   const protoChanges = (ctx.stageResults[3] && ctx.stageResults[3].protoChanges) || []
   if (protoChanges.length === 0) {
     log('  ⏭️ 无 Proto 变更，跳过')
@@ -892,7 +918,7 @@ async function stage4Proto(ctx) {
       log('  ⛔ Owner 确认 proto 未完成，回阶段 3')
       ctx.currentStage = 3
       saveState(ctx)
-      return { status: 'stage_fail', stage: 4, change: CHANGE, failures: [{ gate: 'proto_not_done', message: 'Owner 确认 proto 未完成' }], stateFile: statePath() }
+      return { status: 'stage_fail', stage: 4, change: CHANGE, failures: [{ gate: 'proto_not_done', message: 'Owner 确认 proto 未完成' }], stateFile: statePath(), tokenStats: tokenStats() }
     }
     log(`  📋 Proto 已执行: ${done}`)
   }
@@ -903,7 +929,7 @@ async function stage4Proto(ctx) {
     log(`❌ Proto 门禁 FAIL: ${gate.failures.map(f => f.message).join('; ')}`)
     ctx.currentStage = 3  // 回阶段 3（resume 后重跑架构设计再进阶段 4；主循环遇 stage_fail 直接 return，不会 +1）
     saveState(ctx)
-    return { status: 'stage_fail', stage: 4, change: CHANGE, failures: gate.failures, stateFile: statePath() }
+    return { status: 'stage_fail', stage: 4, change: CHANGE, failures: gate.failures, stateFile: statePath(), tokenStats: tokenStats() }
   }
   ctx.stageResults[4] = { passed: true }
   saveState(ctx)
@@ -913,6 +939,7 @@ async function stage4Proto(ctx) {
 // 阶段 5: 编码测试（HITL 委托 Owner 启动 N×harness-pipeline.js）
 async function stage5Coding(ctx) {
   phase('5 编码+测试')
+  _markTokenPhase('5 编码+测试')
 
   // resume 处理：若已暂停过 stage5_done，读用户裁决分支
   const stage5Done = consumeDecision(ctx, 'stage5_done')
@@ -962,6 +989,7 @@ async function stage5Coding(ctx) {
 // 阶段 6: 集成归档
 async function stage6Integrate(ctx) {
   phase('6 集成归档')
+  _markTokenPhase('6 集成归档')
 
   // resume 处理：若已暂停过 stage6_done，读用户最终交付决策
   const stage6Done = consumeDecision(ctx, 'stage6_done')
@@ -1014,7 +1042,7 @@ async function stage6Integrate(ctx) {
     })
     if (!gate2.passed) {
       log(`❌ 集成归档门禁 FAIL: ${gate2.failures.map(f => f.message).join('; ')}`)
-      return { status: 'stage_fail', stage: 6, change: CHANGE, failures: gate2.failures, stateFile: statePath() }
+      return { status: 'stage_fail', stage: 6, change: CHANGE, failures: gate2.failures, stateFile: statePath(), tokenStats: tokenStats() }
     }
   }
 
@@ -1165,5 +1193,6 @@ return {
   change: CHANGE,
   stageResults: ctx.stageResults,
   cost: budgetLevel(),  // P2.2: 成本可观测
+  tokenStats: tokenStats(),  // 分阶段 + 总输出 token
   stateFile: statePath(),
 }

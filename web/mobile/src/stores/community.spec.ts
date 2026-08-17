@@ -70,6 +70,33 @@ describe('community store — switchCommunity', () => {
   });
 });
 
+describe('community store — pendingCommunityId（一次性待加入小区，供我的页申请角色）', () => {
+  beforeEach(() => {
+    pinia = createPinia();
+    setActivePinia(pinia);
+    vi.clearAllMocks();
+    uni.setStorageSync('current_community_id', '');
+  });
+
+  it('setPendingCommunityId → pendingCommunityId 可读', () => {
+    const store = useCommunityStore();
+    store.setPendingCommunityId('c9');
+    expect(store.pendingCommunityId).toBe('c9');
+  });
+
+  it('clearPendingCommunityId → 清空回空串', () => {
+    const store = useCommunityStore();
+    store.setPendingCommunityId('c9');
+    store.clearPendingCommunityId();
+    expect(store.pendingCommunityId).toBe('');
+  });
+
+  it('初始 pendingCommunityId 为空串', () => {
+    const store = useCommunityStore();
+    expect(store.pendingCommunityId).toBe('');
+  });
+});
+
 describe('community store — loadMemberships 服务端权威（getAppState）', () => {
   beforeEach(() => {
     pinia = createPinia();

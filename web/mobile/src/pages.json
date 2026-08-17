@@ -51,6 +51,20 @@
       }
     },
     {
+      "path": "pages/join-choice/join-choice",
+      "style": {
+        "navigationBarTitleText": "选择身份",
+        "navigationBarBackgroundColor": "#FFFFFF"
+      }
+    },
+    {
+      "path": "pages/join-residence/join-residence",
+      "style": {
+        "navigationBarTitleText": "登记房号",
+        "navigationBarBackgroundColor": "#FFFFFF"
+      }
+    },
+    {
       "path": "pages/leave-community/leave-community",
       "style": {
         "navigationBarTitleText": "退出小区"

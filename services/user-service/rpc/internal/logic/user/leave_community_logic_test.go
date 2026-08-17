@@ -37,15 +37,15 @@ func TestLeaveCommunity_RevokesOwnerAndTenant(t *testing.T) {
 		func(_ context.Context, req *permissionv1.RevokeRoleRequest, _ ...interface{}) (*permissionv1.RevokeRoleResponse, error) {
 			revoked = append(revoked, req)
 			return &permissionv1.RevokeRoleResponse{}, nil
-		}).Times(2)
+		}).Times(6)
 
 	logic := NewLeaveCommunityLogic(context.Background(), svc)
 	resp, err := logic.LeaveCommunity(&userv1.LeaveCommunityRequest{UserId: 1001, CommunityId: 2001})
 	require.NoError(t, err)
 	assert.Equal(t, int32(0), resp.Base.Code)
 
-	// 双调断言：owner(1) + tenant(5)，均指向该小区
-	require.Len(t, revoked, 2, "应双调 RevokeRole（owner + tenant）")
+	// 撤销断言：该小区下全部社区角色 grant（owner/tenant/grid_worker/property_admin/community_admin/committee）
+	require.Len(t, revoked, 6, "应撤销该小区全部社区角色（owner/tenant/服务角色/业委会）")
 	roleIDs := make(map[int64]bool)
 	for _, r := range revoked {
 		assert.Equal(t, int64(1001), r.UserId)
@@ -80,7 +80,7 @@ func TestLeaveCommunity_OtherCommunityPreserved(t *testing.T) {
 			// 只允许撤销 2001（不得触碰 2002）
 			assert.Equal(t, int64(2001), *req.ScopeId, "不得撤销其他小区的角色")
 			return &permissionv1.RevokeRoleResponse{}, nil
-		}).Times(2)
+		}).Times(6)
 
 	logic := NewLeaveCommunityLogic(context.Background(), svc)
 	resp, err := logic.LeaveCommunity(&userv1.LeaveCommunityRequest{UserId: 1002, CommunityId: 2001})

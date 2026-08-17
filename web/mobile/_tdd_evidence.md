@@ -702,3 +702,179 @@ TypeError: wrapper.vm.onOwnerAuth is not a function
 ```
 
 > 全量门禁: `npm run test:unit` → 21 files / 123 tests PASS；`npm run type-check` → 0 errors；`npm run build:h5` → PASS（DONE Build complete）；`harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）。
+
+---
+
+# TDD 证据 — web/mobile 加入小区流程改造（选小区后分流 join-choice / join-residence）
+
+> 生成时间: 2026-08-17
+> 变更: ① join-community 去掉选小区后 modal，改存 pending-join → 导航 join-choice；② 新页 join-choice（2 身份分流）；③ 新页 join-residence（业主路径填房号，复用 join-form）；④ my.vue applyForRole 兼容 pending 小区。
+> 分诊: pending-join 契约模块 / community store pendingCommunityId / join-community 分流 / my.vue 回退 = 有逻辑，配 RED；join-choice / join-residence 为页面接线 + 复用既有校验函数，属「逻辑函数」范畴（含导航分支），一并走 RED。
+> RED 摘录均为 vitest 实际输出（`npx vitest run <file>`）。
+
+## 1. RED — pending-join 契约模块（src/utils/pending-join.spec.ts）
+
+复现方式: 仅写测试文件、未实现 `src/utils/pending-join.ts`，运行 `npx vitest run src/utils/pending-join.spec.ts`。
+
+```
+ FAIL  src/utils/pending-join.spec.ts [ src/utils/pending-join.spec.ts ]
+Error: Failed to resolve import "./pending-join" from "src/utils/pending-join.spec.ts". Does the file exist?
+  Plugin: vite:import-analysis
+```
+
+GREEN 后: `Test Files 1 passed (1) / Tests 5 passed (5)`。
+
+## 2. RED — community store pendingCommunityId（src/stores/community.spec.ts）
+
+复现方式: 先加 3 条 pendingCommunityId 用例，store 未实现，运行 `npx vitest run src/stores/community.spec.ts`。
+
+```
+ FAIL  src/stores/community.spec.ts > community store — pendingCommunityId … > setPendingCommunityId → pendingCommunityId 可读
+TypeError: store.setPendingCommunityId is not a function
+ ❯ src/stores/community.spec.ts:83:11
+
+ FAIL  … > 初始 pendingCommunityId 为空串
+AssertionError: expected undefined to be '' // Object.is equality
+- Expected: ""
++ Received: undefined
+```
+
+GREEN 后: `Test Files 1 passed (1) / Tests 10 passed (10)`。
+
+## 3. RED — join-community 选小区分流（src/pages/join-community/join-community.spec.ts 重写）
+
+复现方式: 重写测试（断言 savePendingJoin + navigateTo join-choice + modal 不存在），实现仍为旧 modal 流程，运行测试。
+
+```
+ ❯ src/pages/join-community/join-community.spec.ts (4 tests | 2 failed)
+ FAIL … > 点击未加入小区 → 存 pending-join {id,name,address} + navigateTo join-choice
+AssertionError: expected "vi.fn()" to be called with arguments: [ { communityId: 'c1', …(2) } ]
+ FAIL … > 不再弹出 join form modal（.join-form-mask 不存在）
+AssertionError: expected true to be false // Object.is equality
+ Test Files  1 failed (1)
+      Tests  2 failed | 2 passed (4)
+```
+
+GREEN 后: `Test Files 1 passed (1) / Tests 4 passed (4)`。
+
+## 4. RED — join-choice 新页（src/pages/join-choice/join-choice.spec.ts）
+
+复现方式: 仅写测试文件、未创建页面，运行测试。
+
+```
+ FAIL  src/pages/join-choice/join-choice.spec.ts [ src/pages/join-choice/join-choice.spec.ts ]
+Error: Failed to resolve import "./join-choice.vue" from "src/pages/join-choice/join-choice.spec.ts". Does the file exist?
+```
+
+GREEN 后: `Test Files 1 passed (1) / Tests 4 passed (4)`。
+
+## 5. RED — join-residence 新页（src/pages/join-residence/join-residence.spec.ts）
+
+### 5a. 模块缺失 RED
+复现方式: 仅写测试文件、未创建页面。
+
+```
+ FAIL  src/pages/join-residence/join-residence.spec.ts [ src/pages/join-residence/join-residence.spec.ts ]
+Error: Failed to resolve import "./join-residence.vue" from "src/pages/join-residence/join-residence.spec.ts". Does the file exist?
+```
+
+### 5b. 确认按钮选择器对齐（测试选择器与模板 class 不匹配）
+页面创建后运行：测试用 `.confirm-join-btn` 选择器，模板按钮仅有 `.btn` → 全部 5 条用例 FAIL `Cannot call trigger on an empty DOMWrapper`。
+修复：模板按钮补充 `confirm-join-btn` class（纯选择器对齐，无逻辑改动）。
+
+GREEN 后: `Test Files 1 passed (1) / Tests 5 passed (5)`。
+
+## 6. RED — my.vue applyForRole 兼容 pending 小区（src/pages/my/my.spec.ts）
+
+复现方式: 新增 3 条 applyForRole pending 回退用例，实现未改，运行测试。
+
+```
+ ❯ src/pages/my/my.spec.ts (8 tests | 1 failed)
+ FAIL … > currentCommunityId 为空 + pendingCommunityId 存在 → 用 pending 申请并一次性清除
+AssertionError: expected "vi.fn()" to be called with arguments: [ { community_id: 'c9', …(1) } ]
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+```
+
+GREEN 后: `Test Files 1 passed (1) / Tests 8 passed (8)`。
+
+## 门禁全量
+
+- `npx vitest run` → 24 files / 144 tests PASS（基线 21 files / 125 → +3 文件 / +19 用例）
+- `npm run type-check` → 0 errors
+- `npm run build:h5` → DONE Build complete
+- `harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量：type-safety 3 处 `as any` 均在 request.ts/crypto.ts/identity.ts，非本轮；api-field-align 34 处 WARN 存量）
+
+---
+
+## 24. RED — agreement.vue confirmRegister 10002/timeout 分流（src/pages/agreement/agreement.spec.ts）— TDD 证据补录
+
+> 工作树未提交变更「注册超时 UX 修复」（08-17 08:23-08:24 游离于管线之外、未经 QA 门禁的临时会话所留）在 `confirmRegister` catch 新增**有逻辑函数**三分支（`code===10002` / timeout 正则 / 其他错误），配 agreement.spec.ts:189-228 两条真实断言（+2 用例），但 RED 摘录三处全缺（`_tdd_evidence.md` 无相关章节、CHANGELOG「注册超时 UX 修复」条无摘录、spec 注释仍指向旧 §5）。本轮补录真实 RED 摘录（不改变已 GREEN 的实现与测试）。
+
+复现方式: 临时 `git stash push -- src/pages/agreement/agreement.vue` 回退至 HEAD 基线（catch 仅 `uni.showToast({ title: '注册失败，请重试', icon: 'none' })`，无 10002/timeout 分支；agreement.spec.ts 为工作树新增断言，不受 stash 影响），测试保持行为断言不动，运行 `npx vitest run src/pages/agreement/agreement.spec.ts` 捕获真实 FAIL，随后 `git stash pop` 恢复实现。摘录均为 vitest 实际输出。
+
+```
+ FAIL  src/pages/agreement/agreement.spec.ts > agreement page — 协议确认注册 > 手机号已注册(10002) → 清临时数据 + 回登录页直接登录
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+-   ObjectContaining {
+-     "title": "该手机号已注册，请直接登录",
++   {
++     "icon": "none",
++     "title": "注册失败，请重试",
+    },
+  ]
+
+Number of calls: 1
+
+ ❯ src/pages/agreement/agreement.spec.ts:202:27
+    202|     expect(uni.showToast).toHaveBeenCalledWith(
+       |                           ^
+    203|       expect.objectContaining({ title: '该手机号已注册，请直接登录' }),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/pages/agreement/agreement.spec.ts > agreement page — 协议确认注册 > 注册超时（timeout）→ 提示账号可能已创建、保留数据可重试
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+-   ObjectContaining {
+-     "title": "注册超时，账号可能已创建；请重试或返回登录",
++   {
++     "icon": "none",
++     "title": "注册失败，请重试",
+    },
+  ]
+
+Number of calls: 1
+
+ ❯ src/pages/agreement/agreement.spec.ts:223:27
+    223|     expect(uni.showToast).toHaveBeenCalledWith(
+       |                           ^
+    224|       expect.objectContaining({ title: '注册超时，账号可能已创建；请重试或返回登录' }),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 5 passed (7)
+```
+
+说明: 回退后 HEAD 的 agreement.vue catch 无 10002/timeout 分支（`git show HEAD:web/mobile/src/pages/agreement/agreement.vue` 106-128 行仅 `showToast('注册失败，请重试')`），故 10002/timeout 两条 toast 断言必然产出 `AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]`（Received 为统一兜底 toast「注册失败，请重试」，未走到 10002 清数据 / timeout 提示分支）。该 AssertionError 先于 clearRegPending / navigateBack / handleAuthSuccess 断言抛出，故 FAIL 形态为 toast 断言对比失败（其余分支断言在实现存在后才逐个通过）。
+
+### GREEN 后（agreement.vue confirmRegister 三分支实现 + agreement.spec.ts 全量）
+
+```
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+```
+
+> 全量门禁: `npm run test:unit` → 24 files / 144 tests PASS；`npm run type-check` → 0 errors；`npm run build:h5` → PASS（DONE Build complete）；`harness-checks-frontend.sh --service mobile` → 6 PASS / 0 FAIL / 2 WARN（存量）。

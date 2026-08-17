@@ -85,9 +85,9 @@ func TestJoinCommunity_Rejoin(t *testing.T) {
 
 	expectNoVerifiedRoles(permMock)
 	permMock.EXPECT().ListRoles(gomock.Any(), gomock.Any()).Return(mockJoinRoles(), nil).AnyTimes()
-	// 退出：撤销 owner+tenant 双调
+	// 退出：撤销该小区全部社区角色（owner/tenant/服务角色/业委会，6 个）
 	permMock.EXPECT().RevokeRole(gomock.Any(), gomock.Any()).
-		Return(&permissionv1.RevokeRoleResponse{}, nil).Times(2)
+		Return(&permissionv1.RevokeRoleResponse{}, nil).Times(6)
 	// 重新加入：重新授权 owner
 	permMock.EXPECT().AssignRole(gomock.Any(), gomock.Any()).Return(&permissionv1.AssignRoleResponse{}, nil).Times(1)
 

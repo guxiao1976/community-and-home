@@ -6,7 +6,7 @@
 // - 无临时注册数据进入 → 明确提示注册信息已失效
 // - 断言共享契约模块 @/utils/reg-pending（readRegPending/clearRegPending），不再依赖 uni storage magic string
 // - A: 注册成功分支 submitting 在 handleAuthSuccess 跳转完成（onCompleted）前保持 true（防双提交）
-// SEE: [[tdd-red-evidence-requires-fail-excerpt]] — RED 摘录见 _tdd_evidence.md §5（本次改 §19）
+// SEE: [[tdd-red-evidence-requires-fail-excerpt]] — RED 摘录见 _tdd_evidence.md §13/§19/§21；注册超时 10002/timeout 分流补录 §24
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { setActivePinia, createPinia, type Pinia } from 'pinia';
@@ -182,6 +182,47 @@ describe('agreement page — 协议确认注册', () => {
       expect.objectContaining({ title: '注册失败，请重试' }),
     );
     // 临时数据保留，可重试
+    expect(clearRegPending).not.toHaveBeenCalled();
+    expect(handleAuthSuccess).not.toHaveBeenCalled();
+  });
+
+  it('手机号已注册(10002) → 清临时数据 + 回登录页直接登录', async () => {
+    seedPending();
+    (register as any).mockRejectedValue(Object.assign(new Error('手机号已注册'), { code: 10002 }));
+    (uni as any).navigateBack = vi.fn();
+    vi.useFakeTimers();
+    const wrapper = mountPage();
+    mockOnLoadCb({});
+    await flushPromises();
+
+    (wrapper.vm as any).toggleAgreed();
+    await (wrapper.vm as any).confirmRegister();
+    await flushPromises();
+
+    expect(uni.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: '该手机号已注册，请直接登录' }),
+    );
+    expect(clearRegPending).toHaveBeenCalled();
+    vi.runAllTimers();
+    expect((uni as any).navigateBack).toHaveBeenCalledWith({ delta: 1 });
+    expect(handleAuthSuccess).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('注册超时（timeout）→ 提示账号可能已创建、保留数据可重试', async () => {
+    seedPending();
+    (register as any).mockRejectedValue(new Error('timeout of 30000ms exceeded'));
+    const wrapper = mountPage();
+    mockOnLoadCb({});
+    await flushPromises();
+
+    (wrapper.vm as any).toggleAgreed();
+    await (wrapper.vm as any).confirmRegister();
+    await flushPromises();
+
+    expect(uni.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: '注册超时，账号可能已创建；请重试或返回登录' }),
+    );
     expect(clearRegPending).not.toHaveBeenCalled();
     expect(handleAuthSuccess).not.toHaveBeenCalled();
   });

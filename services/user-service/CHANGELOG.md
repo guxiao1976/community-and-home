@@ -1,5 +1,157 @@
 # CHANGELOG — user-service
 
+## 2026-08-17 — 退出小区同步撤销服务角色 grant（Review must-follow）
+
+### 背景
+`revokeCommunityRoles` 原只撤销 owner+tenant。服务角色（grid_worker/community_admin/property_admin）免 membership 自助申请后，用户 加入→认证服务角色→退出小区，grant 仍残留（含 resolvePublishScope 的 division 子树发布范围），「已加入小区所在 division」退化为「曾经加入过」。
+
+### 做了什么
+- `revokeCommunityRoles` 扩展到该小区全部社区作用域 grant：owner / tenant / grid_worker / property_admin / community_admin / committee（RevokeRole 幂等）。
+- 配套：`mockJoinRoles` 补 5 个角色；leave/join 测试 RevokeRole 次数 2→6。
+
+### 门禁
+- `go test ./...` 4 包全绿；harness-checks 18 PASS / 0 FAIL / 3 WARN（存量）。
+
+---
+
+# CHANGELOG — user-service
+
+## 2026-08-17 — 社区管理员回归 membership 绑定 + needMembership fail-closed（security-arch CRITICAL 修复 + 文档纠偏）
+
+### 做了什么
+- **community_admin 必须绑定目标小区有效 membership**：`needMembership` 白名单收敛为
+  `grid_worker/property_admin/merchant → false`；`community_admin → true`（回归「数据范围绑定
+  membership」）。修复 security-arch CRITICAL：任意注册用户可免 membership 自助申请 community_admin
+  并对任意小区Id 得到 status=0 grant，grantActive 视其为活跃并驱动 `resolvePublishScope` 的
+  division 子树展开，叠加已认证 level-2 发布角色（committee/property_admin 持
+  `community:notice:create-api`=421）时可跨小区越权发布。
+- **needMembership 改为 fail-closed**（修复 WARNING）：`switch default → true`（未知/未来角色默认
+  需 membership）。任何未来在 permission-service 新增的特权角色若未同步白名单，将自动要求
+  membership，杜绝「免 membership 自助申请特权角色」提权地雷。
+- **安全模型如实披露**（修复 WARNING，与上一反转条目口径纠偏）：`grantActive` 使 status=0 未认证
+  grant **立即**生效于 scope 聚合（`resolveUserScope`/`resolvePublishScope`）——「人工审核通过后
+  才生效」仅由 `min_verf_level=2` 在**权限层级**上强制，division 子树展开**不**校验认证状态。
+  修复后残余风险边界：已认证 level-2 发布角色叠加「已加入小区」的未认证 community_admin grant 时，
+  发布范围仍按该小区所在 division 展开（不再任意小区）。该残余在用户拍板的自助申请模型内可接受，
+  待 permission-service 支持「认证通过后再 grant scope」后彻底消除（记录在案，见 08-17 回滚条目）。
+- **部署依赖声明**（修复 WARNING）：本反转的安全前提（6 个敏感码 `min_verf_level=2` 加固）依赖
+  permission-service **migration/004_privileged_role_min_verf_level.sql 实际执行**（对存量库，
+  `init_permissions.sql` 仅对从零建库生效）。部署清单必须显式包含该迁移并执行幂等验证
+  （`SELECT` 应返回 hardened=6/6）；否则未认证 community_admin 仍可 level-0 删改公告/建活动。
+
+### 测试（TDD RED→GREEN）
+| 测试文件 | 用例 | 类型 |
+|---|---|---|
+| `apply_role_logic_test.go` | `TestApplyRole_CommunityAdmin_NoMembership_Rejected`：community_admin 无 membership → 10005 + **AssignRole 0 次调用**（安全断言：注册 ListRoles 但不注册 AssignRole，误放行则 gomock 报 unexpected call） | 逻辑（回归） |
+| `apply_role_logic_test.go` | `TestNeedMembership`：community_admin→true；新增 super_admin/空串→true（fail-closed） | 逻辑 |
+| `apply_role_logic_test.go` | `TestApplyRole_ServiceRoles_NoMembership_Allowed`：收敛为 grid_worker/property_admin（移除 community_admin） | 逻辑 |
+| `apply_role_logic_test.go`（既有） | WithMembership / MembershipInactive / ResidentRoles_NoMembership 等全部保持绿（回归） | 逻辑 |
+
+### RED 摘录（先写行为测试，修复未实现时）
+```
+apply_role_logic_test.go:474: expected: true / actual: false   # needMembership(community_admin)
+apply_role_logic_test.go:474: expected: true / actual: false   # needMembership(super_admin) / needMembership("")
+apply_role_logic.go:105: Unexpected call to *mocks.MockPermissionServiceClient.AssignRole(...
+  user_id:1005 role_id:5 scope_type:"community" scope_id:2001 status:0 ... no expected calls
+```
+（GREEN：`needMembership` 白名单收敛 + default true 后 `go test ./...` 全绿）
+
+### 为什么
+security-arch 多视角复审判 CRITICAL/WARNING：上一反转（服务角色全免 membership）中 community_admin
+无门槛自助申请 + status=0 grant 立即生效于 scope 聚合 → 跨小区越权发布放大；`needMembership` 对未知
+角色 fail-open 是潜在提权地雷；CHANGELOG「审核通过后才生效」与代码不符且未披露 division 展开放大面。
+用户拍板保留 grid_worker/property_admin/merchant 免 membership 自助申请模型，本修复将
+community_admin 单独回归 membership 绑定（数据范围绑定成员关系，安全默认），并 fail-closed 兜底
+未知角色，文档如实披露残余风险与加固边界。
+
+### 影响
+- Proto: 无（复用 ApplyRoleRequest/AssignRole）
+- 调用方: 移动端 applyRole（community_admin 需先加入目标小区；grid_worker/property_admin/merchant 不变）
+- 数据库: user-service 无变更；**部署依赖 permission-service migration/004 实际执行**（6 个敏感码 min_verf_level=2，幂等）
+- 备注: `// SEE: [[auto-grant-unverified-grant-confers-scope-level0]]` 应用于 needMembership 与 applyRole 校验注释
+
+---
+
+## 2026-08-17 — 服务角色免 membership 自助申请（模型拍板反转 + 逻辑函数）
+
+### 做了什么
+- **恢复「服务角色免带房号 membership」**（有意反转当日早些时候的 security-arch 回滚）：新增 `needMembership(roleCode string) bool` —— `owner/tenant/committee → true`；`grid_worker/community_admin/property_admin/merchant → false`。
+- **applyRole 分支反转**：`if in.RoleCode != RoleCodeMerchant { 查 membership }` → 作用域仍按「非 merchant 绑定小区（scope=community, scope_id=communityId）」，但 **membership 校验改为 `if needMembership(in.RoleCode)`**。服务角色跳过 membership 校验，直接 `AssignRole(scope=community, scope_id=communityId, status=0 未认证待审)`——数据权限来自角色 grant，无房号 membership；merchant 不变（scope=global）。
+- **安全模型（用户拍板依据）**：服务角色自助申请是**预期模型**——每个申请需提交盖章文件、由数据审核人员人工审核、通过后才生效；敏感权限（写/管理类）由 permission-service 的 `min_verf_level=2` 加固（未认证 status=0 grant 不能行使破坏性操作）。居民角色（owner/tenant/committee）数据范围仍绑定有效小区成员关系（无则 10005），未变更。
+
+### 测试（TDD RED→GREEN）
+| 测试文件 | 用例 | 类型 |
+|---|---|---|
+| `apply_role_logic_test.go` | `TestApplyRole_ServiceRoles_NoMembership_Allowed`：grid_worker/community_admin/property_admin 无 membership → **允许**申请，AssignRole 被调 + scope=community + scope_id=2001 + status=0（table-driven；注释注明用户拍板模型） | 逻辑 |
+| `apply_role_logic_test.go` | `TestApplyRole_ServiceRoles_WithMembership`：服务角色 + active membership → 成功（适配：免 membership，注释更新） | 逻辑 |
+| `apply_role_logic_test.go` | `TestApplyRole_ServiceRoles_MembershipInactive`：服务角色 + 已退出 membership → **仍允许**（服务角色不查 membership，适配反转） | 逻辑 |
+| `apply_role_logic_test.go`（既有） | `TestApplyRole_ResidentRoles_NoMembership`：owner/tenant/committee 无 membership → 仍 10005（保持不变） | 逻辑 |
+| `apply_role_logic_test.go` | `TestNeedMembership`：7 角色表驱动（owner/tenant/committee→true；grid_worker/community_admin/property_admin/merchant→false） | 逻辑 |
+| `apply_role_logic_test.go`（既有） | TestApplyRole_Owner/Merchant/NoMembership/GridWorker/RoleCodeNotFound 等全部保持绿（回归） | 逻辑 |
+
+### RED 摘录（先写行为测试，功能未实现时）
+```
+apply_role_logic_test.go:300: Not equal: expected: 0 / actual: 10005
+  Messages: 服务角色无 membership 应允许自助申请
+controller.go:137: missing call(s) to *mocks.MockPermissionServiceClient.AssignRole(...)
+  apply_role_logic_test.go:284
+apply_role_logic_test.go:383: Not equal: expected: 0 / actual: 10005   # MembershipInactive
+apply_role_logic_test.go:433:29: undefined: needMembership              # TestNeedMembership 编译 RED
+```
+（GREEN：新增 `needMembership` + 分支反转后 `go build ./...` + `go test ./...` 全绿，~148 测试函数 PASS，harness-checks 18 PASS / 0 FAIL）
+
+### 为什么
+用户明确：服务角色自助申请是预期业务模型（网格员/社区管理员/物业管理员可自助申请，无需本小区带房号 membership），安全由「盖章文件 + 人工审核 + 敏感权限 min_verf_level=2」保证（permission-service 并行加固）。上一轮按同样需求实现后被 security-arch 以「无门槛自助申请特权角色 = 提权漏洞」CRITICAL 拦下并回滚，现用户拍板**有意反转该回滚**——配合 min_verf_level=2 加固满足安全评审核心关切（未认证 grant 不能行使破坏性操作）。
+
+### 影响
+- Proto: 无（复用 ApplyRoleRequest/AssignRole）
+- 调用方: 移动端 applyRole（服务角色无需先加入目标小区即可申请；数据审核人员人工审核通过后生效）
+- 数据库: 无
+- 备注: `// SEE: [[auto-grant-unverified-grant-confers-scope-level0]]` 应用于 applyRole 校验注释与文件头安全模型
+
+---
+
+## 2026-08-17 — 修复服务角色自助申请权限提升（逻辑函数 + 安全修复）
+
+### 做了什么
+- **回滚「服务角色免带房号 membership」**：applyRole 恢复为「所有小区作用域角色（含服务角色 grid_worker/community_admin/property_admin）必须先有目标小区有效成员关系」，否则 10005；删除 `needMembership` helper。
+- **安全背景（SEE: [[auto-grant-unverified-grant-confers-scope-level0]]）**：permission-service 将 `status∈{0,1,2}` 的 grant 一律视为活跃（`grantActive`），`status=0` 未认证 grant 会**立即**产生 community 数据范围（`resolveUserScope`/`GetDataScopes`）+ level-0 能力；community_admin 还驱动 division 子树发布范围（`resolvePublishScope`）。上一变更使任意用户仅凭 JWT 即可为自己申请任意小区特权角色，立即获得数据权限/发布范围/CheckPermission API 权限，且 `expires_at=NULL` 永不自动过期——权限提升，security-arch/standards-eng 双视角判 CRITICAL。
+- **修复（数据范围绑定 membership，安全默认）**：无目标小区成员关系 → 10005，且**不触达** permission-service AssignRole（无未认证特权 grant）；有 active 成员关系 → 正常 `AssignRole(scope=community, status=0)`。
+- **错误日志补上下文**：`find membership error` 增加 `userId/communityId/roleCode`（并发下可定位）。
+
+### min_verf_level 核验结论（记忆「怎么做」第 1 步）
+核验 permission-service `init_permissions.sql` 服务角色敏感权限的 `min_verf_level`：
+- ✅ `=2`（需已认证）：`user:read:list/detail-api`(111/112)、`moderation:read:list-api`(511)、`moderation:review:approve/reject-api`(521/522)、`community:notice:create-api`(421)
+- ⚠️ 仍 `=0`（持角色+数据范围即可）：`role:read:list/detail-api`(211/212, community_admin)、`community:activity:create-api`(432, community_admin)、`community:notice:delete/update-api`(427/428, 服务角色+全移动端) —— 未认证 grant 即可获得这些 level-0 能力，故服务角色数据范围**必须**绑定 membership，绝不可免成员自我授予
+- 建议（permission-service 边界外，交由安全复审）：考虑将 427/428、432 上调 `min_verf_level=2`
+
+### 测试（TDD RED→GREEN）
+| 测试文件 | 用例 | 类型 |
+|---|---|---|
+| `apply_role_logic_test.go` | `TestApplyRole_ServiceRoles_NoMembership_Rejected`：grid_worker/community_admin/property_admin 无 membership → 10005 + `AssignRole` 0 次调用（安全断言）| 逻辑 |
+| `apply_role_logic_test.go` | `TestApplyRole_ServiceRoles_WithMembership`：服务角色 + active membership → 成功 + AssignRole scope=community/scope_id=2001/status=0（table-driven）| 逻辑 |
+| `apply_role_logic_test.go` | `TestApplyRole_ServiceRoles_MembershipInactive`：服务角色 + 已退出 membership → 10005 | 逻辑 |
+| `apply_role_logic_test.go`（既有） | TestApplyRole_Owner / Merchant / NoMembership / GridWorker / RoleCodeNotFound 等全部保持绿（回归）| 逻辑 |
+
+### RED 摘录（先写行为测试，功能未实现时）
+```
+apply_role_logic_test.go:50: Unexpected call to ...MockPermissionServiceClient.ListRoles(...)
+  role_mapper.go:50: ... there are no expected calls of the method "ListRoles"
+user/apply_role_logic.go:115: ApplyRole success, userId=1005, roleCode=grid_worker, roleId=4, scope=community:2001
+```
+（GREEN：恢复「所有小区作用域角色先查 membership」后 `go test ./...` 全绿）
+
+### 为什么
+见「安全背景」。原「服务角色免 membership 直接授权」使任意注册用户可自我授予特权角色并立即获得小区数据读范围（level-0）+ community_admin 发布范围，需回滚。服务角色与居民解耦的正当诉求（非本小区居民也可服务）需 permission-service 支持「认证通过后再 grant scope」能力后另行实现——超出 user-service 边界，记录在案待全局评估。
+
+### 影响
+- Proto: 无（复用 ApplyRoleRequest/AssignRole）
+- 调用方: 移动端 applyRole（服务角色申请需先加入目标小区，与 08-11 之前行为一致；当前前端仅 owner 走 applyRole）
+- 数据库: 无
+- 备注: 与 JoinCommunity 自动授权（owner/tenant status=0）保持一致——数据范围均绑定 membership；`// SEE: [[auto-grant-unverified-grant-confers-scope-level0]]` 应用于 applyRole 校验注释
+
+---
+
 ## 2026-08-16 — 修复 profile 端点本人手机号被脱敏（接线类型）
 
 ### 做了什么

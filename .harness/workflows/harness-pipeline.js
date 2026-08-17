@@ -619,6 +619,30 @@ function logMetrics(record) {
     console.log('METRIC ' + JSON.stringify(record))
   }
 }
+
+// logAgentUsage — 记录每个子 agent 调用的 skill/阶段（供"哪些 skill 被频繁/从不调用"分析）
+// 与 logMetrics 共用 pipeline/metrics.jsonl，type='agent' 区分于管线最终结果
+// 同时按阶段边界采集 budget.spent() 差分 → 任务结束 tokenStats 列表（token 用量优化依据）
+let _lastBudgetSpent = (typeof budget !== 'undefined' && typeof budget.spent === 'function') ? budget.spent() : 0
+const _phaseTokenMarks = {}
+function logAgentUsage(phase, label) {
+  logMetrics({ timestamp: args.timestamp || 'na', type: 'agent', service: args.serviceName, phase, label })
+  // token 统计：每次阶段边界差分近似该阶段输出 token（budget.spent 为全 turn 累计输出 token）
+  if (typeof budget !== 'undefined' && typeof budget.spent === 'function') {
+    const now = budget.spent()
+    const delta = Math.max(0, now - _lastBudgetSpent)
+    _lastBudgetSpent = now
+    _phaseTokenMarks[phase] = (_phaseTokenMarks[phase] || 0) + delta
+  }
+}
+// tokenStats — 按阶段汇总输出 token（跨轮次累加）+ 总用量；供任务结束以列表呈现
+function tokenStats() {
+  const perPhase = Object.entries(_phaseTokenMarks)
+    .map(([phase, outputTokens]) => ({ phase, outputTokens }))
+    .sort((a, b) => b.outputTokens - a.outputTokens)
+  const totalOutputTokens = perPhase.reduce((s, p) => s + p.outputTokens, 0)
+  return { perPhase, totalOutputTokens }
+}
 const VALID_SERVICES = ServiceRegistry.services
 const VALID_WEB = ServiceRegistry.web
 const ALL_VALID = [...VALID_SERVICES, ...VALID_WEB]
@@ -817,14 +841,16 @@ while (iteration <= MAX_ITERATIONS) {
   // 并行管线若目标服务不同，主树直接编辑天然互不冲突。
   phase('Develop')
   await agent(generatorPrompt(iteration, fixContext, TASK_TYPE, knowledgeCmd), { label: `${args.serviceName}: 开发/修复` })
+  logAgentUsage('develop', `${args.serviceName}: 开发/修复`)
   log(`Generator 完成 (轮次 ${iteration})`)
 
   // Phase 2: QA
   phase('QA')
   const qaResult = await agent(qaPrompt(), { label: `QA: ${args.serviceName}`, schema: QA_SCHEMA })
+  logAgentUsage('qa', `QA: ${args.serviceName}`)
   if (!qaResult) {
     log('QA Agent 被跳过，终止管线')
-    return { status: 'aborted', reason: 'QA agent skipped' }
+    return { status: 'aborted', reason: 'QA agent skipped', tokenStats: tokenStats() }
   }
 
   log(`QA VERDICT: ${qaResult.verdict} — ${qaResult.summary}`)
@@ -856,6 +882,7 @@ while (iteration <= MAX_ITERATIONS) {
         label: `Debug: ${args.serviceName}`,
         schema: DEBUG_SCHEMA,
       })
+      logAgentUsage('debug', `Debug: ${args.serviceName}`)
 
       if (debugResult) {
         log(`Debug 根因: ${debugResult.rootCause} (置信度: ${debugResult.confidence || 'N/A'})`)
@@ -890,6 +917,7 @@ while (iteration <= MAX_ITERATIONS) {
       reviewSummary: 'skipped (chore)',
       memorySuggestions: [],
       confidence,
+      tokenStats: tokenStats(),
       notifications: [{ event: 'pipeline_pass', service: args.serviceName, detail: `${iteration} 轮通过 (${TASK_TYPE}), QA: ${qaResult.summary}` }],
     }
   }
@@ -904,6 +932,7 @@ while (iteration <= MAX_ITERATIONS) {
   const reviewResults = await parallel(
     activeLenses.map(lens => () =>
       agent(reviewLensPrompt(lens), { label: `Review:${lens.key}`, schema: REVIEW_SCHEMA })
+        .then(r => { logAgentUsage('review', `Review:${lens.key}`); return r })
         .then(r => r ? { ...r, lens: lens.key, label: lens.label } : null)
     )
   )
@@ -911,7 +940,7 @@ while (iteration <= MAX_ITERATIONS) {
   const validReviews = reviewResults.filter(Boolean)
   if (validReviews.length === 0) {
     log('所有 Review Agent 被跳过，终止管线')
-    return { status: 'aborted', reason: 'All review agents skipped' }
+    return { status: 'aborted', reason: 'All review agents skipped', tokenStats: tokenStats() }
   }
 
   // 统计各视角结果
@@ -979,6 +1008,7 @@ while (iteration <= MAX_ITERATIONS) {
       reviewSummary: `${reviewSummary} (${passCount}/${validReviews.length} PASS, ${allWarnings} WARNINGs)`,
       memorySuggestions: uniqueSuggestions,
       confidence,
+      tokenStats: tokenStats(),
       notifications: passNotifications,
     }
   } else {
@@ -1006,5 +1036,6 @@ return {
   taskType: TASK_TYPE,
   confidence: Math.round((1 - 0.9) * 100) / 100,  // minimum confidence
   lastFixContext: fixContext,
+  tokenStats: tokenStats(),
   notifications: [{ event: 'pipeline_fail', service: args.serviceName, detail: `超过最大轮次 (${MAX_ITERATIONS}/${TASK_TYPE}), 最后错误: ${fixContext.substring(0, 200)}` }],
 }
