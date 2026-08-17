@@ -686,6 +686,61 @@ check_dep_vuln() {
   fi
 }
 
+# ─── Check 10: ESLint（前端静态检查）───────────────────────────────
+# 只对本次变更（diff + 暂存 + 未跟踪）中的文件跑 eslint；变更文件里有 error 级违规 → FAIL，
+# 存量 error（不在变更里）→ WARN。规则见 web/{pc,mobile}/eslint.config.js。
+check_lint() {
+  echo "[10/10] ESLint (frontend static check)" >&2
+  local projects=()
+  if [[ -n "$SERVICE_NAME" ]]; then
+    projects+=("$WEB_DIR/$SERVICE_NAME")
+  else
+    projects+=("$WEB_DIR/pc" "$WEB_DIR/mobile")
+  fi
+
+  local changed_files
+  changed_files=$(cd "$PROJECT_ROOT" && git diff --name-only HEAD 2>/dev/null; git diff --cached --name-only 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null)
+
+  local new_total=0 existing_total=0 new_list="" proj_linted=0
+  for proj in "${projects[@]}"; do
+    [[ -d "$proj" ]] || continue
+    if [[ ! -f "$proj/eslint.config.js" && ! -f "$proj/eslint.config.mjs" ]]; then
+      log_warn "lint" "未配置 ESLint（${proj#$PROJECT_ROOT/}）——跳过"
+      continue
+    fi
+    proj_linted=1
+    local out rc
+    set +e
+    out="$(cd "$proj" && npx eslint . --no-error-on-unmatched-pattern --format json 2>/dev/null)"; rc=$?
+    set -e
+    local err_files
+    err_files=$(printf '%s' "$out" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const d=JSON.parse(s);d.forEach(f=>{if(f.messages.some(m=>m.severity===2))console.log(f.filePath)})}catch(e){}})' 2>/dev/null || true)
+    [[ -z "$err_files" ]] && continue
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      local rel="${f#$PROJECT_ROOT/}"
+      if echo "$changed_files" | grep -qxF "$rel"; then
+        new_total=$((new_total + 1))
+        new_list="$new_list;$rel"
+      else
+        existing_total=$((existing_total + 1))
+      fi
+    done < <(echo "$err_files")
+  done
+
+  if [[ $proj_linted -eq 0 ]]; then
+    log_warn "lint" "无前端项目可 lint（跳过）"
+  elif [[ $new_total -gt 0 ]]; then
+    local detail
+    detail="$(echo "$new_list" | head -c 1500)"
+    log_fail "lint" "$new_total 处本次变更文件 ESLint error: $detail" "前端静态检查不通过（未使用变量/类型问题等 error 级规则）" "运行 npx eslint <file> 修复 error 级；warning 级可接受" "npx eslint ." ".harness/rules/项目编码规范.md"
+  elif [[ $existing_total -gt 0 ]]; then
+    log_warn "lint" "$existing_total 个文件存在存量 ESLint error（不在本次变更，WARN；新代码不得新增）"
+  else
+    log_pass "lint" "ESLint 无 error"
+  fi
+}
+
 # ─── Main ─────────────────────────────────────────────────────────────
 
 main() {
@@ -706,6 +761,7 @@ main() {
   check_api_field_align
   check_unit_standard
   check_dep_vuln
+  check_lint
   set -e
 
   # Count results
@@ -736,7 +792,7 @@ main() {
     printf '}\n'
   else
     local n=0
-    local labels=("type-check" "unit-test" "build" "hardcoded-secrets" "debug-artifacts" "type-safety" "api-field-align" "unit-standard" "dep-vuln")
+    local labels=("type-check" "unit-test" "build" "hardcoded-secrets" "debug-artifacts" "type-safety" "api-field-align" "unit-standard" "dep-vuln" "lint")
     for result in "${RESULTS[@]}"; do
       local status label detail
       status=$(echo "$result" | grep -oP '"status":"\K\w+')

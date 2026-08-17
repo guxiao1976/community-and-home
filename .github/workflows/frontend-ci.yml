@@ -48,6 +48,15 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: '1'
 
+      - name: Lint changed files (ESLint)
+        run: |
+          BASE_REF="${{ github.event.pull_request.base.sha }}"
+          [[ -z "$BASE_REF" ]] && BASE_REF="HEAD~1"
+          git -C "$GITHUB_WORKSPACE" diff --name-only "$BASE_REF"...HEAD -- web/pc \
+            | sed 's#^web/pc/##' | grep -E '\.(ts|tsx|vue|js)$' | grep -v '\.d\.ts$' > /tmp/changed_lint.txt || true
+          if [ ! -s /tmp/changed_lint.txt ]; then echo "无变更前端文件，跳过 lint"; exit 0; fi
+          cat /tmp/changed_lint.txt | xargs -r npx eslint --no-error-on-unmatched-pattern
+
       - name: Type check
         run: npm run type-check
 
@@ -94,6 +103,15 @@ jobs:
           scanners: vuln
           severity: HIGH,CRITICAL
           exit-code: '1'
+
+      - name: Lint changed files (ESLint)
+        run: |
+          BASE_REF="${{ github.event.pull_request.base.sha }}"
+          [[ -z "$BASE_REF" ]] && BASE_REF="HEAD~1"
+          git -C "$GITHUB_WORKSPACE" diff --name-only "$BASE_REF"...HEAD -- web/mobile \
+            | sed 's#^web/mobile/##' | grep -E '\.(ts|tsx|vue|js)$' | grep -v '\.d\.ts$' > /tmp/changed_lint.txt || true
+          if [ ! -s /tmp/changed_lint.txt ]; then echo "无变更前端文件，跳过 lint"; exit 0; fi
+          cat /tmp/changed_lint.txt | xargs -r npx eslint --no-error-on-unmatched-pattern
 
       - name: Type check
         run: npm run type-check

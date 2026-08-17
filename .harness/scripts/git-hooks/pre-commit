@@ -86,6 +86,24 @@ if [[ -n "$HARNESS_SRC_FILES" ]]; then
     fi
 fi
 
+# ==================== 检查 0.7: 密钥检测（gitleaks，所有提交都跑） ====================
+
+echo ""
+echo "[0.7] 密钥检测（gitleaks protect --staged）..."
+
+if command -v gitleaks &> /dev/null; then
+    if ! gitleaks protect --staged --no-banner 2>&1; then
+        echo ""
+        echo "⚠️  检测到疑似密钥（AK/Token/私钥等），禁止提交！"
+        echo "💡 提示: gitleaks protect --staged 查看详情；密钥改走 .env"
+        exit 1
+    fi
+    echo "  ✅ 密钥检测通过"
+else
+    echo "  ⚠️  gitleaks 未安装，跳过密钥检测"
+    echo "  安装: go install github.com/zricethezav/gitleaks/v8@latest"
+fi
+
 # ==================== 检查 1: Go 文件变更检测 ====================
 
 # 获取所有待提交的 Go 文件

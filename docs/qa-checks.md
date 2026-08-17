@@ -179,8 +179,7 @@
 
 | 优先级 | 缺口 | 说明 |
 |:---:|------|------|
-| P1 | XSS 面扫描 | v-html/rich-text 未机械化扫描（notice-detail XSS 靠 review 抓）——Semgrep 规则待接（第二批） |
-| P1 | 前端 eslint 静态分析 | 前端无 ESLint 配置，仅 check_type_safety 查 `as any`——第二批接入 |
+| P1 | XSS 面扫描 | v-html/rich-text 未机械化扫描（notice-detail XSS 靠 review 抓）——Semgrep 规则待接 |
 | P2 | 错误日志规范 | review 在查「日志含 userId/communityId」，但无机械化检查 |
 
 ## 四、已闭环（2026-08-17）
@@ -192,3 +191,5 @@
 - **前端依赖漏洞审计（trivy）**：`harness-checks-frontend.sh` 新增 check #9，`trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1` 直接读 package-lock.json，HIGH/CRITICAL 即 FAIL、trivy 未装 WARN、DB 下载异常 WARN。CI `frontend-ci.yml` 两 job 均接入 `aquasecurity/trivy-action`。**不依赖 npm audit**（npmmirror 下不可用）。
 - **Go 竞态检测（-race）**：`harness-checks.sh` check #3 go test 加 `-race`。本地热缓存约 +7s/服务可接受；CI 冷缓存首次约 +75s/服务。依赖 CGO（需 gcc，GitHub runner 默认有）。
 - **golangci-lint 激活**：pre-commit hook 原引用但未安装、且 grep 模式匹配不到 golangci 输出（装了也永远"通过"）。现装 v1.64.8 + `.golangci.yml`（排除 SA5008 误报 go-zero `json:"x,optional"`），hook 改为**按变更模块跑 + 退出码判断**，新违规拦截（exit 1）、存量不阻塞。
+- **ESLint（pc + mobile）**：两项目装 ESLint 10 + eslint-plugin-vue + typescript-eslint + @vue/eslint-config-typescript，flat config（mobile 加 Uni-app 全局 uni/wx/plus）。`harness-checks-frontend.sh` 新增 check #10 `check_lint`：只对**变更文件**跑 eslint，变更文件内有 error 级违规 → FAIL、存量 error → WARN（同 api_field_align/golangci 哲学）。降噪规则 `no-explicit-any`/`vue/multi-word-component-names` → warn（存量 98+199 处 as any 由 check_type_safety 另跟踪）。CI frontend-ci.yml 两 job 加 diff 内 lint。
+- **gitleaks 密钥检测**：pre-commit hook 新增 [0.7]，**所有提交**先跑 `gitleaks protect --staged`（在 Go 检测前，前端/配置提交也覆盖），发现密钥 exit 1 拦截；CI test.yml 加 `gitleaks-action`。补 hardcoded_secrets 只扫 `*.go`、不扫 git 历史的盲区。
