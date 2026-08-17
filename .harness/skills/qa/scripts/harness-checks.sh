@@ -1340,6 +1340,48 @@ check_pipeline_evals() {
 
 # ─── Main ─────────────────────────────────────────────────────────────
 
+# ─── Check 20: 依赖漏洞审计（govulncheck）────────────────────────
+# govulncheck 扫描 Go 依赖的已知漏洞（含调用链）。有漏洞 exit=3，无漏洞 exit=0。
+# 工具未装 / 网络不可用 → WARN（不阻塞，但提示）；发现漏洞 → FAIL。
+check_go_vuln() {
+  echo "[20/18] Dependency vulnerability audit (govulncheck)" >&2
+  local gvc=""
+  for c in "$(command -v govulncheck 2>/dev/null)" "$HOME/go/bin/govulncheck"; do
+    [[ -n "$c" && -x "$c" ]] && { gvc="$c"; break; }
+  done
+  if [[ -z "$gvc" ]]; then
+    log_warn "go_vuln" "govulncheck 未安装——依赖漏洞审计跳过。安装: go install golang.org/x/vuln/cmd/govulncheck@latest"
+    return 0
+  fi
+  local dir="${TARGET_DIR:-$PROJECT_ROOT}"
+  cd "$dir"
+  local out rc
+  set +e
+  echo "  (govulncheck: $gvc)" >&2; out="$(timeout -k 10 120 "$gvc" ./... 2>&1)"; rc=$?
+  set -e
+  cd "$PROJECT_ROOT"
+  if [[ $rc -eq 0 ]]; then
+    log_pass "go_vuln" "govulncheck: 未发现已知漏洞"
+    return 0
+  fi
+  if echo "$out" | grep -qE "Your code is affected by [0-9]+ vulnerabilities"; then
+    local count vuln_summary
+    count=$(echo "$out" | grep -oP "affected by \K[0-9]+" | head -1)
+    vuln_summary=$(echo "$out" | grep -E "Fixed in:|Module:" | head -6 | tr '
+' '; ')
+    vuln_summary="$(json_escape "$vuln_summary")"
+    log_fail "go_vuln" "govulncheck: ${count} 个已知漏洞影响本服务代码: $vuln_summary" "依赖存在已知安全漏洞（含 stdlib/传递依赖）" "按输出升级对应模块到 Fixed in 版本，或升级 Go 版本" "govulncheck -show verbose" "https://pkg.go.dev/vuln/"
+    return 1
+  fi
+  # 网络错误 / 工具异常 → WARN（不阻塞，漏洞审计下次再跑）
+  local err_summary
+  err_summary=$(echo "$out" | grep -iE "error|failed|could not|timeout" | head -3 | tr '
+' '; ')
+  err_summary="$(json_escape "$err_summary")"
+  log_warn "go_vuln" "govulncheck 执行异常（网络/DB 下载失败？）: $err_summary"
+  return 0
+}
+
 main() {
   if ! $OUTPUT_JSON; then
     echo "=== Harness Mechanized Checks ==="
@@ -1369,6 +1411,7 @@ main() {
   check_git_hygiene
   check_mutation_testing
   check_pipeline_evals
+  check_go_vuln
   # Note: frontend checks use separate script: harness-checks-frontend.sh
 
   # Count results
