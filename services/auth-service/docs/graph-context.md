@@ -1,6 +1,6 @@
 # 知识图谱上下文 — auth-service
 
-> 自动生成于 2026-08-14 16:15:51 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-17 06:42:50 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -56,6 +56,7 @@
 
 | 方法 | URL | 文件 |
 |------|-----|------|
+| POST | /api/auth/logout | web/mobile/src/api/identity.ts |
 | POST | /api/auth/logout | web/pc/src/api/identity.ts |
 | POST | /api/auth/token/refresh | web/mobile/src/api/identity.ts |
 | POST | /api/auth/token/refresh | web/pc/src/api/identity.ts |

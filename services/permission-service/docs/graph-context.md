@@ -1,6 +1,6 @@
 # 知识图谱上下文 — permission-service
 
-> 自动生成于 2026-08-15 18:15:51 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-17 06:42:53 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -123,6 +123,7 @@
 | POST | /api/auth/login/sms | web/pc/src/api/identity.ts |
 | POST | /api/auth/login/sms | web/mobile/src/api/identity.ts |
 | POST | /api/auth/logout | web/pc/src/api/identity.ts |
+| POST | /api/auth/logout | web/mobile/src/api/identity.ts |
 | GET | /api/masterdata/query/residential-areas | web/pc/src/api/masterdata.ts |
 | POST | /api/auth/token/refresh | web/pc/src/api/identity.ts |
 | POST | /api/auth/token/refresh | web/mobile/src/api/identity.ts |

@@ -1,6 +1,6 @@
 # 知识图谱上下文 — user-service
 
-> 自动生成于 2026-08-14 16:15:54 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
+> 自动生成于 2026-08-16 10:53:35 | 数据源: Neo4j 知识图谱 | 每次 `graph-sync.sh` 后刷新
 
 ## 服务标识
 
@@ -24,6 +24,7 @@
 | 消费方 | 依赖类型 |
 |---------|---------|
 | auth-service | None |
+| community-hub-service | None |
 
 ## REST API 路由
 
