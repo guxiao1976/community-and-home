@@ -155,7 +155,7 @@ detect_pm() {
 # ─── Check 1: Type Check ──────────────────────────────────────────────
 
 check_type_check() {
-  echo "[1/6] TypeScript type check" >&2
+  echo "[1/10] TypeScript type check" >&2
 
   if [[ -z "$TARGET_DIR" ]]; then
     local all_pass=true
@@ -205,7 +205,7 @@ _type_check_one() {
 # ─── Check 2: Unit Tests ──────────────────────────────────────────────
 
 check_unit_test() {
-  echo "[2/6] Unit tests (with 0/0 detection)" >&2
+  echo "[2/10] Unit tests (with 0/0 detection)" >&2
 
   if [[ -z "$TARGET_DIR" ]]; then
     for svc in "${VALID_SERVICES[@]}"; do
@@ -298,7 +298,7 @@ _unit_test_one() {
 # ─── Check 3: Build ───────────────────────────────────────────────────
 
 check_build() {
-  echo "[3/6] Production build" >&2
+  echo "[3/10] Production build" >&2
 
   if [[ -z "$TARGET_DIR" ]]; then
     for svc in "${VALID_SERVICES[@]}"; do
@@ -375,7 +375,7 @@ _build_one() {
 # ─── Check 4: Hardcoded Secrets ───────────────────────────────────────
 
 check_hardcoded_secrets() {
-  echo "[4/6] Hardcoded secrets" >&2
+  echo "[4/10] Hardcoded secrets" >&2
 
   local search_dir="${TARGET_DIR:-$WEB_DIR}"
 
@@ -427,7 +427,7 @@ check_hardcoded_secrets() {
 # ─── Check 5: Debug Artifacts ─────────────────────────────────────────
 
 check_debug_artifacts() {
-  echo "[5/6] Debug artifacts" >&2
+  echo "[5/10] Debug artifacts" >&2
 
   local search_dir="${TARGET_DIR:-$WEB_DIR}"
 
@@ -468,9 +468,42 @@ check_debug_artifacts() {
   fi
 }
 
+# ─── Check 6: Type Safety（禁 as any）───────────────────────────────
+check_type_safety() {
+  echo "[6/10] TypeScript type safety" >&2
+
+  local search_dir="${TARGET_DIR:-$WEB_DIR}"
+
+  # Count `as any` usages in non-test production code
+  local violations=()
+  while IFS= read -r match; do
+    [[ -z "$match" ]] && continue
+    local file="${match%%:*}"
+    [[ "$file" == *".spec."* ]] && continue
+    [[ "$file" == *".test."* ]] && continue
+    [[ "$file" == *"node_modules"* ]] && continue
+
+    local rel="${file#$PROJECT_ROOT/}"
+    local line_num
+    line_num=$(echo "$match" | cut -d: -f2)
+    violations+=("$rel:$line_num")
+  done < <(grep -rn 'as any' "$search_dir/src" --include='*.ts' --include='*.tsx' --include='*.vue' 2>/dev/null || true)
+
+  if [[ ${#violations[@]} -eq 0 ]]; then
+    log_pass "type_safety" "no 'as any' escape hatches"
+  else
+    local count=${#violations[@]}
+    local detail
+    detail="$(printf '%s; ' "${violations[@]}" | head -c 500)"
+    detail="$(json_escape "$detail")"
+    log_warn "type_safety" "$count 'as any' usages (aspirational target ≤10): $detail"
+  fi
+}
+
 # ─── Check 7: api-field-align（snake_case/camelCase 字段对齐）────────
 # 检查前端是否使用了 camelCase 读取后端 snake_case API 字段
 check_api_field_align() {
+  echo "[7/10] api-field-align（snake_case/camelCase 字段对齐）" >&2
   local script="$PROJECT_ROOT/.harness/skills/qa/scripts/check-api-field-align.sh"
   if [ ! -x "$script" ]; then
     log_warn "api_field_align" "检查脚本不可用: $script"
@@ -509,37 +542,6 @@ check_api_field_align() {
   fi
 }
 
-# ─── Check 6: Type Safety（禁 as any）───────────────────────────────
-check_type_safety() {
-  echo "[6/6] TypeScript type safety" >&2
-
-  local search_dir="${TARGET_DIR:-$WEB_DIR}"
-
-  # Count `as any` usages in non-test production code
-  local violations=()
-  while IFS= read -r match; do
-    [[ -z "$match" ]] && continue
-    local file="${match%%:*}"
-    [[ "$file" == *".spec."* ]] && continue
-    [[ "$file" == *".test."* ]] && continue
-    [[ "$file" == *"node_modules"* ]] && continue
-
-    local rel="${file#$PROJECT_ROOT/}"
-    local line_num
-    line_num=$(echo "$match" | cut -d: -f2)
-    violations+=("$rel:$line_num")
-  done < <(grep -rn 'as any' "$search_dir/src" --include='*.ts' --include='*.tsx' --include='*.vue' 2>/dev/null || true)
-
-  if [[ ${#violations[@]} -eq 0 ]]; then
-    log_pass "type_safety" "no 'as any' escape hatches"
-  else
-    local count=${#violations[@]}
-    local detail
-    detail="$(printf '%s; ' "${violations[@]}" | head -c 500)"
-    detail="$(json_escape "$detail")"
-    log_warn "type_safety" "$count 'as any' usages (aspirational target ≤10): $detail"
-  fi
-}
 
 # ─── Check 8: 前端单位规范（rem，§13 项目编码规范）──────────────────
 # 硬性规则：长度/字号一律 rem，禁止 rpx/px（web/mobile 604 处 rpx 已换算为 rem）。
@@ -548,7 +550,7 @@ check_type_safety() {
 # 修复（2026-08-16）：① 跳过 *.spec.*/*.test.* 测试文件（对齐 check_type_safety）；
 #     ② 注释剥离改为逐行状态化，多行块注释续行一并剔除（对齐守卫测试 stripComments 语义）。
 check_unit_standard() {
-  echo "[8/8] Unit standard (rem only, mobile)" >&2
+  echo "[8/10] Unit standard (rem only, mobile)" >&2
 
   # 本轮仅约束 mobile（web/pc 仍 px 体系，含 Element Plus，后续单独评估 —— 决策 2026-08-16 (b)）
   if [[ -n "$SERVICE_NAME" && "$SERVICE_NAME" != "mobile" ]]; then
@@ -639,7 +641,7 @@ check_unit_standard() {
 # 用 Trivy 直接读 package-lock.json 比对漏洞库，不依赖 npm audit（npmmirror 下不可用）。
 # 工具未装 → WARN（不阻塞）；HIGH/CRITICAL → FAIL；DB 下载/扫描异常 → WARN。
 check_dep_vuln() {
-  echo "[9/9] Dependency vulnerability audit (trivy)" >&2
+  echo "[9/10] Dependency vulnerability audit (trivy)" >&2
   if ! command -v trivy >/dev/null 2>&1; then
     log_warn "dep_vuln" "trivy 未安装——前端依赖漏洞审计跳过。安装二进制或 CI 用 aquasecurity/trivy-action"
     return 0

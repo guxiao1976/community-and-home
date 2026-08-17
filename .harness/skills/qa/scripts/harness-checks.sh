@@ -210,7 +210,7 @@ fi
 # ─── Check 1: go build ───────────────────────────────────────────────
 
 check_go_build() {
-  echo "[1/18] go build ./..." >&2
+  echo "[1/22] go build ./..." >&2
   local out err rc
   cd "$TARGET_DIR"
   set +e
@@ -233,7 +233,7 @@ check_go_build() {
 # ─── Check 2: go vet ─────────────────────────────────────────────────
 
 check_go_vet() {
-  echo "[2/18] go vet ./..." >&2
+  echo "[2/22] go vet ./..." >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -256,7 +256,7 @@ check_go_vet() {
 # ─── Check 3: go test (with 0/0 detection) ───────────────────────────
 
 check_go_test() {
-  echo "[3/18] go test ./... (with 0/0 + new-package detection)" >&2
+  echo "[3/22] go test ./... (with 0/0 + new-package detection)" >&2
   local out rc
   cd "$TARGET_DIR"
   set +e
@@ -348,10 +348,10 @@ check_go_test() {
   fi
 }
 
-# ─── Check 3.5: gofmt — 变更文件格式（对齐 pre-commit 提交门）─────
+# ─── Check 4: gofmt — 变更文件格式（对齐 pre-commit 提交门）─────
 
 check_go_fmt() {
-  echo "[gofmt] gofmt — 变更 Go 文件格式（对齐 pre-commit 提交门）" >&2
+  echo "[4/22] gofmt — 变更 Go 文件格式（对齐 pre-commit 提交门）" >&2
   local changed_files unformatted rc
   # 变更 = 未提交工作树（git diff HEAD）+ 已暂存（--cached）的 .go 文件
   set +e
@@ -379,10 +379,10 @@ check_go_fmt() {
   fi
 }
 
-# ─── Check 4: Proto int64 jstype ─────────────────────────────────────
+# ─── Check 5: Proto int64 jstype ─────────────────────────────────────
 
 check_proto_jstype() {
-  echo "[4/18] Proto int64 jstype" >&2
+  echo "[5/22] Proto int64 jstype" >&2
   local proto_dir="$PROJECT_ROOT/api-proto/api"
   local violations=()
 
@@ -439,10 +439,10 @@ check_proto_jstype() {
   fi
 }
 
-# ─── Check 5: Go json:",string" (AST-based with regex fallback) ─────
+# ─── Check 6: Go json:",string" (AST-based with regex fallback) ─────
 
 check_json_string() {
-  echo "[5/18] Go json:\",string\" (AST)" >&2
+  echo "[6/22] Go json:\",string\" (AST)" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -556,10 +556,10 @@ check_json_string() {
   fi
 }
 
-# ─── Check 6: Cross-service DB import ────────────────────────────────
+# ─── Check 7: Cross-service DB import ────────────────────────────────
 
 check_cross_service_import() {
-  echo "[6/18] Cross-service DB import" >&2
+  echo "[7/22] Cross-service DB import" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -624,10 +624,10 @@ check_cross_service_import() {
   fi
 }
 
-# ─── Check 7: Error code format ──────────────────────────────────────
+# ─── Check 8: Error code format ──────────────────────────────────────
 
 check_error_codes() {
-  echo "[7/18] Error code format" >&2
+  echo "[8/22] Error code format" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -666,10 +666,10 @@ check_error_codes() {
   fi
 }
 
-# ─── Check 8: Hardcoded secrets ──────────────────────────────────────
+# ─── Check 9: Hardcoded secrets ──────────────────────────────────────
 
 check_hardcoded_secrets() {
-  echo "[8/18] Hardcoded secrets" >&2
+  echo "[9/22] Hardcoded secrets" >&2
   local search_dir
   if [[ -n "$SERVICE_NAME" ]]; then
     search_dir="$TARGET_DIR"
@@ -724,10 +724,10 @@ check_hardcoded_secrets() {
   fi
 }
 
-# ─── Check 9: Knowledge graph freshness ───────────────────────────────
+# ─── Check 10: Knowledge graph freshness ───────────────────────────────
 
 check_graph_freshness() {
-  echo "[9/18] Knowledge graph freshness" >&2
+  echo "[10/22] Knowledge graph freshness" >&2
   local stamp_file="$PROJECT_ROOT/.harness/.graph_last_sync"
 
   if [[ ! -f "$stamp_file" ]]; then
@@ -774,10 +774,10 @@ check_graph_freshness() {
   fi
 }
 
-# ─── Check 10: CLAUDE.md structural data ──────────────────────────
+# ─── Check 11: CLAUDE.md structural data ──────────────────────────
 
 check_claude_structural_data() {
-  echo "[10/18] CLAUDE.md structural data check" >&2
+  echo "[11/22] CLAUDE.md structural data check" >&2
   local violations=()
 
   # Determine which CLAUDE.md files to scan
@@ -851,10 +851,10 @@ check_claude_structural_data() {
   fi
 }
 
-# ─── Check 11: Proto→TypeScript alignment ─────────────────────────
+# ─── Check 12: Proto→TypeScript alignment ─────────────────────────
 
 check_proto_ts_align() {
-  echo "[11/18] Proto→TypeScript alignment" >&2
+  echo "[12/22] Proto→TypeScript alignment" >&2
   local check_script="$PROJECT_ROOT/.harness/skills/qa/scripts/check-proto-ts-align.sh"
 
   if [[ ! -f "$check_script" ]]; then
@@ -885,14 +885,14 @@ check_proto_ts_align() {
   fi
 }
 
-# ─── Check 12: API Logic TODO stubs ──────────────────────────────────
+# ─── Check 13: API Logic TODO stubs ──────────────────────────────────
 # Detects goctl-generated TODO stubs that were never implemented.
 # Pattern: "// todo: add your logic here and delete this line"
 # These stubs return (nil, nil) causing the Handler to respond
 # {code:0, data:null} — a "silent success" that masks missing functionality.
 
 check_api_stubs() {
-  echo "[12/18] API logic TODO stubs" >&2
+  echo "[13/22] API logic TODO stubs" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -925,7 +925,7 @@ check_api_stubs() {
   fi
 }
 
-# ─── Check 13: Response single-wrap ──────────────────────────────────
+# ─── Check 14: Response single-wrap ──────────────────────────────────
 # Detects Logic functions that return goctl-generated Response types
 # (with embedded BaseResponse) when the Handler also wraps via response.Success().
 # This causes double-nesting: {code:0, data:{code:0, data:{actual}}}
@@ -934,7 +934,7 @@ check_api_stubs() {
 # (goctl Response types embed BaseResponse). These should return raw data instead.
 
 check_response_wrap() {
-  echo "[13/18] Response single-wrap" >&2
+  echo "[14/22] Response single-wrap" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -968,9 +968,9 @@ check_response_wrap() {
   fi
 }
 
-# Check 14: Benchmark regression — compare against stored baselines (non-blocking)
+# Check 15: Benchmark regression — compare against stored baselines (non-blocking)
 check_bench_regression() {
-  echo "[14/18] Benchmark regression" >&2
+  echo "[15/22] Benchmark regression" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -1040,9 +1040,9 @@ check_bench_regression() {
   fi
 }
 
-# Check 15: API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
+# Check 16: API smoke test — curl new/modified REST endpoints to verify non-404 (non-blocking)
 check_api_smoke() {
-  echo "[15/18] API smoke test" >&2
+  echo "[16/22] API smoke test" >&2
   local target="$PROJECT_ROOT/services"
   [[ -n "$SERVICE_NAME" ]] && target="$PROJECT_ROOT/services/$SERVICE_NAME"
 
@@ -1118,10 +1118,10 @@ check_api_smoke() {
   fi
 }
 
-# ─── Check 16: Memory Index Freshness ────────────────────────────────
+# ─── Check 17: Memory Index Freshness ────────────────────────────────
 
 check_memory_index() {
-  echo "[16/18] Memory Index Freshness" >&2
+  echo "[17/22] Memory Index Freshness" >&2
 
   local index_file="$PROJECT_ROOT/.harness/knowledge/memory/.memory-index.json"
   local memory_dir="$PROJECT_ROOT/.harness/knowledge/memory"
@@ -1190,13 +1190,13 @@ check_memory_index() {
   fi
 }
 
-# ─── Check 16.5: 设计一致性（model 列 vs 标准迁移源）───────────────
+# ─── Check 18: 设计一致性（model 列 vs 标准迁移源）───────────────
 # 比对 Go model 的 db tag 列是否覆盖标准迁移源（migration/scripts/docs-specs）。
 # WARN 级：model 引用列缺失可能是历史手工迁移/legacy/建表源不在标准位置，
 # 提示风险而非误伤正常提交。
 
 check_design_consistency() {
-  echo "[16.5/18] Design/code consistency" >&2
+  echo "[18/22] Design/code consistency" >&2
   local check_script="$PROJECT_ROOT/.harness/scripts/check-design-consistency.sh"
 
   if [[ ! -f "$check_script" ]]; then
@@ -1228,10 +1228,10 @@ check_design_consistency() {
   fi
 }
 
-# ─── Check 17: Git hygiene ─────────────────────────────────────────
+# ─── Check 19: Git hygiene ─────────────────────────────────────────
 
 check_git_hygiene() {
-  echo "[17/18] Git hygiene" >&2
+  echo "[19/22] Git hygiene" >&2
   local violations=()
 
   # 1. gitlink ↔ .gitmodules 一致性
@@ -1264,10 +1264,10 @@ check_git_hygiene() {
   fi
 }
 
-# ─── Check 18: Mutation testing（测试有效性）────────────────────────
+# ─── Check 20: Mutation testing（测试有效性）────────────────────────
 
 check_mutation_testing() {
-  echo "[18/18] Mutation testing" >&2
+  echo "[20/22] Mutation testing" >&2
   # 变异测试：对「有逻辑函数」验证测试有效性（替代 RED 证据，见 harness-pipeline-fix/design-tdd-evidence.md T3/T4）
   # 用 gomu（github.com/sivchari/gomu，现代变异测试工具，增量/门禁/并行/JSON）。
   # 注意：gomu --incremental 对 monorepo/go.work 挂起，用 --incremental=false + diff .go 文件范围；
@@ -1319,10 +1319,10 @@ check_mutation_testing() {
   fi
 }
 
-# ─── Check 19: pipeline evals — 管线自身回归语料库 ──────────────
+# ─── Check 21: pipeline evals — 管线自身回归语料库 ──────────────
 
 check_pipeline_evals() {
-  echo "[pipeline-evals] 管线自身 eval 回归（run-evals.sh）" >&2
+  echo "[21/22] 管线自身 eval 回归（run-evals.sh）" >&2
   local out rc
   set +e
   out="$(bash "$PROJECT_ROOT/.harness/pipeline/evals/run-evals.sh" 2>&1)"
@@ -1340,11 +1340,11 @@ check_pipeline_evals() {
 
 # ─── Main ─────────────────────────────────────────────────────────────
 
-# ─── Check 20: 依赖漏洞审计（govulncheck）────────────────────────
+# ─── Check 22: 依赖漏洞审计（govulncheck）────────────────────────
 # govulncheck 扫描 Go 依赖的已知漏洞（含调用链）。有漏洞 exit=3，无漏洞 exit=0。
 # 工具未装 / 网络不可用 → WARN（不阻塞，但提示）；发现漏洞 → FAIL。
 check_go_vuln() {
-  echo "[20/18] Dependency vulnerability audit (govulncheck)" >&2
+  echo "[22/22] Dependency vulnerability audit (govulncheck)" >&2
   local gvc=""
   for c in "$(command -v govulncheck 2>/dev/null)" "$HOME/go/bin/govulncheck"; do
     [[ -n "$c" && -x "$c" ]] && { gvc="$c"; break; }

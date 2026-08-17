@@ -50,23 +50,42 @@ jobs:
           ./services/*/rpc/internal/logic/... \
           -v -cover -coverprofile=coverage.out
 
-    - name: Check coverage
+    - name: Check coverage (per-service)
       run: |
-        echo "=== Coverage Report ==="
-        go tool cover -func=coverage.out
-
-        # 提取总覆盖率
-        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-        echo "Total coverage: ${COVERAGE}%"
-
-        # 检查是否达到目标
-        THRESHOLD=30
-        if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
-          echo "❌ Coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
+        # 分服务覆盖率门禁：每服务必须 ≥ 自身地板阈值（基线-缓冲防回退；随测试增长应上调）。
+        # 基线（2026-08-17 coverprofile 聚合实测）：user 60.7 / auth 72.3 / hub 73.7 / file 18.1 /
+        # monitoring 0 / permission 75.5 / master-data 6.9 / moderation 13.6 / ai-model 6.4
+        declare -A THRESHOLDS=(
+          [user-service]=55
+          [auth-service]=65
+          [community-hub-service]=65
+          [file-service]=15
+          [monitoring-service]=0
+          [permission-service]=70
+          [master-data-service]=5
+          [moderation-service]=10
+          [ai-model-service]=5
+        )
+        FAILED=0
+        for svc in user-service auth-service community-hub-service file-service monitoring-service permission-service master-data-service moderation-service ai-model-service; do
+          go test ./services/$svc/api/internal/logic/... ./services/$svc/rpc/internal/logic/... -coverprofile="coverage-$svc.out" >/dev/null 2>&1 || true
+          COV=$(go tool cover -func="coverage-$svc.out" 2>/dev/null | grep total | awk '{print $3}' | sed 's/%//')
+          rm -f "coverage-$svc.out"
+          COV=${COV:-0}
+          THRESH=${THRESHOLDS[$svc]:-0}
+          printf '%-28s coverage %5.1f%%  (threshold %d%%)' "$svc" "$COV" "$THRESH"
+          if awk -v c="$COV" -v t="$THRESH" 'BEGIN{exit !(c<t)}'; then
+            echo "  ❌"
+            FAILED=1
+          else
+            echo "  ✅"
+          fi
+        done
+        if [ $FAILED -eq 1 ]; then
+          echo "❌ Some services below coverage threshold"
           exit 1
         fi
-
-        echo "✅ Coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
+        echo "✅ All services meet coverage thresholds"
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
