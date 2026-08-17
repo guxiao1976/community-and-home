@@ -14,10 +14,10 @@
 
 **服务类型判定**：根据服务名选择脚本。
 
-| 服务位置 | 脚本 |
-|---------|------|
-| `services/<name>/` (Go 服务) | `bash .harness/skills/qa/scripts/harness-checks.sh --service <name> --json` |
-| `web/<name>/` (前端服务) | `bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service <name> --json` |
+| 服务位置                       | 脚本                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `services/<name>/` (Go 服务) | `bash .harness/skills/qa/scripts/harness-checks.sh --service <name> --json`          |
+| `web/<name>/` (前端服务)       | `bash .harness/skills/qa/scripts/harness-checks-frontend.sh --service <name> --json` |
 
 **Go 服务检查项**：go_build / go_vet / go_test / proto_jstype / json_string / cross_service_import / error_codes / hardcoded_secrets / graph_freshness / claude_structural_data / proto_ts_align / api_stubs / response_wrap / bench_regression / api_smoke（共 15 项）
 
@@ -30,6 +30,7 @@
 ### Step 1-3: 编译/静态分析/单元测试（Step 0 已覆盖）
 
 机械化检查已覆盖 build/vet/test，确认结果并记录详情：
+
 - `go test` 结果需包含测试包数和测试函数数（`0/0` = 假通过，标记为 WARN）
 
 ### Step 4: 覆盖率（可选）
@@ -43,6 +44,7 @@ cd services/<name> && go test ./... -cover
 ### Step 5: 测试质量审查
 
 检查新增代码是否有测试：
+
 - `git diff` 对比新增的函数/方法
 - 是否有对应测试用例
 - 测试是否真正验证行为（有 assert，而非仅 "调用不报错"）
@@ -51,6 +53,7 @@ cd services/<name> && go test ./... -cover
 ### Step 6: 数据库一致性检查（可选，需 MCP mysql 可用）
 
 当 QA 涉及数据变更（Migration 执行、API 写入验证）时：
+
 - 使用 MCP mysql 工具查询相关表，验证数据写入正确性
 - 检查字段值是否符合预期格式和约束（如 Snowflake ID 格式、手机号加密、状态码枚举）
 - 验证数据无重复记录（唯一索引冲突）、无孤儿记录（外键完整性）
@@ -119,12 +122,12 @@ FAIL 时必须列出具体失败信息，让开发者能直接定位。
 
 ## 与其他 Skill 的区别
 
-| | qa | review |
-|------|:---:|:---:|
-| 关注 | 是否正确运行 | 是否合理设计 |
-| 手段 | 编译、测试、覆盖率 | 9维度静态审查 |
-| 产出 | `_qa.md` | `_review.md` |
-| 顺序 | **先于 review** | QA PASS 之后 |
+|     | qa            | review       |
+| --- |:-------------:|:------------:|
+| 关注  | 是否正确运行        | 是否合理设计       |
+| 手段  | 编译、测试、覆盖率     | 9维度静态审查      |
+| 产出  | `_qa.md`      | `_review.md` |
+| 顺序  | **先于 review** | QA PASS 之后   |
 
 ## 关联
 

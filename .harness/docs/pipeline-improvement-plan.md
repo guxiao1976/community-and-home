@@ -308,3 +308,22 @@
 **验证**：脚本连跑 5 次稳定（permission-service 只报真差异 deleted_at）；harness-checks 独立显示 `[WARN] 18. design consistency`；harness 自检 9 PASS。
 **实测发现**（脚本价值）：permission-service 的 `deleted_at`、master-data 全表列未覆盖标准迁移源（建表源不在全局 docs/specs）——正是今天那类不一致，现在可机械捕获。
 **历史清理（2026-08-15）**：quality-check 全量体检 + `check-design-consistency.sh --all --backlog` 批量登记 5 个服务的设计一致性欠账（auth-service 1 列 / master-data 34 列 / moderation 30 列 / permission 1 列 / user 1 列）为 P2 debt 任务（task-011~015）。同时发现并修复 quality-check skill 的 `--all` 误写（check-change-conflict.sh 无此参数，默认即全扫）。
+
+---
+
+## 十二、日志埋点增强（task-010，2026-08-15 已实施）
+
+> 来源：方案 B 分析结论——现有 usage 日志只能支撑"脚本调用频率"，缺"skill 调用记录"和"checks 结果明细"，不足以判断脚本有效性。加最小 2 处埋点，数据积累后做脚本有效性分析。
+
+| # | 埋点 | 位置 | 记录内容 |
+|---|------|------|---------|
+| E1 | harness-checks 打点追加 `failed_checks` | harness-checks.sh 打点处 | 本次 FAIL/WARN 的具体检查项名（如 `proto_ts_align;design_consistency;git_hygiene;`）——回答"哪些检查项常 FAIL/WARN、是否有价值" |
+| E2 | workflow agent 调用记 skill 使用 | harness-pipeline-core.js（logAgentUsage helper + 4 处 agent 调用） | `{type:'agent', service, phase(develop/qa/debug/review), label}` 写入 pipeline/metrics.jsonl——回答"哪些 skill 被频繁/从不调用" |
+
+**设计原则（克制）**：
+- 复用现有 `log-usage.sh`（E1）和 `logMetrics`（E2），不引入新基础设施
+- E2 的 `logAgentUsage` 是 logMetrics 的薄封装（type='agent' 区分），4 个 agent 调用点各加 1 行
+- 均受 `config/tracking.yml` enabled 开关控制，可整体关闭
+
+**验证**：E1 实测记录 `failed_checks="proto_ts_align;design_consistency;git_hygiene;"`；E2 编译进 harness-pipeline.js（4 阶段）；`run-evals.sh` 全绿；harness 自检 9 PASS。
+**后续**：数据积累 2-4 周后，用 `analyze-usage.sh` + 新增分析脚本做脚本有效性分析（淘汰无用脚本/补薄弱门禁）。

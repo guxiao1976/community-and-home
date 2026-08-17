@@ -1421,9 +1421,20 @@ main() {
     echo "=== Summary: $pass PASS, $fail FAIL, $warn WARN ==="
   fi
 
-  # ── 打点：记录 QA 门禁调用（服务 + PASS/FAIL 数，为流水线复盘提供第一手数据）──
+  # ── 打点：记录 QA 门禁调用（服务 + PASS/FAIL 数 + 非 PASS 的检查项名，为脚本有效性分析提供数据）──
+  # 提取 FAIL/WARN 的 check 名（RESULTS 每条含 "check":"xxx"），供"哪些检查项常 FAIL/WARN"分析
+  local failed_checks=""
+  local r st
+  for r in "${RESULTS[@]}"; do
+    st=$(echo "$r" | grep -oP '"status":"\K\w+')
+    if [[ "$st" == "FAIL" || "$st" == "WARN" ]]; then
+      local chk
+      chk=$(echo "$r" | grep -oP '"check":"\K[^"]*')
+      failed_checks="${failed_checks}${chk};"
+    fi
+  done
   bash "$PROJECT_ROOT/.harness/scripts/log-usage.sh" harness-checks \
-    service="${SERVICE_NAME:-all}" pass="$pass" fail="$fail" warn="$warn" 2>/dev/null || true
+    service="${SERVICE_NAME:-all}" pass="$pass" fail="$fail" warn="$warn" failed_checks="$failed_checks" 2>/dev/null || true
 
   return $EXIT_CODE
 }

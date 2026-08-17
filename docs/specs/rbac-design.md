@@ -365,6 +365,32 @@ Snowflake 19 位 ID，`el-table-column` 统一 `width="200"`。
 
 **发现的问题**：`community:read` 权限对应的 `GET /api/community/communities` 路由在 community-hub-service 中不存在（仅有 notices/contact/lostfound）。该权限暂时无对应 API。
 
+### 6.5.1 通用图文（content-posts）发布/读写权限矩阵（2026-08-16，content-post-generalization REQ-CPP-3 REVISION）
+
+> fail-closed 语义：移动端每个 content-post REST 端点必须有 `sys_permission` type=3 权限码并绑定角色，否则全体 403、RPC 契约不可达。**「全部移动端角色」**={owner 1 / community_admin 3 / grid_worker 4 / tenant 5 / committee 6 / merchant 7 / sys_admin 8 / registered_user 9}（property_admin `platforms='pc'` 不在移动端角色集）。
+
+**写路径权限**
+
+| 权限码 | 端点 | code | min_verf_level | 角色绑定 |
+|--------|------|------|:---:|------|
+| 421 | `POST:/api/community/notices`（创建） | `community:notice:create-api` | **0→2**（行为变更，需已认证） | **property_admin(2) 保留**（推翻 notice D26 回收）；**grid_worker(4) 授**；**owner(1)/tenant(5) 撤销**（DELETE (1,421)/(5,421)，保留 435/436）；community_admin(3)/committee(6) 保留 |
+| 427 | `DELETE:/api/community/notices/:id`（撤回） | `community:notice:delete-api` | 0 | 全部移动端角色（真正越权判定交 080002 作者校验） |
+| 428 | `PUT:/api/community/notices/:id`（编辑） | `community:notice:update-api` | 0 | 全部移动端角色 |
+
+**读路径权限**
+
+| 权限码 | 端点 | code | min_verf_level | 角色绑定 |
+|--------|------|------|:---:|------|
+| 422 | `GET:/api/community/notices`（列表） | `community:notice:read-list-api` | 0 | 现 (9,1,5) **扩展为全部移动端角色**（补 grid_worker/community_admin/committee/merchant/sys_admin） |
+| 423 | `GET:/api/community/notices/marquee`（跑马灯） | `community:notice:read-marquee-api` | 0 | 全部移动端角色（新增） |
+| 424 | `GET:/api/community/notices/publish-permission` | `community:notice:publish-permission-api` | 0 | 全部移动端角色（新增） |
+| 426 | `GET:/api/community/notices/:id`（详情） | `community:notice:read-detail-api` | 0 | 全部移动端角色（新增——现无任何码，fail-closed 下全体 403） |
+
+> **parent_id**：423/424/426 → 410（community:read）；427/428 → 420（community:notice）；422 保持 → 410（防孤儿节点，path 与实际 REST 路由一致）。
+> **幻影 435**：`community:lostfound:create-api` 无 sys_permission 行，仅 (1,435)/(5,435) 绑定引用——本变更不动 435/436（保留 owner/tenant 绑定）。
+> **property_admin 发布权限不对称（评审 SHOULD #4，有意为之）**：property_admin 绑 421（create）但不绑 427/428（update/delete 绑「全部移动端角色」——property_admin `platforms='pc'` 不在移动端角色集）——PC 本期不接线，property_admin 的编辑/撤回走后续 PC 接线，创建后的操作由 080002 作者校验兜底。
+> **080002 语义（跨端点重载）**：Create 功能权限层「无发布权限」/ Update·Delete「非帖作者」复用 080002；proto 头注释扩展为「080002 — 无发布权限 / 非帖作者（功能权限层先于 scope 校验；Update/Delete 为作者归属校验）」。
+
 ---
 
 ## 7. 已知差距
